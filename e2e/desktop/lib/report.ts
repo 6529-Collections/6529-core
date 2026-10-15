@@ -112,6 +112,15 @@ export function compareWithBaseline(report: SuiteReport, baseline: SuiteReport) 
   return { regressions, routeRegressions };
 }
 
+/** Text safe inside a Markdown table cell: backslashes and pipes escaped, one line. */
+export function markdownCell(text: string, maxLength: number): string {
+  return text
+    .slice(0, maxLength)
+    .replace(/\\/g, "\\\\")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ");
+}
+
 export function renderMarkdown(report: SuiteReport, baseline?: SuiteReport): string {
   const lines: string[] = [];
   lines.push(`# Desktop function suite: ${report.label}`);
@@ -142,7 +151,7 @@ export function renderMarkdown(report: SuiteReport, baseline?: SuiteReport): str
   lines.push("| Function | Check | Result | Details |");
   lines.push("| --- | --- | --- | --- |");
   for (const result of report.results) {
-    const details = (result.details ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ").slice(0, 240);
+    const details = markdownCell(result.details ?? "", 240);
     lines.push(`| ${result.fn} | ${result.name} | ${result.status} | ${details} |`);
   }
   const failedRoutes = (report.routes ?? []).filter((route) => route.status === "fail");
@@ -151,7 +160,7 @@ export function renderMarkdown(report: SuiteReport, baseline?: SuiteReport): str
     lines.push("| Failed route | HTTP | Details |");
     lines.push("| --- | ---: | --- |");
     for (const route of failedRoutes) {
-      lines.push(`| ${route.route} | ${route.httpStatus ?? ""} | ${(route.details ?? "").replace(/\|/g, "\\|").slice(0, 200)} |`);
+      lines.push(`| ${markdownCell(route.route, 200)} | ${route.httpStatus ?? ""} | ${markdownCell(route.details ?? "", 200)} |`);
     }
   }
   return lines.join("\n") + "\n";
