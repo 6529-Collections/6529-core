@@ -181,34 +181,14 @@ export async function runShellChecks(ctx: SuiteContext): Promise<void> {
     await page.keyboard.press("Escape");
   });
   await r.check("F8", "deep-link-single-instance", "A deep link from a second launch navigates the running app, which stays single", async () => {
-    const second = spawn(
-      ctx.app.options.exe,
-      [...(ctx.app.options.extraArgs ?? []), `--user-data-dir=${ctx.app.options.profileDir}`, `${ctx.scheme}://navigate/network`],
-      { stdio: "ignore", windowsHide: false },
-    );
-    const exitCode = await new Promise<number | null>((resolve) => {
-      const timer = setTimeout(() => {
-        second.kill();
-        resolve(-1);
-      }, 30_000);
-      second.once("exit", (code) => {
-        clearTimeout(timer);
-        resolve(code);
-      });
-    });
-    assert(exitCode !== -1, "the second instance did not exit");
+    const exitCode = await launchSecondInstance(ctx, `${ctx.scheme}://navigate/network`);
     await waitFor("navigation to /network", () => new URL(page.url()).pathname.startsWith("/network"), 20_000);
     const mainWindows = ctx.app.pages().filter((candidate) => candidate.url().startsWith(baseUrl));
     assert(mainWindows.length === 1, `${mainWindows.length} main windows`);
     return `second instance exit code ${exitCode}`;
   });
   await r.check("F8", "deep-link-share-connection", "A connection-sharing deep link opens the accept page", async () => {
-    const second = spawn(
-      ctx.app.options.exe,
-      [...(ctx.app.options.extraArgs ?? []), `--user-data-dir=${ctx.app.options.profileDir}`, `${ctx.scheme}://share-connection?code=suite-test`],
-      { stdio: "ignore" },
-    );
-    await new Promise((resolve) => second.once("exit", resolve));
+    await launchSecondInstance(ctx, `${ctx.scheme}://share-connection?code=suite-test`);
     await waitFor(
       "navigation to /accept-connection-sharing",
       () => new URL(page.url()).pathname.startsWith("/accept-connection-sharing"),
@@ -293,12 +273,7 @@ export async function runLifecycleChecks(ctx: SuiteContext): Promise<void> {
     if (process.platform !== "win32") skip("window automation implemented for Windows");
     // Launching the app again is how people reopen it; builds that keep a
     // minimized splash instead reopen when it is restored from the taskbar.
-    const second = spawn(
-      ctx.app.options.exe,
-      [...(ctx.app.options.extraArgs ?? []), `--user-data-dir=${ctx.app.options.profileDir}`],
-      { stdio: "ignore" },
-    );
-    await new Promise((resolve) => second.once("exit", resolve));
+    await launchSecondInstance(ctx);
     let how = "a second launch reopened it";
     const reopened = await ctx.app.mainPage(15_000).catch(() => null);
     if (!reopened) {
@@ -317,6 +292,36 @@ export async function runLifecycleChecks(ctx: SuiteContext): Promise<void> {
     assert(await ctx.app.waitForExit(30_000), "the app did not exit");
     return `exit code ${ctx.app.exitCode}`;
   });
+}
+
+/**
+ * Launches the app again on the same profile, as a deep link or a second
+ * start does, and waits for that second process to hand over and exit. A
+ * second process that stays up means the single-instance lock broke; it is
+ * stopped and reported instead of hanging the suite.
+ */
+async function launchSecondInstance(ctx: SuiteContext, ...args: string[]): Promise<number | null> {
+  const second = spawn(
+    ctx.app.options.exe,
+    [...(ctx.app.options.extraArgs ?? []), `--user-data-dir=${ctx.app.options.profileDir}`, ...args],
+    { stdio: "ignore" },
+  );
+  const exitCode = await new Promise<number | null | "timeout">((resolve) => {
+    const timer = setTimeout(() => resolve("timeout"), 30_000);
+    second.once("exit", (code) => {
+      clearTimeout(timer);
+      resolve(code);
+    });
+  });
+  if (exitCode === "timeout") {
+    if (process.platform === "win32" && second.pid) {
+      spawnSync("taskkill", ["/PID", String(second.pid), "/T", "/F"], { windowsHide: true });
+    } else {
+      second.kill("SIGKILL");
+    }
+    throw new Error("the second launch did not exit within 30 s: the app is no longer single-instance");
+  }
+  return exitCode;
 }
 
 function findProcessesByCommandLine(marker: string): number[] {

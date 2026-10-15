@@ -19,7 +19,7 @@ Options:
   external-browser wallet connector. This opens real browser windows; only
   processes started with this run's marker URL are stopped afterwards.
 - `--no-lifecycle`: skip the close dialog, background mode, restore and quit
-  (Windows UI Automation; they end the app).
+  (Windows window messages; they end the app).
 - `--baseline <function-suite.json>`: compare with an earlier report; the run
   fails only on checks or routes that passed before and fail now.
 - `--profile <dir>`: reuse a profile (warm start) instead of a fresh one.
