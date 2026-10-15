@@ -9,6 +9,7 @@ import {
   Delegation,
   NativeDelegationRegistration,
   ReplayNativeDelegationRegistration,
+  NFTDelegationRecoveryPoint,
 } from "../../../db/entities/IDelegation";
 import { planConsolidationEvent } from "./consolidation-row-plan";
 import { writeDelegations } from "./delegation-row";
@@ -198,6 +199,7 @@ export async function resetNativeDelegationReplay(db: DataSource) {
     await manager.getRepository(ReplayDelegation).clear();
     await manager.getRepository(ReplayNativeDelegationRegistration).clear();
     await manager.getRepository(NFTDelegationReplayBlock).clear();
+    await manager.getRepository(NFTDelegationRecoveryPoint).clear();
     await manager
       .getRepository(NFTDelegationBlock)
       .update({ id: 1 }, { index_version: 0 });

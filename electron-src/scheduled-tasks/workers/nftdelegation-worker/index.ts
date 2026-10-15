@@ -20,6 +20,7 @@ import {
   NFTDelegationBlock,
   NativeDelegationRegistration,
   ReplayNativeDelegationRegistration,
+  NFTDelegationRecoveryPoint,
 } from "../../../db/entities/IDelegation";
 import { sleep } from "../../../../shared/helpers";
 import { DELEGATION_CONTRACT } from "../../../../electron-constants";
@@ -56,6 +57,10 @@ import {
   verifyDelegationCheckpoint,
 } from "./delegation-sync";
 import { expandAffectedConsolidationWallets } from "../tdh-worker/tdh-worker.db";
+import {
+  captureDelegationRecoveryPoint,
+  DELEGATION_RECOVERY_CAPTURE_DISTANCE,
+} from "./delegation-recovery";
 
 const data: ResettableWorkerData = workerData;
 
@@ -80,6 +85,7 @@ class NFTDelegationWorker extends CoreWorker {
       NFTDelegationReplayBlock,
       NativeDelegationRegistration,
       ReplayNativeDelegationRegistration,
+      NFTDelegationRecoveryPoint,
       TDHBlock,
       TDH,
       ConsolidatedTDH,
@@ -192,6 +198,22 @@ class NFTDelegationWorker extends CoreWorker {
       const previousCheckpoint = await this.getDb()
         .getRepository(NFTDelegationReplayBlock)
         .findOneByOrFail({ id: 1 });
+      // Capture before applying this chunk, while revocations and earlier
+      // consolidation state can still be rolled back as a complete unit.
+      if (
+        toBlock - previousCheckpoint.block <=
+        DELEGATION_RECOVERY_CAPTURE_DISTANCE
+      ) {
+        await verifyDelegationCheckpoint(
+          this.getProvider(),
+          previousCheckpoint,
+        );
+        await captureDelegationRecoveryPoint(
+          this.getDb(),
+          previousCheckpoint,
+          await this.getProvider().getBlockNumber(),
+        );
+      }
 
       const latestBlockTime = await getBlockTimestamp(
         parentPort,
