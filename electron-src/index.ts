@@ -1312,9 +1312,6 @@ async function createWindow() {
   updateSplashMessage("Running Database Migrations");
   await runCoreMigrations(getDb());
 
-  updateSplashMessage("Initializing IPFS");
-  await IPFS_SERVER.init(PORT);
-
   const windowState = getValue("window-state");
 
   updateSplashMessage("Creating main window");
@@ -1346,6 +1343,10 @@ async function createWindow() {
   const url = `http://localhost:${PORT}`;
 
   mainWindow.loadURL(url);
+
+  // IPFS starts once the main window is loading and never holds it back;
+  // if a step fails the app runs with IPFS marked unavailable.
+  void IPFS_SERVER.start(PORT);
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
@@ -1839,17 +1840,28 @@ ipcMain.handle("get-nav-state", () => {
 });
 
 ipcMain.handle("get-info", () => {
+  // No IPFS ports when IPFS failed to start, so the renderer does not point
+  // media at a gateway that is not there.
+  const ipfsAvailable = IPFS_SERVER?.getStatus() !== "unavailable";
   return {
     ...getInfo(),
     port: PORT,
-    ipfsPort: IPFS_PORT,
-    ipfsRpcPort: IPFS_RPC_PORT,
-    ipfsSwarmPort: IPFS_SWARM_PORT,
+    ipfsPort: ipfsAvailable ? IPFS_PORT : null,
+    ipfsRpcPort: ipfsAvailable ? IPFS_RPC_PORT : null,
+    ipfsSwarmPort: ipfsAvailable ? IPFS_SWARM_PORT : null,
   };
 });
 
-ipcMain.handle("get-ipfs-info", () => {
+ipcMain.handle("get-ipfs-info", async () => {
+  // The window opens while IPFS is still starting: answer once it has
+  // started or failed. Without endpoints the renderer resolves media through
+  // the 6529 media resolver instead of the local gateway.
+  const status = await IPFS_SERVER.whenSettled();
+  if (status !== "ready") {
+    return { status };
+  }
   return {
+    status,
     apiEndpoint: IPFS_SERVER.getApiEndpoint(),
     gatewayEndpoint: IPFS_SERVER.getGatewayEndpoint(),
     mfsPath: IPFS_SERVER.getMfsPath(),
