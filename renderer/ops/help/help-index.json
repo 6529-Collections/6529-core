@@ -9314,9 +9314,9 @@
         "capabilities"
       ],
       "facts": [
-        "6529 Desktop is the Windows, macOS, and Linux app with local wallets, Ethereum indexing workers, independent TDH calculation, and a bundled IPFS node. These 6529 Desktop tools are separate from 6529 Mobile and the desktop-browser website.",
+        "6529 Desktop is the Windows, macOS, and Linux app with local wallets, Ethereum indexing workers, independent TDH calculation, and a bundled IPFS node. These 6529 Desktop tools are separate from 6529 Mobile and the desktop-browser website. IPFS starts in the background. Fast launches can skip the splash, while slower launches show it after its page has loaded and painted; splash artwork never delays the main window.",
         "Get the official installer from 6529 Apps, choose your operating system, install, and open the app.",
-        "Open the dedicated 6529 Desktop sidebar menu (monitor icon). Its entries are Wallets, ETH Transactions, TDH Calculation, My IPFS when available, and About.",
+        "Open the dedicated 6529 Desktop sidebar menu (monitor icon). Its entries are Wallets, ETH Transactions, TDH Calculation, My IPFS, and About. My IPFS stays in a fixed position: a spinner means starting and a warning icon means unavailable; both states are disabled. It becomes clickable with an external-link icon when ready.",
         "First open 6529 Desktop > ETH Transactions > RPC Providers > Providers List. Choose Set Active on a provider, or Add RPC Provider, enter an Ethereum mainnet RPC URL, Test it, give it a Provider Name, Add, then Set Active. Saving a provider alone does not enable it.",
         "With an active RPC provider and the app running, Transactions and NFTDelegation sync automatically, and NFTs discovers and refreshes local NFT data. Initial history sync may take time; inspect worker progress and Logs instead of repeatedly resetting.",
         "Then open 6529 Desktop > TDH Calculation. TDH runs daily at 00:15 UTC; after prerequisite workers catch up you can use the TDH worker Advanced Options > Recalculate TDH Now. Compare Your Node and 6529.io at the same Last Block.",
@@ -9364,7 +9364,7 @@
         "setup"
       ],
       "facts": [
-        "Open the dedicated 6529 Desktop sidebar menu (monitor icon). Its entries are Wallets, ETH Transactions, TDH Calculation, My IPFS when available, and About.",
+        "Open the dedicated 6529 Desktop sidebar menu (monitor icon). Its entries are Wallets, ETH Transactions, TDH Calculation, My IPFS, and About. My IPFS stays in a fixed position: a spinner means starting and a warning icon means unavailable; both states are disabled. It becomes clickable with an external-link icon when ready.",
         "First open 6529 Desktop > ETH Transactions > RPC Providers > Providers List. Choose Set Active on a provider, or Add RPC Provider, enter an Ethereum mainnet RPC URL, Test it, give it a Provider Name, Add, then Set Active. Saving a provider alone does not enable it.",
         "With an active RPC provider and the app running, Transactions and NFTDelegation sync automatically, and NFTs discovers and refreshes local NFT data. Initial history sync may take time; inspect worker progress and Logs instead of repeatedly resetting.",
         "Then open 6529 Desktop > TDH Calculation. TDH runs daily at 00:15 UTC; after prerequisite workers catch up you can use the TDH worker Advanced Options > Recalculate TDH Now. Compare Your Node and 6529.io at the same Last Block.",
@@ -9900,11 +9900,11 @@
         "webui"
       ],
       "facts": [
-        "6529 Desktop bundles a local IPFS daemon. Open 6529 Desktop > My IPFS to launch its WebUI when the app has resolved the local IPFS configuration; My IPFS is separate from ETH Transactions and the Ethereum RPC Providers list.",
+        "6529 Desktop bundles a local IPFS daemon. My IPFS is always shown in the 6529 Desktop menu. It is disabled with a spinner while starting, disabled with a warning icon when unavailable, and enabled with an external-link icon when ready. Availability updates automatically, including recovery after an initial timeout. Open it when enabled to launch its WebUI; My IPFS is separate from ETH Transactions and the Ethereum RPC Providers list.",
         "The app uses a local IPFS API, gateway, and swarm port. Find the actual IPFS Port, IPFS RPC Port, and IPFS Swarm Port in 6529 Desktop > About; do not assume a fixed port or share a localhost URL as a public link.",
         "The Desktop IPFS file service pins added files and keeps a named entry under /6529-Desktop in the node file system. A CID identifies content; local storage/pinning is not a promise of permanent availability or replication elsewhere.",
         "The bundled node uses configured bootstrap peers with automatic peer discovery/routing features restricted. Do not describe it as an unrestricted network crawler, a backup of every NFT, or proof that TDH consensus has completed.",
-        "If My IPFS is missing or the WebUI cannot connect, keep the app open, check About > App Logs for IPFS startup/connection errors and confirm the displayed ports. Restart the app normally if initialization failed; persistent errors need the app version, OS, and redacted log details.",
+        "If My IPFS remains unavailable or the WebUI cannot connect, keep the app open, check About > App Logs for IPFS startup/connection errors and confirm the displayed ports. Restart the app normally if initialization failed; persistent errors need the app version, OS, and redacted log details.",
         "The IPFS API and gateway are bound to loopback. Do not expose the local administrative API publicly, upload wallet secrets, or delete the IPFS repository to fix an unrelated TDH mismatch. IPFS storage and Ethereum transaction indexing are separate concerns."
       ],
       "canonical_path": "/about/6529-apps",

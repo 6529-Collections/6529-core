@@ -24,6 +24,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { isSidebarNavItemActive } from "./sidebarActive";
+import DesktopIpfsNavItem from "./DesktopIpfsNavItem";
 
 const FOCUSABLE_ELEMENT_SELECTOR =
   "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
@@ -220,8 +221,7 @@ function WebSidebarSubmenu({
       const menuRect = containerRef.current.getBoundingClientRect();
       const viewportHeight = browserWindow.innerHeight || 0;
       const padding = 16;
-      const topPadding =
-        padding + (isElectron() ? CORE_TITLEBAR_HEIGHT_PX : 0);
+      const topPadding = padding + (isElectron() ? CORE_TITLEBAR_HEIGHT_PX : 0);
 
       const anchorCenter =
         anchorTop !== undefined && anchorHeight !== undefined
@@ -259,6 +259,19 @@ function WebSidebarSubmenu({
 
   const topStyle = Number.isFinite(computedTop) ? `${computedTop}px` : "16px";
   const renderLink = (item: SidebarNavItem, nested: boolean = false) => {
+    if (item.id === "desktop-ipfs") {
+      return (
+        <DesktopIpfsNavItem
+          key={item.id}
+          onNavigate={onClose}
+          className={`tw-touch-action-manipulation tw-flex tw-items-center tw-rounded-lg tw-no-underline tw-ring-offset-iron-950 tw-transition-colors focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-1 ${
+            nested
+              ? "tw-min-h-10 tw-px-3 tw-py-2 tw-text-sm"
+              : "tw-mb-1 tw-px-3 tw-py-2 tw-text-md"
+          }`}
+        />
+      );
+    }
     const active = isSidebarNavItemActive(item, pathname);
 
     return (

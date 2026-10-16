@@ -10,11 +10,11 @@ import React, {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import { isElectron } from "../../helpers";
 import IpfsService from "./IPFSService";
+import type { IpfsStatus } from "@/shared/ipfs-status";
 
 interface IpfsUrls {
   webui: string;
@@ -25,6 +25,7 @@ interface IpfsUrls {
 interface IpfsContextType {
   ipfsService: IpfsService | null;
   ipfsUrls: IpfsUrls | undefined;
+  ipfsStatus: IpfsStatus;
 }
 
 const IpfsContext = createContext<IpfsContextType | undefined>(undefined);
@@ -111,7 +112,12 @@ const isIpfsConfigInput = (value: unknown): value is IpfsConfigInput => {
   return hasApiConfig && hasGatewayConfig;
 };
 
-const readIpfsConfig = async () => {
+type IpfsSnapshot =
+  | { status: "ready"; config: ReturnType<typeof buildIpfsConfig> }
+  | { status: Exclude<IpfsStatus, "ready">; config: null };
+
+/** Preserve the native lifecycle state alongside endpoints available when ready. */
+const readIpfsSnapshot = async (): Promise<IpfsSnapshot> => {
   const bridge =
     typeof window !== "undefined"
       ? (window as Window & { api?: typeof window.api }).api
@@ -126,7 +132,7 @@ const readIpfsConfig = async () => {
       details
     );
     const appInfo = await bridge.getInfo();
-    return buildIpfsConfig(appInfo ?? {});
+    return { status: "ready" as const, config: buildIpfsConfig(appInfo ?? {}) };
   };
 
   let ipfsInfo: unknown;
@@ -136,12 +142,23 @@ const readIpfsConfig = async () => {
     return fallbackToAppInfo("bridge call failed", error);
   }
 
+  if (
+    typeof ipfsInfo === "object" &&
+    ipfsInfo !== null &&
+    "status" in ipfsInfo &&
+    (ipfsInfo.status === "stopped" ||
+      ipfsInfo.status === "starting" ||
+      ipfsInfo.status === "unavailable")
+  ) {
+    return { status: ipfsInfo.status, config: null };
+  }
+
   if (!isIpfsConfigInput(ipfsInfo)) {
     return fallbackToAppInfo("invalid getIpfsInfo() payload shape", ipfsInfo);
   }
 
   try {
-    return buildIpfsConfig(ipfsInfo);
+    return { status: "ready", config: buildIpfsConfig(ipfsInfo) };
   } catch (error) {
     return fallbackToAppInfo("invalid getIpfsInfo() payload", {
       ipfsInfo,
@@ -150,7 +167,7 @@ const readIpfsConfig = async () => {
   }
 };
 
-const getEnv = async () => readIpfsConfig();
+const readIpfsConfig = async () => (await readIpfsSnapshot()).config;
 
 export const getConfiguredGatewayBaseForSync = (): string | null => {
   if (!cachedGatewayBase) {
@@ -211,11 +228,13 @@ function resolveViaMediaResolver(url: string): string {
 export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [ipfsService, setIpfsService] = useState<IpfsService | null>(null);
-  const [ipfsUrls, setIpfsUrls] = useState<IpfsUrls | undefined>(undefined);
+  const [value, setValue] = useState<IpfsContextType>({
+    ipfsService: null,
+    ipfsUrls: undefined,
+    ipfsStatus: "starting",
+  });
 
   useEffect(() => {
-    if (ipfsService) return;
     if (typeof window === "undefined") {
       return;
     }
@@ -223,30 +242,61 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    getEnv()
-      .then((info) => {
+    let disposed = false;
+    let revision = 0;
+    const clearService = (status: IpfsStatus) => {
+      cachedGatewayBase = null;
+      setValue({ ipfsService: null, ipfsUrls: undefined, ipfsStatus: status });
+    };
+    const refresh = async () => {
+      const currentRevision = ++revision;
+      try {
+        const { status, config: info } = await readIpfsSnapshot();
+        if (disposed || currentRevision !== revision) return;
+        if (!info) {
+          clearService(status);
+          return;
+        }
         cachedGatewayBase = info.gatewayBase;
         const service = new IpfsService({
           apiEndpoint: info.apiEndpoint,
           mfsPath: info.mfsPath,
         });
-        setIpfsUrls({
-          webui: `${info.apiEndpoint}/webui`,
-          api: info.apiEndpoint,
-          gateway: info.gatewayEndpoint,
+        void Promise.resolve(service.init()).catch((error: unknown) => {
+          console.error("Error initializing IPFS file service", error);
         });
-        service.init();
-        setIpfsService(service);
-      })
-      .catch((error: unknown) => {
+        setValue({
+          ipfsService: service,
+          ipfsUrls: {
+            webui: `${info.apiEndpoint}/webui`,
+            api: info.apiEndpoint,
+            gateway: info.gatewayEndpoint,
+          },
+          ipfsStatus: "ready",
+        });
+      } catch (error: unknown) {
+        if (disposed || currentRevision !== revision) return;
+        clearService("unavailable");
         console.error("Error initializing IPFS service", error);
-      });
-  }, [ipfsService]);
-
-  const value = useMemo(
-    () => ({ ipfsService, ipfsUrls }),
-    [ipfsService, ipfsUrls]
-  );
+      }
+    };
+    const unsubscribe = window.api?.onIpfsStatusChange?.((status) => {
+      if (disposed) return;
+      if (status === "ready") {
+        void refresh();
+      } else {
+        revision++;
+        clearService(status);
+      }
+    });
+    void refresh();
+    return () => {
+      disposed = true;
+      revision++;
+      unsubscribe?.();
+      cachedGatewayBase = null;
+    };
+  }, []);
 
   return <IpfsContext.Provider value={value}>{children}</IpfsContext.Provider>;
 };
@@ -293,6 +343,7 @@ export const resolveIpfsUrlAsync = async (url: string) => {
 
   try {
     const info = await readIpfsConfig();
+    if (!info) return resolveViaMediaResolver(url);
     cachedGatewayBase = info.gatewayBase;
     return `${info.gatewayBase}/ipfs/${url.slice(7)}`;
   } catch (error) {

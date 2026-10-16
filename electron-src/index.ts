@@ -920,6 +920,7 @@ function isValidSplashCard(data: unknown): data is SplashCard {
 let splashCardData: SplashCard | null = null;
 
 let preloadSplashImagePromise: Promise<string | null> | null = null;
+let latestSplashMessage = "Loading";
 
 function preloadSplashImage(url: string): Promise<string | null> {
   return fetch(url)
@@ -1131,7 +1132,20 @@ if (!gotTheLock) {
     await initLogs();
     initStore();
 
-    IPFS_SERVER = new IPFSServer(IPFS_PORT, IPFS_RPC_PORT, IPFS_SWARM_PORT);
+    IPFS_SERVER = new IPFSServer(
+      IPFS_PORT,
+      IPFS_RPC_PORT,
+      IPFS_SWARM_PORT,
+      (status) => {
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send("ipfs-status-change", status);
+        }
+      },
+    );
 
     await createWindow();
 
@@ -1151,6 +1165,7 @@ if (!gotTheLock) {
 async function sendSplashCardIfReady() {
   if (!splashCardData || !splash || splash.isDestroyed() || !splash.webContents)
     return;
+  const splashWindow = splash;
   let payload: SplashCard & { preloadedImageDataUrl?: string } = {
     ...splashCardData,
   };
@@ -1167,7 +1182,9 @@ async function sendSplashCardIfReady() {
       // send without preloaded image
     }
   }
-  splash.webContents.send("splash-card", payload);
+  if (splash === splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send("splash-card", payload);
+  }
 }
 
 const SPLASH_LEFT_PANEL_RATIO = 0.4;
@@ -1195,7 +1212,8 @@ function getRightPanelWidth(totalWidth: number): number {
   return totalWidth - leftWidth;
 }
 
-function createSplash() {
+/** Gate startup display on a complete paint while preserving background mode. */
+function createSplash(shouldShow?: () => boolean) {
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
   let width =
@@ -1240,6 +1258,7 @@ function createSplash() {
     frame: false,
     backgroundColor: "#000",
     transparent: false,
+    show: shouldShow === undefined,
     webPreferences: {
       preload: path.join(__dirname, "preload-splash.js"),
       additionalArguments: [
@@ -1249,6 +1268,18 @@ function createSplash() {
         `--backend-target=${getBackendTarget()}`,
       ],
     },
+  });
+  const splashWindow = splash;
+  let painted = false;
+  let loaded = false;
+  const showIfReady = () => {
+    if (painted && loaded && shouldShow?.() && !splashWindow.isDestroyed()) {
+      splashWindow.show();
+    }
+  };
+  splashWindow.once("ready-to-show", () => {
+    painted = true;
+    showIfReady();
   });
   const splashPath = path.join(__dirname, "assets", "splash.html");
   const splashURL = `file://${splashPath}`;
@@ -1268,21 +1299,30 @@ function createSplash() {
       .catch(() => {});
   }
 
-  splash.webContents.once("did-finish-load", sendSplashCardIfReady);
+  splash.webContents.once("did-finish-load", () => {
+    if (splashWindow.isDestroyed()) return;
+    loaded = true;
+    splashWindow.webContents.send("update-message", latestSplashMessage);
+    void sendSplashCardIfReady();
+    showIfReady();
+  });
 }
 
 function updateSplashMessage(newMessage: string) {
-  if (splash && splash.webContents) {
+  latestSplashMessage = newMessage;
+  if (splash && !splash.isDestroyed() && splash.webContents) {
     splash.webContents.send("update-message", newMessage);
   }
 }
 
+/** Open the main window and start IPFS without blocking renderer loading. */
 async function createWindow() {
   Logger.info("Creating window");
   if (mainWindow && !mainWindow.isDestroyed()) {
     Logger.info("Window already exists");
     return;
   }
+  latestSplashMessage = "Loading";
 
   let iconPath: string;
   if (isWindows()) {
@@ -1304,23 +1344,23 @@ async function createWindow() {
     preloadSplashImagePromise = null;
   }
 
-  Logger.info("Creating splash");
-  if (!splash) {
-    Logger.info("Splash does not exist, creating");
-    if (splashCardData && preloadSplashImagePromise) {
-      await preloadSplashImagePromise;
+  let startupComplete = false;
+  // Fast launches skip the splash. Slower launches show it only after its
+  // first paint, without delaying the main window for artwork or a minimum time.
+  const splashTimer = setTimeout(() => {
+    if (startupComplete || splash) return;
+    try {
+      createSplash(() => !startupComplete);
+    } catch (error) {
+      Logger.warn("Could not create startup splash", error);
     }
-    createSplash();
-  }
+  }, 400);
 
   updateSplashMessage("Initializing Database");
   await initDb();
 
   updateSplashMessage("Running Database Migrations");
   await runCoreMigrations(getDb());
-
-  updateSplashMessage("Initializing IPFS");
-  await IPFS_SERVER.init(PORT);
 
   const windowState = getValue("window-state");
 
@@ -1354,6 +1394,10 @@ async function createWindow() {
 
   mainWindow.loadURL(url);
 
+  // IPFS starts once the main window is loading and never holds it back;
+  // if a step fails the app runs with IPFS marked unavailable.
+  void IPFS_SERVER.start(PORT);
+
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
   });
@@ -1365,6 +1409,8 @@ async function createWindow() {
   mainWindow.once("ready-to-show", async () => {
     Logger.info("Main window ready to show");
     await createScheduledTasks();
+    startupComplete = true;
+    clearTimeout(splashTimer);
     if (windowState) {
       mainWindow?.setBounds(windowState);
     } else {
@@ -1846,17 +1892,27 @@ ipcMain.handle("get-nav-state", () => {
 });
 
 ipcMain.handle("get-info", () => {
+  // Report IPFS ports only while the daemon is ready, so the renderer does
+  // not point media at a gateway that is still starting or has stopped.
+  const ipfsAvailable = IPFS_SERVER?.getStatus() === "ready";
   return {
     ...getInfo(),
     port: PORT,
-    ipfsPort: IPFS_PORT,
-    ipfsRpcPort: IPFS_RPC_PORT,
-    ipfsSwarmPort: IPFS_SWARM_PORT,
+    ipfsPort: ipfsAvailable ? IPFS_PORT : null,
+    ipfsRpcPort: ipfsAvailable ? IPFS_RPC_PORT : null,
+    ipfsSwarmPort: ipfsAvailable ? IPFS_SWARM_PORT : null,
   };
 });
 
 ipcMain.handle("get-ipfs-info", () => {
+  // Return the live snapshot immediately. Status events refresh the renderer
+  // when IPFS becomes ready; media uses the remote resolver in the meantime.
+  const status = IPFS_SERVER.getStatus();
+  if (status !== "ready") {
+    return { status };
+  }
   return {
+    status,
     apiEndpoint: IPFS_SERVER.getApiEndpoint(),
     gatewayEndpoint: IPFS_SERVER.getGatewayEndpoint(),
     mfsPath: IPFS_SERVER.getMfsPath(),

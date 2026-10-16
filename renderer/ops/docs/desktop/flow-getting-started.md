@@ -8,7 +8,7 @@ Parent: [Desktop index](README.md)
 
 Get the official installer from [6529 Apps](https://6529.io/about/6529-apps), choose your operating system, install, and open the app.
 
-Open the dedicated 6529 Desktop sidebar menu (monitor icon). Its entries are Wallets, ETH Transactions, TDH Calculation, My IPFS when available, and About.
+Open the dedicated 6529 Desktop sidebar menu (monitor icon). Its entries are Wallets, ETH Transactions, TDH Calculation, My IPFS, and About. My IPFS stays disabled with a spinner until the local node is ready; a warning icon means it is unavailable.
 
 First open 6529 Desktop > ETH Transactions > RPC Providers > Providers List. Choose Set Active on a provider, or Add RPC Provider, enter an Ethereum mainnet RPC URL, Test it, give it a Provider Name, Add, then Set Active. Saving a provider alone does not enable it.
 
@@ -24,6 +24,8 @@ The bot can explain these controls but cannot inspect or operate your local node
 
 These controls live inside the installed desktop application under the
 **6529 Desktop** sidebar menu. Desktop-only routes are not public website links.
+
+IPFS starts in the background while the main app opens. Fast launches can skip the splash; slower launches show it only after its page has loaded and painted. The app does not wait for splash artwork or a minimum display time.
 
 ## Entry Points
 

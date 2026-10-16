@@ -249,13 +249,11 @@
       document.addEventListener("DOMContentLoaded", function () {
         if (window.splashAPI) {
           var imgEl = document.getElementById("splash-image");
-          if (window.splashAPI.hasSavedCard) {
-          } else {
-            imgEl.src = "./6529.svg";
-            imgEl.onload = function () {
-              imgEl.classList.remove("splash-image-loading");
-            };
-          }
+          // Render a complete fallback while saved or remote artwork arrives.
+          imgEl.onload = function () {
+            imgEl.classList.remove("splash-image-loading");
+          };
+          imgEl.src = "./6529.svg";
           window.splashAPI.onUpdateMessage(function (event, newMessage) {
             updateMessage(newMessage);
           });

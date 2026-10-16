@@ -2326,6 +2326,34 @@ assertContract(
   "Museum build snapshots must pin the public Git ref without anonymous REST API lookup and retain publication validation",
 );
 
+const ipfsContextPath = "renderer/components/ipfs/IPFSContext.tsx";
+const ipfsContextSource = parseSource(ipfsContextPath).text;
+assertContract(
+  ipfsContextSource.includes("onIpfsStatusChange") &&
+    ipfsContextSource.includes("unsubscribe?.()") &&
+    ipfsContextSource.includes("currentRevision !== revision"),
+  ipfsContextPath,
+  "desktop IPFS availability must follow native changes, ignore stale reads and unsubscribe on unmount",
+);
+const desktopIpfsItemPath = "renderer/components/layout/sidebar/nav/DesktopIpfsNavItem.tsx";
+const desktopIpfsItem = parseSource(desktopIpfsItemPath).text;
+assertContract(
+  desktopIpfsItem.includes("aria-disabled") &&
+    desktopIpfsItem.includes("<CircleLoader size={CircleLoaderSize.SMALL}") &&
+    desktopIpfsItem.includes("faTriangleExclamation") &&
+    desktopIpfsItem.includes("event.preventDefault()"),
+  desktopIpfsItemPath,
+  "desktop IPFS menu must keep starting and unavailable states non-navigable with distinct status icons",
+);
+const desktopSectionsPath = "renderer/hooks/useSidebarSections.ts";
+const desktopSections = parseSource(desktopSectionsPath);
+const desktopSection = findFunction(desktopSections, "getDesktopSection");
+assertContract(
+  desktopSection?.getText(desktopSections).includes('id: "desktop-ipfs"'),
+  desktopSectionsPath,
+  "desktop IPFS menu must keep a stable row identity while availability changes",
+);
+
 if (failures.length > 0) {
   console.error("Desktop renderer contract failed:");
   for (const failure of failures) {
