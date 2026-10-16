@@ -44,6 +44,20 @@ jest.mock("@/contexts/wave/MyStreamContext", () => ({
   useMyStreamOptional: jest.fn(),
 }));
 jest.mock("@/hooks/useWaveById", () => ({ useWaveById: jest.fn() }));
+jest.mock("@/components/waves/header/WaveJoinCta", () => ({
+  __esModule: true,
+  default: ({
+    wave,
+    variant,
+  }: {
+    readonly wave: { readonly id: string };
+    readonly variant?: string;
+  }) => (
+    <div data-testid="wave-join-cta" data-variant={variant}>
+      {wave.id}
+    </div>
+  ),
+}));
 jest.mock("@/hooks/useWave", () => ({ useWave: jest.fn() }));
 jest.mock("@/hooks/useWaveViewMode", () => ({ useWaveViewMode: jest.fn() }));
 jest.mock("@/components/navigation/BackButton", () => ({
@@ -490,6 +504,29 @@ describe("AppHeader", () => {
     });
     expect(screen.getByTestId("back")).toBeInTheDocument();
     expect(screen.getByText("WaveOne")).toBeInTheDocument();
+  });
+
+  it("offers the wave Join action in the native header inside a wave", () => {
+    setup({
+      address: "0xabc",
+      wave: {
+        id: "w1",
+        name: "WaveOne",
+        chat: { scope: { group: { is_direct_message: false } } },
+      },
+      query: { wave: "w1" },
+      asPath: "/waves/w1",
+    });
+
+    const joinCta = screen.getByTestId("wave-join-cta");
+    expect(joinCta).toHaveTextContent("w1");
+    expect(joinCta).toHaveAttribute("data-variant", "app-header");
+  });
+
+  it("does not offer a wave Join action outside a wave", () => {
+    setup({ asPath: "/waves" });
+
+    expect(screen.queryByTestId("wave-join-cta")).toBeNull();
   });
 
   it("shows a linked parent wave for an active subwave", () => {
@@ -1160,9 +1197,7 @@ describe("AppHeader", () => {
       waveInfo: { isRankWave: false, isMemesWave: false, isDm: false },
     });
 
-    expect(
-      screen.getByRole("button", { name: "Show wave description" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^About / })).toBeInTheDocument();
     const subtitle = screen.getByText("A chill place to discuss drops");
     expect(subtitle).toBeInTheDocument();
     expect(subtitle).toHaveClass("tw-truncate");

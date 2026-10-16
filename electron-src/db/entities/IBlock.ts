@@ -12,7 +12,7 @@ export interface Block {
 }
 
 export abstract class SingletonBlockEntity {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: "int" })
   id: number = 1;
 
   @Column({ type: "int" })

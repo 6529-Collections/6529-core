@@ -1,4 +1,7 @@
 "use client";
+import { useWaveInformation } from "@/contexts/WaveInformationContext";
+import { useWaveById } from "@/hooks/useWaveById";
+import WaveInformationSheet from "@/components/brain/mobile/WaveInformationSheet";
 
 import useCreateModalState from "@/hooks/useCreateModalState";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -20,6 +23,7 @@ import BrainRightSidebar, {
 import CreateWaveModal from "../waves/create-wave/CreateWaveModal";
 import { isCreateWavePathname } from "@/helpers/waves/create-wave-route.helpers";
 import { WaveChatScrollProvider } from "@/contexts/wave/WaveChatScrollContext";
+import { useMyStreamOptional } from "@/contexts/wave/MyStreamContext";
 import { useClosingDropId } from "@/hooks/useClosingDropId";
 import {
   DROP_DETAIL_STALE_TIME_MS,
@@ -51,6 +55,12 @@ interface WavesMessagesWrapperProps {
   readonly showLeftSidebar?: boolean | undefined;
 }
 
+function getValidDropId(rawDropId: string | null): string | undefined {
+  return rawDropId && /^[a-zA-Z0-9-_]+$/.test(rawDropId)
+    ? rawDropId
+    : undefined;
+}
+
 const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
   children,
   defaultPath = "/waves",
@@ -66,19 +76,47 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
   const { contentContainerStyle } = useLayout();
 
   // Get global sidebar state
-  const { isRightSidebarOpen, closeRightSidebar } = useSidebarState();
+  const { isRightSidebarOpen, closeRightSidebar, openRightSidebar } =
+    useSidebarState();
+  const information = useWaveInformation();
   const { connectedProfile } = useAuth();
   const { isWaveModalOpen, close } = useCreateModalState();
+  const requestMainWavesList = useMyStreamOptional()?.requestMainWavesList;
+  const isWavesSurface = defaultPath === "/waves";
+
+  // Waves pages read the main list even when the sidebar is hidden (mobile
+  // web wave view), so the layout requests it. Messages pages show DMs only.
+  useEffect(() => {
+    if (!isWavesSurface) {
+      return;
+    }
+
+    return requestMainWavesList?.();
+  }, [isWavesSurface, requestMainWavesList]);
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>(SidebarTab.ABOUT);
 
-  const rawDropId = searchParams.get("drop") ?? undefined;
+  const rawDropId = searchParams.get("drop");
   const waveId =
     getActiveWaveIdFromUrl({ pathname, searchParams }) ?? undefined;
+  const informationOpen =
+    information?.request?.overlay && information.request.waveId === waveId;
+  const informationWave = useWaveById(waveId ?? null, {
+    enabled: Boolean(informationOpen),
+  });
+
+  useEffect(
+    () =>
+      information?.registerDesktopHandler((requestedWaveId) => {
+        if (requestedWaveId !== waveId) return;
+        setSidebarTab(SidebarTab.ABOUT);
+        openRightSidebar();
+      }),
+    [information, waveId, openRightSidebar, setSidebarTab]
+  );
 
   // Validate drop ID format (assuming alphanumeric + hyphens)
-  const dropId =
-    rawDropId && /^[a-zA-Z0-9-_]+$/.test(rawDropId) ? rawDropId : undefined;
+  const dropId = getValidDropId(rawDropId);
   const { effectiveDropId, beginClosingDrop } = useClosingDropId(dropId);
 
   // Check if we're on mobile (below LG breakpoint)
@@ -214,11 +252,18 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
           </div>
         </div>
       </div>
-      {connectedProfile && (
+      {isWaveModalOpen && (
         <CreateWaveModal
           isOpen={isWaveModalOpen}
           onClose={close}
           profile={connectedProfile}
+        />
+      )}
+      {informationOpen && informationWave.wave?.id === waveId && (
+        <WaveInformationSheet
+          key={information.request.id}
+          wave={informationWave.wave}
+          onClose={information.close}
         />
       )}
     </WaveChatScrollProvider>

@@ -1,3 +1,4 @@
+import type { ConsolidationSettingsRequest } from "./workers/tdh-worker/consolidation-policy";
 import Logger from "electron-log";
 import {
   ResettableScheduledWorker,
@@ -13,9 +14,7 @@ import {
   createTdhTransactionMutationGuard,
   createTransactionMutationTdhGuard,
 } from "./transaction-mutation-guard";
-import type {
-  TransactionReconciliationState,
-} from "./workers/transactions-worker/transactions-worker.db";
+import type { TransactionReconciliationState } from "./workers/transactions-worker/transactions-worker.db";
 import { getTdhRestartAction } from "./workers/tdh-worker/tdh-restart";
 
 const DEFAULT_BLOCK_RANGE = 500;
@@ -95,9 +94,9 @@ export function startSchedulers(
     action?: string,
     statusPercentage?: number,
   ) => void,
-  pendingTransactionReconciliation: TransactionReconciliationState | null =
-    null,
+  pendingTransactionReconciliation: TransactionReconciliationState | null = null,
   incompleteTdhRun = false,
+  consolidationSettingsRequest?: ConsolidationSettingsRequest,
 ) {
   if (!logDirectory) {
     throw new Error("Log directory is required");
@@ -154,6 +153,14 @@ export function startSchedulers(
         logDirectory,
         postWorkerUpdate,
         worker.filePath,
+      );
+    }
+    if (
+      worker.name === ScheduledWorkerNames.TDH_WORKER ||
+      worker.name === ScheduledWorkerNames.NFT_DELEGATION_WORKER
+    ) {
+      scheduledWorker.setConsolidationSettingsRequest(
+        consolidationSettingsRequest,
       );
     }
     scheduledWorkers.push(scheduledWorker);

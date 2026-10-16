@@ -413,6 +413,21 @@ describe("fetchWaveDropsFeedV2", () => {
     expect(result.drops[0]?.poll).toEqual(poll);
   });
 
+  it("carries collapsed-thread reply counts onto hydrated drops", async () => {
+    commonApiFetchMock.mockResolvedValueOnce({
+      wave,
+      drops: [{ ...createDrop(1), replies_count: 3 }, createDrop(2)],
+    });
+
+    const result = await fetchWaveDropsFeedV2({
+      waveId: "wave-1",
+      limit: 20,
+    });
+
+    expect(result.drops[0]).toMatchObject({ replies_count: 3 });
+    expect(result.drops[1]).not.toHaveProperty("replies_count");
+  });
+
   it("preserves no-negative vote waves on feed and drop results", async () => {
     commonApiFetchMock.mockResolvedValueOnce({
       wave: {
@@ -496,6 +511,27 @@ describe("fetchWaveDropsFeedV2", () => {
       (result.drops[0] as { readonly over_threshold_since_ms?: number })
         ?.over_threshold_since_ms
     ).toBeUndefined();
+  });
+
+  it("preserves missing winner-history availability during leaderboard hydration", () => {
+    const original = createEnrichableDrop();
+    const voting = {
+      ...original.submission_context.voting,
+      voters_count: 0,
+      voters_count_available: false,
+    };
+    const mapped = mapLeaderboardDropV2({
+      drop: {
+        ...original,
+        submission_context: { ...original.submission_context, voting },
+      } as unknown as ApiDropV2,
+      wave: waveMin,
+    });
+    expect(mapped).toMatchObject({
+      raters_count: 0,
+      voters_count_available: false,
+      rating: 10,
+    });
   });
 
   it("maps V2 priority metadata into leaderboard legacy drops", () => {

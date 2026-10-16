@@ -6,6 +6,7 @@ const os = require("node:os");
 const path = require("node:path");
 const asar = require("@electron/asar");
 const { copyResolvedTree } = require("./helpers/copy-resolved-tree.cjs");
+const { getUnpackedPaths, repackAsar } = require("./helpers/repack-asar.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -252,6 +253,7 @@ const resolveResourcesDir = (context) => {
 const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir) => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "6529-afterpack-"));
   try {
+    const unpackedPaths = getUnpackedPaths(asarPath);
     asar.extractAll(asarPath, tempDir);
     for (const { sourceDir, relativePath } of copyEntries) {
       const targetDir = path.join(tempDir, relativePath);
@@ -259,7 +261,7 @@ const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir) => 
     }
     materializePackagedNodeModules(tempDir, projectDir, allowedRoots);
     assertElectronUpdaterRuntime(tempDir);
-    await asar.createPackage(tempDir, asarPath);
+    await repackAsar(tempDir, asarPath, unpackedPaths);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

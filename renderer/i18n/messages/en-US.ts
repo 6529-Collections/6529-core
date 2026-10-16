@@ -1,4 +1,6 @@
 import emmaMessages from "@/i18n/messages/emma.en-US.json";
+import { EN_SUBMISSION_DISCOVERY_MESSAGES } from "@/i18n/messages/submission-discovery";
+import waveCreationMessages from "@/i18n/messages/wave-creation.en-US.json";
 import { COMPETITION_MESSAGES } from "@/i18n/messages/competitions";
 import { EN_US_DROP_METADATA_MESSAGES } from "@/i18n/messages/drop-metadata";
 import { EN_DROP_REQUIREMENT_MESSAGES } from "@/i18n/messages/drop-requirements";
@@ -33,10 +35,15 @@ import museumMessages from "@/i18n/messages/museum.en-US.json";
 import networkMetricsMessages from "@/i18n/messages/networkMetrics.en-US.json";
 import networkTdhMessages from "@/i18n/messages/networkTdh.en-US.json";
 import networkTdhExplainerMessages from "@/i18n/messages/networkTdhExplainer.en-US.json";
+import networkTdhConsolidationMessages from "@/i18n/messages/networkTdhConsolidation.en-US.json";
+import safeCollectingMessages from "@/i18n/messages/safeCollecting.en-US.json";
 import networkTdhExampleMessages from "@/i18n/messages/networkTdhExample.en-US.json";
 import networkTdhProfileMessages from "@/i18n/messages/networkTdhProfile.en-US.json";
 import networkTdhRulesMessages from "@/i18n/messages/networkTdhRules.en-US.json";
+import delegationTapGuideMessages from "@/i18n/messages/delegationTapGuide.en-US.json";
 import toolsMessages from "@/i18n/messages/tools.en-US.json";
+import utcScheduleMessages from "@/i18n/messages/utcSchedule.en-US.json";
+import worldTimeZonesMessages from "@/i18n/messages/worldTimeZones.en-US.json";
 import wavesRightPanelMessages from "@/i18n/messages/wavesRightPanel.en-US.json";
 import { QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
 import { CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
@@ -51,11 +58,14 @@ import { EN_US_RECEIPT_MESSAGES } from "@/i18n/messages/collect-receipts";
 import { CONTENT_MODERATION_MESSAGES } from "@/i18n/messages/content-moderation";
 import { MODERATION_CHECK_MESSAGES } from "@/i18n/messages/moderation-checks";
 import { EULA_MESSAGES } from "@/i18n/messages/eula";
+import { GLOBAL_ERROR_MESSAGES } from "@/i18n/messages/global-error";
 import { PROFILE_CURATION_MESSAGES } from "@/i18n/messages/profile-curation";
 import { ARTWORK_DOCUMENTATION_MESSAGES } from "@/i18n/messages/artwork-documentation";
 import { ARTWORK_DOCUMENTATION_INTEGRATION_MESSAGES } from "@/i18n/messages/artwork-documentation-integration";
 import { COLLECT_MESSAGES } from "@/i18n/messages/collect";
 import { COLLECT_TDH_TARGET_MESSAGES } from "@/i18n/messages/collect-tdh-target";
+import { DROP_FORGE_ADMIN_MESSAGES } from "@/i18n/messages/drop-forge-admins";
+import { DELEGATION_CONSOLIDATION_BUILDER_MESSAGES } from "@/i18n/messages/delegation-consolidation-builder";
 
 type MessageEntry = readonly [key: string, value: string];
 
@@ -261,6 +271,9 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
     "Memes submissions require {amount} REP in {category}.",
   "grant.submissionLookalikeInfo":
     '"{category}" is a separate category. Only {submissionCategory} counts for submissions.',
+  "grant.amountLabel": "REP amount",
+  "grant.availableRepLabel": "Your available REP:",
+  "grant.assignedRepLabel": "Your REP assigned to {name}:",
   "grant.availableRep": "Your available REP: {amount}",
   "grant.assignedRep": "Your REP assigned to {name}: {amount}",
   "grant.actions.grant": "Grant REP",
@@ -468,10 +481,19 @@ const TITLE_CONTEXT_MESSAGES = objectMessages("titleContext", {
 } as const);
 
 const WAVE_NAVIGATION_MESSAGES = objectMessages("wave.navigation", {
+  chat: "Chat",
+  sales: "Sales",
+  myStream: "My Stream",
+  polls: "Polls",
+  loadingSection: "Loading section…",
+  about: "About",
   waveSections: "Wave sections",
   appSections: "App sections",
   loadingSections: "Loading wave sections",
   fallbackCuration: "Curation",
+  myVotes: "My Votes",
+  outcome: "Outcome",
+  faq: "FAQ",
 } as const);
 
 const MY_STREAM_CURATION_MESSAGES = objectMessages("waves.myStream.curation", {
@@ -708,6 +730,25 @@ const WAVE_VOTE_DETAILS_MESSAGES = objectMessages("waves.voteDetails", {
   title: "Votes",
   "trigger.one": "View voters and vote log for {count} voter",
   "trigger.other": "View voters and vote log for {count} voters",
+  "trigger.unavailable":
+    "View vote history; historical voter count unavailable",
+  "voters.unavailable": "Voters unavailable",
+  "voters.unavailableExplanation":
+    "The voter list at the time this winner was decided was not saved. The final score is available. Open {voteLogTab} to view any recorded changes.",
+  "voters.one": "{count} voter",
+  "voters.other": "{count} voters",
+  "voters.tab": "Voters",
+  "logs.tab": "Vote log",
+  "voters.empty": "No voters yet.",
+  "voters.loading": "Loading voters...",
+  "voters.error": "Could not load voters.",
+  "logs.empty": "No vote changes yet.",
+  "logs.loading": "Loading vote log...",
+  "logs.error": "Could not load vote log.",
+  retry: "Try again",
+  close: "Close votes",
+  tabsLabel: "Vote details",
+  total: "{value} {unit} total",
 } as const);
 
 const WAVE_DROP_ACTIONS_MESSAGES = objectMessages("waves.drop.actions", {
@@ -1054,8 +1095,9 @@ const USER_PROFILE_IDENTITY_STATEMENT_MESSAGES = objectMessages(
     verificationDialogTitle: "Add verification post",
     desktopTitle: "Add Statements About Your Identity",
     mobileDescription: "Choose a type to add to your public profile.",
+    privacyNotice: "Statements are optional and fully and permanently public.",
     desktopDescription:
-      "Seize users can make statements asserting their identity (eponymous, pseudonymous or organizational). It is up to the community to evaluate if they are accurate.",
+      "6529 users can make statements asserting their identity (eponymous, pseudonymous or organizational).",
     socialTitle: "Social Media Accounts",
     socialDescription: "Your handle on social media platforms.",
     nftTitle: "NFT Accounts",
@@ -1068,7 +1110,7 @@ const USER_PROFILE_IDENTITY_STATEMENT_MESSAGES = objectMessages(
     caveatOptional: "All statements are optional.",
     caveatPublic: "All statements are fully and permanently public.",
     caveatNoVerification:
-      "Seize does not connect to social media accounts or verify posts.",
+      "6529 does not connect to social media accounts or verify posts.",
     caveatCommunityRates: "The community will rate the accuracy of statements.",
   } as const
 );
@@ -1077,6 +1119,7 @@ const USER_PROFILE_IDENTITY_STATEMENTS_MESSAGES = objectMessages(
   "user.profile.identity.statements",
   {
     heading: "{name} ID Statements",
+    walletHeading: "{name} Wallet",
     description: "Public identity links and consolidated wallet addresses.",
     consolidatedAddresses: "Consolidated addresses",
     help: "About identity statements",
@@ -1085,7 +1128,13 @@ const USER_PROFILE_IDENTITY_STATEMENTS_MESSAGES = objectMessages(
     retry: "Try again",
     add: "Add",
     walletChecker: "Wallet Checker",
-    delegationCenter: "Delegation Center",
+    addWallet: "Add another wallet",
+    addWalletDescription:
+      "Link another wallet you control. Your NFTs stay in their wallets.",
+    walletCount: "{count} of {limit} addresses",
+    walletLimitReached:
+      "This consolidation has the maximum of {limit} wallets.",
+    delegationCenter: "Safe Collecting",
     primary: "Primary",
     setPrimary: "Set primary",
     settingPrimary: "Setting primary",
@@ -1114,6 +1163,8 @@ const USER_PROFILE_IDENTITY_STATEMENTS_MESSAGES = objectMessages(
     deleteStatement: "Delete",
     copied: "Copied!",
     socialMediaAccounts: "Social media accounts",
+    socialAccountsDisclaimer:
+      "Social accounts are self-declared. 6529 does not connect to social media accounts or verify account ownership or posts.",
     nftAccounts: "NFT accounts",
     contact: "Contact",
     verificationPosts: "Social media verification posts",
@@ -1123,7 +1174,7 @@ const USER_PROFILE_IDENTITY_STATEMENTS_MESSAGES = objectMessages(
     noVerificationPosts: "No verification posts added yet.",
     addTitle: "Add an ID statement",
     addDescription:
-      "Choose what you want to add. Every statement is public and the community decides whether it is accurate.",
+      "Choose what you want to add. Statements are optional and fully and permanently public.",
     addSocialTitle: "Social media account",
     addSocialDescription: "Share your profile on a social platform.",
     addNftTitle: "NFT account",
@@ -1152,7 +1203,7 @@ const USER_PROFILE_IDENTITY_STATEMENTS_MESSAGES = objectMessages(
     optional: "All statements are optional.",
     permanentlyPublic: "All statements are fully and permanently public.",
     noVerification:
-      "Seize does not connect to social media accounts or verify posts.",
+      "6529 does not connect to social media accounts or verify posts.",
     communityRates: "The community will rate statement accuracy.",
     addSuccess: "ID statement added.",
     addErrorTitle: "Couldn’t add this ID statement.",
@@ -1355,7 +1406,26 @@ const QUICK_DM_MESSAGES = objectMessages("quickDm", {
   chatTitleFallback: "Messages",
   closeAriaLabel: "Close quick direct messages",
   newDirectMessageAriaLabel: "New direct message",
-  createModalTitle: "New Direct Message",
+  createModalTitle: "New message",
+  recipientLabel: "To:",
+  recipientAddMore: "Add more",
+  recipientRemove: "Remove {name}",
+  recipientPeople: "People",
+  recipientLoading: "Searching for people",
+  recipientResults: "People found: {count}",
+  recipientEmpty: "No one found for “{query}”",
+  recipientSearchError: "Couldn't search for people. Please try again.",
+  recipientRetry: "Retry search",
+  recipientLevel: "Level {level}",
+  recipientLevelTdh: "Level {level} · {tdh} TDH",
+  recipientOption: "{name} {details}",
+  createMessage: "Message",
+  createMessagePerson: "Message {name}",
+  createMessagePeople: "Message {count} people",
+  creating: "Creating...",
+  createSelfIncluded: "You are already included in this direct message.",
+  createSelfRemove: "You can't remove yourself from this direct message.",
+  createError: "Couldn't create this direct message.",
   createModalCloseAriaLabel: "Close new direct message modal",
   backAriaLabel: "Back to direct message list",
   backUnreadAriaLabel: "Back to direct message list, unread messages available",
@@ -1429,6 +1499,22 @@ const WAVE_HEADER_MESSAGES = objectMessages("waves.header", {
   "postLabel.inProgress": "Posting",
   "postLabel.one": "Post",
   "postLabel.other": "Posts",
+} as const);
+
+const WAVE_JOIN_MESSAGES = objectMessages("waves.join", {
+  action: "Join",
+  actionAriaLabel: "Join {waveName}",
+  actionTooltip: "Add this wave to your Joined list",
+  joined: "Joined",
+  joinedAnnouncement: "You joined {waveName}.",
+  signInTooltip: "Connect a wallet to join this wave",
+  joinErrorTitle: "Couldn't join this wave.",
+  leaveErrorTitle: "Couldn't leave this wave.",
+  allMessagesErrorTitle:
+    "Joined, but notifications for every message couldn't be turned on.",
+  allMessagesErrorDescription:
+    "Turn them on from the bell menu in the wave's About panel.",
+  errorDescription: PLEASE_TRY_AGAIN,
 } as const);
 
 const WAVE_DROP_ELIGIBILITY_MESSAGES = objectMessages("waves.dropEligibility", {
@@ -1566,6 +1652,16 @@ const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
   "validation.invalidTitle": "Some access groups need attention.",
   "validation.invalidDescription":
     "Every Drop, Vote, Chat, and Admins group member must also belong to the Visibility group.",
+  criteriaLabel: "Group criteria",
+  "inlineIdentities.loadingProfiles": "Loading profiles…",
+  "inlineIdentities.profileError":
+    "Some profiles could not be loaded. You can still edit their wallets.",
+  "inlineIdentities.retryProfiles": "Retry profile lookup",
+  "inlineIdentities.walletLabel": "Wallet {wallet}",
+  "inlineIdentities.removeWallet": "Remove {name}, wallet {wallet}",
+  "inlineIdentities.page": "Wallets {start}–{end} of {total}",
+  "inlineIdentities.previous": "Previous wallets",
+  "inlineIdentities.next": "Next wallets",
   "inlineIdentities.modeLabel": "Identity treatment",
   "inlineIdentities.included.label": "Included",
   "inlineIdentities.included.searchLabel": "Find an identity to include",
@@ -1822,6 +1918,8 @@ const WAVE_CREATE_ACTIONS_MESSAGES = objectMessages("waves.create.actions", {
   complete: "Complete",
   create: "Create",
   createMenuHeader: "Create",
+  curationDescription: "Collect drops in a custom view",
+  subwaveDescription: "Start a separate space within this wave",
   next: "Next",
   newCuration: "New curation",
   newSubwave: "New subwave",
@@ -2087,6 +2185,17 @@ const WAVE_CHAT_MESSAGES = objectMessages("waves.chat", {
   "replyTargetUnavailableToast.detailsKept":
     "Your current draft was not changed.",
   "replyTargetUnavailableToast.actionReviewDraft": "Review draft",
+  repliesOnlyPlaceholder:
+    "Only chat members can start new drops here. You can reply to any drop.",
+  "replyThread.showOne": "Show 1 reply",
+  "replyThread.showMany": "Show {count} replies",
+  "replyThread.hide": "Hide replies",
+  "replyThread.regionLabel": "Replies to this drop",
+  "replyThread.loading": "Loading replies…",
+  "replyThread.loadEarlier": "Show earlier replies",
+  "replyThread.empty": "No replies to show.",
+  "replyThread.error": "Couldn't load replies.",
+  "replyThread.retry": "Retry",
 } as const);
 
 const WAVE_COMPOSER_ACTION_MESSAGES = objectMessages("waves.composer.actions", {
@@ -2177,6 +2286,18 @@ const NETWORK_GROUP_INSPECTION_MESSAGES = objectMessages(
     bulkRep: "REP everyone matching criteria",
     bulkNic: "NIC everyone matching criteria",
     bulkActionsLabel: "Bulk rating actions",
+    add: "Add",
+    subtract: "Subtract",
+    grant: "Grant",
+    cancel: "Cancel",
+    repCategory: "Rep Category",
+    clearCategory: "Clear category",
+    repCategoryRequired: "Please enter rep category",
+    creditSummary:
+      "You can grant up to {credit} {matter} to each of {count} members of the group.",
+    progress: "{matter} Progress",
+    keepOpen:
+      "Keep this window open while we distribute credits across the group.",
     bulkRepSuccess: "REP distributed.",
     bulkNicSuccess: "NIC distributed.",
     source: "Source: filters + optional manual list",
@@ -2187,7 +2308,22 @@ const NETWORK_GROUP_INSPECTION_MESSAGES = objectMessages(
   } as const
 );
 
+const NETWORK_HEADER_ACTION_MESSAGES = objectMessages("network.actions", {
+  openFilters: "Open group filters",
+  openSort: "Open sort options",
+  openNerd: "Open Nerd view",
+} as const);
+
 const NETWORK_GROUP_FILTER_MESSAGES = objectMessages("network.groupFilter", {
+  filter: "Filter",
+  all: "All filters",
+  level: "Level",
+  tdh: "TDH",
+  nic: "NIC",
+  rep: "Rep",
+  nfts: "Required NFTs",
+  collections: "Collection Access",
+  xtdhGrant: "xTDH Grant",
   title: "Filter Network",
   suggestedName: "Network filter",
   defaultLabel: "All Network members",
@@ -2199,6 +2335,7 @@ const NETWORK_GROUP_FILTER_MESSAGES = objectMessages("network.groupFilter", {
 
 const WAVE_LOADING_MESSAGES = objectMessages("waves", {
   loadingStatus: "Loading waves",
+  "drops.editorLoadingStatus": "Loading editor",
 } as const);
 
 const WAVE_DROPS_SEARCH_MODAL_MESSAGES = objectMessages(
@@ -2424,7 +2561,7 @@ const ABOUT_TECH_MESSAGES = objectMessages("about.tech", {
   "index.longUpdates":
     "Long updates, repo analysis, bot context, and links back into the wave conversation.",
   "index.liveActivity":
-    "Shorter live repo activity still belongs in {followTheRepo}. This page is the linkable longer-form shelf beside it.",
+    "{followTheRepo} is the dev team's live chat. Anyone can read it, and its subwaves carry the deploy and GitHub PR feeds. This page is the linkable longer-form shelf beside it.",
   "index.followTheRepo": "Follow The Repo",
   "index.activeTechnicalNotes": "Active Technical Notes",
   "index.authChanges": "Auth changes",
@@ -2442,6 +2579,8 @@ const ABOUT_TECH_MESSAGES = objectMessages("about.tech", {
   "report.daily": "Daily",
   "report.prCount": "{count} PRs",
   "report.repoSummary": "{focus}. {count} PRs, {stateSummary}.",
+  "report.liveActivity":
+    "For live updates, see {followTheRepo}, the dev team's live chat. Anyone can read it, and its subwaves carry the deploy and GitHub PR feeds.",
   "report.tocDescription":
     "This report is split by repository. Use this index to jump directly to the area you want, or read through from the frontend app work into backend, Stream contracts, Safe app hardening, and review bot updates.",
   "walletAuth.metadata.title": "Wallet Authentication Update",
@@ -2528,6 +2667,25 @@ const REVIEWBOT_USAGE_MESSAGES = objectMessages("reviewbotUsage", {
 } as const);
 
 const ATTACHMENT_MESSAGES = namespaceMessages("attachment", [
+  ["pdf.pages", "PDF pages"],
+  ["pdf.pageHeading", "Page {page}"],
+  ["pdf.loading", "Loading PDF…"],
+  ["pdf.loadingPage", "Loading page…"],
+  [
+    "pdf.error",
+    "This PDF could not be previewed. Try again or open the full PDF.",
+  ],
+  [
+    "pdf.tooLarge",
+    "This PDF is too large for this preview. Open the full PDF to read it.",
+  ],
+  [
+    "pdf.password",
+    "This PDF requires a password. Open the full PDF to read it.",
+  ],
+  ["pdf.open", "Open full PDF"],
+  ["pdf.retry", "Try again"],
+  ["pdf.page", "Page {page} of {total}"],
   ["safety.ariaLabel", "Scanned and validated attachment"],
   ["safety.badge", "Scanned and validated"],
   ["safety.heading", "Attachment safety"],
@@ -2672,9 +2830,14 @@ const IDENTITY_FILTER_MESSAGES = objectMessages("identityFilter", {
 } as const);
 
 const XTDH_COLLECTION_MESSAGES = objectMessages("xtdh.collections", {
+  loading: "Loading collections",
   "search.emptyDescription":
     "Try another collection name or clear the search to see all collections.",
   "search.emptyTitle": "No collections found for “{query}”",
+} as const);
+
+const XTDH_GRANT_MESSAGES = objectMessages("xtdh.grant", {
+  "lastGrant.label": "Last grant",
 } as const);
 
 const COLLECTION_DELEGATION_MESSAGES = objectMessages("delegation.collection", {
@@ -2686,7 +2849,7 @@ const COLLECTION_DELEGATION_MESSAGES = objectMessages("delegation.collection", {
   "scope.memeLab": "Records here apply only to Meme Lab.",
   "scope.gradient": "Records here apply only to 6529 Gradient.",
   "scope.selected": "Records here apply to the selected collection scope.",
-  "navigation.back": "Back to Delegation Center",
+  "navigation.back": "Back to Safe Collecting",
   "connect.title": "Connect Wallet to Manage {collection}",
   "connect.description":
     "Connect the wallet whose outgoing and incoming records you want to review.",
@@ -2722,6 +2885,9 @@ const COLLECTION_DELEGATION_MESSAGES = objectMessages("delegation.collection", {
   "row.status.incomplete": "consolidation incomplete",
   "row.status.unavailable": "consolidation status unavailable",
   "row.consolidationMissing": "{label} consolidation missing",
+  "row.expiry.nonExpiring": "active - non-expiring",
+  "row.expiry.expired": "expired",
+  "row.expiry.active": "active - expires {date}",
   "row.label.incoming": "Incoming",
   "row.label.outgoing": "Outgoing",
   "outgoing.selectBulk": "Select {wallet} for bulk revoke",
@@ -2806,6 +2972,17 @@ const COLLECTION_DELEGATION_MESSAGES = objectMessages("delegation.collection", {
     "Register Consolidation from {from} to {to}",
 } as const);
 
+const DELEGATION_EXPIRY_MESSAGES = objectMessages("delegation.expiry", {
+  inputLabel: "Expiry Date",
+  timeZone:
+    "The delegation ends at the end of the selected day in your time zone ({zone}).",
+  preview: "Expires {local} ({utc})",
+  previewEmpty: "Select a date to see the exact expiry time.",
+  "error.missing": "Missing or invalid Expiry",
+  "error.tooSoon":
+    "Choose a later expiry date. The delegation must stay active for at least 1 hour after you submit.",
+} as const);
+
 const HEADER_SEARCH_MESSAGES = objectMessages("headerSearch", {
   "wave.byAuthor": "by {author}",
   "wave.serial": "Wave #{serial}",
@@ -2868,6 +3045,12 @@ const OPEN_DATA_DOWNLOAD_MESSAGES = objectMessages("openData.downloads", {
   "columns.date": "Date",
   "columns.link": "Link",
   "columns.tokenId": "Token ID",
+} as const);
+
+const DATE_PICKER_MESSAGES = objectMessages("datePicker", {
+  utcNote:
+    "Dates are in UTC. The latest date you can select is today in UTC.",
+  afterTodayError: "Dates cannot be later than today in UTC.",
 } as const);
 
 const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
@@ -2934,9 +3117,33 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 
 export const EN_US_MESSAGES = {
+  "network.prenodes.title": "Prenodes",
+  "network.prenodes.pageTitle": "Prenodes | Network",
+  "network.prenodes.deprecation":
+    "6529 Prenodes have been deprecated. Use the 6529 Desktop app to calculate TDH.",
+  "network.prenodes.desktopLink": "Explore 6529 Desktop",
+  "tokenList.thumbnail.loading": "Loading thumbnail",
+  "tokenList.thumbnail.failed": "Failed to load thumbnail",
+  "tokenList.thumbnail.error": "Load Error",
+  "tokenList.thumbnail.tokenId": "#{tokenId}",
+  "header.menu.open": "Open menu",
+  "header.menu.close": "Close menu",
+  "header.navigation.loading": "Loading navigation…",
+  "waves.information.open": "About {name}",
+  ...EN_SUBMISSION_DISCOVERY_MESSAGES,
+  ...waveCreationMessages,
   ...COMPETITION_MESSAGES,
   ...EN_DROP_REQUIREMENT_MESSAGES,
   ...EN_US_DROP_METADATA_MESSAGES,
+  ...DELEGATION_CONSOLIDATION_BUILDER_MESSAGES,
+  "delegation.consolidation.instructions.title":
+    "Every pair of wallets · both directions",
+  "delegation.consolidation.instructions.steps":
+    "A consolidation holds up to {limit} wallets. Each wallet registers a link to every other wallet, so every wallet signs and needs ETH for gas.",
+  "delegation.consolidation.instructions.guided":
+    "Use guided setup: one transaction per wallet, in the safe order",
+  "delegation.consolidation.instructions.publicLink":
+    "The link is public. Existing profile data may be combined.",
   "drop.composer.image": "Image",
   "drop.composer.selectImage": "Select image",
   "drop.composer.removeImage": "Remove image",
@@ -3008,6 +3215,7 @@ export const EN_US_MESSAGES = {
   ...artworkShareMessages,
   ...COLLECT_MESSAGES,
   ...COLLECT_TDH_TARGET_MESSAGES,
+  ...DROP_FORGE_ADMIN_MESSAGES,
   ...profileCmsStudioMessages,
   ...profileCmsAgentMessages,
   ...studioTemplateDescriptions,
@@ -3152,7 +3360,9 @@ export const EN_US_MESSAGES = {
   "linkPreview.twitter.article.read": "Read article: {title}",
   ...IDENTITY_FILTER_MESSAGES,
   ...XTDH_COLLECTION_MESSAGES,
+  ...XTDH_GRANT_MESSAGES,
   ...COLLECTION_DELEGATION_MESSAGES,
+  ...DELEGATION_EXPIRY_MESSAGES,
   ...join6529Messages,
   "nextgen.brand": "NextGen",
   "nextgen.navigation.featured": "Featured",
@@ -3628,6 +3838,11 @@ export const EN_US_MESSAGES = {
   "theMemes.description.collections": "Collections",
   "theMemes.mint.metadata.description":
     "View the latest mint from The Memes collection.",
+  "theMemes.mint.openWebMint": "Mint on 6529.io",
+  "theMemes.mint.connect.connectedProfile": "Connected Profile",
+  "theMemes.mint.connect.profileStats": "TDH: {tdh} - Level: {level}",
+  "theMemes.mint.connect.mintForMe": "Mint for me",
+  "theMemes.mint.connect.mintForFren": "Mint for fren",
   "theMemes.title": "The Memes",
   "theMemes.sorting.regionLabel": "Meme sorting",
   "theMemes.sorting.sortBy": "Sort by",
@@ -3789,6 +4004,8 @@ export const EN_US_MESSAGES = {
   "user.collected.cards.listLabel": "Collected cards",
   "user.collected.navigation.backToCollected": "Back to {profile}'s collected",
   "user.collected.empty.noCards": "No cards to display",
+  "user.collected.empty.filtered": "No artwork matches these filters.",
+  "user.collected.empty.clearFilters": "Clear filters",
   "user.collected.empty.fullSetter": "Congratulations, full setter!",
   "user.collected.empty.memesFullSetter":
     "Congratulations, The Memes full setter!",
@@ -4315,10 +4532,12 @@ export const EN_US_MESSAGES = {
   ...WAVE_CHAT_SETTINGS_MESSAGES,
   ...NETWORK_GROUP_INSPECTION_MESSAGES,
   ...NETWORK_GROUP_FILTER_MESSAGES,
+  ...NETWORK_HEADER_ACTION_MESSAGES,
   ...WAVE_LOADING_MESSAGES,
   ...WAVE_DROPS_SEARCH_MODAL_MESSAGES,
   ...WAVE_GIF_PICKER_MESSAGES,
   ...WAVE_HEADER_MESSAGES,
+  ...WAVE_JOIN_MESSAGES,
   ...WAVE_DROP_ELIGIBILITY_MESSAGES,
   ...WAVE_NOTIFICATION_SETTINGS_MESSAGES,
   ...WAVE_CREATE_ACTIONS_MESSAGES,
@@ -4354,6 +4573,7 @@ export const EN_US_MESSAGES = {
   ...WAVE_REP_MODAL_MESSAGES,
   ...WAVE_REP_DETAILS_MESSAGES,
   ...PROFILE_ACTIVITY_RATE_MESSAGES,
+  "profileActivity.loading": "Loading activity log",
   ...USER_RATE_MESSAGES,
   ...aboutMessages,
   ...emmaSnapshotsMessages,
@@ -4362,10 +4582,15 @@ export const EN_US_MESSAGES = {
   ...networkMetricsMessages,
   ...networkTdhMessages,
   ...networkTdhExplainerMessages,
+  ...networkTdhConsolidationMessages,
+  ...safeCollectingMessages,
   ...networkTdhExampleMessages,
   ...networkTdhProfileMessages,
   ...networkTdhRulesMessages,
+  ...delegationTapGuideMessages,
   ...toolsMessages,
+  ...utcScheduleMessages,
+  ...worldTimeZonesMessages,
   ...ABOUT_TECH_MESSAGES,
   ...REVIEWBOT_USAGE_MESSAGES,
   ...REMEMES_DETAIL_MESSAGES,
@@ -4383,12 +4608,14 @@ export const EN_US_MESSAGES = {
   ...COMMON_MESSAGES,
   ...EN_US_PAGINATION_MESSAGES,
   ...OPEN_DATA_DOWNLOAD_MESSAGES,
+  ...DATE_PICKER_MESSAGES,
   ...MEME_DATA_TABLE_MESSAGES,
   ...HEADER_SEARCH_MESSAGES,
   ...NEW_VERSION_TOAST_MESSAGES,
   ...NAVIGATION_MESSAGES,
   ...PUBLIC_REVIEW_MESSAGES,
   ...EULA_MESSAGES,
+  ...GLOBAL_ERROR_MESSAGES,
   ...TITLE_CONTEXT_MESSAGES,
   ...WAVE_NAVIGATION_MESSAGES,
   ...MY_STREAM_CURATION_MESSAGES,

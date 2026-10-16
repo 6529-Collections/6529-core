@@ -1,15 +1,11 @@
+import type { ConsolidationPolicy } from "./consolidation-policy";
 import { DataSource, In, LessThanOrEqual, Like, MoreThan } from "typeorm";
 import {
-  CONSOLIDATIONS_LIMIT,
   CONSOLIDATIONS_TABLE,
   TDH_BLOCKS_TABLE,
   WALLETS_TDH_TABLE,
 } from "../../../../electron-constants";
-import {
-  areEqualAddresses,
-  buildConsolidationKey,
-  isNullAddress,
-} from "../../../../shared/helpers";
+import { isNullAddress } from "../../../../shared/helpers";
 import { Transaction } from "../../../db/entities/ITransaction";
 import {
   ConsolidatedTDH,
@@ -21,7 +17,7 @@ import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { batchSave, batchUpsert } from "../../worker-helpers";
 import { getMerkleRoot } from "./tdh-worker.merkle";
-import { Consolidation } from "../../../db/entities/IDelegation";
+import { consolidationTools, ConsolidationLink } from "./consolidation-tools";
 import { preserveEditionSizeFloors } from "../nft-edition-size-floor-persistence";
 
 export async function fetchAllConsolidationAddresses(db: DataSource) {
@@ -64,7 +60,9 @@ export function getConsolidationsSql(wallet: string) {
       LOWER(wallet1) AS wallet1,
       LOWER(wallet2) AS wallet2,
       block,
-      created_at
+      created_at,
+      wallet1_registered_at,
+      wallet2_registered_at
     FROM ${CONSOLIDATIONS_TABLE}
     WHERE confirmed = true
       AND (
@@ -80,7 +78,7 @@ export function getConsolidationsSql(wallet: string) {
           SELECT wallet2 FROM wallet_cluster
         )
       )
-    ORDER BY block DESC
+    ORDER BY block DESC, LOWER(wallet1), LOWER(wallet2)
   `;
 
   const params = [wallet.toLowerCase()];
@@ -90,123 +88,63 @@ export function getConsolidationsSql(wallet: string) {
 
 export async function retrieveWalletConsolidations(
   db: DataSource,
-  wallet: string
+  wallet: string,
+  policy: ConsolidationPolicy,
 ) {
   const { sql, params } = getConsolidationsSql(wallet);
   const consolidations: any[] = await db.query(sql, params);
-  return extractConsolidationWallets(consolidations, wallet);
+  return extractConsolidationWallets(consolidations, wallet, policy);
 }
 
 export function extractConsolidationWallets(
-  consolidations: any[],
-  wallet: string
+  consolidations: ConsolidationLink[],
+  wallet: string,
+  policy: ConsolidationPolicy,
 ): string[] {
-  const clusters = extractConsolidations(consolidations);
-  const walletCluster = clusters.find((c) =>
-    c.some((w) => areEqualAddresses(w, wallet))
+  return consolidationTools.extractConsolidationWallets(
+    consolidations.map((c) => ({
+      ...c,
+      wallet1: c.wallet1.toLowerCase(),
+      wallet2: c.wallet2.toLowerCase(),
+    })),
+    wallet.toLowerCase(),
+    policy,
   );
-  if (walletCluster) {
-    return walletCluster;
-  }
-  return [wallet];
 }
 
-function extractConsolidations(consolidations: Consolidation[]): string[][] {
-  // Sort by block descending
-  consolidations.sort((a, b) => b.block - a.block);
-
-  const usedWallets = new Set<string>();
-  const clusters: string[][] = [];
-
-  // Create a quick lookup of all direct consolidations
-  const consolidationSet = new Set<string>();
-  for (const c of consolidations) {
-    consolidationSet.add(buildConsolidationKey([c.wallet1, c.wallet2]));
-  }
-
-  // Convert consolidations into a queue
-  const queue = [...consolidations];
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const { wallet1, wallet2 } = current;
-
-    if (usedWallets.has(wallet1) || usedWallets.has(wallet2)) {
-      continue;
-    }
-
-    const cluster = new Set<string>();
-    cluster.add(wallet1);
-    cluster.add(wallet2);
-
-    let changed = true;
-
-    // Keep trying to expand this cluster
-    while (changed && cluster.size < CONSOLIDATIONS_LIMIT) {
-      changed = false;
-
-      for (let i = 0; i < queue.length; i++) {
-        const candidate = queue[i];
-        const { wallet1: w1, wallet2: w2 } = candidate;
-
-        let newWallet: string | null = null;
-
-        if (cluster.has(w1) && !cluster.has(w2) && !usedWallets.has(w2)) {
-          newWallet = w2;
-        } else if (
-          cluster.has(w2) &&
-          !cluster.has(w1) &&
-          !usedWallets.has(w1)
-        ) {
-          newWallet = w1;
-        }
-
-        if (newWallet) {
-          const safeWallet = newWallet.toLowerCase();
-          const allConnectionsExist = Array.from(cluster).every((existing) =>
-            consolidationSet.has(buildConsolidationKey([existing, safeWallet]))
-          );
-
-          if (allConnectionsExist) {
-            cluster.add(safeWallet);
-            queue.splice(i, 1);
-            changed = true;
-            break;
-          }
-        }
+// A changed pair can reshuffle an entire connected component. Include former
+// groups too, so both sides of a split are recalculated and stale rows removed.
+export async function expandAffectedConsolidationWallets(
+  db: DataSource,
+  wallets: string[],
+): Promise<string[]> {
+  const affected = new Set(wallets.map((w) => w.toLowerCase()));
+  const links: { wallet1: string; wallet2: string }[] = await db.query(
+    `SELECT LOWER(wallet1) AS wallet1, LOWER(wallet2) AS wallet2 FROM ${CONSOLIDATIONS_TABLE} WHERE confirmed = true`,
+  );
+  const oldGroups: string[][] = (await fetchAllConsolidatedTdh(db)).map(
+    (group) => group.wallets.map((w: string) => w.toLowerCase()),
+  );
+  let size: number;
+  do {
+    size = affected.size;
+    for (const members of [
+      ...links.map((link) => [link.wallet1, link.wallet2]),
+      ...oldGroups,
+    ]) {
+      if (members.some((w) => affected.has(w))) {
+        members.forEach((w) => affected.add(w));
       }
     }
-
-    // finalize cluster
-    const clusterArray = Array.from(cluster);
-    for (const w of clusterArray) {
-      usedWallets.add(w);
-    }
-    clusters.push(clusterArray);
-  }
-
-  // Any wallets left out entirely? Add them as singletons.
-  const allWallets = new Set<string>();
-  for (const c of consolidations) {
-    allWallets.add(c.wallet1);
-    allWallets.add(c.wallet2);
-  }
-
-  for (const w of Array.from(allWallets)) {
-    if (!usedWallets.has(w)) {
-      clusters.push([w]);
-      usedWallets.add(w);
-    }
-  }
-
-  return clusters;
+  } while (affected.size !== size);
+  return Array.from(affected).sort();
 }
 
 export async function fetchWalletTransactions(
   db: DataSource,
   contracts: string[],
   wallet: string,
-  block: number
+  block: number,
 ): Promise<Transaction[]> {
   const where: any[] = [
     {
@@ -268,7 +206,7 @@ export async function persistTDH(
   db: DataSource,
   block: number,
   tdh: TDH[],
-  wallets?: string[]
+  wallets?: string[],
 ) {
   await db.transaction(async (manager) => {
     const tdhRepo = manager.getRepository(TDH);
@@ -279,7 +217,7 @@ export async function persistTDH(
             wallet: wallet.toLowerCase(),
             block: block,
           });
-        })
+        }),
       );
     } else {
       await tdhRepo.clear();
@@ -307,7 +245,7 @@ async function computeMerkleRoot(db: DataSource) {
     data.map((item) => ({
       key: item.consolidation_key,
       value: item.boosted_tdh,
-    }))
+    })),
   );
 
   return merkleRoot;
@@ -316,14 +254,22 @@ async function computeMerkleRoot(db: DataSource) {
 export async function persistTDHBlock(
   db: DataSource,
   block: number,
-  blockTimestamp: Time
+  blockTimestamp: Time,
+  consolidationPolicyKey: string,
 ) {
   const merkleRoot = await computeMerkleRoot(db);
   await db.transaction(async (manager) => {
     const timestamp = blockTimestamp.toSeconds();
-    await manager
-      .getRepository(TDHBlock)
-      .upsert([{ block, timestamp }], ["block"]);
+    await manager.getRepository(TDHBlock).upsert(
+      [
+        {
+          block,
+          timestamp,
+          consolidation_policy_key: consolidationPolicyKey,
+        },
+      ],
+      ["block"],
+    );
 
     await manager.getRepository(TDHMerkleRoot).upsert(
       [
@@ -335,7 +281,7 @@ export async function persistTDHBlock(
           last_update: Math.floor(Date.now() / 1000),
         },
       ],
-      ["id"]
+      ["id"],
     );
   });
 
@@ -350,7 +296,7 @@ export async function fetchAllConsolidatedTdh(db: DataSource) {
 export async function fetchAllTDH(
   db: DataSource,
   block: number,
-  wallets?: string[]
+  wallets?: string[],
 ) {
   let sql = `SELECT * FROM ${WALLETS_TDH_TABLE} WHERE block=? `;
   const params: any[] = [block];
@@ -366,7 +312,7 @@ export async function fetchAllTDH(
 }
 
 export async function fetchLatestTDHBlockNumber(
-  db: DataSource
+  db: DataSource,
 ): Promise<number> {
   const sql = `SELECT block FROM ${TDH_BLOCKS_TABLE} order by block desc limit 1;`;
   const r = await db.query(sql);
@@ -376,7 +322,7 @@ export async function fetchLatestTDHBlockNumber(
 export async function persistConsolidatedTDH(
   db: DataSource,
   tdh: ConsolidatedTDH[],
-  wallets?: string[]
+  wallets?: string[],
 ) {
   await db.transaction(async (manager) => {
     const tdhRepo = manager.getRepository(ConsolidatedTDH);
@@ -387,7 +333,7 @@ export async function persistConsolidatedTDH(
           await tdhRepo.delete({
             consolidation_key: Like(walletPattern),
           });
-        })
+        }),
       );
     } else {
       await tdhRepo.clear();

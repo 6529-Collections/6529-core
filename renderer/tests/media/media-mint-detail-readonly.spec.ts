@@ -1,3 +1,4 @@
+import { defineMobileVideoBatteryTest } from "./mobileVideoBatteryCases";
 import {
   defineNftImageLayoutTests,
   expectContainedImage,
@@ -10,7 +11,10 @@ import {
   test,
   waitForRouteReady,
 } from "../testHelpers";
-import { gotoDocumentWithTransientRetry } from "../support/routeReadiness";
+import {
+  gotoDocumentWithTransientRetry,
+  RESPONSE_TIMEOUT_MS,
+} from "../support/routeReadiness";
 import { MEMES_MINT_TITLE_PATTERN } from "../support/mintTitle";
 
 async function gotoReady(page: Page, path: string) {
@@ -116,7 +120,7 @@ test.describe("Media, mint, and detail read-only coverage @surface @medium @larg
     );
   });
 
-  test("renders The Memes mint page read-only", async ({ page }) => {
+  test("renders The Memes mint page read-only", async ({ page }, testInfo) => {
     await gotoReady(page, "/the-memes/mint");
 
     await expect(page).toHaveTitle(MEMES_MINT_TITLE_PATTERN);
@@ -126,9 +130,46 @@ test.describe("Media, mint, and detail read-only coverage @surface @medium @larg
     await expect(
       page.locator("main a[href^='/the-memes/']").first()
     ).toBeVisible({ timeout: 15000 });
-    await expect(
-      page.locator("main [data-nft-media-renderer]").first()
-    ).toBeVisible();
+    const media = page.locator("main [data-nft-media-renderer]").first();
+    const readMediaState = () =>
+      media.evaluateAll((elements) => {
+        const element = elements[0];
+        if (!element) return { loaded: false, reason: "Missing mint artwork" };
+        const image = element instanceof HTMLImageElement ? element : null;
+        const bounds = element.getBoundingClientRect();
+        return {
+          loaded:
+            !image ||
+            (image.complete &&
+              image.naturalWidth > 0 &&
+              image.naturalHeight > 0),
+          tag: element.tagName,
+          src: image?.currentSrc ?? element.getAttribute("src"),
+          complete: image?.complete,
+          naturalWidth: image?.naturalWidth,
+          naturalHeight: image?.naturalHeight,
+          width: bounds.width,
+          height: bounds.height,
+        };
+      });
+    try {
+      // Mint data can be ready before the original gateway image has decoded.
+      await expect
+        .poll(readMediaState, {
+          timeout: 20000,
+          message: "Mint artwork image must finish loading successfully",
+        })
+        .toMatchObject({ loaded: true });
+      await expect(media).toBeVisible();
+    } finally {
+      const mediaState = await readMediaState().catch((error: unknown) => ({
+        error: String(error),
+      }));
+      await testInfo.attach("mint-artwork-state", {
+        body: Buffer.from(JSON.stringify(mediaState, null, 2)),
+        contentType: "application/json",
+      });
+    }
     await expect(
       page.getByRole("link", { name: "Distribution Plan" })
     ).toBeVisible();
@@ -150,15 +191,17 @@ test.describe("Media, mint, and detail read-only coverage @surface @medium @larg
   }) => {
     await gotoReady(page, "/meme-lab/1?focus=activity&locale=de-DE");
 
-    await expect(page).toHaveTitle(
-      "Spread the Memes | Meme Lab #1 | Card Activity"
-    );
+    // The route shell and server title precede the client card data. Wait for
+    // the named card before asserting its final activity title.
     await expect(
       page.getByRole("heading", {
         level: 1,
         name: "Meme Lab Card 1 - Spread the Memes",
       })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
+    await expect(page).toHaveTitle(
+      "Spread the Memes | Meme Lab #1 | Card Activity"
+    );
     await expect(
       page.getByRole("link", { name: "Back to Meme Lab" })
     ).toHaveAttribute("href", "/meme-lab?locale=de-DE");
@@ -264,6 +307,11 @@ test.describe("Staging video artwork sizing @surface @medium @large @readonly", 
       return true;
     }
   }, "video fixtures 549 and 550 are qualified on staging only");
+
+  defineMobileVideoBatteryTest(
+    "mobile browser artwork stops offscreen buffering and restores position after tab hiding",
+    (project) => project === "web-mobile-chromium"
+  );
 
   test("centers homepage artwork without resizing when its column grows", async ({
     page,

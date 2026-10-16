@@ -1,4 +1,5 @@
 import { DE_DE_DROP_METADATA_MESSAGES } from "@/i18n/messages/drop-metadata";
+import { DE_SUBMISSION_DISCOVERY_MESSAGES } from "@/i18n/messages/submission-discovery";
 import { DE_DE_DROP_REQUIREMENT_MESSAGES } from "@/i18n/messages/drop-requirements";
 import artworkShareMessages from "@/i18n/messages/artworkShare.de-DE.json";
 import profileCmsAgentMessages from "@/i18n/messages/profileCmsAgent.de-DE.json";
@@ -7,6 +8,7 @@ import profileCmsStudioUploadMessages from "@/i18n/messages/profileCmsStudioUplo
 import studioWalletImportMessages from "@/i18n/messages/studioWalletImport.de-DE.json";
 import { DE_DE_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { DE_DE_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
+import { DE_DE_GLOBAL_ERROR_MESSAGES } from "@/i18n/messages/global-error";
 import { DE_DE_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
 import { DE_DE_CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { DE_DE_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
@@ -21,6 +23,7 @@ import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.de-DE.jso
 const RETRY_LABEL = "Erneut versuchen";
 
 export const DE_DE_MESSAGES = {
+  ...DE_SUBMISSION_DISCOVERY_MESSAGES,
   ...DE_DE_DROP_REQUIREMENT_MESSAGES,
   ...DE_DE_DROP_METADATA_MESSAGES,
   "profile.subscriptions.noAllocation": "Keine Abonnement-Zuteilung",
@@ -622,6 +625,7 @@ export const DE_DE_MESSAGES = {
   ...DE_DE_QR_SCANNER_MESSAGES,
   ...DE_DE_CAPACITOR_CONNECT_MESSAGES,
   ...DE_DE_NEW_VERSION_TOAST_MESSAGES,
+  ...DE_DE_GLOBAL_ERROR_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Datei-Upload-Bereich für den Wave-Chat",
   "waves.chat.guidelinesDialog.title": "Wave-Richtlinien",
@@ -1184,6 +1188,11 @@ export const DE_DE_MESSAGES = {
   "theMemes.documentTitle": "The Memes | Sammlungen",
   "theMemes.description.collections": "Sammlungen",
   "theMemes.detail.live.artwork.mintDateLabel": "Mint-Datum:",
+  "theMemes.mint.openWebMint": "Auf 6529.io minten",
+  "theMemes.mint.connect.connectedProfile": "Verbundenes Profil",
+  "theMemes.mint.connect.profileStats": "TDH: {tdh} - Stufe: {level}",
+  "theMemes.mint.connect.mintForMe": "Für mich minten",
+  "theMemes.mint.connect.mintForFren": "Für einen Fren minten",
   ...DE_DE_THE_MEMES_COLLECTORS_MESSAGES,
   "theMemes.sorting.regionLabel": "Meme-Sortierung",
   "theMemes.sorting.sortBy": "Sortieren nach",

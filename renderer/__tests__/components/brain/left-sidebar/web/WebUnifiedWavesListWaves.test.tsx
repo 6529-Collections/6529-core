@@ -169,9 +169,28 @@ jest.mock(
       data-depth={String(props.depth)}
       data-can-expand={String(props.canExpand)}
       data-unread-subwaves={String(props.hasUnreadSubwaves)}
+      data-score-details-disabled={String(props.scoreDetailsDisabled)}
     ></div>
   )
 );
+
+it("suppresses announcement and wave-row score details during an empty search", () => {
+  renderWebWaves();
+  const expectScoreDetailsDisabled = (disabled: boolean) => {
+    for (const row of screen.getAllByTestId(/^wave-/)) {
+      expect(row).toHaveAttribute(
+        "data-score-details-disabled",
+        String(disabled)
+      );
+    }
+  };
+  expectScoreDetailsDisabled(false);
+  fireEvent.click(screen.getByRole("button", { name: "Find a wave…" }));
+  expect(screen.getByRole("searchbox")).toHaveValue("");
+  expectScoreDetailsDisabled(true);
+  fireEvent.click(screen.getByRole("button", { name: "Close wave search" }));
+  expectScoreDetailsDisabled(false);
+});
 
 it("renders announcement, highly rated preview, pinned, and one filterable bottom list without double rendering", () => {
   const sentinelRef = React.createRef<HTMLDivElement>();
@@ -558,6 +577,7 @@ it("expands regular subwaves and keeps child rows unpinned", async () => {
         hasSubwaves: true,
         createdAt: 10,
         unreadDropsCount: 1,
+        isFollowing: true,
       }),
     ],
   });
@@ -622,6 +642,7 @@ it("hides expanded child rows immediately while the sidebar is collapsed", async
       parentWaveId: "parent",
       createdAt: 10,
       unreadDropsCount: 1,
+      isFollowing: true,
     }),
   ];
   const sentinelRef = React.createRef<HTMLDivElement>();

@@ -43,6 +43,10 @@ import {
 } from "../shared/types";
 import type { NotificationNavigationContext } from "../shared/preload-types";
 import {
+  NativeAuthApiError,
+  serializeNativeAuthResult,
+} from "../shared/native-auth-result";
+import {
   addRpcProvider,
   addSeedWallet,
   deactivateRpcProvider,
@@ -272,17 +276,23 @@ function getWalletAuthHeaders(accessToken: unknown): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
-function getApiError(responseBody: unknown, fallback: string): Error {
+/** Retain the API status and retry delay without carrying its raw response body. */
+function getApiError(responseBody: unknown, response: Response): Error {
   const error =
     responseBody &&
     typeof responseBody === "object" &&
     "error" in responseBody &&
     typeof responseBody.error === "string"
       ? responseBody.error
-      : fallback;
-  return new Error(error);
+      : response.statusText || "Native auth API request failed";
+  return new NativeAuthApiError(
+    response.status,
+    error,
+    response.headers.get("Retry-After") ?? undefined,
+  );
 }
 
+/** Send native auth requests in the main process, with a bounded API deadline. */
 async function postNativeAuthApi<T>({
   endpoint,
   body,
@@ -327,10 +337,7 @@ async function postNativeAuthApi<T>({
       }
     }
     if (!response.ok) {
-      throw getApiError(
-        responseBody,
-        response.statusText || "Native auth API request failed",
-      );
+      throw getApiError(responseBody, response);
     }
 
     return (parseJson ? responseBody : undefined) as T;
@@ -1464,12 +1471,25 @@ async function createScheduledTasks() {
       getTransactionReconciliationState(getDb().manager),
       getTdhRunIncomplete(getDb().manager),
     ]);
+  let consolidationSettingsRequest;
+  try {
+    const config = getPublicRuntimeConfig();
+    consolidationSettingsRequest = {
+      url: `${getApiEndpoint(config)}/api/settings`,
+      headers: getStagingApiHeaders(config),
+    };
+  } catch {
+    Logger.error(
+      "Consolidation settings request is unavailable; TDH will wait for backend configuration",
+    );
+  }
   scheduledWorkers = startSchedulers(
     rpcProvider?.url ?? null,
     getLogDirectory(),
     postWorkerUpdate,
     pendingTransactionReconciliation,
     incompleteTdhRun,
+    consolidationSettingsRequest,
   );
 }
 
@@ -1915,7 +1935,7 @@ ipcMain.handle("native-auth:session-refresh", (_event, request: unknown) => {
   if (!isNativeSessionRefreshRequest(request)) {
     throw new Error("Invalid native session refresh request");
   }
-  return nativeSessionRefresh(request);
+  return serializeNativeAuthResult(() => nativeSessionRefresh(request));
 });
 
 ipcMain.handle("native-auth:connection-share", (_event, request: unknown) => {

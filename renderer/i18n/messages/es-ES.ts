@@ -1,4 +1,5 @@
 import { ES_ES_DROP_METADATA_MESSAGES } from "@/i18n/messages/drop-metadata";
+import { ES_SUBMISSION_DISCOVERY_MESSAGES } from "@/i18n/messages/submission-discovery";
 import { ES_ES_DROP_REQUIREMENT_MESSAGES } from "@/i18n/messages/drop-requirements";
 import artworkShareMessages from "@/i18n/messages/artworkShare.es-ES.json";
 import profileCmsAgentMessages from "@/i18n/messages/profileCmsAgent.es-ES.json";
@@ -7,6 +8,7 @@ import profileCmsStudioUploadMessages from "@/i18n/messages/profileCmsStudioUplo
 import studioWalletImportMessages from "@/i18n/messages/studioWalletImport.es-ES.json";
 import { ES_ES_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { ES_ES_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
+import { ES_ES_GLOBAL_ERROR_MESSAGES } from "@/i18n/messages/global-error";
 import { ES_ES_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
 import { ES_ES_CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { ES_ES_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
@@ -19,6 +21,7 @@ import type { MessageKey } from "@/i18n/messages/en-US";
 import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.es-ES.json";
 
 export const ES_ES_MESSAGES = {
+  ...ES_SUBMISSION_DISCOVERY_MESSAGES,
   ...ES_ES_DROP_REQUIREMENT_MESSAGES,
   ...ES_ES_DROP_METADATA_MESSAGES,
   "profile.subscriptions.noAllocation": "Sin asignación de suscripción",
@@ -618,6 +621,7 @@ export const ES_ES_MESSAGES = {
   ...ES_ES_QR_SCANNER_MESSAGES,
   ...ES_ES_CAPACITOR_CONNECT_MESSAGES,
   ...ES_ES_NEW_VERSION_TOAST_MESSAGES,
+  ...ES_ES_GLOBAL_ERROR_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Área de carga de archivos del chat de wave",
   "waves.chat.guidelinesDialog.title": "Directrices de la wave",
@@ -1182,6 +1186,11 @@ export const ES_ES_MESSAGES = {
   "theMemes.documentTitle": "The Memes | Colecciones",
   "theMemes.description.collections": "Colecciones",
   "theMemes.detail.live.artwork.mintDateLabel": "Fecha de mint:",
+  "theMemes.mint.openWebMint": "Acuñar en 6529.io",
+  "theMemes.mint.connect.connectedProfile": "Perfil conectado",
+  "theMemes.mint.connect.profileStats": "TDH: {tdh} - Nivel: {level}",
+  "theMemes.mint.connect.mintForMe": "Acuñar para mí",
+  "theMemes.mint.connect.mintForFren": "Acuñar para un fren",
   ...ES_ES_THE_MEMES_COLLECTORS_MESSAGES,
   "theMemes.sorting.regionLabel": "Orden de memes",
   "theMemes.sorting.sortBy": "Ordenar por",

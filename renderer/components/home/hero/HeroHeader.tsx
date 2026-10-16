@@ -5,12 +5,16 @@ import Link from "next/link";
 
 export default function HeroHeader() {
   return (
-    <section className="tw-relative tw-px-4 tw-pt-10 md:tw-mx-auto md:tw-max-w-3xl md:tw-px-6 md:tw-pt-12 md:tw-text-center lg:tw-px-8">
+    <section
+      data-home-section="Introduction"
+      className="tw-relative tw-px-4 tw-pt-10 md:tw-mx-auto md:tw-max-w-3xl md:tw-px-6 md:tw-pt-12 md:tw-text-center lg:tw-px-8"
+    >
       <Link
+        data-home-action="Open network health"
         href="/network/health"
         aria-label="Open network health dashboard"
         title="Network health"
-        className="tw-bg-red/8 desktop-hover:hover:tw-bg-red/18 tw-group tw-fixed tw-right-4 tw-top-10 tw-z-40 tw-hidden tw-h-10 tw-w-10 tw-items-center tw-justify-center tw-rounded-full tw-border tw-border-solid tw-border-red/35 tw-text-red/85 tw-no-underline tw-shadow-[0_0_12px_rgba(249,112,102,0.16)] tw-backdrop-blur-sm tw-transition-all tw-duration-300 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-red/40 active:tw-scale-95 desktop-hover:hover:tw-border-red/55 desktop-hover:hover:tw-text-red desktop-hover:hover:tw-shadow-[0_0_22px_rgba(249,112,102,0.26)] md:tw-right-6 md:tw-top-10 md:tw-inline-flex [.capacitor-native_&]:tw-hidden"
+        className="tw-bg-red/8 desktop-hover:hover:tw-bg-red/18 tw-group tw-fixed tw-right-4 tw-top-10 tw-z-40 tw-hidden tw-h-10 tw-w-10 tw-items-center tw-justify-center tw-rounded-full tw-border tw-border-solid tw-border-red/35 tw-text-red/85 tw-no-underline tw-shadow-[0_0_12px_rgba(249,112,102,0.16)] tw-backdrop-blur-sm tw-transition-all tw-duration-300 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 active:tw-scale-95 desktop-hover:hover:tw-border-red/55 desktop-hover:hover:tw-text-red desktop-hover:hover:tw-shadow-[0_0_22px_rgba(249,112,102,0.26)] md:tw-right-6 md:tw-top-10 md:tw-inline-flex [.capacitor-native_&]:tw-hidden"
       >
         <span className="tw-relative tw-inline-flex tw-items-center tw-justify-center">
           <HeartIcon

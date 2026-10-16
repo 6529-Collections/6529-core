@@ -134,7 +134,7 @@ export default function CommonDropdown<T, U = unknown>(
   const editorialUnderlineClass = getEditorialUnderlineClass(isOpen, disabled);
   let buttonClasses = `${getDefaultButtonStateClass(disabled)} ${getDefaultThemeClass(theme)} ${getDefaultSizeClass(size)} tw-relative tw-block tw-w-full tw-justify-between tw-truncate tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-pl-3.5 tw-pr-8 tw-text-left tw-font-semibold tw-leading-5 tw-caret-primary-400 tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-iron-800 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400`;
   if (isEditorial) {
-    buttonClasses = `${getEditorialButtonStateClass(disabled)} ${editorialUnderlineClass} tw-group tw-relative tw-inline-flex tw-max-w-full tw-items-center tw-gap-1.5 tw-rounded-md tw-border-0 tw-bg-transparent tw-px-0.5 tw-py-1 tw-text-left tw-text-sm tw-font-semibold tw-leading-5 tw-caret-primary-400 tw-shadow-none tw-transition tw-duration-200 tw-ease-out after:tw-absolute after:-tw-bottom-0.5 after:tw-left-0 after:tw-h-px after:tw-w-full after:tw-origin-left after:tw-transition-transform after:tw-duration-200 after:tw-content-[''] focus:tw-outline-none focus-visible:tw-outline-none focus-visible:tw-text-iron-100`;
+    buttonClasses = `${getEditorialButtonStateClass(disabled)} ${editorialUnderlineClass} tw-group tw-relative tw-inline-flex tw-max-w-full tw-items-center tw-gap-1.5 tw-rounded-md tw-border-0 tw-bg-transparent tw-px-0.5 tw-py-1 tw-text-left tw-text-sm tw-font-semibold tw-leading-5 tw-caret-primary-400 tw-shadow-none tw-transition tw-duration-200 tw-ease-out after:tw-absolute after:-tw-bottom-0.5 after:tw-left-0 after:tw-h-px after:tw-w-full after:tw-origin-left after:tw-transition-transform after:tw-duration-200 after:tw-content-[''] focus:tw-outline-none focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-text-iron-100`;
   } else if (isToolbar) {
     buttonClasses = `${getToolbarButtonStateClass(disabled)} ${getDefaultSizeClass(size)} tw-group tw-relative tw-block tw-w-full tw-justify-between tw-truncate tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-iron-950 tw-pl-3.5 tw-pr-8 tw-text-left tw-leading-5 tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-transition tw-duration-200 tw-ease-out focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400`;
   }
@@ -147,8 +147,7 @@ export default function CommonDropdown<T, U = unknown>(
   }
   let valueClassName = "";
   if (isEditorial) {
-    valueClassName =
-      "tw-truncate tw-text-iron-200 group-hover:tw-text-white";
+    valueClassName = "tw-truncate tw-text-iron-200 group-hover:tw-text-white";
   } else if (isToolbar) {
     valueClassName =
       "tw-min-w-0 tw-truncate tw-font-semibold tw-text-iron-200 group-hover:tw-text-white";
@@ -162,6 +161,7 @@ export default function CommonDropdown<T, U = unknown>(
       <div className={triggerWrapperClassName}>
         <button
           ref={buttonRef}
+          {...props.buttonDataAttributes}
           type="button"
           aria-haspopup="true"
           aria-label={`${filterLabel}: ${computedLabel}`}
@@ -174,7 +174,7 @@ export default function CommonDropdown<T, U = unknown>(
             className={
               usesInlineContent
                 ? "tw-flex tw-min-w-0 tw-items-center tw-gap-1.5"
-                : ""
+                : "tw-inline-flex tw-items-center"
             }
           >
             {showFilterLabel && (
@@ -183,12 +183,15 @@ export default function CommonDropdown<T, U = unknown>(
               </span>
             )}
             <span className={valueClassName}>{computedLabel}</span>
+            {sortDirection !== undefined && (
+              <span className="tw-ml-2 tw-flex tw-shrink-0 tw-items-center">
+                <CommonTableSortIcon
+                  direction={sortDirection}
+                  isActive={true}
+                />
+              </span>
+            )}
           </span>
-          {sortDirection && (
-            <span className="-tw-mt-0.5 tw-ml-2">
-              <CommonTableSortIcon direction={sortDirection} isActive={true} />
-            </span>
-          )}
           <span className={chevronClassName}>
             <svg
               ref={iconScope}
@@ -221,6 +224,7 @@ export default function CommonDropdown<T, U = unknown>(
       >
         {items.map((item, i) => (
           <CommonDropdownItem
+            onItemSelection={props.onItemSelection}
             key={item.key}
             item={item}
             itemIdx={i}

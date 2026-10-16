@@ -1,23 +1,8 @@
 "use client";
 
-import React, { createContext, ReactNode, useContext, useMemo } from "react";
-
-type EULAConsentContextType = {
-  readonly consent: () => Promise<void>;
-  readonly isSaving: boolean;
-  readonly saveError: string | null;
-};
-
-const EULAConsentContext = createContext<EULAConsentContextType | undefined>(
-  undefined
-);
-
-export const useEULAConsent = () => {
-  const context = useContext(EULAConsentContext);
-  if (!context)
-    throw new Error("useEULAConsent must be used within a EULAConsentProvider");
-  return context;
-};
+import React, { type ReactNode, useMemo } from "react";
+import { EULAConsentContext } from "./useEULAConsent";
+export { useEULAConsent } from "./useEULAConsent";
 
 type EULAConsentProviderProps = {
   readonly children: ReactNode;

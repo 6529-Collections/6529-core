@@ -6,6 +6,7 @@ import {
   setActiveWalletAccount,
   setAuthJwt,
 } from "@/services/auth/auth.utils";
+import { unwrapNativeAuthResult } from "@/shared/native-auth-result";
 import {
   getNativeRefreshToken,
   removeNativeRefreshToken,
@@ -512,6 +513,7 @@ const toBrowserConnectorErrorMessage = (error: unknown): string => {
   return "Browser connector returned an error.";
 };
 
+/** Recover an existing connector session, decoding desktop refresh failures first. */
 const refreshPersistedNativeSession = async ({
   address,
   clientType,
@@ -524,10 +526,12 @@ const refreshPersistedNativeSession = async ({
       ? undefined
       : window.nativeAuth?.sessionRefresh;
   if (typeof guardedNativeSessionRefresh === "function") {
-    return await guardedNativeSessionRefresh({
-      client_type: clientType,
-      client_address: address,
-    });
+    return unwrapNativeAuthResult(
+      await guardedNativeSessionRefresh({
+        client_type: clientType,
+        client_address: address,
+      })
+    );
   }
 
   // Mobile/native fallback. Electron refresh tokens intentionally never leave

@@ -8,7 +8,10 @@ import {
 import { BlockEntity, SingletonBlockEntity } from "./IBlock";
 
 @Entity(TDH_BLOCKS_TABLE)
-export class TDHBlock extends BlockEntity {}
+export class TDHBlock extends BlockEntity {
+  @Column({ type: "text", nullable: true })
+  consolidation_policy_key!: string | null;
+}
 
 export class BaseTDHFields {
   @Column({ type: "int", nullable: false })

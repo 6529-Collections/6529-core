@@ -471,6 +471,9 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     experimental: {
       webpackMemoryOptimizations: true,
       webpackBuildWorker: true,
+      // Match FE's Next 16.3 compiler-API build check; the default CLI also
+      // includes renderer tests, which are checked separately.
+      useTypeScriptCli: false,
     },
     images: {
       loader: "default",
@@ -519,6 +522,35 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     transpilePackages: ["react-tweet"],
     poweredByHeader: false,
+    redirects() {
+      return Promise.resolve([
+        {
+          source: "/delegation/delegation-center",
+          destination: "/safe-collecting",
+          permanent: true,
+        },
+        {
+          source: "/delegation/wallet-architecture",
+          destination: "/safe-collecting/tap-guide",
+          permanent: true,
+        },
+        {
+          source: "/delegation/delegation-faq/:path*",
+          destination: "/safe-collecting/faq/:path*",
+          permanent: true,
+        },
+        {
+          source: "/delegation/:path*",
+          destination: "/safe-collecting/:path*",
+          permanent: true,
+        },
+        {
+          source: "/about/nft-delegation",
+          destination: "/safe-collecting",
+          permanent: true,
+        },
+      ]);
+    },
     logging: {
       incomingRequests: false,
     },
@@ -687,6 +719,19 @@ const nextConfigFactory = (phase: string): NextConfig => {
       async generateBuildId() {
         return VERSION;
       },
+      // Match FE's production-only missing-asset fallback. Real files are
+      // served before afterFiles, and development HMR must stay untouched.
+      ...(phase === PHASE_PRODUCTION_BUILD
+        ? {
+            rewrites: () => Promise.resolve({
+              beforeFiles: [],
+              afterFiles: [
+                { source: "/_next/:path*", destination: "/api/missing-next-asset" },
+              ],
+              fallback: [],
+            }),
+          }
+        : {}),
     };
   }
 

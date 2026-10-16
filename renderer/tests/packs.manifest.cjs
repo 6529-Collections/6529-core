@@ -70,6 +70,7 @@ const READONLY_SPECS = {
   collections: ["tests/collections/nextgen-collections-readonly.spec.ts"],
   publicGroupsTools: [
     "tests/public-groups-tools/public-groups-tools-readonly.spec.ts",
+    "tests/public-groups-tools/world-time-zones-readonly.spec.ts",
   ],
   adminGuards: ["tests/admin/admin-destructive-guards-readonly.spec.ts"],
   publicContent: ["tests/content/public-content-readonly.spec.ts"],
@@ -77,8 +78,8 @@ const READONLY_SPECS = {
   searchWaves: ["tests/social/search-waves-readonly.spec.ts"],
   museumInstitutionalPractice: [
     "tests/museum/institutional-practice-readonly.spec.ts",
-    "tests/museum/network-ia-readonly.spec.ts",
   ],
+  museumNetworkIa: ["tests/museum/network-ia-readonly.spec.ts"],
   museumAbout: ["tests/museum/about-readonly.spec.ts"],
   museumInsideSystem: ["tests/museum/inside-system-readonly.spec.ts"],
   museumDataArchitecture: ["tests/museum/data-architecture-readonly.spec.ts"],
@@ -221,6 +222,22 @@ const PACKS = [
     triggers: ["pr-ci", "manual"],
   },
 
+  {
+    ...sandboxPack(
+      "test:e2e:wave-feature-usage-sandbox",
+      "Wave feature visibility and production SDK privacy with synthetic loopback data.",
+      ["tests/social/wave-feature-usage-sandbox.spec.ts"],
+      {
+        PLAYWRIGHT_BASE_URL: "http://127.0.0.1:3302",
+        PLAYWRIGHT_WEB_SERVER_URL: "http://127.0.0.1:3302",
+        PLAYWRIGHT_WEB_SERVER_COMMAND:
+          "node tests/support/waveFeatureSandboxServer.cjs",
+        PLAYWRIGHT_FORCE_WEB_SERVER: "1",
+      },
+      [DESKTOP, MOBILE]
+    ),
+    triggers: ["pr-ci", "manual"],
+  },
   localReadonlyPack(
     "test:e2e:social-readonly",
     "Waves and profile read-only journeys.",
@@ -307,6 +324,15 @@ const PACKS = [
     ),
     triggers: ["manual"],
   }),
+  museumPack({
+    ...localReadonlyPack(
+      "test:e2e:museum-network-ia",
+      "Network Museum information-architecture gate across hubs, works, and acquisitions.",
+      READONLY_SPECS.museumNetworkIa
+    ),
+    // PR CI runs this spec directly as the always-on Museum lane gate.
+    triggers: ["manual"],
+  }),
   museumPack(
     localReadonlyPack(
       "test:e2e:museum-about",
@@ -350,6 +376,24 @@ const PACKS = [
     ),
     triggers: ["pr-ci", "manual"],
   },
+  {
+    ...sandboxPack(
+      "test:e2e:pdf-attachments-sandbox",
+      "PDF attachment scrolling, recovery and touch layout in WebKit.",
+      ["tests/media/pdf-attachment-preview-sandbox.spec.ts"],
+      {
+        ...COMPOSER_SANDBOX_ENV,
+        PLAYWRIGHT_BASE_URL: "http://localhost:3296",
+        PLAYWRIGHT_WEB_SERVER_URL: "http://localhost:3296",
+        PLAYWRIGHT_COMPOSER_SANDBOX_API_PORT: "4296",
+        NEXT_DEV_DIST_DIR: ".next-playwright-pdf",
+        PLAYWRIGHT_WEB_SERVER_COMMAND:
+          "node --require ./scripts/prepare-pdfjs-assets.cjs tests/support/composerSandboxServer.cjs",
+      },
+      ["web-desktop-webkit"]
+    ),
+    triggers: ["pr-ci", "manual"],
+  },
   sandboxPack(
     "test:e2e:composer-sandbox",
     "Waves composer sandbox against the local mock API.",
@@ -374,13 +418,17 @@ const PACKS = [
     "test:e2e:edit-drop-sandbox",
     "Drop edit sandbox against the local mock API.",
     ["tests/social/wave-edit-drop-sandbox.spec.ts"],
-    COMPOSER_SANDBOX_ENV
+    COMPOSER_SANDBOX_ENV,
+    [DESKTOP, MOBILE]
   ),
   {
     ...sandboxPack(
       "test:e2e:native-competition-sandbox",
       "Native competition context, parallel budgets and navigation against the local mock API.",
-      ["tests/social/native-competition-sandbox.spec.ts"],
+      [
+        "tests/social/native-competition-sandbox.spec.ts",
+        "tests/social/wave-notification-settings-sandbox.spec.ts",
+      ],
       {
         ...AUTH_SANDBOX_ENV,
         NEXT_PUBLIC_FEATURE_MULTI_COMPETITION: "true",
@@ -399,6 +447,20 @@ const PACKS = [
     ["tests/social/wave-signature-sandbox.spec.ts"],
     AUTH_SANDBOX_ENV
   ),
+  {
+    ...sandboxPack(
+      "test:e2e:session-recovery-sandbox",
+      "Expired session cold-start and foreground recovery against the local mock API.",
+      ["tests/auth/session-recovery-sandbox.spec.ts"],
+      {
+        ...AUTH_SANDBOX_ENV,
+        USE_DEV_AUTH: "false",
+        NEXT_DEV_DIST_DIR: ".next-playwright-session-recovery",
+      },
+      [DESKTOP, MOBILE]
+    ),
+    triggers: ["pr-ci", "manual"],
+  },
   sandboxPack(
     "test:e2e:auth-sandbox",
     "Aggregate authenticated sandbox pack.",
@@ -413,6 +475,22 @@ const PACKS = [
     ],
     AUTH_SANDBOX_ENV
   ),
+  {
+    ...sandboxPack(
+      "test:e2e:wave-creation-sandbox",
+      "Wave creation, permissions, and draft recovery on desktop and mobile.",
+      ["tests/social/create-wave-sandbox.spec.ts"],
+      {
+        ...AUTH_SANDBOX_ENV,
+        PLAYWRIGHT_BASE_URL: "http://localhost:3298",
+        PLAYWRIGHT_WEB_SERVER_URL: "http://localhost:3298",
+        PLAYWRIGHT_COMPOSER_SANDBOX_API_PORT: "4298",
+        NEXT_DEV_DIST_DIR: ".next-playwright-wave-creation",
+      },
+      [DESKTOP, MOBILE]
+    ),
+    triggers: ["pr-ci", "manual"],
+  },
 
   localPack(
     "test:e2e:smoke:surface-matrix",
@@ -567,6 +645,14 @@ const PACKS = [
   ),
   museumPack(
     stagingPack(
+      "museum-network-ia",
+      "museum-network-ia",
+      "Staging Network Museum information-architecture gate across hubs, works, and acquisitions.",
+      READONLY_SPECS.museumNetworkIa
+    )
+  ),
+  museumPack(
+    stagingPack(
       "museum-about",
       "museum-about",
       "Staging Network Museum About proposition route smoke.",
@@ -670,6 +756,16 @@ const PACKS = [
   }),
   museumPack(
     productionPack(
+      "museum-network-ia",
+      "Production Network Museum information-architecture gate across hubs, works, and acquisitions.",
+      READONLY_SPECS.museumNetworkIa,
+      ["cron", "post-deploy", "manual"],
+      15,
+      [DESKTOP, MOBILE]
+    )
+  ),
+  museumPack(
+    productionPack(
       "museum-about",
       "Production Network Museum About proposition route smoke.",
       READONLY_SPECS.museumAbout,
@@ -716,6 +812,7 @@ const PACKS = [
       ...READONLY_SPECS.museumDataArchitecture,
       ...READONLY_SPECS.museumAbout,
       ...READONLY_SPECS.museumInstitutionalPractice,
+      ...READONLY_SPECS.museumNetworkIa,
       ...READONLY_SPECS.museumInsideSystem,
       ...READONLY_SPECS.museumRights,
     ],
