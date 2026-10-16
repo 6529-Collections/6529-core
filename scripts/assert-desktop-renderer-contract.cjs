@@ -705,6 +705,36 @@ function assertContract(condition, relativePath, message) {
   }
 }
 
+const desktopNextConfigPath = "next.config.ts";
+const desktopNextConfig = parseSource(desktopNextConfigPath);
+const localeDictionaryAlias = findDescendant(
+  desktopNextConfig,
+  (node) =>
+    ts.isPropertyAssignment(node) &&
+    ts.isStringLiteral(node.name) &&
+    node.name.text === "@/i18n/localeDictionaries",
+);
+const localeDictionaryBrowserTarget = localeDictionaryAlias
+  ? findDescendant(
+      localeDictionaryAlias.initializer,
+      (node) =>
+        ts.isPropertyAssignment(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === "browser",
+    )?.initializer
+  : undefined;
+assertContract(
+  localeDictionaryBrowserTarget &&
+    ts.isStringLiteral(localeDictionaryBrowserTarget) &&
+    localeDictionaryBrowserTarget.text ===
+      "./i18n/localeDictionaries.browser.ts" &&
+    fs.existsSync(
+      path.resolve(repositoryRoot, "renderer", localeDictionaryBrowserTarget.text),
+    ),
+  desktopNextConfigPath,
+  "Browser locale dictionary alias must resolve from the renderer project directory, without an extra renderer/ prefix",
+);
+
 const packageJsonPath = "package.json";
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(repositoryRoot, packageJsonPath), "utf8"),
