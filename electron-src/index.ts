@@ -1983,7 +1983,8 @@ ipcMain.on(
     redirectPath: string,
     navigationContext?: NotificationNavigationContext,
   ) => {
-    Logger.info(`Showing notification: [${id}] ${title} - ${body}, ${pfp}`);
+    // Titles and bodies carry sender handles and message previews; log the id only.
+    Logger.info(`Showing notification: [${id}]`);
 
     const notificationKey = getNotificationKey(id, navigationContext);
     if (shownNotifications.has(notificationKey)) {

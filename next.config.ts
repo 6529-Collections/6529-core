@@ -295,6 +295,9 @@ function getMediaResolverHostname(resolverEndpoint: string | undefined): string 
 interface SecurityHeaderOptions {
   readonly allowInsecureLocalhostConnectSrc?: boolean | undefined;
   readonly allowUnsafeEval?: boolean | undefined;
+  // Encrypted chats (D109) run OpenMLS as WebAssembly; compiling it needs
+  // 'wasm-unsafe-eval' (no JavaScript eval). Only on when the flag is on.
+  readonly allowWasm?: boolean | undefined;
   readonly webSocketEndpoint?: string | undefined;
 }
 
@@ -369,7 +372,7 @@ function createSecurityHeaders(
     },
     {
       key: "Content-Security-Policy",
-      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com${options.allowUnsafeEval ? " 'unsafe-eval'" : ""}; connect-src * 'self' blob: ${configuredApiSource} ${configuredWebSocketSource} ${mediaResolverSource} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ ${arweaveGatewaySources} https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
+      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com${options.allowUnsafeEval ? " 'unsafe-eval'" : ""}${options.allowWasm ? " 'wasm-unsafe-eval'" : ""}; connect-src * 'self' blob: ${configuredApiSource} ${configuredWebSocketSource} ${mediaResolverSource} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ ${arweaveGatewaySources} https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
     },
     { key: "X-Frame-Options", value: "SAMEORIGIN" },
     { key: "X-Content-Type-Options", value: "nosniff" },
@@ -569,6 +572,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
               allowUnsafeEval:
                 process.env.NODE_ENV === "development" ||
                 process.env.NODE_ENV === "local",
+              allowWasm: process.env.NEXT_PUBLIC_E2EE_DM_ENABLED === "true",
               webSocketEndpoint: publicEnv.WS_ENDPOINT,
             },
           ),
