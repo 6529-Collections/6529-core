@@ -1322,6 +1322,7 @@ async function createWindow() {
     Logger.info("Window already exists");
     return;
   }
+  latestSplashMessage = "Loading";
 
   let iconPath: string;
   if (isWindows()) {
@@ -1903,11 +1904,10 @@ ipcMain.handle("get-info", () => {
   };
 });
 
-ipcMain.handle("get-ipfs-info", async () => {
-  // The window opens while IPFS is still starting: answer once it has
-  // started or failed. Without endpoints the renderer resolves media through
-  // the 6529 media resolver instead of the local gateway.
-  const status = await IPFS_SERVER.whenSettled();
+ipcMain.handle("get-ipfs-info", () => {
+  // Return the live snapshot immediately. Status events refresh the renderer
+  // when IPFS becomes ready; media uses the remote resolver in the meantime.
+  const status = IPFS_SERVER.getStatus();
   if (status !== "ready") {
     return { status };
   }

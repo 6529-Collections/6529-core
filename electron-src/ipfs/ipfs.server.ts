@@ -164,10 +164,14 @@ export default class IPFSServer {
       });
       let stderr = "";
       let settled = false;
+      let timedOut = false;
+      let killTimer: ReturnType<typeof setTimeout> | undefined;
+      const timeoutError = new Error(`${name} timed out after ${timeoutMs}ms`);
       const finish = (error?: Error) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        clearTimeout(killTimer);
         if (error) {
           reject(error);
         } else {
@@ -175,16 +179,23 @@ export default class IPFSServer {
         }
       };
       const timer = setTimeout(() => {
+        timedOut = true;
+        // Keep the repository locked out of the next startup step until close.
+        // Escalate if the command ignores graceful termination.
+        killTimer = setTimeout(() => child.kill("SIGKILL"), 1_000);
         child.kill();
-        finish(new Error(`${name} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
       child.stderr?.on("data", (data) => {
         stderr = (stderr + data.toString()).slice(-2000);
       });
-      child.once("error", (error) => finish(error));
+      child.once("error", (error) => {
+        if (!timedOut) finish(error);
+      });
       child.once("close", (code) => {
-        if (code === 0) {
+        if (timedOut) {
+          finish(timeoutError);
+        } else if (code === 0) {
           finish();
         } else {
           finish(
