@@ -513,6 +513,7 @@ const toBrowserConnectorErrorMessage = (error: unknown): string => {
   return "Browser connector returned an error.";
 };
 
+/** Recover an existing connector session, decoding desktop refresh failures first. */
 const refreshPersistedNativeSession = async ({
   address,
   clientType,

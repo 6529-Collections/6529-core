@@ -276,6 +276,7 @@ function getWalletAuthHeaders(accessToken: unknown): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
+/** Retain the API status and retry delay without carrying its raw response body. */
 function getApiError(responseBody: unknown, response: Response): Error {
   const error =
     responseBody &&
@@ -291,6 +292,7 @@ function getApiError(responseBody: unknown, response: Response): Error {
   );
 }
 
+/** Send native auth requests in the main process, with a bounded API deadline. */
 async function postNativeAuthApi<T>({
   endpoint,
   body,

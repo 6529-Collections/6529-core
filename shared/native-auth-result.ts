@@ -8,6 +8,7 @@ export interface NativeAuthFailure {
 
 export type NativeAuthResult<T> = T | NativeAuthFailure;
 
+/** Main-process HTTP failure whose allowed fields can be serialized explicitly. */
 export class NativeAuthApiError extends Error {
   constructor(
     readonly status: number,
@@ -18,6 +19,7 @@ export class NativeAuthApiError extends Error {
   }
 }
 
+/** Transport HTTP failures as data; preserve successes and non-API rejections. */
 export async function serializeNativeAuthResult<T>(
   request: () => Promise<T>,
 ): Promise<NativeAuthResult<T>> {
@@ -35,6 +37,7 @@ export async function serializeNativeAuthResult<T>(
   }
 }
 
+/** Reconstruct status-aware errors in the renderer after Electron serialization. */
 export function unwrapNativeAuthResult<T>(result: NativeAuthResult<T>): T {
   if (
     typeof result === "object" &&

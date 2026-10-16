@@ -418,6 +418,7 @@ export async function loginWithSessionV2({
   return response;
 }
 
+/** Refresh the platform session while keeping desktop credentials in the main process. */
 async function executeSessionRefreshV2({
   address,
   abortSignal,
