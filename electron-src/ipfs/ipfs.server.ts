@@ -66,6 +66,7 @@ export default class IPFSServer {
 
   /** Notify the renderer only when the daemon's availability changes. */
   private setStatus(status: IpfsStatus): void {
+    if (status === "ready" && this.shuttingDown) return;
     if (this.status === status) return;
     this.status = status;
     this.onStatusChange?.(status);
@@ -364,6 +365,7 @@ export default class IPFSServer {
         const output = data.toString();
         Logger.info(`[IPFS] ${output}`);
 
+        if (this.shuttingDown) return;
         if (!ready && isReadyLine(output)) {
           ready = true;
           clearTimeout(timer);
@@ -449,6 +451,7 @@ export default class IPFSServer {
   /** Stop the owned or attached daemon and cancel any remaining startup steps. */
   async shutdown(): Promise<void> {
     this.shuttingDown = true;
+    this.setStatus("unavailable");
     const daemon = this.ipfsProcess;
     if (!daemon) {
       Logger.info("[IPFS] Daemon is not running.");

@@ -18,12 +18,25 @@ const compile = (text: string) =>
 const read = (file: string) =>
   fs.readFileSync(path.join(process.cwd(), file), "utf8");
 
-test("daemon timeout, late readiness and exit publish live status changes", async () => {
+interface TestServer {
+  init: () => Promise<void>;
+  startDaemon: (binary: string) => Promise<void>;
+  start: (port: number) => Promise<IpfsStatus>;
+  getStatus: () => IpfsStatus;
+  whenSettled: () => Promise<IpfsStatus>;
+  shutdown: () => Promise<void>;
+}
+
+/** Exercise the real daemon lifecycle without processes, network or wall-clock waits. */
+function createServerHarness() {
   const timers = new Map<number, () => void>();
   let nextTimer = 0;
   const daemon = Object.assign(new EventEmitter(), {
     stdout: new EventEmitter(),
     stderr: new EventEmitter(),
+    pid: 123,
+    exitCode: null,
+    signalCode: null,
     kill: () => undefined,
   });
   const logger = {
@@ -64,13 +77,6 @@ test("daemon timeout, late readiness and exit publish live status changes", asyn
     clearTimeout: (id: number) => timers.delete(id),
     process: { env: {} },
   });
-  interface TestServer {
-    init: () => Promise<void>;
-    startDaemon: (binary: string) => Promise<void>;
-    start: (port: number) => Promise<IpfsStatus>;
-    getStatus: () => IpfsStatus;
-    whenSettled: () => Promise<IpfsStatus>;
-  }
   const Server = (
     serverModule.exports as { default: new (...args: unknown[]) => TestServer }
   ).default;
@@ -79,14 +85,22 @@ test("daemon timeout, late readiness and exit publish live status changes", asyn
     statuses.push(status),
   );
   server.init = () => server.startDaemon("FAKE");
+  const expireTimers = () => {
+    for (const [id, callback] of [...timers]) {
+      timers.delete(id);
+      callback();
+    }
+  };
+  return { server, daemon, statuses, timers, expireTimers };
+}
+
+test("daemon timeout, late readiness and exit publish live status changes", async () => {
+  const { server, daemon, statuses, timers, expireTimers } = createServerHarness();
   const initial = server.start(3000);
   assert.equal(server.start(3000), initial);
   assert.equal(server.getStatus(), "starting");
   assert.equal(timers.size, 1);
-  for (const [id, callback] of [...timers]) {
-    timers.delete(id);
-    callback();
-  }
+  expireTimers();
   await initial;
   assert.equal(await server.whenSettled(), "unavailable");
   daemon.stdout.emit("data", Buffer.from("Daemon is r"));
@@ -102,6 +116,36 @@ test("daemon timeout, late readiness and exit publish live status changes", asyn
     "unavailable",
   ]);
 });
+
+for (const phase of ["starting", "timed-out", "ready-pending", "ready"] as const) {
+  test(`shutdown prevents readiness during ${phase} startup`, async () => {
+    const { server, daemon, statuses, timers, expireTimers } = createServerHarness();
+    const startup = server.start(3000);
+    if (phase === "timed-out") {
+      expireTimers();
+      await startup;
+    } else if (phase === "ready" || phase === "ready-pending") {
+      daemon.stdout.emit("data", Buffer.from("Daemon is ready\n"));
+      if (phase === "ready") assert.equal(await startup, "ready");
+    }
+
+    // Ready output can arrive after termination starts, or startup's success
+    // continuation can already be queued when shutdown withdraws availability.
+    const shutdown = server.shutdown();
+    const transitionCount = statuses.length;
+    assert.equal(server.getStatus(), "unavailable");
+    daemon.stdout.emit("data", Buffer.from("Daemon is r"));
+    daemon.stdout.emit("data", Buffer.from("eady\n"));
+    await Promise.resolve();
+    assert.equal(server.getStatus(), "unavailable");
+    assert.equal(statuses.slice(transitionCount).includes("ready"), false);
+    daemon.emit("close", 0);
+    await shutdown;
+    await startup;
+    assert.equal(await server.whenSettled(), "unavailable");
+    assert.equal(timers.size, 0);
+  });
+}
 
 test("preload status subscription removes the exact listener and exposes no IPC object", () => {
   const source = ts.createSourceFile(
