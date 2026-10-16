@@ -34,8 +34,12 @@ const compiled = ts.transpileModule(code, {
 }).outputText;
 
 /** Run the real window lifecycle with fake native windows and virtual timers. */
-function createHarness(savedArtwork = false) {
+function createHarness(
+  savedArtwork = false,
+  createScheduledTasks: () => Promise<void> = async () => undefined,
+) {
   const timers = new Map<number, () => void>();
+  const timerDelays: number[] = [];
   const windows: FakeWindow[] = [];
   let nextTimer = 0;
   class FakeWindow extends EventEmitter {
@@ -86,7 +90,7 @@ function createHarness(savedArtwork = false) {
     getDb: noop,
     IPFS_SERVER: { start: async () => "starting" },
     localShortcut: { register: noop },
-    createScheduledTasks: async () => undefined,
+    createScheduledTasks,
     process: { on: noop },
     initListeners: noop,
     screen: {
@@ -103,7 +107,8 @@ function createHarness(savedArtwork = false) {
     fetchSplashCard: async () => {
       throw new Error("Network disabled");
     },
-    setTimeout: (callback: () => void) => {
+    setTimeout: (callback: () => void, delay: number) => {
+      timerDelays.push(delay);
       timers.set(++nextTimer, callback);
       return nextTimer;
     },
@@ -113,6 +118,7 @@ function createHarness(savedArtwork = false) {
   return {
     windows,
     timers,
+    timerDelays,
     launch: () => vm.runInContext("createWindow()", context) as Promise<void>,
     async ready() {
       windows[0].emit("ready-to-show");
@@ -130,9 +136,45 @@ function createHarness(savedArtwork = false) {
 test("fast startup cancels the splash before creating a native window", async () => {
   const h = createHarness();
   await h.launch();
+  assert.deepEqual(h.timerDelays, [1000]);
   await h.ready();
   h.elapseDelay();
   assert.equal(h.windows.length, 1);
+  assert.equal(h.windows[0].visible, true);
+});
+
+test("main readiness cancels the splash timer before scheduler setup finishes", async () => {
+  let finishSetup!: () => void;
+  const setup = new Promise<void>((resolve) => {
+    finishSetup = resolve;
+  });
+  const h = createHarness(false, () => setup);
+  await h.launch();
+  await h.ready();
+  h.elapseDelay();
+  assert.equal(h.windows.length, 1);
+  assert.equal(h.windows[0].visible, false);
+  finishSetup();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(h.windows[0].visible, true);
+});
+
+test("late splash paint stays hidden while ready main window finishes scheduler setup", async () => {
+  let finishSetup!: () => void;
+  const setup = new Promise<void>((resolve) => {
+    finishSetup = resolve;
+  });
+  const h = createHarness(false, () => setup);
+  await h.launch();
+  h.elapseDelay();
+  const splash = h.windows[1];
+  await h.ready();
+  splash.emit("ready-to-show");
+  splash.webContents.emit("did-finish-load");
+  assert.equal(splash.visible, false);
+  finishSetup();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(splash.destroyed, true);
   assert.equal(h.windows[0].visible, true);
 });
 
