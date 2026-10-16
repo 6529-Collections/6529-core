@@ -2339,7 +2339,7 @@ const desktopIpfsItemPath = "renderer/components/layout/sidebar/nav/DesktopIpfsN
 const desktopIpfsItem = parseSource(desktopIpfsItemPath).text;
 assertContract(
   desktopIpfsItem.includes("aria-disabled") &&
-    desktopIpfsItem.includes("faSpinner") &&
+    desktopIpfsItem.includes("<CircleLoader size={CircleLoaderSize.SMALL}") &&
     desktopIpfsItem.includes("faTriangleExclamation") &&
     desktopIpfsItem.includes("event.preventDefault()"),
   desktopIpfsItemPath,

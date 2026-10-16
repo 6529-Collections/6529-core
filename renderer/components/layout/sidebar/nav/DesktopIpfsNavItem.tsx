@@ -1,11 +1,13 @@
 "use client";
 
 import { useIpfsContext } from "@/components/ipfs/IPFSContext";
+import CircleLoader, {
+  CircleLoaderSize,
+} from "@/components/distribution-plan-tool/common/CircleLoader";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import {
   faExternalLinkAlt,
-  faSpinner,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -57,19 +59,20 @@ export default function DesktopIpfsNavItem({
     >
       <span className="tw-flex tw-min-w-0 tw-items-center tw-gap-2">
         <span className="tw-truncate">{label}</span>
-        <FontAwesomeIcon
+        <span
           aria-hidden="true"
-          icon={
-            ready
-              ? faExternalLinkAlt
-              : starting
-                ? faSpinner
-                : faTriangleExclamation
-          }
-          className={`tw-h-4 tw-w-4 tw-flex-shrink-0 ${
-            starting && !ready ? "motion-safe:tw-animate-spin" : ""
-          }`}
-        />
+          className="tw-flex tw-h-4 tw-w-4 tw-flex-shrink-0 tw-items-center tw-justify-center motion-reduce:[&_svg]:tw-animate-none"
+        >
+          {starting && !ready ? (
+            <CircleLoader size={CircleLoaderSize.SMALL} />
+          ) : (
+            <FontAwesomeIcon
+              aria-hidden="true"
+              icon={ready ? faExternalLinkAlt : faTriangleExclamation}
+              className="tw-h-4 tw-w-4"
+            />
+          )}
+        </span>
       </span>
     </a>
   );

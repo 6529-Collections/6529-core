@@ -56,9 +56,11 @@ describe("Desktop IPFS menu availability", () => {
         name: unavailable ? "My IPFS: unavailable" : "My IPFS: starting",
       });
       const icon = row.querySelector("svg");
-      expect(icon).toHaveAttribute(
-        "data-icon", unavailable ? "triangle-exclamation" : "spinner"
-      );
+      if (unavailable) {
+        expect(icon).toHaveAttribute("data-icon", "triangle-exclamation");
+      } else {
+        expect(icon).toHaveClass("tw-text-primary-400", "tw-animate-spin");
+      }
       expect(icon).toHaveClass("tw-h-4", "tw-w-4");
       expect(row).toHaveAttribute("aria-disabled", "true");
       expect(row).not.toHaveAttribute("href");
@@ -101,7 +103,7 @@ describe("Desktop IPFS menu availability", () => {
     const row = screen.getByRole("link", { name: "My IPFS: starting" });
     expect(row).toHaveAttribute("aria-disabled", "true");
     expect(row).not.toHaveAttribute("href");
-    expect(row.querySelector('[data-icon="spinner"]')).not.toBeNull();
+    expect(row.querySelector("svg.tw-text-primary-400")).not.toBeNull();
     fireEvent.click(row);
     expect(onNavigate).not.toHaveBeenCalled();
 
