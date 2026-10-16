@@ -4,6 +4,7 @@ const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const dotenv = require("dotenv");
+const { resolvePnpmCommand } = require("./helpers/pnpm-command.cjs");
 
 const ROOT = path.resolve(__dirname, "..");
 const LIVE_BASE_ENDPOINT = "https://6529.io";
@@ -119,6 +120,21 @@ const COMMANDS = {
       "always",
     ],
   },
+  // CI checks: the unpacked staging app only, for the size budget and the
+  // function suite. Never publishes.
+  "check-linux-staging": {
+    appEnvironment: "staging",
+    build: ["pnpm", ["run", "build"]],
+    electronBuilder: [
+      "--config",
+      "electron-builder.staging.json",
+      "--linux",
+      "--x64",
+      "--dir",
+      "--publish",
+      "never",
+    ],
+  },
   "dist-linux-production": {
     appEnvironment: "production",
     build: ["pnpm", ["run", "build"]],
@@ -200,12 +216,12 @@ function getBuildEnvironment(commandConfig, backendTarget) {
 }
 
 function run(command, args, env) {
-  const executable =
-    process.platform === "win32" && command === "pnpm" ? "pnpm.cmd" : command;
-  const result = spawnSync(executable, args, {
+  const resolved = resolvePnpmCommand(command, args, env);
+  const result = spawnSync(resolved.executable, resolved.args, {
     cwd: ROOT,
     env,
     stdio: "inherit",
+    shell: resolved.shell ?? false,
   });
   if (result.error) {
     throw result.error;
