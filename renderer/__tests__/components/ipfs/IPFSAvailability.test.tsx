@@ -29,6 +29,49 @@ describe("Desktop IPFS menu availability", () => {
     });
   });
 
+  it.each(["stopped", "starting", "unavailable"] as const)(
+    "preserves an initial %s snapshot after the bridge response resolves",
+    async (status) => {
+      let notify: (status: "ready") => void = () => undefined;
+      const getIpfsInfo = jest.fn().mockResolvedValue({ status });
+      Object.defineProperty(window, "api", {
+        configurable: true,
+        value: {
+          getIpfsInfo,
+          onIpfsStatusChange: (callback: typeof notify) => {
+            notify = callback;
+            return () => undefined;
+          },
+        },
+      });
+      await act(async () => {
+        render(
+          <IpfsProvider>
+            <DesktopIpfsNavItem className="" />
+          </IpfsProvider>
+        );
+      });
+      const unavailable = status === "unavailable";
+      const row = screen.getByRole("link", {
+        name: unavailable ? "My IPFS: unavailable" : "My IPFS: starting",
+      });
+      const icon = row.querySelector("svg");
+      expect(icon).toHaveAttribute(
+        "data-icon", unavailable ? "triangle-exclamation" : "spinner"
+      );
+      expect(icon).toHaveClass("tw-h-4", "tw-w-4");
+      expect(row).toHaveAttribute("aria-disabled", "true");
+      expect(row).not.toHaveAttribute("href");
+      expect(getIpfsInfo).toHaveBeenCalledTimes(1);
+
+      getIpfsInfo.mockResolvedValue(readyInfo);
+      await act(async () => notify("ready"));
+      expect(screen.getByRole("link", { name: "My IPFS" })).toBe(row);
+      expect(row).toHaveAttribute("href", "http://127.0.0.1:5001/webui");
+      expect(row).not.toHaveAttribute("aria-disabled");
+    }
+  );
+
   it("keeps one row through startup, failure and late recovery, ignoring stale results", async () => {
     let initialResult: (value: unknown) => void = () => undefined;
     let notify: (status: "ready" | "unavailable") => void = () => undefined;

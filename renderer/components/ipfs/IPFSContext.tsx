@@ -112,8 +112,12 @@ const isIpfsConfigInput = (value: unknown): value is IpfsConfigInput => {
   return hasApiConfig && hasGatewayConfig;
 };
 
-/** Resolve ready endpoints, preserving explicit native unavailability states. */
-const readIpfsConfig = async () => {
+type IpfsSnapshot =
+  | { status: "ready"; config: ReturnType<typeof buildIpfsConfig> }
+  | { status: Exclude<IpfsStatus, "ready">; config: null };
+
+/** Preserve the native lifecycle state alongside endpoints available when ready. */
+const readIpfsSnapshot = async (): Promise<IpfsSnapshot> => {
   const bridge =
     typeof window !== "undefined"
       ? (window as Window & { api?: typeof window.api }).api
@@ -128,7 +132,7 @@ const readIpfsConfig = async () => {
       details
     );
     const appInfo = await bridge.getInfo();
-    return buildIpfsConfig(appInfo ?? {});
+    return { status: "ready" as const, config: buildIpfsConfig(appInfo ?? {}) };
   };
 
   let ipfsInfo: unknown;
@@ -146,7 +150,7 @@ const readIpfsConfig = async () => {
       ipfsInfo.status === "starting" ||
       ipfsInfo.status === "unavailable")
   ) {
-    return null;
+    return { status: ipfsInfo.status, config: null };
   }
 
   if (!isIpfsConfigInput(ipfsInfo)) {
@@ -154,7 +158,7 @@ const readIpfsConfig = async () => {
   }
 
   try {
-    return buildIpfsConfig(ipfsInfo);
+    return { status: "ready", config: buildIpfsConfig(ipfsInfo) };
   } catch (error) {
     return fallbackToAppInfo("invalid getIpfsInfo() payload", {
       ipfsInfo,
@@ -163,7 +167,7 @@ const readIpfsConfig = async () => {
   }
 };
 
-const getEnv = async () => readIpfsConfig();
+const readIpfsConfig = async () => (await readIpfsSnapshot()).config;
 
 export const getConfiguredGatewayBaseForSync = (): string | null => {
   if (!cachedGatewayBase) {
@@ -247,10 +251,10 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
     const refresh = async () => {
       const currentRevision = ++revision;
       try {
-        const info = await getEnv();
+        const { status, config: info } = await readIpfsSnapshot();
         if (disposed || currentRevision !== revision) return;
         if (!info) {
-          clearService("unavailable");
+          clearService(status);
           return;
         }
         cachedGatewayBase = info.gatewayBase;

@@ -66,7 +66,7 @@ export default function DesktopIpfsNavItem({
                 ? faSpinner
                 : faTriangleExclamation
           }
-          className={`tw-h-3 tw-w-3 tw-flex-shrink-0 ${
+          className={`tw-h-4 tw-w-4 tw-flex-shrink-0 ${
             starting && !ready ? "motion-safe:tw-animate-spin" : ""
           }`}
         />
