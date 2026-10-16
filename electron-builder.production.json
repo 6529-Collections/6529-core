@@ -20,6 +20,8 @@
     "next.config.mjs",
     "renderer/config/env.schema.runtime.cjs",
     "renderer/out/**/*",
+    "!renderer/out/cache{,/**/*}",
+    "!renderer/out/dev/cache{,/**/*}",
     "renderer/public/**/*"
   ],
   "extraResources": [

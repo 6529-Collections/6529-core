@@ -736,6 +736,24 @@ assertContract(
 );
 
 const packageJsonPath = "package.json";
+for (const configPath of [
+  "electron-builder.local.json",
+  "electron-builder.staging.json",
+  "electron-builder.production.json",
+  "electron-builder.production-mac-arm64.json",
+  "electron-builder.production-mac-x64.json",
+]) {
+  const config = JSON.parse(
+    fs.readFileSync(path.join(repositoryRoot, configPath), "utf8"),
+  );
+  assertContract(
+    config.files?.includes("!renderer/out/cache{,/**/*}") &&
+      config.files?.includes("!renderer/out/dev/cache{,/**/*}") &&
+      config.afterPack === "scripts/after-pack-copy-next-node-modules.cjs",
+    configPath,
+    "Desktop packages must exclude build-only renderer caches and retain the afterPack artifact guard",
+  );
+}
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(repositoryRoot, packageJsonPath), "utf8"),
 );
