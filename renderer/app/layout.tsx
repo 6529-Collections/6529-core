@@ -8,6 +8,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import "@/styles/swiper.css";
+import "@/styles/wave-navigation-transition.css";
 //keep this last so that we can override the styles of the above css files
 import "@/styles/animations.css";
 import "@/styles/globals.css";
@@ -29,6 +30,7 @@ import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
 import type { Viewport } from "next";
 import { Suspense } from "react";
+import { getMediaResolverSource } from "@/lib/media/decentralized-media";
 
 export const fetchCache = "force-no-store";
 
@@ -65,8 +67,10 @@ export default function RootLayout({
         />
         <link rel="preconnect" href={publicEnv.API_ENDPOINT} crossOrigin="" />
         <link rel="preconnect" href="https://d3lqz0a4bldqgf.cloudfront.net" />
-        <link rel="preconnect" href="https://media.artblocks.io" />
-        <link rel="preconnect" href="https://media-proxy.artblocks.io" />
+        <link
+          rel="preconnect"
+          href={getMediaResolverSource(publicEnv.MEDIA_RESOLVER_ENDPOINT)}
+        />
         {isUsingStaticAssets && (
           <link rel="preconnect" href="https://dnclu2fna0b2b.cloudfront.net" />
         )}

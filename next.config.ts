@@ -591,6 +591,10 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         pino: "./renderer/stubs/empty.js",
         "thread-stream": "./renderer/stubs/empty.js",
         "idb-keyval": "./renderer/lib/storage/idb-keyval.ts",
+        // Match the renderer's browser-only, on-demand locale dictionaries.
+        "@/i18n/localeDictionaries": {
+          browser: "./renderer/i18n/localeDictionaries.browser.ts",
+        },
       },
     },
     assetPrefix,
