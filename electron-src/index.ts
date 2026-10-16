@@ -1847,9 +1847,9 @@ ipcMain.handle("get-nav-state", () => {
 });
 
 ipcMain.handle("get-info", () => {
-  // No IPFS ports when IPFS failed to start, so the renderer does not point
-  // media at a gateway that is not there.
-  const ipfsAvailable = IPFS_SERVER?.getStatus() !== "unavailable";
+  // Report IPFS ports only while the daemon is ready, so the renderer does
+  // not point media at a gateway that is still starting or has stopped.
+  const ipfsAvailable = IPFS_SERVER?.getStatus() === "ready";
   return {
     ...getInfo(),
     port: PORT,
