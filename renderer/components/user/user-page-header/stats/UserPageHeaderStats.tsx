@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
-import UserStatsRow, {
-  UserStatsRowSize,
-} from "../../utils/stats/UserStatsRow";
+import UserStatsRow, { UserStatsRowSize } from "../../utils/stats/UserStatsRow";
 import UserPageFollowersModal from "../../followers/UserPageFollowersModal";
 import UserPageHeaderStatsTDHConsensus from "./UserPageHeaderStatsTDHConsensus";
 
@@ -54,6 +52,7 @@ export default function UserPageHeaderStats({
         followersCount={followersCount}
         onFollowersClick={() => setIsFollowersModalOpen(true)}
         size={UserStatsRowSize.MEDIUM}
+        rateClassName="tw-text-meta tw-leading-4"
       />
       <UserPageFollowersModal
         profileId={profile.id}

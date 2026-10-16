@@ -4,6 +4,7 @@ import type {
   ScheduledWorkerStatus,
   SeedWalletRequest,
 } from "./types";
+import type { NativeAuthResult } from "./native-auth-result";
 
 export interface NotificationNavigationContext {
   readonly targetAddress?: string | null;
@@ -134,7 +135,7 @@ export interface ElectronNativeAuth {
   sessionRefresh: (request: {
     readonly client_type?: ElectronNativeAuthClientType;
     readonly client_address: string;
-  }) => Promise<ElectronNativeAuthSessionResponse>;
+  }) => Promise<NativeAuthResult<ElectronNativeAuthSessionResponse>>;
   createConnectionShare: (request: {
     readonly access_token?: string | null;
     readonly target_client_type?: ElectronNativeAuthClientType;

@@ -18,6 +18,12 @@ import {
 import { completeNativeDelegationReplay } from "./nftdelegation-worker.db";
 import { mapInChunks } from "./map-in-chunks";
 import type { DatabaseWaitUpdate } from "./replay-transaction";
+import {
+  captureDelegationRecoveryPoint,
+  DELEGATION_CONFIRMATIONS,
+  DelegationCheckpointChangedError,
+  recoverDelegationCheckpoint,
+} from "./delegation-recovery";
 
 interface RecentStateProvider {
   getBlockNumber(): Promise<number>;
@@ -36,9 +42,7 @@ export async function verifyDelegationCheckpoint(
       `Missing delegation checkpoint block ${checkpoint.block}; retry to resume reconciliation`,
     );
   if (block.hash !== checkpoint.block_hash)
-    throw new Error(
-      "Delegation log checkpoint changed; Reset NFTDelegation to rebuild the index",
-    );
+    throw new DelegationCheckpointChangedError();
 }
 
 /** Scan durable history, then reconcile bounded batches inside the state window. */
@@ -49,6 +53,49 @@ export async function syncNativeDelegations(
   scan: (fromBlock: number, toBlock: number) => Promise<void>,
   progress: (completed: number, total: number) => void,
   onDatabaseWait?: DatabaseWaitUpdate,
+  options: { confirmationDepth?: number } = {},
+): Promise<{ block: number; upgrade: boolean }> {
+  const confirmationDepth =
+    options.confirmationDepth ?? DELEGATION_CONFIRMATIONS;
+  if (
+    !Number.isSafeInteger(confirmationDepth) ||
+    confirmationDepth < 0 ||
+    confirmationDepth > 32
+  )
+    throw new Error("Invalid delegation confirmation depth");
+  try {
+    return await syncNativeDelegationsOnce(
+      db,
+      provider,
+      reader,
+      scan,
+      progress,
+      onDatabaseWait,
+      confirmationDepth,
+    );
+  } catch (error) {
+    if (!(error instanceof DelegationCheckpointChangedError)) throw error;
+    const restored = await recoverDelegationCheckpoint(
+      db,
+      provider,
+      onDatabaseWait,
+    );
+    throw new Error(
+      restored === null
+        ? "Delegation chain changed; rebuilding unverified history automatically on next run (live data preserved)"
+        : `Delegation chain changed; restored block ${restored}; automatically resuming on next run`,
+    );
+  }
+}
+
+async function syncNativeDelegationsOnce(
+  db: DataSource,
+  provider: RecentStateProvider,
+  reader: DelegationStateReader,
+  scan: (fromBlock: number, toBlock: number) => Promise<void>,
+  progress: (completed: number, total: number) => void,
+  onDatabaseWait: DatabaseWaitUpdate | undefined,
+  confirmationDepth: number,
 ): Promise<{ block: number; upgrade: boolean }> {
   const start = await prepareNativeDelegationReplay(db);
   const guardedReader = guardRecentDelegationReader(reader, () =>
@@ -59,7 +106,9 @@ export async function syncNativeDelegations(
   const initialHead = await provider.getBlockNumber();
   if (initialHead < start.block)
     throw new Error("Delegation checkpoint is ahead of the chain");
-  if (start.block < initialHead) await scan(start.block + 1, initialHead);
+  await captureDelegationRecoveryPoint(db, start, initialHead, onDatabaseWait);
+  const scanHead = Math.max(0, initialHead - confirmationDepth);
+  if (start.block < scanHead) await scan(start.block + 1, scanHead);
   for (;;) {
     let checkpoint = await db
       .getRepository(NFTDelegationReplayBlock)
@@ -69,9 +118,10 @@ export async function syncNativeDelegations(
       throw new Error("Delegation checkpoint is ahead of the chain");
     // A long historical scan or an interrupted reconciliation can leave its
     // target outside AWS's state window. Catch up logs before any eth_call.
-    if (head - checkpoint.block > 32) {
+    const confirmedHead = Math.max(0, head - confirmationDepth);
+    if (confirmedHead - checkpoint.block > 32) {
       await verifyDelegationCheckpoint(provider, checkpoint);
-      await scan(checkpoint.block + 1, head);
+      await scan(checkpoint.block + 1, confirmedHead);
       checkpoint = await db
         .getRepository(NFTDelegationReplayBlock)
         .findOneByOrFail({ id: 1 });
@@ -87,10 +137,9 @@ export async function syncNativeDelegations(
         `Missing delegation snapshot block ${snapshotBlock}; retry to resume reconciliation`,
       );
     if (checkpoint.block_hash && checkpoint.block_hash !== snapshot.hash) {
-      throw new Error(
-        "Delegation log checkpoint changed; Reset NFTDelegation to rebuild the index",
-      );
+      throw new DelegationCheckpointChangedError();
     }
+    await captureDelegationRecoveryPoint(db, checkpoint, head, onDatabaseWait);
     const groups = await getPendingDelegationGroups(db);
     if (!groups.length) {
       await completeNativeDelegationReplay(db, snapshotBlock, onDatabaseWait);

@@ -976,6 +976,43 @@ const preloadPath = "electron-src/preload.ts";
 const preloadSource = parseSource(preloadPath);
 const mainPath = "electron-src/index.ts";
 const mainSource = parseSource(mainPath);
+const refreshHandler = findDescendant(
+  mainSource,
+  (node) =>
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === "ipcMain" &&
+    node.expression.name.text === "handle" &&
+    ts.isStringLiteral(node.arguments[0]) &&
+    node.arguments[0].text === "native-auth:session-refresh",
+);
+assertContract(
+  refreshHandler &&
+    callsIdentifier(refreshHandler, "serializeNativeAuthResult"),
+  mainPath,
+  "native session refresh must preserve API failures as serializable IPC data",
+);
+assertContract(
+  callsIdentifier(
+    findFunction(sessionUtils, "executeSessionRefreshV2"),
+    "unwrapNativeAuthResult",
+  ),
+  sessionUtilsPath,
+  "desktop session refresh must decode API status after crossing the bridge",
+);
+const browserConnectorPath = "renderer/wagmiConfig/browserConnector.ts";
+const browserConnector = parseSource(browserConnectorPath);
+const persistedSessionRefresh = findVariable(
+  browserConnector,
+  "refreshPersistedNativeSession",
+);
+assertContract(
+  persistedSessionRefresh &&
+    callsIdentifier(persistedSessionRefresh, "unwrapNativeAuthResult"),
+  browserConnectorPath,
+  "browser connection recovery must decode native refresh failures before using sessions",
+);
 const quitApplication = findFunction(mainSource, "quitApplication");
 assertContract(
   quitApplication && hasBoundedShutdownSequence(quitApplication),
@@ -2276,6 +2313,18 @@ for (const seedWalletRendererPath of [
     "Core wallet secrets must be encrypted only in the main process, never in the renderer",
   );
 }
+
+const museumSnapshotPath = "renderer/scripts/build-museum-publication-snapshot.ts";
+const museumSnapshot = parseSource(museumSnapshotPath).text;
+assertContract(
+  museumSnapshot.includes('"ls-remote"') &&
+    museumSnapshot.includes("isExactGitCommit(commit)") &&
+    museumSnapshot.includes("pRetry(resolveMuseumBuildCommit, retryOptions)") &&
+    /new GitHubMuseumPublicationSource\(\{\s*ref,/.test(museumSnapshot) &&
+    museumSnapshot.includes("catalogResolver: museumPublicationCatalogResolver"),
+  museumSnapshotPath,
+  "Museum build snapshots must pin the public Git ref without anonymous REST API lookup and retain publication validation",
+);
 
 if (failures.length > 0) {
   console.error("Desktop renderer contract failed:");

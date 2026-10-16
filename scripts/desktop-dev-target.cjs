@@ -67,12 +67,15 @@ function getDevEnvironment(backendTarget) {
           API_ENDPOINT: TEST_API_ENDPOINT,
           WS_ENDPOINT: TEST_WS_ENDPOINT,
           STAGING_API_KEY: stagingApiKey,
+          // Encrypted chats (D109) are staging-only for now.
+          NEXT_PUBLIC_E2EE_DM_ENABLED: "true",
         }
       : {
           BASE_ENDPOINT: LIVE_BASE_ENDPOINT,
           API_ENDPOINT: LIVE_API_ENDPOINT,
           WS_ENDPOINT: LIVE_WS_ENDPOINT,
           STAGING_API_KEY: "",
+          NEXT_PUBLIC_E2EE_DM_ENABLED: "",
         };
 
   return {

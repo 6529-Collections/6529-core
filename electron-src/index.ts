@@ -43,6 +43,10 @@ import {
 } from "../shared/types";
 import type { NotificationNavigationContext } from "../shared/preload-types";
 import {
+  NativeAuthApiError,
+  serializeNativeAuthResult,
+} from "../shared/native-auth-result";
+import {
   addRpcProvider,
   addSeedWallet,
   deactivateRpcProvider,
@@ -272,17 +276,23 @@ function getWalletAuthHeaders(accessToken: unknown): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
-function getApiError(responseBody: unknown, fallback: string): Error {
+/** Retain the API status and retry delay without carrying its raw response body. */
+function getApiError(responseBody: unknown, response: Response): Error {
   const error =
     responseBody &&
     typeof responseBody === "object" &&
     "error" in responseBody &&
     typeof responseBody.error === "string"
       ? responseBody.error
-      : fallback;
-  return new Error(error);
+      : response.statusText || "Native auth API request failed";
+  return new NativeAuthApiError(
+    response.status,
+    error,
+    response.headers.get("Retry-After") ?? undefined,
+  );
 }
 
+/** Send native auth requests in the main process, with a bounded API deadline. */
 async function postNativeAuthApi<T>({
   endpoint,
   body,
@@ -327,10 +337,7 @@ async function postNativeAuthApi<T>({
       }
     }
     if (!response.ok) {
-      throw getApiError(
-        responseBody,
-        response.statusText || "Native auth API request failed",
-      );
+      throw getApiError(responseBody, response);
     }
 
     return (parseJson ? responseBody : undefined) as T;
@@ -1940,7 +1947,7 @@ ipcMain.handle("native-auth:session-refresh", (_event, request: unknown) => {
   if (!isNativeSessionRefreshRequest(request)) {
     throw new Error("Invalid native session refresh request");
   }
-  return nativeSessionRefresh(request);
+  return serializeNativeAuthResult(() => nativeSessionRefresh(request));
 });
 
 ipcMain.handle("native-auth:connection-share", (_event, request: unknown) => {
@@ -1988,7 +1995,8 @@ ipcMain.on(
     redirectPath: string,
     navigationContext?: NotificationNavigationContext,
   ) => {
-    Logger.info(`Showing notification: [${id}] ${title} - ${body}, ${pfp}`);
+    // Titles and bodies carry sender handles and message previews; log the id only.
+    Logger.info(`Showing notification: [${id}]`);
 
     const notificationKey = getNotificationKey(id, navigationContext);
     if (shownNotifications.has(notificationKey)) {
