@@ -73,7 +73,7 @@ instead of misclassifying expired state as a slot-count or metadata mismatch.
 Snapshot hashes are checked around state reads. Before catch-up and each scan
 chunk's commit, the previous saved checkpoint hash is rechecked so a canonical
 new endpoint cannot overwrite evidence of orphaned staged history. Saved hashes detect
-a changed chain checkpoint and require Reset to rebuild rather than publishing
+a changed chain checkpoint and initiate automatic recovery rather than publishing
 mixed history. A temporarily unavailable block or hash preserves replay progress
 and asks for a retry; it does not require Reset. The checkpoint hash also commits
 to its ancestors through each block's parent hash, so a canonical reorg below the
@@ -84,9 +84,29 @@ Scanning extends the saved checkpoint from `checkpoint.block + 1`; committed
 chunks are not overwritten by overlapping rescans. Each chunk captures its end
 block hash before fetching logs and rechecks it and the previous checkpoint
 before the atomic event/checkpoint commit. A changed uncommitted range is
-retried; a changed committed ancestor requires Reset. Deleting only ledger rows
+retried; a changed committed ancestor restores a verified recovery point. Deleting only ledger rows
 in a re-mined range would not undo revocations or consolidation changes, so it
 is not a substitute for this checkpoint protection.
+
+Normal scanning targets 16 blocks behind the actual chain head (roughly three
+minutes on Ethereum), instead of committing the newest block. Snapshot-age
+checks still use the actual head and retain the 64-block state-window cap.
+The worker retains up to 32 durable recovery points near the scan tip, including
+the complete staged consolidation, delegation, registration/expiry and checkpoint
+state. On a checkpoint mismatch it verifies an older anchor against the RPC,
+restores that entire state in one transaction, and resumes the tail on the next
+scheduled run. This also reverses revoked entries and consolidation changes;
+it never simply replaces a saved block hash. TDH waits until verified state is
+republished and a full recalculation is requested after recovery.
+
+An older installation already stopped on a changed hash has no recovery points.
+If no retained anchor can be verified, the worker automatically restarts shadow
+history once, without deleting live index rows, token holdings or other app data.
+That fallback can take as long as the initial replay. It is also the fallback
+for a reorg deeper than all retained points. Manual Reset is not required.
+Unavailable or inconsistent RPC responses remain retryable and do not authorize
+resetting history. The new recovery table is created by normal schema sync;
+healthy version-two indexes do not need another version upgrade/replay.
 
 Each reconciliation iteration reads at most 20 tuple groups with concurrency
 five, preserving verified progress and catching logs up when the checkpoint

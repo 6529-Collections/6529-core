@@ -15,6 +15,7 @@ import {
   ReplayDelegation,
   NativeDelegationRegistration,
   ReplayNativeDelegationRegistration,
+  NFTDelegationRecoveryPoint,
 } from "../../../db/entities/IDelegation";
 import { TransactionBlock } from "../../../db/entities/ITransaction";
 import { ConsolidatedTDH } from "../../../db/entities/ITDH";
@@ -36,7 +37,19 @@ import {
   persistReconciledDelegationGroup,
   prepareNativeDelegationReplay,
 } from "./staged-delegation-sync.db";
-import { syncNativeDelegations } from "./delegation-sync";
+import { syncNativeDelegations as syncWithConfirmations } from "./delegation-sync";
+import {
+  captureDelegationRecoveryPoint,
+  recoverDelegationCheckpoint,
+} from "./delegation-recovery";
+// Historical fixtures model a fixed chain tip; confirmation lag has dedicated
+// coverage below using the production default rather than shifting every clock.
+const syncNativeDelegations = (
+  ...args: Parameters<typeof syncWithConfirmations>
+) =>
+  syncWithConfirmations(args[0], args[1], args[2], args[3], args[4], args[5], {
+    confirmationDepth: 0,
+  });
 import { DelegationStateReader } from "./delegation-registration-expiry";
 import { retryReplayTransaction } from "./replay-transaction";
 import {
@@ -165,6 +178,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
           .run();
       },
       entities: [
+        NFTDelegationRecoveryPoint,
         Consolidation,
         Delegation,
         NFTDelegationBlock,
@@ -1359,7 +1373,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
     );
   });
 
-  it("rejects a checkpoint reorg between reconciliation batches before catch-up can replace its hash", async () => {
+  it("does not extend an orphaned checkpoint between batches and schedules automatic shadow rebuild", async () => {
     await persistNftDelegations(
       db,
       100,
@@ -1406,22 +1420,18 @@ describe("native delegation persistence and resumable atomic replay", () => {
         },
         () => {},
       ),
-      /checkpoint changed; Reset NFTDelegation/,
+      /rebuilding unverified history automatically/,
     );
     assert.equal(reads, 2);
     assert.equal(await getLatestNFTDBlock(db), 10);
-    const checkpoint = await db
-      .getRepository(NFTDelegationReplayBlock)
-      .findOneByOrFail({ id: 1 });
-    assert.equal(checkpoint.block, 100);
-    assert.equal(checkpoint.block_hash, "original-hash");
+    assert.equal(await db.getRepository(NFTDelegationReplayBlock).count(), 0);
     assert.equal(
       await db.getRepository(NativeDelegationRegistration).count(),
       0,
     );
   });
 
-  it("rejects a changed saved checkpoint before scanning or reading state", async () => {
+  it("recovers an older build without checkpoints automatically, preserving live rows and withholding TDH", async () => {
     await persistNftDelegations(
       db,
       100,
@@ -1452,16 +1462,456 @@ describe("native delegation persistence and resumable atomic replay", () => {
         },
         () => {},
       ),
-      /checkpoint changed/,
+      /rebuilding unverified history automatically/,
     );
     assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(await db.getRepository(NFTDelegationReplayBlock).count(), 0);
+    assert.equal(
+      (await db.getRepository(Consolidation).find())[0].wallet1,
+      "old",
+    );
+    assert.equal(await isNativeDelegationIndexReady(db), false);
+  });
+
+  it("scans sixteen blocks behind the real tip, retaining the actual state-age guard", async () => {
+    await prepareNativeDelegationReplay(db);
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      {
+        consolidations: [],
+        registrations: [],
+        revocations: [],
+        registrationLogs: [],
+      },
+      1,
+      0,
+      true,
+      "hash-100",
+    );
+    const ranges: number[][] = [];
+    await syncWithConfirmations(
+      db,
+      {
+        getBlockNumber: async () => 132,
+        getBlock: async (block) => ({ hash: `hash-${block}` }),
+      },
+      {
+        readDelegates: async () => {
+          throw new Error("unexpected state read");
+        },
+        readEntry: async () => {
+          throw new Error("unexpected state read");
+        },
+      },
+      async (from, to) => {
+        ranges.push([from, to]);
+        await persistNftDelegations(
+          db,
+          to,
+          2016,
+          {
+            consolidations: [],
+            registrations: [],
+            revocations: [],
+            registrationLogs: [],
+          },
+          1,
+          0,
+          true,
+          `hash-${to}`,
+        );
+      },
+      () => {},
+    );
+    assert.deepEqual(ranges, [[101, 116]]);
+    assert.equal(await getLatestNFTDBlock(db), 116);
+  });
+
+  it("restores revoked entries, expiry slots and both consolidation directions together, then resumes only the tail", async () => {
+    await prepareNativeDelegationReplay(db);
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true, "hash-100");
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      scan("b", "a"),
+      1,
+      0,
+      true,
+      "hash-100",
+    );
+    await resolveFixtureGroups(db, 100);
+    await captureDelegationRecoveryPoint(
+      db,
+      await db
+        .getRepository(NFTDelegationReplayBlock)
+        .findOneByOrFail({ id: 1 }),
+      120,
+    );
+    const originalRows = await db
+      .getRepository(ReplayNativeDelegationRegistration)
+      .find();
+    const changed = scan("a", "b", 1792022410);
+    changed.consolidations[0].type = EventType.REVOKE;
+    changed.consolidations[0].block = 110;
+    changed.registrations = [];
+    changed.registrationLogs = [];
+    changed.revocations = [
+      {
+        ...changed.consolidations[0],
+        log_index: 0,
+        collection: "memes",
+        use_case: 2,
+      },
+    ];
+    await persistNftDelegations(
+      db,
+      110,
+      2010,
+      changed,
+      1,
+      0,
+      true,
+      "orphan-110",
+    );
+    await captureDelegationRecoveryPoint(
+      db,
+      await db
+        .getRepository(NFTDelegationReplayBlock)
+        .findOneByOrFail({ id: 1 }),
+      120,
+    );
+    assert.equal(
+      await db.getRepository(ReplayNativeDelegationRegistration).count(),
+      1,
+    );
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        {
+          getBlockNumber: async () => 120,
+          getBlock: async (block) => ({ hash: `hash-${block}` }),
+        },
+        {
+          readDelegates: async () => {
+            throw new Error("unexpected state read");
+          },
+          readEntry: async () => {
+            throw new Error("unexpected state read");
+          },
+        },
+        async () => {
+          throw new Error("must rewind before scan");
+        },
+        () => {},
+      ),
+      /restored block 100/,
+    );
+    assert.deepEqual(
+      await db.getRepository(ReplayNativeDelegationRegistration).find(),
+      originalRows,
+    );
+    assert.equal(
+      (await db.getRepository(ReplayConsolidation).find())[0].wallet1,
+      "a",
+    );
+    assert.equal(
+      (await db.getRepository(ReplayConsolidation).find())[0].confirmed,
+      true,
+    );
+    assert.equal(await isNativeDelegationIndexReady(db), false);
+    assert.equal(await db.getRepository(NFTDelegationRecoveryPoint).count(), 1);
+    const ranges: number[][] = [];
+    const result = await syncNativeDelegations(
+      db,
+      {
+        getBlockNumber: async () => 120,
+        getBlock: async (block) => ({ hash: `hash-${block}` }),
+      },
+      {
+        readDelegates: async () => {
+          throw new Error("verified expiry survives recovery");
+        },
+        readEntry: async () => {
+          throw new Error("verified expiry survives recovery");
+        },
+      },
+      async (from, to) => {
+        ranges.push([from, to]);
+        await persistNftDelegations(
+          db,
+          to,
+          2020,
+          {
+            consolidations: [],
+            registrations: [],
+            revocations: [],
+            registrationLogs: [],
+          },
+          1,
+          0,
+          true,
+          `hash-${to}`,
+        );
+      },
+      () => {},
+    );
+    assert.deepEqual(ranges, [[101, 120]]);
+    assert.equal(result.upgrade, true);
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+    assert.equal(
+      (await db.getRepository(NativeDelegationRegistration).find())[0].expiry,
+      1234,
+    );
+  });
+
+  it("keeps recovery state untouched when the RPC cannot verify a retained anchor", async () => {
+    await prepareNativeDelegationReplay(db);
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true, "hash-100");
+    await captureDelegationRecoveryPoint(
+      db,
+      await db
+        .getRepository(NFTDelegationReplayBlock)
+        .findOneByOrFail({ id: 1 }),
+      120,
+    );
+    await persistNftDelegations(
+      db,
+      110,
+      2010,
+      {
+        consolidations: [],
+        registrations: [],
+        revocations: [],
+        registrationLogs: [],
+      },
+      1,
+      0,
+      true,
+      "orphan-110",
+    );
+    await assert.rejects(
+      recoverDelegationCheckpoint(db, {
+        getBlock: async (block) =>
+          block === 110 ? { hash: "canonical-110" } : null,
+      }),
+      /Missing delegation recovery block/,
+    );
+    assert.equal(
+      await db.getRepository(ReplayNativeDelegationRegistration).count(),
+      1,
+    );
+    assert.equal(await db.getRepository(NFTDelegationRecoveryPoint).count(), 1);
+  });
+
+  it("does not rewrite data after a transient RPC hash disagreement", async () => {
+    await prepareNativeDelegationReplay(db);
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true, "hash-100");
+    let calls = 0;
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        {
+          getBlockNumber: async () => 120,
+          getBlock: async () => ({
+            hash: ++calls === 1 ? "transient-fork" : "hash-100",
+          }),
+        },
+        {
+          readDelegates: async () => [],
+          readEntry: async () => {
+            throw new Error("unexpected read");
+          },
+        },
+        async () => {
+          throw new Error("unexpected scan");
+        },
+        () => {},
+      ),
+      /inconsistent; retry/,
+    );
     assert.equal(
       (
         await db
           .getRepository(NFTDelegationReplayBlock)
           .findOneByOrFail({ id: 1 })
       ).block_hash,
-      "original-hash",
+      "hash-100",
+    );
+    assert.equal(
+      await db.getRepository(ReplayNativeDelegationRegistration).count(),
+      1,
+    );
+  });
+
+  it("rolls back a failed recovery restore instead of exposing mixed tables", async () => {
+    await prepareNativeDelegationReplay(db);
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true, "hash-100");
+    await captureDelegationRecoveryPoint(
+      db,
+      await db
+        .getRepository(NFTDelegationReplayBlock)
+        .findOneByOrFail({ id: 1 }),
+      120,
+    );
+    await persistNftDelegations(
+      db,
+      110,
+      2010,
+      {
+        consolidations: [],
+        registrations: [],
+        revocations: [],
+        registrationLogs: [],
+      },
+      1,
+      0,
+      true,
+      "orphan-110",
+    );
+    await db.query(
+      "CREATE TRIGGER fail_recovery BEFORE INSERT ON native_delegation_registrations_replay BEGIN SELECT RAISE(ABORT, 'recovery write failed'); END",
+    );
+    await assert.rejects(
+      recoverDelegationCheckpoint(db, {
+        getBlock: async (block) => ({ hash: `hash-${block}` }),
+      }),
+      /recovery write failed/,
+    );
+    assert.equal(
+      (
+        await db
+          .getRepository(NFTDelegationReplayBlock)
+          .findOneByOrFail({ id: 1 })
+      ).block,
+      110,
+    );
+    assert.equal(
+      await db.getRepository(ReplayNativeDelegationRegistration).count(),
+      1,
+    );
+    assert.equal(
+      (await db.getRepository(Consolidation).find())[0].wallet1,
+      "old",
+    );
+  });
+
+  it("retains recovery copies across database close/reopen", async () => {
+    const competitor = await openCompetingConnection();
+    competitor.close();
+    await prepareNativeDelegationReplay(db);
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true, "hash-100");
+    await captureDelegationRecoveryPoint(
+      db,
+      await db
+        .getRepository(NFTDelegationReplayBlock)
+        .findOneByOrFail({ id: 1 }),
+      120,
+    );
+    await persistNftDelegations(
+      db,
+      110,
+      2010,
+      {
+        consolidations: [],
+        registrations: [],
+        revocations: [],
+        registrationLogs: [],
+      },
+      1,
+      0,
+      true,
+      "orphan-110",
+    );
+    const options = db.options;
+    if (options.type !== "better-sqlite3") {
+      throw new Error("Recovery fixture requires SQLite");
+    }
+    await db.destroy();
+    db = await new DataSource({
+      ...options,
+      prepareDatabase: undefined,
+    }).initialize();
+    assert.equal(
+      await recoverDelegationCheckpoint(db, {
+        getBlock: async (block) => ({ hash: `hash-${block}` }),
+      }),
+      100,
+    );
+    assert.equal(
+      await db.getRepository(ReplayNativeDelegationRegistration).count(),
+      1,
+    );
+  });
+
+  it("bounds recovery storage and clears it on an explicit Reset", async () => {
+    await prepareNativeDelegationReplay(db);
+    for (let block = 100; block < 140; block++) {
+      await persistNftDelegations(
+        db,
+        block,
+        block,
+        {
+          consolidations: [],
+          registrations: [],
+          revocations: [],
+          registrationLogs: [],
+        },
+        1,
+        0,
+        true,
+        `hash-${block}`,
+      );
+      await captureDelegationRecoveryPoint(
+        db,
+        await db
+          .getRepository(NFTDelegationReplayBlock)
+          .findOneByOrFail({ id: 1 }),
+        150,
+      );
+    }
+    assert.equal(
+      await db.getRepository(NFTDelegationRecoveryPoint).count(),
+      32,
+    );
+    await resetNativeDelegationReplay(db);
+    assert.equal(await db.getRepository(NFTDelegationRecoveryPoint).count(), 0);
+  });
+
+  it("automatically rebuilds shadow history when a fork exceeds every retained anchor", async () => {
+    await prepareNativeDelegationReplay(db);
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      scan(),
+      1,
+      0,
+      true,
+      "orphan-100",
+    );
+    await captureDelegationRecoveryPoint(
+      db,
+      await db
+        .getRepository(NFTDelegationReplayBlock)
+        .findOneByOrFail({ id: 1 }),
+      120,
+    );
+    assert.equal(
+      await recoverDelegationCheckpoint(db, {
+        getBlock: async () => ({ hash: "canonical-fork" }),
+      }),
+      null,
+    );
+    const restart = await prepareNativeDelegationReplay(db);
+    assert.equal(restart.block, DELEGATION_CONTRACT.deploy_block - 1);
+    assert.equal(restart.upgrade, true);
+    assert.equal(await db.getRepository(NFTDelegationRecoveryPoint).count(), 0);
+    assert.equal(
+      (await db.getRepository(Consolidation).find())[0].wallet1,
+      "old",
     );
   });
 
