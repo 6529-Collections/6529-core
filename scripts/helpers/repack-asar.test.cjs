@@ -13,6 +13,24 @@ const {
 const builderRequire = createRequire(require.resolve("electron-builder"));
 const { FileMatcher } = builderRequire("app-builder-lib/out/fileMatcher");
 
+test("Local output survives release cleanup without changing release output paths", () => {
+  const root = path.resolve(__dirname, "../..");
+  const readJson = (file) => JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));
+  assert.equal(readJson("electron-builder.local.json").directories.output, "dist-local");
+  for (const file of [
+    "electron-builder.staging.json",
+    "electron-builder.production.json",
+    "electron-builder.production-mac-arm64.json",
+    "electron-builder.production-mac-x64.json",
+  ]) {
+    assert.equal(readJson(file).directories?.output ?? "dist", "dist", file);
+  }
+  const scripts = readJson("package.json").scripts;
+  assert.doesNotMatch(scripts.clean, /dist-local/);
+  assert.doesNotMatch(scripts["clean-win"], /dist-local/);
+  assert.match(fs.readFileSync(path.join(root, ".gitignore"), "utf8"), /^\/dist-local\/$/m);
+});
+
 test("all desktop packaging filters exclude build caches while retaining runtime assets", () => {
   const root = path.resolve(__dirname, "../..");
   const configs = fs
