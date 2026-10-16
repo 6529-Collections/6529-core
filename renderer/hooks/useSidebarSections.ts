@@ -31,9 +31,12 @@ function getDesktopSection(ipfsWebuiUrl: string): SidebarSection {
       { name: "Wallets", href: "/core/core-wallets" },
       { name: "ETH Transactions", href: "/core/eth-transactions" },
       { name: "TDH Calculation", href: "/core/tdh-calculation" },
-      ...(ipfsWebuiUrl
-        ? [{ name: "My IPFS", href: ipfsWebuiUrl, isExternal: true }]
-        : []),
+      {
+        id: "desktop-ipfs",
+        name: t(DEFAULT_LOCALE, "navigation.desktop.myIpfs"),
+        href: ipfsWebuiUrl,
+        isExternal: true,
+      },
       { name: "About", href: "/core/core-info" },
     ],
     subsections: [],
@@ -220,12 +223,7 @@ export function useSidebarSections(
         publicReviewsEnabled,
         ipfsWebuiUrl
       ),
-    [
-      appWalletsSupported,
-      hideSubscriptions,
-      publicReviewsEnabled,
-      ipfsWebuiUrl,
-    ]
+    [appWalletsSupported, hideSubscriptions, publicReviewsEnabled, ipfsWebuiUrl]
   );
 }
 
@@ -249,12 +247,14 @@ export function mapSidebarSectionsToPages(
 ): SidebarPageEntry[] {
   return sections.flatMap((section) => {
     const sectionIcon = section.icon;
-    const sectionItems: SidebarPageEntry[] = section.items.map((item) => ({
-      name: item.name,
-      href: item.href,
-      section: section.name,
-      icon: sectionIcon,
-    }));
+    const sectionItems: SidebarPageEntry[] = section.items
+      .filter((item) => item.id !== "desktop-ipfs" || Boolean(item.href))
+      .map((item) => ({
+        name: item.name,
+        href: item.href,
+        section: section.name,
+        icon: sectionIcon,
+      }));
 
     const subsectionItems =
       section.subsections?.flatMap((subsection) =>

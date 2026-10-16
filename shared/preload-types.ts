@@ -5,6 +5,7 @@ import type {
   SeedWalletRequest,
 } from "./types";
 import type { NativeAuthResult } from "./native-auth-result";
+import type { IpfsStatus } from "./ipfs-status";
 
 export interface NotificationNavigationContext {
   readonly targetAddress?: string | null;
@@ -38,6 +39,7 @@ export interface ElectronAPI {
   offSeedWalletsChange: (callback: any) => void;
   getInfo: () => Promise<any>;
   getIpfsInfo: () => Promise<any>;
+  onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => () => void;
   getMainWorker: () => Promise<any>;
   getScheduledWorkers: () => Promise<any>;
   getCrashReports: () => Promise<any>;

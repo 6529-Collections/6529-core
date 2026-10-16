@@ -9,6 +9,8 @@ import type {
   NotificationNavigatePayload,
 } from "../shared/preload-types";
 
+import type { IpfsStatus } from "../shared/ipfs-status";
+
 export const api = {
   on: (channel: string, callback: Function) => {
     ipcRenderer.on(channel, (event: IpcRendererEvent, args: any) =>
@@ -58,6 +60,14 @@ export const api = {
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
   getIpfsInfo: () => ipcRenderer.invoke("get-ipfs-info"),
+  onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => {
+    const listener = (_event: IpcRendererEvent, status: IpfsStatus) =>
+      callback(status);
+    ipcRenderer.on("ipfs-status-change", listener);
+    return () => {
+      ipcRenderer.removeListener("ipfs-status-change", listener);
+    };
+  },
   getMainWorker: () => ipcRenderer.invoke("get-main-worker"),
   getScheduledWorkers: () => ipcRenderer.invoke("get-scheduled-workers"),
   getCrashReports: () => ipcRenderer.invoke("get-crash-reports"),

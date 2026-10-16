@@ -47,7 +47,12 @@ export default class IPFSServer {
   private startup: Promise<IpfsStatus> | null = null;
   private shuttingDown = false;
 
-  constructor(ipfsPort: number, rpcPort: number, swarmPort: number) {
+  constructor(
+    ipfsPort: number,
+    rpcPort: number,
+    swarmPort: number,
+    private readonly onStatusChange?: (status: IpfsStatus) => void,
+  ) {
     this.ipfsRepoPath = path.join(app.getPath("userData"), "ipfs-repo");
     this.ipfsPort = ipfsPort;
     this.rpcPort = rpcPort;
@@ -59,6 +64,13 @@ export default class IPFSServer {
     return this.status;
   }
 
+  /** Notify the renderer only when the daemon's availability changes. */
+  private setStatus(status: IpfsStatus): void {
+    if (this.status === status) return;
+    this.status = status;
+    this.onStatusChange?.(status);
+  }
+
   /**
    * Starts IPFS once; later calls return the same result. Never rejects: a
    * failed step is logged and IPFS is marked unavailable, so the rest of the
@@ -66,10 +78,10 @@ export default class IPFSServer {
    */
   start(appPort: number): Promise<IpfsStatus> {
     if (!this.startup) {
-      this.status = "starting";
+      this.setStatus("starting");
       this.startup = this.init(appPort).then(
         () => {
-          this.status = "ready";
+          this.setStatus("ready");
           return this.status;
         },
         (error: unknown) => {
@@ -81,7 +93,7 @@ export default class IPFSServer {
               error,
             );
           }
-          this.status = "unavailable";
+          this.setStatus("unavailable");
           return this.status;
         },
       );
@@ -349,7 +361,7 @@ export default class IPFSServer {
           );
           if (settled) {
             Logger.info("[IPFS] Daemon became ready after the startup timeout");
-            this.status = "ready";
+            this.setStatus("ready");
           } else {
             settled = true;
             resolve();
@@ -383,7 +395,7 @@ export default class IPFSServer {
           Logger.error(`[IPFS] Daemon exited prematurely with code ${code}`);
         } else if (!this.shuttingDown) {
           Logger.error(`[IPFS] Daemon exited with code ${code}`);
-          this.status = "unavailable";
+          this.setStatus("unavailable");
         }
         if (!settled) {
           settled = true;

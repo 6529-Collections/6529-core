@@ -13,7 +13,7 @@ export const IPFS_BOOTSTRAP_NODES: readonly string[] = [
 export const IPFS_INIT_TIMEOUT_MS = 60_000;
 export const IPFS_COMMAND_TIMEOUT_MS = 30_000;
 
-export type IpfsStatus = "stopped" | "starting" | "ready" | "unavailable";
+export type { IpfsStatus } from "../../shared/ipfs-status";
 
 export class IpfsStartupCancelledError extends Error {
   constructor() {

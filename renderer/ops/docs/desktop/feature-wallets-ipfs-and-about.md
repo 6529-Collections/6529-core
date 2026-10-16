@@ -39,7 +39,7 @@ A 6529 Desktop wallet is optional for node indexing and TDH calculation. You can
 
 ### Explore My IPFS
 
-6529 Desktop bundles a local IPFS daemon. Open 6529 Desktop > My IPFS to launch its WebUI when the app has resolved the local IPFS configuration; My IPFS is separate from ETH Transactions and the Ethereum RPC Providers list.
+6529 Desktop bundles a local IPFS daemon. My IPFS stays in a fixed menu position. It is disabled with a spinner while starting, disabled with a warning icon when unavailable, and enabled with an external-link icon when ready. It updates automatically if the node recovers later. Open it when enabled to launch its WebUI; My IPFS is separate from ETH Transactions and the Ethereum RPC Providers list.
 
 The app uses a local IPFS API, gateway, and swarm port. Find the actual IPFS Port, IPFS RPC Port, and IPFS Swarm Port in 6529 Desktop > About; do not assume a fixed port or share a localhost URL as a public link.
 
@@ -47,7 +47,7 @@ The Desktop IPFS file service pins added files and keeps a named entry under /65
 
 The bundled node uses configured bootstrap peers with automatic peer discovery/routing features restricted. Do not describe it as an unrestricted network crawler, a backup of every NFT, or proof that TDH consensus has completed.
 
-If My IPFS is missing or the WebUI cannot connect, keep the app open, check About > App Logs for IPFS startup/connection errors and confirm the displayed ports. Restart the app normally if initialization failed; persistent errors need the app version, OS, and redacted log details.
+If My IPFS remains unavailable or the WebUI cannot connect, keep the app open, check About > App Logs for IPFS startup/connection errors and confirm the displayed ports. Restart the app normally if initialization failed; persistent errors need the app version, OS, and redacted log details.
 
 The IPFS API and gateway are bound to loopback. Do not expose the local administrative API publicly, upload wallet secrets, or delete the IPFS repository to fix an unrelated TDH mismatch. IPFS storage and Ethereum transaction indexing are separate concerns.
 
@@ -91,7 +91,7 @@ The native titlebar identifies a Live/Test backend where applicable. That backen
 
 A private-key-only wallet cannot display a mnemonic it never had. A website
 connection or Mobile connection transfer is not a backup of the locally saved
-6529 Desktop wallet. My IPFS can be absent when the local configuration is unavailable.
+6529 Desktop wallet. My IPFS stays visible but disabled when the local node is starting or unavailable.
 The IPFS RPC port is unrelated to the Ethereum RPC provider URL.
 
 ## Failure and Recovery

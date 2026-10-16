@@ -438,6 +438,9 @@ const NEW_VERSION_TOAST_MESSAGES = objectMessages("newVersionToast", {
 } as const);
 
 const NAVIGATION_MESSAGES = objectMessages("navigation", {
+  "desktop.myIpfs": "My IPFS",
+  "desktop.ipfsStarting": "My IPFS: starting",
+  "desktop.ipfsUnavailable": "My IPFS: unavailable",
   "primary.nfts": "NFTs",
   "primary.waves": "Waves",
   "primary.dms": "DMs",
