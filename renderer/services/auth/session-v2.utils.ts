@@ -1,4 +1,5 @@
 import { queueNativePushLogout } from "@/services/notifications/push-installation";
+import { unwrapNativeAuthResult } from "@/shared/native-auth-result";
 import { Capacitor } from "@capacitor/core";
 import { isElectron } from "@/helpers";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
@@ -417,6 +418,7 @@ export async function loginWithSessionV2({
   return response;
 }
 
+/** Refresh the platform session while keeping desktop credentials in the main process. */
 async function executeSessionRefreshV2({
   address,
   abortSignal,
@@ -440,11 +442,13 @@ async function executeSessionRefreshV2({
         request: () =>
           runDesktopBridgeRequestWithAbort({
             abortSignal,
-            request: () =>
-              sessionRefresh({
-                client_type: clientType,
-                client_address: address,
-              }),
+            request: async () =>
+              unwrapNativeAuthResult(
+                await sessionRefresh({
+                  client_type: clientType,
+                  client_address: address,
+                })
+              ),
           }),
       });
     }
