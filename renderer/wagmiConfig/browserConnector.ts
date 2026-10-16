@@ -6,6 +6,7 @@ import {
   setActiveWalletAccount,
   setAuthJwt,
 } from "@/services/auth/auth.utils";
+import { unwrapNativeAuthResult } from "@/shared/native-auth-result";
 import {
   getNativeRefreshToken,
   removeNativeRefreshToken,
@@ -524,10 +525,12 @@ const refreshPersistedNativeSession = async ({
       ? undefined
       : window.nativeAuth?.sessionRefresh;
   if (typeof guardedNativeSessionRefresh === "function") {
-    return await guardedNativeSessionRefresh({
-      client_type: clientType,
-      client_address: address,
-    });
+    return unwrapNativeAuthResult(
+      await guardedNativeSessionRefresh({
+        client_type: clientType,
+        client_address: address,
+      })
+    );
   }
 
   // Mobile/native fallback. Electron refresh tokens intentionally never leave
