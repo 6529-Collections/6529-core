@@ -165,6 +165,20 @@ export class NativeDelegationRegistration {
 @Entity("native_delegation_registrations_replay")
 export class ReplayNativeDelegationRegistration extends NativeDelegationRegistration {}
 
+// Bounded, transactional copies of staged state let shallow reorgs rewind
+// revocations and consolidations too, not just delete recent registrations.
+@Entity("nft_delegation_recovery_points")
+export class NFTDelegationRecoveryPoint {
+  @PrimaryColumn({ type: "int" })
+  block!: number;
+
+  @Column({ type: "varchar", length: 66 })
+  block_hash!: string;
+
+  @Column({ type: "text" })
+  state!: string;
+}
+
 export interface WalletConsolidationKey {
   wallet: string;
   consolidation_key: string;
