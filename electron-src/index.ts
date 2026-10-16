@@ -1408,12 +1408,10 @@ async function createWindow() {
 
   mainWindow.once("ready-to-show", async () => {
     Logger.info("Main window ready to show");
-    // A ready main window must suppress pending/late splash paints even while
-    // scheduler setup is still settling. Keep an already-visible splash until
-    // the main window is actually shown below.
+    // Show the ready main window before scheduler setup so slow initialization
+    // cannot leave startup without a visible window or revive a late splash.
     startupComplete = true;
     clearTimeout(splashTimer);
-    await createScheduledTasks();
     if (windowState) {
       mainWindow?.setBounds(windowState);
     } else {
@@ -1422,6 +1420,11 @@ async function createWindow() {
     mainWindow?.show();
     splash?.destroy();
     splash = null;
+    try {
+      await createScheduledTasks();
+    } catch (error) {
+      Logger.error("Could not initialize scheduled tasks", error);
+    }
   });
 
   mainWindow.on("close", (e) => {
