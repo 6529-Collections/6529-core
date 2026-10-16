@@ -44,12 +44,14 @@ export interface IpfsStartupSteps {
   log: IpfsStartupLogger;
 }
 
+/** Stop the startup sequence before another step when the app is quitting. */
 function throwIfCancelled(steps: IpfsStartupSteps): void {
   if (steps.isCancelled()) {
     throw new IpfsStartupCancelledError();
   }
 }
 
+/** Replace bootstrap peers sequentially to avoid overlapping repository locks. */
 async function resetBootstrapNodes(steps: IpfsStartupSteps): Promise<void> {
   await steps.runCommand(["bootstrap", "rm", "--all"], IPFS_COMMAND_TIMEOUT_MS);
   for (const node of IPFS_BOOTSTRAP_NODES) {
@@ -59,6 +61,7 @@ async function resetBootstrapNodes(steps: IpfsStartupSteps): Promise<void> {
   }
 }
 
+/** Initialize and configure the repository, then attach to or start its daemon. */
 export async function runIpfsStartup(steps: IpfsStartupSteps): Promise<void> {
   if (!steps.isRepoInitialized()) {
     steps.log.info("[IPFS] Initializing repo...");

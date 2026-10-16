@@ -1277,6 +1277,7 @@ function updateSplashMessage(newMessage: string) {
   }
 }
 
+/** Open the main window and start IPFS without blocking renderer loading. */
 async function createWindow() {
   Logger.info("Creating window");
   if (mainWindow && !mainWindow.isDestroyed()) {

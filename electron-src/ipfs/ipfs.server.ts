@@ -31,6 +31,7 @@ function getOS(): string {
   }
 }
 
+/** Yield between bounded probes while waiting for a leftover daemon to stop. */
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -53,6 +54,7 @@ export default class IPFSServer {
     this.swarmPort = swarmPort;
   }
 
+  /** Return the current daemon state, including changes after startup settles. */
   getStatus(): IpfsStatus {
     return this.status;
   }
@@ -110,6 +112,7 @@ export default class IPFSServer {
     return path.join(process.resourcesPath, "ipfs-binaries", "ipfs");
   }
 
+  /** Run ordered repository setup and daemon startup for this renderer port. */
   private async init(appPort: number): Promise<void> {
     Logger.info("[IPFS] Init", appPort);
     Logger.info("[IPFS] Swarm Port", this.swarmPort);
@@ -134,6 +137,7 @@ export default class IPFSServer {
     });
   }
 
+  /** Run one repository command with bounded duration and captured error output. */
   private runCommand(
     ipfsBinaryPath: string,
     args: readonly string[],
@@ -183,6 +187,7 @@ export default class IPFSServer {
     });
   }
 
+  /** Apply the app's loopback endpoints, renderer origin and trusted peers. */
   private writeConfig(configFilePath: string, appPort: number): void {
     Logger.info(`[IPFS] Configuring`, appPort);
     const config = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
@@ -274,6 +279,7 @@ export default class IPFSServer {
     throw new Error("A daemon from an earlier session did not stop");
   }
 
+  /** Reuse an answering daemon on the configured local API endpoint. */
   private async attachToDaemon(): Promise<boolean> {
     const apiEndpoint = `http://127.0.0.1:${this.rpcPort}/api/v0`;
 
@@ -305,6 +311,7 @@ export default class IPFSServer {
     }
   }
 
+  /** Await daemon readiness with a timeout while tracking late readiness and exit. */
   private startDaemon(ipfsBinaryPath: string): Promise<void> {
     Logger.info("[IPFS] Spawning a new daemon...");
     const daemon = spawn(ipfsBinaryPath, ["daemon", "--migrate"], {
@@ -386,6 +393,7 @@ export default class IPFSServer {
     });
   }
 
+  /** Log the connected peer count without failing startup when its probe fails. */
   private async logPeerCount(): Promise<void> {
     try {
       const response = await axios.post(
@@ -415,6 +423,7 @@ export default class IPFSServer {
     return this.mfsPath;
   }
 
+  /** Stop the owned or attached daemon and cancel any remaining startup steps. */
   async shutdown(): Promise<void> {
     this.shuttingDown = true;
     const daemon = this.ipfsProcess;
