@@ -106,6 +106,7 @@ import {
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
+import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import {
   pinnedWindowNavigation,
@@ -1759,40 +1760,30 @@ ipcMain.on("open-external", (event, url) => {
   }
 });
 
+const browserLaunchDeps: BrowserLaunchDeps = {
+  openWithApp: (url, name) => open(url, { app: { name: name as string | string[] } }),
+  openDefault: (url) => shell.openExternal(url),
+  log: (message, detail) => Logger.error(message, detail),
+  platform: process.platform,
+};
+
 ipcMain.on("open-external-chrome", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Chrome:", url);
-  open(url, { app: { name: apps.chrome } }).catch((err) => {
-    Logger.error(
-      "Failed to open in Chrome, falling back to default browser:",
-      err,
-    );
-    shell.openExternal(url);
-  });
+  openInBrowser(url, apps.chrome, "Chrome", browserLaunchDeps);
 });
 
 ipcMain.on("open-external-firefox", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Firefox:", url);
-  open(url, { app: { name: apps.firefox } }).catch((err) => {
-    Logger.error(
-      "Failed to open in Firefox, falling back to default browser:",
-      err,
-    );
-    shell.openExternal(url);
-  });
+  openInBrowser(url, apps.firefox, "Firefox", browserLaunchDeps);
 });
 
 ipcMain.on("open-external-brave", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Brave:", url);
-  open(url, { app: { name: "Brave Browser" } }).catch((err) => {
-    Logger.error(
-      "Failed to open in Brave, falling back to default browser:",
-      err,
-    );
-    shell.openExternal(url);
-  });
+  // apps.brave names Brave per platform; "Brave Browser" is its macOS name only.
+  openInBrowser(url, apps.brave, "Brave", browserLaunchDeps);
 });
 
 ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
