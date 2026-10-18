@@ -15,6 +15,7 @@ import { app, BrowserWindow, dialog, Menu, Notification } from "electron/main";
 import fs from "fs";
 import { getPort } from "get-port-please";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import open, { apps } from "open";
 import { platform } from "os";
 import { Tail } from "tail";
@@ -925,37 +926,28 @@ function isValidSplashCard(data: unknown): data is SplashCard {
 
 let splashCardData: SplashCard | null = null;
 
-let preloadSplashImagePromise: Promise<string | null> | null = null;
+// The saved splash image, as a file URL for the splash window.
+let savedSplashImage: string | null = null;
 let latestSplashMessage = "Loading";
 
-function preloadSplashImage(url: string): Promise<string | null> {
-  return fetch(url)
-    .then((res) => {
-      const ct =
-        res.headers.get("content-type")?.split(";")[0]?.trim() || "image/png";
-      return res.arrayBuffer().then((buf) => ({ ct, buf }));
-    })
-    .then(({ ct, buf }) => {
-      const b64 = Buffer.from(buf).toString("base64");
-      return `data:${ct};base64,${b64}`;
-    })
-    .catch(() => null);
-}
+// Larger images are not saved; the splash then loads the card's image from
+// the network, as it does before the first save.
+const SPLASH_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
-function loadSplashImageFromFile(card: SplashCard): Promise<string | null> {
-  const storedCardId = getValue(SPLASH_IMAGE_CARD_ID_STORE_KEY);
-  if (storedCardId !== card.id) return Promise.resolve(null);
-  const ct = getValue(SPLASH_IMAGE_TYPE_STORE_KEY);
-  if (typeof ct !== "string" || !ct) return Promise.resolve(null);
+/**
+ * The saved image of this card as a file URL, or null. The splash window
+ * loads it from disk, so the image is never copied into the main process.
+ */
+function savedSplashImageUrl(card: SplashCard): string | null {
+  if (getValue(SPLASH_IMAGE_CARD_ID_STORE_KEY) !== card.id) return null;
   const filePath = getSplashImagePath();
   try {
-    if (!fs.existsSync(filePath)) return Promise.resolve(null);
-    const buf = fs.readFileSync(filePath);
-    const b64 = buf.toString("base64");
-    return Promise.resolve(`data:${ct};base64,${b64}`);
+    const { size } = fs.statSync(filePath);
+    if (size === 0 || size > SPLASH_IMAGE_MAX_BYTES) return null;
   } catch {
-    return Promise.resolve(null);
+    return null;
   }
+  return pathToFileURL(filePath).href;
 }
 
 function saveSplashCardAndImage(data: SplashCard): Promise<void> {
@@ -966,8 +958,9 @@ function saveSplashCardAndImage(data: SplashCard): Promise<void> {
       return res.arrayBuffer().then((buf) => ({ ct, buf: Buffer.from(buf) }));
     })
     .then(({ ct, buf }) => {
-      fs.writeFileSync(getSplashImagePath(), buf);
       setValue(SPLASH_CARD_STORE_KEY, data);
+      if (buf.length === 0 || buf.length > SPLASH_IMAGE_MAX_BYTES) return;
+      fs.writeFileSync(getSplashImagePath(), buf);
       setValue(SPLASH_IMAGE_TYPE_STORE_KEY, ct);
       setValue(SPLASH_IMAGE_CARD_ID_STORE_KEY, data.id);
     })
@@ -1194,22 +1187,12 @@ async function sendSplashCardIfReady() {
   if (!splashCardData || !splash || splash.isDestroyed() || !splash.webContents)
     return;
   const splashWindow = splash;
-  let payload: SplashCard & { preloadedImageDataUrl?: string } = {
+  // splash.html reads the saved image's URL from preloadedImageDataUrl and
+  // falls back to the card's own image.
+  const payload: SplashCard & { preloadedImageDataUrl?: string } = {
     ...splashCardData,
+    ...(savedSplashImage ? { preloadedImageDataUrl: savedSplashImage } : {}),
   };
-  if (preloadSplashImagePromise) {
-    try {
-      const dataUrl = await Promise.race([
-        preloadSplashImagePromise,
-        new Promise<string | null>((_, rej) =>
-          setTimeout(() => rej(new Error("timeout")), 5000),
-        ),
-      ]);
-      if (dataUrl) payload.preloadedImageDataUrl = dataUrl;
-    } catch {
-      // send without preloaded image
-    }
-  }
   if (splash === splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.send("splash-card", payload);
   }
@@ -1405,12 +1388,10 @@ async function createWindow() {
   const savedCard = getValue(SPLASH_CARD_STORE_KEY);
   if (isValidSplashCard(savedCard)) {
     splashCardData = savedCard;
-    preloadSplashImagePromise = loadSplashImageFromFile(splashCardData).then(
-      (dataUrl) => dataUrl ?? preloadSplashImage(splashCardData!.scaled),
-    );
+    savedSplashImage = savedSplashImageUrl(splashCardData);
   } else {
     splashCardData = null;
-    preloadSplashImagePromise = null;
+    savedSplashImage = null;
   }
 
   let startupComplete = false;
