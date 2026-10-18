@@ -140,6 +140,7 @@ module.exports = {
   budgetArgs,
   checkPackedAppSizeBudget,
   checkSizeBudget,
+  findPython,
   platformKeyFor,
   readBudget,
 };

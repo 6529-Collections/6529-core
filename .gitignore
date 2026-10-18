@@ -29,6 +29,7 @@ release-work
 /out
 /main
 /main-bundle
+/main-previous
 
 # Generated from next.config.ts
 next.config.mjs

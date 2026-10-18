@@ -1083,6 +1083,23 @@ if (!gotTheLock) {
     }
   }
 
+  /**
+   * Hands a deep link to the renderer, waiting for the page when the main
+   * window is still loading (just reopened from background mode). Links that
+   * arrive during one load are handled in order once it finishes.
+   */
+  function deliverDeepLink(url: string) {
+    const window = mainWindow;
+    if (!window || window.isDestroyed()) {
+      return;
+    }
+    if (window.webContents.isLoading()) {
+      window.webContents.once("did-finish-load", () => handleUrl(url));
+      return;
+    }
+    handleUrl(url);
+  }
+
   app.on("second-instance", (_event, commandLine, _workingDirectory) => {
     const url = commandLine.find((arg) => arg.startsWith(getScheme()));
     if (mainWindow) {
@@ -1090,14 +1107,14 @@ if (!gotTheLock) {
       mainWindow.focus();
 
       if (url) {
-        handleUrl(url);
+        deliverDeepLink(url);
       }
       return;
     }
     // Launching the app again while it runs in the background reopens it.
     void restoreFromBackground().then(() => {
       if (url) {
-        mainWindow?.webContents.once("did-finish-load", () => handleUrl(url));
+        deliverDeepLink(url);
       }
     });
   });
@@ -1336,6 +1353,14 @@ function appIconPath(): string {
   return path.join(__dirname, "assets", "icon.png");
 }
 
+/**
+ * Tray icons load through nativeImage, which reads ICO on Windows and PNG
+ * everywhere, but not the macOS ICNS file the windows use.
+ */
+function trayIconPath(): string {
+  return path.join(__dirname, "assets", isWindows() ? "icon.ico" : "icon.png");
+}
+
 let coreReady: Promise<void> | null = null;
 
 /**
@@ -1460,6 +1485,9 @@ async function createWindow() {
     mainWindow?.show();
     splash?.destroy();
     splash = null;
+    // Reopened from background mode: the window is visible, so the tray
+    // icon can go. It stays while the window loads, in case loading stalls.
+    hideBackgroundTray();
     if (scheduledTasksStarted) {
       return;
     }
@@ -1467,6 +1495,8 @@ async function createWindow() {
     try {
       await createScheduledTasks();
     } catch (error) {
+      // Let the next window (reopened from background mode) try again.
+      scheduledTasksStarted = false;
       Logger.error("Could not initialize scheduled tasks", error);
     }
   });
@@ -1790,30 +1820,21 @@ function runInBackground(): void {
 
     // No window stays open in the background: the tray icon (and on macOS
     // the Dock, or a second launch anywhere) reopens the app.
-    showBackgroundTray(
-      path.join(__dirname, "assets", isWindows() ? "icon.ico" : "icon.png"),
-      {
-        open: () => void restoreFromBackground(),
-        quit: () => void quitApplication(),
-      },
-    );
+    showBackgroundTray(trayIconPath(), {
+      open: () => void restoreFromBackground(),
+      quit: () => void quitApplication(),
+    });
 
     destroyMainWindow();
   }
 }
 
 /** Reopens the main window from background mode. */
+// The tray icon goes once the new window is shown (in createWindow), so the
+// app can still be reopened or quit if the window fails to load.
 async function restoreFromBackground(): Promise<void> {
   Logger.info("Restoring from background");
-  try {
-    await createWindow();
-  } finally {
-    // Keep the tray if the window could not be created, so the app can
-    // still be reopened or quit.
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      hideBackgroundTray();
-    }
-  }
+  await createWindow();
 }
 
 function destroyMainWindow(): void {

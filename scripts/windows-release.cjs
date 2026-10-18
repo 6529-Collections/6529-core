@@ -162,6 +162,30 @@ function mergeLatest(release, perArch) {
   };
 }
 
+/**
+ * Copies the feed's current latest.yml for rollback. A feed without one (a
+ * first release) is fine; any other failure stops the release before it
+ * replaces the only copy.
+ */
+function saveRollbackCopy(release, destination, spawn = spawnSync) {
+  const key = `${release.prefix}/win/latest.yml`;
+  const head = spawn("aws", ["s3api", "head-object", "--bucket", BUCKET, "--key", key], { encoding: "utf8" });
+  if (head.error) throw head.error;
+  if (head.status !== 0) {
+    if (/\b404\b|Not Found|NoSuchKey/.test(String(head.stderr ?? ""))) {
+      console.log("[windows-release] no previous latest.yml on the feed");
+      return false;
+    }
+    throw new Error(`[windows-release] cannot check the feed's latest.yml: ${String(head.stderr ?? "").trim()}`);
+  }
+  const copy = spawn("aws", ["s3", "cp", `s3://${BUCKET}/${key}`, destination], { stdio: "inherit" });
+  if (copy.error) throw copy.error;
+  if (copy.status !== 0) {
+    throw new Error("[windows-release] could not copy the feed's latest.yml for rollback");
+  }
+  return true;
+}
+
 function signPublish(release) {
   fs.rmSync(WORK, { recursive: true, force: true });
   fs.mkdirSync(path.join(WORK, "rollback"), { recursive: true });
@@ -170,10 +194,7 @@ function signPublish(release) {
 
   const feed = `s3://${BUCKET}/${release.prefix}/win`;
   // Keep the feed's current latest.yml so the release can be rolled back.
-  const previous = spawnSync("aws", ["s3", "cp", `${feed}/latest.yml`, path.join(WORK, "rollback", "latest.yml")], {
-    stdio: "inherit",
-  });
-  if (previous.status !== 0) console.log("[windows-release] no previous latest.yml on the feed");
+  saveRollbackCopy(release, path.join(WORK, "rollback", "latest.yml"));
 
   aws(["s3", "sync", `s3://${BUCKET}/${release.prefix}/win-unsigned/`, WORK, "--exclude", "*", "--include", "*.zip"]);
 
@@ -231,4 +252,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { mergeLatest, RELEASES, installerName, zipName };
+module.exports = { mergeLatest, RELEASES, installerName, saveRollbackCopy, zipName };

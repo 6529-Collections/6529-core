@@ -104,6 +104,7 @@ function createHarness(
     getDb: noop,
     IPFS_SERVER: { start: async () => "starting" },
     localShortcut: { register: noop },
+    hideBackgroundTray: noop,
     createScheduledTasks: () => {
       calls.scheduledTasks++;
       return createScheduledTasks();
@@ -176,6 +177,23 @@ test("reopening the window from background mode keeps the database and jobs", as
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(reopened.visible, true);
   assert.deepEqual(h.calls, { initDb: 1, migrations: 1, scheduledTasks: 1 });
+});
+
+test("a window reopened after failed scheduler setup tries the setup again", async () => {
+  let attempts = 0;
+  const h = createHarness(false, async () => {
+    attempts++;
+    if (attempts === 1) throw new Error("setup failed");
+  });
+  await h.launch();
+  await h.ready();
+  h.windows[0].destroy();
+  h.context.mainWindow = null;
+  await h.launch();
+  h.windows.at(-1)!.emit("ready-to-show");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(attempts, 2);
+  assert.deepEqual(h.calls, { initDb: 1, migrations: 1, scheduledTasks: 2 });
 });
 
 test("main window is visible before scheduler setup starts or finishes", async () => {

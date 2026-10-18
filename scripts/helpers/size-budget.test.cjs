@@ -7,9 +7,20 @@ const asar = require("@electron/asar");
 const {
   budgetArgs,
   checkSizeBudget,
+  findPython,
   platformKeyFor,
   readBudget,
 } = require("./size-budget.cjs");
+
+// The measuring tests need Python 3. Without it they are skipped, as the
+// check itself is, so a release machine without Python still builds; CI
+// requires Python (DESKTOP_SIZE_BUDGET_REQUIRED=1) and runs them.
+const needsPython = {
+  skip:
+    !findPython() && process.env.DESKTOP_SIZE_BUDGET_REQUIRED !== "1"
+      ? "Python 3 is not installed"
+      : false,
+};
 
 async function makeFakeBuild(root) {
   const source = path.join(root, "source");
@@ -69,7 +80,7 @@ test("platform budgets override the defaults and map to footprint flags", () => 
   }
 });
 
-test("a build within budget passes and writes its footprint report", async () => {
+test("a build within budget passes and writes its footprint report", needsPython, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-budget-"));
   try {
     const build = await makeFakeBuild(root);
@@ -115,7 +126,7 @@ test("without Python the check warns and skips, unless it is required", async ()
   }
 });
 
-test("a build over budget fails with the exceeded budgets", async () => {
+test("a build over budget fails with the exceeded budgets", needsPython, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-budget-"));
   try {
     const build = await makeFakeBuild(root);

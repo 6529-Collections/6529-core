@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { azureSignToolArgs, hasSigningSettings, signFile } = require("../windows-sign-hook.cjs");
-const { installerName, mergeLatest, RELEASES, zipName } = require("../windows-release.cjs");
+const { installerName, mergeLatest, RELEASES, saveRollbackCopy, zipName } = require("../windows-release.cjs");
 
 const SETTINGS = {
   AZURE_KEY_VAULT_URL: "https://vault.example",
@@ -58,4 +58,29 @@ test("merging fails when a per-architecture latest.yml lacks its installer", () 
     () => mergeLatest(RELEASES.staging, { x64: { files: [{ url: "other.exe", sha512: "h", size: 1 }] } }),
     /does not list/,
   );
+});
+
+test("the rollback copy of latest.yml is taken, skipped only when the feed has none", () => {
+  const fakeAws = (head, copy = { status: 0 }) => {
+    const calls = [];
+    const spawn = (command, args) => {
+      calls.push(args.slice(0, 2).join(" "));
+      return args[0] === "s3api" ? head : copy;
+    };
+    return { calls, spawn };
+  };
+
+  const present = fakeAws({ status: 0, stderr: "" });
+  assert.equal(saveRollbackCopy(RELEASES.staging, "rollback.yml", present.spawn), true);
+  assert.deepEqual(present.calls, ["s3api head-object", "s3 cp"]);
+
+  const absent = fakeAws({ status: 254, stderr: "An error occurred (404) when calling the HeadObject operation: Not Found" });
+  assert.equal(saveRollbackCopy(RELEASES.staging, "rollback.yml", absent.spawn), false);
+  assert.deepEqual(absent.calls, ["s3api head-object"]);
+
+  const denied = fakeAws({ status: 254, stderr: "An error occurred (403) when calling the HeadObject operation: Forbidden" });
+  assert.throws(() => saveRollbackCopy(RELEASES.staging, "rollback.yml", denied.spawn), /cannot check/);
+
+  const failedCopy = fakeAws({ status: 0, stderr: "" }, { status: 1 });
+  assert.throws(() => saveRollbackCopy(RELEASES.staging, "rollback.yml", failedCopy.spawn), /could not copy/);
 });

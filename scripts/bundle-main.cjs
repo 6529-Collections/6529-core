@@ -41,7 +41,9 @@ const RUNTIME_EXTERNALS = [
 ];
 
 // TypeORM requires every database driver it supports by name; this app uses
-// better-sqlite3 only, so the others are never loaded.
+// better-sqlite3 only, so the others are never loaded. Checked against
+// TypeORM 0.3.31: a driver a later version adds and this list misses makes
+// esbuild fail the build ("Could not resolve"), not the app at run time.
 const UNUSED_TYPEORM_DRIVERS = [
   "@google-cloud/spanner",
   "@sap/hana-client",
@@ -99,8 +101,12 @@ async function main() {
   if (fs.existsSync(config)) {
     fs.cpSync(config, path.join(STAGING, "config"), { recursive: true });
   }
-  fs.rmSync(MAIN, { recursive: true, force: true });
+  // Swap folders so an interrupted build never leaves main/ missing.
+  const previous = `${MAIN}-previous`;
+  fs.rmSync(previous, { recursive: true, force: true });
+  fs.renameSync(MAIN, previous);
   fs.renameSync(STAGING, MAIN);
+  fs.rmSync(previous, { recursive: true, force: true });
 
   const outputs = Object.entries(result.metafile.outputs).map(([file, info]) => ({
     // Metafile paths are relative to absWorkingDir (main/).
