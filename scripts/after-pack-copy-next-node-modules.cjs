@@ -13,6 +13,7 @@ const { getUnpackedPaths, repackAsar } = require("./helpers/repack-asar.cjs");
 const { assertNoPackagedBuildCache } = require("./helpers/packaged-build-cache.cjs");
 const { checkPackedAppSizeBudget } = require("./helpers/size-budget.cjs");
 const { writeWindowsAppUpdateConfig } = require("./helpers/app-update-config.cjs");
+const { refreshPackedAsarIntegrity } = require("./helpers/asar-integrity.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -326,6 +327,8 @@ module.exports = async function afterPack(context) {
   await copyRendererNodeModules(context);
   // The release zip has no NSIS target, so write the updater config here.
   await writeWindowsAppUpdateConfig(context);
+  // app.asar is final now: embed its hash for the integrity fuse.
+  refreshPackedAsarIntegrity(context);
   // Last, once the app folder is final and before any installer is made.
   checkPackedAppSizeBudget(context);
 };

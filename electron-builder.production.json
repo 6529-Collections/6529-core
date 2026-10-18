@@ -32,6 +32,13 @@
     "!renderer/out/**/*.nft.json"
   ],
   "electronLanguages": ["en-US", "en-GB", "de", "es", "es-419", "fr"],
+  "electronFuses": {
+    "runAsNode": false,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": true
+  },
   "extraResources": [
     "assets/**/*",
     {
