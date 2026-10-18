@@ -70,9 +70,7 @@ jobs:
 
       - name: Download the Kubo binary
         if: ${{ steps.aws.outcome == 'success' }}
-        run: |
-          aws s3 cp s3://6529bucket/ipfs-binaries/linux ./ipfs-binaries/linux --recursive
-          find ./ipfs-binaries/linux -type f -name ipfs -exec chmod +x {} \;
+        run: node scripts/download-kubo.cjs linux
 
       - name: Build the unpacked staging app (runs the size budget)
         run: node scripts/desktop-build-target.cjs check-linux-staging

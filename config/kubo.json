@@ -1,0 +1,11 @@
+{
+  "$comment": "The Kubo (IPFS) binaries bundled with the app. scripts/download-kubo.cjs fetches them from s3://6529bucket/ipfs-binaries/kubo-v<version>/ and checks these SHA-256 values. They are the official ipfs/kubo release builds (each archive matched its published .sha512). Each version keeps its own S3 folder, so changing this file back rolls the binaries back.",
+  "version": "0.43.1",
+  "files": {
+    "win/x64/ipfs.exe": "fd0d46df76f455d938713c98c7fca5fa117b74c934c9fc0d37730fdb33313651",
+    "win/arm64/ipfs.exe": "2e71fa1c5a233d67a29cfe262d344b76407c001b2c18ecb01b71d93b113720d5",
+    "mac/x64/ipfs": "5f3a8f9844e7d868bd3363d26a00600ae1ccc72a40834f0738787f0caa195a29",
+    "mac/arm64/ipfs": "9b8e75bca4fa666338b45fd4353aed1716fa4262c61bb5bae2c1e0f91d902b56",
+    "linux/x64/ipfs": "8768c8a2907f429f177917091e8abe250d3368d1b82ea0348332cf7e53807bf0"
+  }
+}

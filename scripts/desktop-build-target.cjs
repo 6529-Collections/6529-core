@@ -25,7 +25,7 @@ const COMMANDS = {
   // (scripts/windows-release.cjs).
   "dist-win-staging": {
     appEnvironment: "staging",
-    prebuild: [["pnpm", ["run", "download-signed-ipfs"]]],
+    prebuild: [["pnpm", ["run", "download-ipfs"]]],
     build: ["pnpm", ["run", "build-win"]],
     electronBuilder: [
       "--config",
@@ -39,7 +39,7 @@ const COMMANDS = {
   },
   "dist-win-production": {
     appEnvironment: "production",
-    prebuild: [["pnpm", ["run", "download-signed-ipfs"]]],
+    prebuild: [["pnpm", ["run", "download-ipfs"]]],
     build: ["pnpm", ["run", "build-win"]],
     electronBuilder: [
       "--config",

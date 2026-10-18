@@ -111,15 +111,9 @@ jobs:
           echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
 
-      - name: Download ipfs-binaries
+      - name: Download the Kubo binaries (config/kubo.json)
         if: ${{ inputs.should_run }}
-        run: |
-          aws s3 cp s3://6529bucket/ipfs-binaries/mac ./ipfs-binaries/mac --recursive
-
-      - name: Make all ipfs binaries executable
-        if: ${{ inputs.should_run }}
-        run: |
-          find ./ipfs-binaries/mac -type f -name ipfs -exec chmod +x {} \;
+        run: node scripts/download-kubo.cjs mac
 
       - name: Build for arm64
         if: ${{ inputs.should_run }}
@@ -241,15 +235,9 @@ jobs:
           echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
 
-      - name: Download ipfs-binaries
+      - name: Download the Kubo binaries (config/kubo.json)
         if: ${{ inputs.should_run }}
-        run: |
-          aws s3 cp s3://6529bucket/ipfs-binaries/mac ./ipfs-binaries/mac --recursive
-
-      - name: Make all ipfs binaries executable
-        if: ${{ inputs.should_run }}
-        run: |
-          find ./ipfs-binaries/mac -type f -name ipfs -exec chmod +x {} \;
+        run: node scripts/download-kubo.cjs mac
 
       - name: Build for x64
         env:
