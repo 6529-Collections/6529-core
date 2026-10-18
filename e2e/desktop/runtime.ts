@@ -220,8 +220,14 @@ async function main(): Promise<number> {
     const limits = { ...budget.default, ...(budget.platforms?.[`${process.platform}-${process.arch}`] ?? {}) };
     const over: string[] = [];
     if (limits.maxHangs !== undefined && summary.hangs > limits.maxHangs) over.push(`hangs ${summary.hangs} > ${limits.maxHangs}`);
+    // A launch that failed without hanging gives no measurements, so it must
+    // not quietly drop out of the medians.
+    const failed = runs.filter((run) => run.failure && !run.hung).length;
+    if (failed > 0) over.push(`failed launches ${failed} of ${runs.length}`);
     const check = (name: string, value: number | null, limit: number | undefined) => {
-      if (limit !== undefined && value !== null && value > limit) over.push(`${name} ${value} > ${limit}`);
+      if (limit === undefined) return;
+      if (value === null) over.push(`${name} not measured`);
+      else if (value > limit) over.push(`${name} ${value} > ${limit}`);
     };
     check("main window warm s", summary.medianMainWindowShownWarmS, limits.maxMainWindowShownWarmS);
     check("private MiB", summary.medianPrivateMiB, limits.maxPrivateMiB);

@@ -11,7 +11,8 @@
 // The older app's resources/app-update.yml is pointed at the test feed for
 // the run and restored afterwards; downloads go to a separate updater cache
 // folder. The app is never relaunched by the installer, so the real profile is
-// never used.
+// never used. --install refuses to run while any other installation of the
+// same product is registered, because the installer would replace it.
 
 import fs from "node:fs";
 import http from "node:http";
@@ -44,10 +45,17 @@ interface ServedStats {
 
 /** A static feed server with single and multiple byte ranges, as electron-updater uses. */
 function serveFeed(dir: string, port: number, stats: ServedStats): Promise<http.Server> {
+  const root = path.resolve(dir);
   const server = http.createServer((request, response) => {
-    const name = decodeURIComponent(new URL(request.url ?? "/", "http://localhost").pathname).replace(/^\/+/, "");
-    const file = path.join(dir, name);
-    if (!name || name.includes("..") || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    let name: string;
+    try {
+      name = decodeURIComponent(new URL(request.url ?? "/", "http://localhost").pathname).replace(/^\/+/, "");
+    } catch {
+      response.writeHead(400).end();
+      return;
+    }
+    const file = path.resolve(root, name);
+    if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
       response.writeHead(404).end();
       return;
     }
@@ -106,6 +114,35 @@ function findExe(dir: string): string {
   return path.join(dir, exe);
 }
 
+/**
+ * Install folders of every registered Windows installation of this product.
+ * The NSIS installer runs the registered uninstaller before installing, even
+ * with /D=, so --install must only ever meet the disposable test install.
+ */
+function registeredInstallFolders(productName: string): string[] {
+  const script = [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    "$keys = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*', 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*', 'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'",
+    "@(Get-ItemProperty $keys | Where-Object { $_.DisplayName } | ForEach-Object { [pscustomobject]@{ name = $_.DisplayName; location = $_.InstallLocation; icon = $_.DisplayIcon; uninstall = $_.UninstallString } }) | ConvertTo-Json -Compress",
+  ].join("; ");
+  const run = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8", windowsHide: true });
+  if (run.status !== 0) throw new Error(`could not read registered installations: ${run.stderr}`);
+  const parsed = JSON.parse(run.stdout.trim() || "[]");
+  type Entry = { name: string; location: string | null; icon: string | null; uninstall: string | null };
+  const entries: Entry[] = Array.isArray(parsed) ? parsed : [parsed];
+  const sameProduct = new RegExp(`^${productName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}( \\d+\\.\\d+\\.\\d+\\S*)?$`);
+  // electron-builder leaves InstallLocation empty in the uninstall entry; the
+  // icon and uninstaller paths name the folder.
+  const folderOf = (entry: Entry) => {
+    if (entry.location) return entry.location;
+    const file = entry.icon?.replace(/,-?\d+$/, "") ?? entry.uninstall?.match(/^"([^"]+)"/)?.[1];
+    return file ? path.dirname(file) : "(no install folder)";
+  };
+  return entries.filter((entry) => sameProduct.test(entry.name)).map(folderOf);
+}
+
+const samePath = (a: string, b: string) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
+
 async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
   const fromDir = path.resolve(String(args["from-dir"] ?? ""));
@@ -134,8 +171,24 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  const installDir = typeof args.install === "string" ? path.resolve(args.install) : null;
+  if (installDir && process.platform === "win32") {
+    const others = registeredInstallFolders(path.basename(exe, ".exe")).filter(
+      (folder) => !samePath(folder, fromDir) && !samePath(folder, installDir),
+    );
+    if (others.length > 0) {
+      console.error(`--install refused: the installer would replace the registered installation in ${others.join(", ")}`);
+      server?.close();
+      return 2;
+    }
+  }
+
   const updateYml = path.join(fromDir, "resources", "app-update.yml");
-  const originalYml = fs.readFileSync(updateYml, "utf8");
+  // Kept until the run ends; a run killed outright leaves it behind, and the
+  // next run starts from it instead of from the test configuration.
+  const backupYml = `${updateYml}.e2e-backup`;
+  const originalYml = fs.readFileSync(fs.existsSync(backupYml) ? backupYml : updateYml, "utf8");
+  fs.writeFileSync(backupYml, originalYml);
   const publisher = originalYml.match(/^publisherName:\s*\n((?:\s+- .*\n?)+)/m)?.[1] ?? null;
   const testYml = [
     "provider: generic",
@@ -148,6 +201,26 @@ async function main(): Promise<number> {
 
   const guard = new ProtocolHandlerGuard(publicRuntime.CORE_SCHEME ?? "core6529", work);
   guard.save();
+  let restored = false;
+  const restoreTestChanges = () => {
+    if (restored) return;
+    restored = true;
+    fs.writeFileSync(updateYml, originalYml);
+    fs.rmSync(backupYml, { force: true });
+    guard.restore();
+  };
+  // finally blocks do not run when a signal or an uncaught error ends Node.
+  for (const signal of ["SIGINT", "SIGTERM", "SIGBREAK"] as const) {
+    process.once(signal, () => {
+      restoreTestChanges();
+      process.exit(130);
+    });
+  }
+  process.once("uncaughtException", (error) => {
+    restoreTestChanges();
+    console.error(error);
+    process.exit(1);
+  });
   const result: Record<string, unknown> = {
     fromVersion,
     fromDir: path.basename(fromDir),
@@ -218,11 +291,10 @@ async function main(): Promise<number> {
     const pending = path.join(cacheDir, "pending");
     const installer = fs.existsSync(pending) ? fs.readdirSync(pending).find((name) => name.endsWith(".exe")) : undefined;
     result.downloadedInstaller = installer ?? null;
-    if (typeof args.install === "string") {
+    if (installDir) {
       if (!installer) throw new Error("no downloaded installer to run");
       await app.kill();
       app = null;
-      const installDir = path.resolve(args.install);
       // Silent, and without --force-run, so the installer never starts the
       // app with the default profile.
       const run = spawnSync(path.join(pending, installer), ["/S", "--updated", `/D=${installDir}`], {
@@ -242,8 +314,7 @@ async function main(): Promise<number> {
     result.failure = String(error instanceof Error ? error.message : error).slice(0, 800);
   } finally {
     if (app) await app.kill();
-    fs.writeFileSync(updateYml, originalYml);
-    guard.restore();
+    restoreTestChanges();
     server?.close();
     fs.rmSync(work, { recursive: true, force: true });
   }
