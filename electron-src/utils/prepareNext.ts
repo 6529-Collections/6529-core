@@ -157,7 +157,10 @@ export async function prepareNext(port: number) {
     handle(req, res, parsedUrl);
   });
 
-  nextServer.listen(port, () => {
+  // Loopback only: the renderer server is for this machine's app window,
+  // not for other machines on the network. The window keeps its
+  // http://localhost origin, which Chromium resolves to loopback.
+  nextServer.listen(port, "127.0.0.1", () => {
     Logger.info("NEXT SERVER:", `Ready on http://localhost:${port}`);
   });
 }

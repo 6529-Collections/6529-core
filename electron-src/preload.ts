@@ -11,20 +11,52 @@ import type {
 
 import type { IpfsStatus } from "../shared/ipfs-status";
 
+// The channels the renderer reaches through the generic send, sendSync and
+// invoke calls (the names in electron-constants.ts that renderer/electron.ts
+// uses). Every other channel has its own named bridge below, so a page can
+// never call an arbitrary main-process handler. Listed as literals because
+// a sandboxed preload cannot require other files.
+// preload-channels.test.ts keeps this list in step with the renderer.
+const GENERIC_IPC_CHANNELS: ReadonlySet<string> = new Set([
+  "addSeedWallet",
+  "importSeedWallet",
+  "deleteSeedWallet",
+  "getSeedWallets",
+  "getSeedWallet",
+  "addRpcProvider",
+  "setRpcProviderActive",
+  "deactivateRpcProvider",
+  "deleteRpcProvider",
+  "manualStartWorker",
+  "fullRefreshWorker",
+  "resetTransactionsToBlock",
+  "recalculateTransactionsOwners",
+  "reconcileTransactions",
+  "resetWorker",
+  "stopWorker",
+]);
+
+function allowedChannel(channel: string): string {
+  if (!GENERIC_IPC_CHANNELS.has(channel)) {
+    throw new Error(`IPC channel "${channel}" is not available to the page`);
+  }
+  return channel;
+}
+
 export const api = {
   on: (channel: string, callback: Function) => {
-    ipcRenderer.on(channel, (event: IpcRendererEvent, args: any) =>
+    ipcRenderer.on(allowedChannel(channel), (event: IpcRendererEvent, args: any) =>
       callback(event, args)
     );
   },
   send: (channel: string, ...args: any[]): void => {
-    ipcRenderer.send(channel, args);
+    ipcRenderer.send(allowedChannel(channel), args);
   },
   sendSync: (channel: string, ...args: any[]): any => {
-    return ipcRenderer.sendSync(channel, args);
+    return ipcRenderer.sendSync(allowedChannel(channel), args);
   },
   invoke: (channel: string, ...args: any[]): Promise<any> => {
-    return ipcRenderer.invoke(channel, args);
+    return ipcRenderer.invoke(allowedChannel(channel), args);
   },
   openExternal: (url: string): void => {
     ipcRenderer.send("open-external", url);

@@ -869,10 +869,13 @@ function openIpfsWindow(url: string): void {
     backgroundColor: "#222",
     titleBarStyle: "hidden",
     titleBarOverlay: { color: "#000", symbolColor: "#fff", height: 30 },
+    // The IPFS WebUI is the daemon's own page and uses none of the app's
+    // bridges; without a preload, nothing it (or a file it opens) loads can
+    // reach wallets, sessions or the store.
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"),
+      sandbox: true,
       spellcheck: true,
     },
     show: false,
