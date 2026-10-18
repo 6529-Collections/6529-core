@@ -85,7 +85,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Sign executables & upload to S3
+      - name: Sign, build the installers & upload to S3
         if: ${{ inputs.should_run }}
         shell: pwsh
         run: |
@@ -94,6 +94,18 @@ jobs:
           } else {
             pnpm run sign-publish-production-win
           }
+
+      # The feed's previous latest.yml, to restore if the release is rolled back.
+      - name: Keep the previous and new latest.yml
+        if: ${{ inputs.should_run && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-latest-yml-${{ inputs.env }}-${{ inputs.version }}
+          path: |
+            release-work/rollback/latest.yml
+            release-work/latest-*.yml
+            dist/latest.yml
+          if-no-files-found: ignore
 
       - name: Notify Discord on failure
         if: ${{ inputs.should_run && failure() }}

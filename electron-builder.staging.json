@@ -22,8 +22,16 @@
     "renderer/out/**/*",
     "!renderer/out/cache{,/**/*}",
     "!renderer/out/dev/cache{,/**/*}",
-    "renderer/public/**/*"
+    "renderer/public/**/*",
+    "!**/*.map",
+    "!renderer/out/diagnostics{,/**}",
+    "!renderer/out/types{,/**}",
+    "!renderer/out/trace",
+    "!renderer/out/trace-build",
+    "!renderer/out/turbopack",
+    "!renderer/out/**/*.nft.json"
   ],
+  "electronLanguages": ["en-US", "en-GB", "de", "es", "es-419", "fr"],
   "extraResources": [
     "assets/**/*",
     {
@@ -81,7 +89,8 @@
     "artifactName": "6529-DESKTOP-STAGING-win-${arch}-${version}.${ext}",
     "signtoolOptions": {
       "publisherName": "6529 Collection LLC",
-      "signingHashAlgorithms": ["sha256"]
+      "signingHashAlgorithms": ["sha256"],
+      "sign": "./scripts/windows-sign-hook.cjs"
     }
   },
   "nsis": {

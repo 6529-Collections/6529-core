@@ -466,7 +466,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     basePath: "",
     distDir: "out",
     compress: true,
-    productionBrowserSourceMaps: true,
+    productionBrowserSourceMaps: localDebugBuild,
     sassOptions: { loadPaths: SASS_LOAD_PATHS, quietDeps: true },
     experimental: {
       webpackMemoryOptimizations: true,

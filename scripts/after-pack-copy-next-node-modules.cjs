@@ -5,7 +5,10 @@ const { createRequire } = require("node:module");
 const os = require("node:os");
 const path = require("node:path");
 const asar = require("@electron/asar");
-const { copyResolvedTree } = require("./helpers/copy-resolved-tree.cjs");
+const {
+  copyResolvedTree,
+  isUnneededRuntimeFile,
+} = require("./helpers/copy-resolved-tree.cjs");
 const { getUnpackedPaths, repackAsar } = require("./helpers/repack-asar.cjs");
 const { assertNoPackagedBuildCache } = require("./helpers/packaged-build-cache.cjs");
 const { checkPackedAppSizeBudget } = require("./helpers/size-budget.cjs");
@@ -18,7 +21,7 @@ const SOURCE_RELATIVE_PATHS = [
 const copyDir = (from, to, allowedRoots = []) => {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.rmSync(to, { recursive: true, force: true });
-  copyResolvedTree(from, to, { allowedRoots });
+  copyResolvedTree(from, to, { allowedRoots, skipFile: isUnneededRuntimeFile });
 };
 
 const readJson = (filePath) => JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -110,10 +113,37 @@ const targetPackageMatchesSource = (sourcePackageDir, targetPackageDir) => {
   return sourceVersion != null && sourceVersion === targetVersion;
 };
 
+/**
+ * The package Node would load for `dependencyName` from inside
+ * `packageDir`: the nearest node_modules/<name> walking up to the app's own
+ * node_modules folder, or null when none exists.
+ */
+const findResolvablePackageDir = (packageDir, dependencyName, appNodeModulesDir) => {
+  const stop = path.resolve(path.dirname(appNodeModulesDir));
+  let dir = path.resolve(packageDir);
+  while (true) {
+    if (path.basename(dir) !== "node_modules") {
+      const candidate = path.join(dir, "node_modules", packageFolderName(dependencyName));
+      if (fs.existsSync(path.join(candidate, "package.json"))) {
+        return candidate;
+      }
+    }
+    if (dir === stop) {
+      return null;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return null;
+    }
+    dir = parent;
+  }
+};
+
 const materializeDependencyTree = (
   sourcePackageDir,
   targetPackageDir,
   allowedRoots,
+  appNodeModulesDir,
   visited = new Set(),
 ) => {
   const sourcePackageJsonPath = path.join(sourcePackageDir, "package.json");
@@ -134,15 +164,23 @@ const materializeDependencyTree = (
       throw error;
     }
 
-    const targetDependencyDir = path.join(
+    // Copy only where Node would not already find the same version: reuse
+    // the nearest resolvable copy when it matches, hoist to the app's own
+    // node_modules when nothing resolves, and nest only on a version clash.
+    let targetDependencyDir = findResolvablePackageDir(
       targetPackageDir,
-      "node_modules",
-      packageFolderName(dependencyName),
+      dependencyName,
+      appNodeModulesDir,
     );
     if (
-      !fs.existsSync(targetDependencyDir) ||
+      targetDependencyDir === null ||
       !targetPackageMatchesSource(sourceDependencyDir, targetDependencyDir)
     ) {
+      const hoisted = path.join(appNodeModulesDir, packageFolderName(dependencyName));
+      targetDependencyDir =
+        targetDependencyDir === null && !fs.existsSync(hoisted)
+          ? hoisted
+          : path.join(targetPackageDir, "node_modules", packageFolderName(dependencyName));
       copyDir(sourceDependencyDir, targetDependencyDir, allowedRoots);
     }
 
@@ -155,6 +193,7 @@ const materializeDependencyTree = (
       sourceDependencyDir,
       targetDependencyDir,
       allowedRoots,
+      appNodeModulesDir,
       visited,
     );
   }
@@ -167,6 +206,7 @@ const materializePackagedNodeModules = (appDir, projectDir, allowedRoots) => {
     return;
   }
 
+  const visited = new Set();
   const entries = fs.readdirSync(targetNodeModulesDir);
   for (const entry of entries) {
     if (entry.startsWith(".")) {
@@ -182,7 +222,13 @@ const materializePackagedNodeModules = (appDir, projectDir, allowedRoots) => {
         const packageName = `${entry}/${scopedEntry}`;
         const sourcePackageDir = resolvePackageDir(packageName, projectDir);
         const targetPackageDir = path.join(scopeDir, scopedEntry);
-        materializeDependencyTree(sourcePackageDir, targetPackageDir, allowedRoots);
+        materializeDependencyTree(
+          sourcePackageDir,
+          targetPackageDir,
+          allowedRoots,
+          targetNodeModulesDir,
+          visited,
+        );
       }
       continue;
     }
@@ -192,7 +238,13 @@ const materializePackagedNodeModules = (appDir, projectDir, allowedRoots) => {
       continue;
     }
     const sourcePackageDir = resolvePackageDir(entry, projectDir);
-    materializeDependencyTree(sourcePackageDir, targetPackageDir, allowedRoots);
+    materializeDependencyTree(
+      sourcePackageDir,
+      targetPackageDir,
+      allowedRoots,
+      targetNodeModulesDir,
+      visited,
+    );
   }
 };
 
@@ -329,3 +381,6 @@ async function copyRendererNodeModules(context) {
   assertElectronUpdaterRuntime(appDir);
   assertNoPackagedBuildCache(resourcesDir, false);
 }
+
+module.exports.materializePackagedNodeModules = materializePackagedNodeModules;
+module.exports.findResolvablePackageDir = findResolvablePackageDir;
