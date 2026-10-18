@@ -14,6 +14,7 @@ const { assertNoPackagedBuildCache } = require("./helpers/packaged-build-cache.c
 const { checkPackedAppSizeBudget } = require("./helpers/size-budget.cjs");
 const { writeWindowsAppUpdateConfig } = require("./helpers/app-update-config.cjs");
 const { refreshPackedAsarIntegrity } = require("./helpers/asar-integrity.cjs");
+const { pruneInactiveReviewVersions } = require("./helpers/review-data.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -317,9 +318,18 @@ const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir) => 
     }
     materializePackagedNodeModules(tempDir, projectDir, allowedRoots);
     assertElectronUpdaterRuntime(tempDir);
+    logPrunedReviewVersions(pruneInactiveReviewVersions(tempDir));
     await repackAsar(tempDir, asarPath, unpackedPaths);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+};
+
+const logPrunedReviewVersions = (removed) => {
+  for (const { review, version, bytes } of removed) {
+    console.log(
+      `[afterPack] Left out review ${review} version ${version} (${(bytes / 1e6).toFixed(1)} MB); the app loads it from the site`,
+    );
   }
 };
 
@@ -385,6 +395,7 @@ async function copyRendererNodeModules(context) {
     allowedSourceRoots,
   );
   assertElectronUpdaterRuntime(appDir);
+  logPrunedReviewVersions(pruneInactiveReviewVersions(appDir));
   assertNoPackagedBuildCache(resourcesDir, false);
 }
 
