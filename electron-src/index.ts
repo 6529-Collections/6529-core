@@ -1,3 +1,5 @@
+// Must stay the first import: sets the working folder before other modules load.
+import "./startup-cwd-apply";
 import {
   crashReporter,
   ipcMain,
