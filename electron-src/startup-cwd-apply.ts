@@ -3,7 +3,7 @@
 import { app } from "electron";
 import { appWorkingDirectory } from "./startup-cwd";
 
-const directory = appWorkingDirectory(app.isPackaged, process.execPath);
+const directory = appWorkingDirectory(app.isPackaged, process.platform, process.execPath);
 if (directory) {
   try {
     process.chdir(directory);
