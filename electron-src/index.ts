@@ -105,7 +105,10 @@ import {
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
-import { shouldOpenInExternalBrowser } from "./navigation-policy";
+import {
+  pinnedWindowNavigation,
+  shouldOpenInExternalBrowser,
+} from "./navigation-policy";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
 contextMenu({
@@ -889,6 +892,35 @@ function openIpfsWindow(url: string): void {
 
   ipfsWindow.once("ready-to-show", () => {
     ipfsWindow.show();
+  });
+
+  // The window stays on the daemon's origin. Files the WebUI links to (on
+  // the gateway) and other sites open in the system browser; anything else
+  // is dropped.
+  const ipfsOrigin = new URL(url).origin;
+  const openOutside = (target: string) => {
+    shell.openExternal(target).catch((error) => {
+      Logger.error("Failed to open external web URL:", target, error);
+    });
+  };
+  ipfsWindow.webContents.setWindowOpenHandler(({ url: target }) => {
+    const decision = pinnedWindowNavigation(ipfsOrigin, target);
+    if (decision === "stay") {
+      void ipfsWindow.loadURL(target);
+    } else if (decision === "external") {
+      openOutside(target);
+    }
+    return { action: "deny" };
+  });
+  ipfsWindow.webContents.on("will-navigate", (event, target) => {
+    const decision = pinnedWindowNavigation(ipfsOrigin, target);
+    if (decision === "stay") {
+      return;
+    }
+    event.preventDefault();
+    if (decision === "external") {
+      openOutside(target);
+    }
   });
 
   ipfsWindow.loadURL(url);

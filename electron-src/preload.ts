@@ -14,8 +14,9 @@ import type { IpfsStatus } from "../shared/ipfs-status";
 // The channels the renderer reaches through the generic send, sendSync and
 // invoke calls (the names in electron-constants.ts that renderer/electron.ts
 // uses). Every other channel has its own named bridge below, so a page can
-// never call an arbitrary main-process handler. Listed as literals because
-// a sandboxed preload cannot require other files.
+// never call an arbitrary main-process handler. The generic `on` is held to
+// the same list: the renderer subscribes only through the named bridges.
+// Listed as literals because a sandboxed preload cannot require other files.
 // preload-channels.test.ts keeps this list in step with the renderer.
 const GENERIC_IPC_CHANNELS: ReadonlySet<string> = new Set([
   "addSeedWallet",

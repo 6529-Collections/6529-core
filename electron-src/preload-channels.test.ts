@@ -24,17 +24,27 @@ function rendererFiles(dir: string): string[] {
   });
 }
 
-/** Channels the renderer passes to window.api.send, sendSync or invoke. */
+/**
+ * Channels the renderer passes to window.api.send, sendSync, invoke or on.
+ * Every call must name its channel with a constant or a plain string; any
+ * other form fails, so no call can slip past the list unseen.
+ */
 function rendererChannels(): string[] {
   const channels = new Set<string>();
   for (const file of rendererFiles(path.join(root, "renderer"))) {
     const source = fs.readFileSync(file, "utf8");
-    for (const match of source.matchAll(/window\.api\.(?:send|sendSync|invoke)\(\s*([A-Za-z_][\w]*|"[^"]*")/g)) {
-      const argument = match[1];
-      if (argument.startsWith('"')) {
-        channels.add(argument.slice(1, -1));
+    for (const match of source.matchAll(/window\.api\??\.(?:send|sendSync|invoke|on)\(\s*([^,)]*)/g)) {
+      const argument = match[1].trim();
+      const literal = argument.match(/^(["'`])([^"'`$]*)\1$/);
+      if (literal) {
+        channels.add(literal[2]);
         continue;
       }
+      assert.match(
+        argument,
+        /^[A-Za-z_]\w*$/,
+        `${path.relative(root, file)} names a channel as ${argument}; use a constant from electron-constants.ts`,
+      );
       const value = (constants as Record<string, unknown>)[argument];
       assert.equal(typeof value, "string", `${path.relative(root, file)} passes ${argument}, which is not a channel in electron-constants.ts`);
       channels.add(value as string);
