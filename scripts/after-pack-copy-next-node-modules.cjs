@@ -12,6 +12,7 @@ const {
 const { getUnpackedPaths, repackAsar } = require("./helpers/repack-asar.cjs");
 const { assertNoPackagedBuildCache } = require("./helpers/packaged-build-cache.cjs");
 const { checkPackedAppSizeBudget } = require("./helpers/size-budget.cjs");
+const { writeWindowsAppUpdateConfig } = require("./helpers/app-update-config.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -323,6 +324,8 @@ const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir) => 
 
 module.exports = async function afterPack(context) {
   await copyRendererNodeModules(context);
+  // The release zip has no NSIS target, so write the updater config here.
+  await writeWindowsAppUpdateConfig(context);
   // Last, once the app folder is final and before any installer is made.
   checkPackedAppSizeBudget(context);
 };

@@ -203,6 +203,10 @@ function signPublish(release) {
     const zip = path.join(WORK, zipName(release, arch));
     if (!fs.existsSync(zip)) throw new Error(`missing ${zipName(release, arch)} in win-unsigned`);
     const appDir = extractZip(zip, path.join(WORK, `unpacked-${arch}`));
+    // Without it the installed app cannot find the update feed.
+    if (!fs.existsSync(path.join(appDir, "resources", "app-update.yml"))) {
+      throw new Error(`${zipName(release, arch)} has no resources/app-update.yml`);
+    }
     for (const exe of listFiles(appDir, (file) => file.toLowerCase().endsWith(".exe"))) {
       signFile(exe, { ...process.env, WINDOWS_SIGNING_REQUIRED: "1" });
       assertSigned(exe);
