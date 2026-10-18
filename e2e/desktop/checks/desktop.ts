@@ -2,6 +2,7 @@
 // same IPC surface the renderer uses, so a narrowed preload or a moved main
 // process has to keep these working.
 
+import os from "node:os";
 import { ethers } from "ethers";
 import {
   ADD_RPC_PROVIDER,
@@ -226,6 +227,33 @@ export async function runDesktopChecks(ctx: SuiteContext): Promise<void> {
     assert(!removed.error, `delete failed: ${JSON.stringify(removed.data)}`);
     const listed = await bridge(page, "api", "getScheduledWorkers");
     assert(!listed.rpcProviders.some((provider: any) => provider.id === providerId), "provider still listed");
+  });
+  await r.check("F6", "ipc-allowlist", "The page reaches only the listed IPC channels through the generic calls", async () => {
+    // Only anonymous functions inside page.evaluate (see update-path.ts).
+    const refused = await page.evaluate(async () => {
+      try {
+        await (window as any).api.invoke("store:get", "window-state");
+        return "reached";
+      } catch (error) {
+        return String(error);
+      }
+    });
+    assert(/not available to the page/.test(refused), `store:get through api.invoke: ${refused}`);
+  });
+
+  // F7 the renderer server answers on this machine only
+  await r.check("F7", "server-loopback-only", "The renderer server is not reachable from the network", async () => {
+    const port = new URL(ctx.baseUrl).port;
+    const address = Object.values(os.networkInterfaces())
+      .flat()
+      .find((entry) => entry && entry.family === "IPv4" && !entry.internal)?.address;
+    if (!address) skip("no non-loopback network address on this machine");
+    const reached = await fetch(`http://${address}:${port}/api/version`, { signal: AbortSignal.timeout(5_000) }).then(
+      (response) => `HTTP ${response.status}`,
+      () => null,
+    );
+    assert(reached === null, `the renderer server answered on ${address}: ${reached}`);
+    return `refused on ${address}`;
   });
 
   // F11 logs and crash dumps

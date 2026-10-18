@@ -26,3 +26,24 @@ export function shouldOpenInExternalBrowser(
     return true;
   }
 }
+
+/**
+ * Where a navigation goes from a window kept to one origin (the IPFS WebUI
+ * window): it stays when it keeps that origin, opens in the system browser
+ * when it is another web address, and is dropped otherwise.
+ */
+export function pinnedWindowNavigation(
+  windowOrigin: string,
+  targetUrl: string,
+): "stay" | "external" | "block" {
+  let target: URL;
+  try {
+    target = new URL(targetUrl);
+  } catch {
+    return "block";
+  }
+  if (target.origin === windowOrigin) {
+    return "stay";
+  }
+  return EXTERNAL_WEB_PROTOCOLS.has(target.protocol) ? "external" : "block";
+}

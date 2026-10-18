@@ -107,7 +107,10 @@ import {
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
-import { shouldOpenInExternalBrowser } from "./navigation-policy";
+import {
+  pinnedWindowNavigation,
+  shouldOpenInExternalBrowser,
+} from "./navigation-policy";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
 contextMenu({
@@ -871,10 +874,13 @@ function openIpfsWindow(url: string): void {
     backgroundColor: "#222",
     titleBarStyle: "hidden",
     titleBarOverlay: { color: "#000", symbolColor: "#fff", height: 30 },
+    // The IPFS WebUI is the daemon's own page and uses none of the app's
+    // bridges; without a preload, nothing it (or a file it opens) loads can
+    // reach wallets, sessions or the store.
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"),
+      sandbox: true,
       spellcheck: true,
     },
     show: false,
@@ -888,6 +894,35 @@ function openIpfsWindow(url: string): void {
 
   ipfsWindow.once("ready-to-show", () => {
     ipfsWindow.show();
+  });
+
+  // The window stays on the daemon's origin. Files the WebUI links to (on
+  // the gateway) and other sites open in the system browser; anything else
+  // is dropped.
+  const ipfsOrigin = new URL(url).origin;
+  const openOutside = (target: string) => {
+    shell.openExternal(target).catch((error) => {
+      Logger.error("Failed to open external web URL:", target, error);
+    });
+  };
+  ipfsWindow.webContents.setWindowOpenHandler(({ url: target }) => {
+    const decision = pinnedWindowNavigation(ipfsOrigin, target);
+    if (decision === "stay") {
+      void ipfsWindow.loadURL(target);
+    } else if (decision === "external") {
+      openOutside(target);
+    }
+    return { action: "deny" };
+  });
+  ipfsWindow.webContents.on("will-navigate", (event, target) => {
+    const decision = pinnedWindowNavigation(ipfsOrigin, target);
+    if (decision === "stay") {
+      return;
+    }
+    event.preventDefault();
+    if (decision === "external") {
+      openOutside(target);
+    }
   });
 
   ipfsWindow.loadURL(url);
@@ -1376,8 +1411,22 @@ function initCoreOnce(): Promise<void> {
 // app is in the background; reopening the window does not restart them.
 let scheduledTasksStarted = false;
 
+let windowCreation: Promise<void> | null = null;
+
+/**
+ * Opens the main window, or joins the opening already under way: startup,
+ * a second launch, the tray and the Dock can all ask at the same moment and
+ * must get one window.
+ */
+function createWindow(): Promise<void> {
+  windowCreation ??= openMainWindow().finally(() => {
+    windowCreation = null;
+  });
+  return windowCreation;
+}
+
 /** Open the main window and start IPFS without blocking renderer loading. */
-async function createWindow() {
+async function openMainWindow() {
   Logger.info("Creating window");
   if (mainWindow && !mainWindow.isDestroyed()) {
     Logger.info("Window already exists");
@@ -1819,24 +1868,14 @@ function runInBackground(): void {
   }
 }
 
-let restoring: Promise<void> | null = null;
-
 /**
- * Reopens the main window from background mode. A tray click and a second
- * launch at the same moment share one window. The tray icon goes once the
- * new window is shown (in createWindow), so the app can still be reopened
+ * Reopens the main window from background mode. The tray icon goes once the
+ * new window is shown (in openMainWindow), so the app can still be reopened
  * or quit if the window fails to load.
  */
 function restoreFromBackground(): Promise<void> {
-  restoring ??= (async () => {
-    Logger.info("Restoring from background");
-    try {
-      await createWindow();
-    } finally {
-      restoring = null;
-    }
-  })();
-  return restoring;
+  Logger.info("Restoring from background");
+  return createWindow();
 }
 
 function destroyMainWindow(): void {

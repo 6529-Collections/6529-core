@@ -16,6 +16,7 @@ const functions = [
   "appIconPath",
   "initCoreOnce",
   "createWindow",
+  "openMainWindow",
   "createSplash",
   "updateSplashMessage",
   "sendSplashCardIfReady",
@@ -78,6 +79,7 @@ function createHarness(
     splash: null,
     splashCardData: null,
     savedSplashImage: null,
+    windowCreation: null,
     latestSplashMessage: "Loading",
     BrowserWindow: FakeWindow,
     path,
@@ -210,6 +212,14 @@ test("the splash gets the saved image as a file URL, never as data", async () =>
     | { preloadedImageDataUrl?: string }
     | undefined;
   assert.equal(card?.preloadedImageDataUrl, "file:///FAKE/splash-image");
+});
+
+test("requests that arrive while the window opens share one window", async () => {
+  const h = createHarness();
+  // Startup and a second launch ask for the window at the same moment.
+  await Promise.all([h.launch(), h.launch()]);
+  assert.equal(h.windows.length, 1);
+  assert.equal(h.calls.initDb, 1);
 });
 
 test("main window is visible before scheduler setup starts or finishes", async () => {
