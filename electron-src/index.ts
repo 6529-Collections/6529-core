@@ -73,6 +73,7 @@ import { sanitizeNativeSessionResponse } from "./native-auth-session";
 import {
   ResettableScheduledWorker,
   ScheduledWorker,
+  setScheduledTasksDir,
   TransactionsScheduledWorker,
 } from "./scheduled-tasks/scheduled-worker";
 import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
@@ -116,6 +117,10 @@ contextMenu({
 crashReporter.start({
   uploadToServer: false,
 });
+
+// Worker scripts sit beside this file's folder in both the compiled and the
+// bundled main process.
+setScheduledTasksDir(path.join(__dirname, "scheduled-tasks"));
 
 let mainWindow: BrowserWindow | null = null;
 let closeConfirmationPromise: Promise<void> | null = null;
@@ -1718,7 +1723,7 @@ ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
       closeLogs(logFile);
       logWindowsMap.delete(logFile);
     });
-    openLogs(logsWindow, name, logFile);
+    openLogs(logsWindow, name, logFile, path.join(__dirname, "assets", "logs.html"));
   } else {
     logsWindow.focus();
   }

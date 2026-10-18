@@ -77,18 +77,22 @@ function bootstrapNodePathSearch(): void {
   const globalPaths = Array.isArray(moduleWithPaths.globalPaths)
     ? moduleWithPaths.globalPaths
     : [];
+  // In the bundled main process `module` is the bundler's stand-in, which
+  // has no lookup paths; the entry module's paths serve the same purpose.
+  const lookupModule = Array.isArray(module.paths) ? module : require.main;
+  const modulePaths = lookupModule?.paths;
 
   for (let i = normalizedNodePaths.length - 1; i >= 0; i -= 1) {
     const nodePathEntry = normalizedNodePaths[i];
     if (!globalPaths.includes(nodePathEntry)) {
       globalPaths.unshift(nodePathEntry);
     }
-    if (!module.paths.includes(nodePathEntry)) {
-      module.paths.unshift(nodePathEntry);
+    if (modulePaths && !modulePaths.includes(nodePathEntry)) {
+      modulePaths.unshift(nodePathEntry);
     }
   }
 
-  if (!Array.isArray(moduleWithPaths.globalPaths) || !Array.isArray(module.paths)) {
+  if (!Array.isArray(moduleWithPaths.globalPaths) || !Array.isArray(modulePaths)) {
     moduleWithPaths._initPaths?.();
   }
 

@@ -15,10 +15,11 @@ export async function initLogs(): Promise<void> {
 export function openLogs(
   logsWindow: BrowserWindow,
   name: string,
-  logFile: string
+  logFile: string,
+  logsPagePath: string
 ): void {
   Logger.info("Opening logs at:", logFile);
-  logsWindow.loadFile(path.join(__dirname, "..", "assets/logs.html"));
+  logsWindow.loadFile(logsPagePath);
   logsWindow.setTitle(`${name} | Logs | 6529 Desktop`);
 
   const loadLogs = () => {

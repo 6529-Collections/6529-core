@@ -26,6 +26,15 @@ import {
 } from "./workers/transactions-worker/transactions-worker.db";
 import { isValidTransactionReconciliationState } from "./workers/transactions-worker/transaction-reconciliation-state";
 
+// Worker scripts are found relative to this folder of the compiled main
+// process. The main bundle sets it, because inside a bundle __dirname is the
+// bundle's folder rather than this file's.
+let scheduledTasksDir = __dirname;
+
+export function setScheduledTasksDir(dir: string): void {
+  scheduledTasksDir = dir;
+}
+
 export interface WorkerData {
   consolidationSettingsRequest?: ConsolidationSettingsRequest;
   rpcUrl: string;
@@ -311,7 +320,7 @@ export class ScheduledWorker {
     );
 
     // Path to the compiled worker script
-    const workerPath = path.join(__dirname, this.filePath);
+    const workerPath = path.join(scheduledTasksDir, this.filePath);
 
     // Create a new worker thread for each scheduled execution
     this.worker = new Worker(workerPath, {
