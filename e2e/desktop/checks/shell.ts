@@ -160,14 +160,23 @@ export async function runShellChecks(ctx: SuiteContext): Promise<void> {
     // Windows has no app badge API; Electron reports false there.
     return line.text;
   });
-  await r.check("F8", "title-bar", "The custom title bar shows the environment label", async () => {
+  await r.check("F8", "title-bar", "The custom title bar renders, with the environment label outside production", async () => {
     await expectRendered(ctx, "/");
-    const label = await page.evaluate(() => {
+    const { titleBar, label } = await page.evaluate(() => {
       const element = document.querySelector('[class*="environmentLabel"]');
-      return element ? (element.textContent ?? "").trim() : null;
+      return {
+        titleBar: document.querySelector('[class*="buttonWrapper"]') !== null,
+        label: element ? (element.textContent ?? "").trim() : null,
+      };
     });
-    assert(label !== null, "no title bar environment label");
-    return label || "(production: no suffix)";
+    assert(titleBar, "no custom title bar");
+    if (ctx.environment === "production") {
+      // Production builds show no environment label.
+      assert(label === null, `unexpected environment label "${label}" in production`);
+      return "production: title bar without a label";
+    }
+    assert(label, "no title bar environment label");
+    return label;
   });
   await r.check("F8", "shortcut-search", "Ctrl/Cmd+F opens search", async () => {
     await page.evaluate(() => {
@@ -313,7 +322,7 @@ async function launchSecondInstance(ctx: SuiteContext, ...args: string[]): Promi
   const second = spawn(
     ctx.app.options.exe,
     [...(ctx.app.options.extraArgs ?? []), `--user-data-dir=${ctx.app.options.profileDir}`, ...args],
-    { stdio: "ignore" },
+    { stdio: "ignore", cwd: ctx.app.options.cwd ?? path.dirname(ctx.app.options.exe) },
   );
   const exitCode = await new Promise<number | null | "timeout">((resolve, reject) => {
     const timer = setTimeout(() => resolve("timeout"), 30_000);

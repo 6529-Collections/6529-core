@@ -93,6 +93,8 @@ export interface LaunchOptions {
   cdpPort: number;
   extraArgs?: string[];
   env?: NodeJS.ProcessEnv;
+  /** Working folder; defaults to the executable's folder, as a shortcut starts it. */
+  cwd?: string;
 }
 
 export interface MainLogLine {
@@ -127,6 +129,7 @@ export class AppSession {
       {
         stdio: "ignore",
         detached: process.platform !== "win32",
+        cwd: options.cwd ?? path.dirname(options.exe),
         env: options.env ?? process.env,
         windowsHide: false,
       },

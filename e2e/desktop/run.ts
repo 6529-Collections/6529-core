@@ -87,7 +87,9 @@ async function main(): Promise<number> {
   let app: AppSession | null = null;
   let routeResults: SuiteReport["routes"] = [];
   try {
-    app = AppSession.launch({ exe, profileDir, cdpPort, extraArgs });
+    // --cwd starts the app from another folder (a shortcut starts it from its own).
+    const cwd = typeof args.cwd === "string" ? path.resolve(args.cwd) : undefined;
+    app = AppSession.launch({ exe, profileDir, cdpPort, extraArgs, cwd });
     const session = app;
     let splashSeenAt: number | null = null;
     await session.connect();

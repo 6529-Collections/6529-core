@@ -161,16 +161,25 @@ async function main(): Promise<number> {
     fs.writeFileSync(updateYml, testYml + "\n");
     app = AppSession.launch({ exe, profileDir: path.join(work, "profile"), cdpPort: await freePort() });
     const page = await app.mainPage(240_000);
+    // Only anonymous functions inside page.evaluate: tsx names local
+    // functions with a helper that does not exist in the page.
     await page.evaluate(() => {
       const state = ((window as any).__suiteUpdate = { events: [] as any[] });
       const updater = (window as any).updater;
-      const push = (event: string) => (_e: unknown, detail: any) =>
-        state.events.push({ event, detail: detail && typeof detail === "object" ? JSON.parse(JSON.stringify(detail)) : String(detail) });
-      updater.onUpdateAvailable(push("available"));
-      updater.onUpdateNotAvailable(push("not-available"));
-      updater.onUpdateError(push("error"));
-      updater.onUpdateProgress(push("progress"));
-      updater.onUpdateDownloaded(push("downloaded"));
+      for (const [event, method] of [
+        ["available", "onUpdateAvailable"],
+        ["not-available", "onUpdateNotAvailable"],
+        ["error", "onUpdateError"],
+        ["progress", "onUpdateProgress"],
+        ["downloaded", "onUpdateDownloaded"],
+      ]) {
+        updater[method]((_e: unknown, detail: any) =>
+          state.events.push({
+            event,
+            detail: detail && typeof detail === "object" ? JSON.parse(JSON.stringify(detail)) : String(detail),
+          }),
+        );
+      }
       updater.checkUpdates();
     });
     const readEvents = () => page.evaluate(() => (window as any).__suiteUpdate.events as any[]);
