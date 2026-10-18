@@ -1409,8 +1409,22 @@ function initCoreOnce(): Promise<void> {
 // app is in the background; reopening the window does not restart them.
 let scheduledTasksStarted = false;
 
+let windowCreation: Promise<void> | null = null;
+
+/**
+ * Opens the main window, or joins the opening already under way: startup,
+ * a second launch, the tray and the Dock can all ask at the same moment and
+ * must get one window.
+ */
+function createWindow(): Promise<void> {
+  windowCreation ??= openMainWindow().finally(() => {
+    windowCreation = null;
+  });
+  return windowCreation;
+}
+
 /** Open the main window and start IPFS without blocking renderer loading. */
-async function createWindow() {
+async function openMainWindow() {
   Logger.info("Creating window");
   if (mainWindow && !mainWindow.isDestroyed()) {
     Logger.info("Window already exists");
@@ -1852,24 +1866,14 @@ function runInBackground(): void {
   }
 }
 
-let restoring: Promise<void> | null = null;
-
 /**
- * Reopens the main window from background mode. A tray click and a second
- * launch at the same moment share one window. The tray icon goes once the
- * new window is shown (in createWindow), so the app can still be reopened
+ * Reopens the main window from background mode. The tray icon goes once the
+ * new window is shown (in openMainWindow), so the app can still be reopened
  * or quit if the window fails to load.
  */
 function restoreFromBackground(): Promise<void> {
-  restoring ??= (async () => {
-    Logger.info("Restoring from background");
-    try {
-      await createWindow();
-    } finally {
-      restoring = null;
-    }
-  })();
-  return restoring;
+  Logger.info("Restoring from background");
+  return createWindow();
 }
 
 function destroyMainWindow(): void {

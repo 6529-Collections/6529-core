@@ -91,15 +91,16 @@ function refreshPackedAsarIntegrity(context) {
   // Re-hashes the archives electron-builder listed. afterPack changes only
   // app.asar, which is always listed; a step that added another archive
   // would have to add it here too.
-  const archives = Object.fromEntries(
-    current.map(({ file }) => [file, path.join(context.appOutDir, file)]),
-  );
+  // The list names files Windows-style (resources\app.asar), which a macOS
+  // or Linux build host would read as one file name.
+  const archivePath = (file) => path.join(context.appOutDir, ...file.split(/[\\/]/));
+  const archives = Object.fromEntries(current.map(({ file }) => [file, archivePath(file)]));
   const list = writeWinAsarIntegrity(exePath, archives);
   // Read the executable back, so a change in electron-builder's internals
   // (checked with 26.17.0) fails the build rather than the app at startup.
   const embedded = readWinAsarIntegrity(exePath) ?? [];
   for (const { file, value } of list) {
-    const archive = path.join(context.appOutDir, file);
+    const archive = archivePath(file);
     if (!embedded.some((entry) => entry.file === file && entry.value === asarHeaderHash(archive))) {
       throw new Error(`[asar-integrity] ${exePath} does not carry the hash of ${file}`);
     }

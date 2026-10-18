@@ -240,9 +240,12 @@
             setImageDimensions(img, panel, card.width, card.height);
           }
         };
+        var triedCardImage = !card.preloadedImageDataUrl;
         img.onerror = function () {
-          // A saved image that cannot be read falls back to the card's own.
-          if (card.preloadedImageDataUrl && card.scaled && img.src !== card.scaled) {
+          // A saved image that cannot be read falls back to the card's own,
+          // once.
+          if (!triedCardImage && card.scaled) {
+            triedCardImage = true;
             img.src = card.scaled;
             return;
           }
