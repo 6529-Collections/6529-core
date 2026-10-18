@@ -124,14 +124,26 @@ function listFiles(dir, predicate) {
   return out;
 }
 
-/** Status and signer of an Authenticode signature (PowerShell). */
+/**
+ * The environment for Windows PowerShell's signature check. A step running
+ * in PowerShell 7 (as the CI workflow does) passes down a PSModulePath that
+ * lists PowerShell 7's own Microsoft.PowerShell.Security first, which
+ * Windows PowerShell finds and cannot load. Without the variable it uses its
+ * own module folders.
+ */
+function signatureCheckEnv(env, file) {
+  const clean = Object.fromEntries(Object.entries(env).filter(([key]) => key.toUpperCase() !== "PSMODULEPATH"));
+  return { ...clean, SIGNED_FILE: file };
+}
+
+/** Status and signer of an Authenticode signature (Windows PowerShell). */
 function signatureOf(file) {
   const script =
     "$s = Get-AuthenticodeSignature -LiteralPath $env:SIGNED_FILE; " +
     "'{0}|{1}' -f $s.Status, $s.SignerCertificate.Subject";
   const output = execFileSync("powershell", ["-NoProfile", "-Command", script], {
     encoding: "utf8",
-    env: { ...process.env, SIGNED_FILE: file },
+    env: signatureCheckEnv(process.env, file),
   }).trim();
   const [status, subject = ""] = output.split("|");
   return { status, subject };
@@ -256,4 +268,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { mergeLatest, RELEASES, installerName, saveRollbackCopy, zipName };
+module.exports = { mergeLatest, RELEASES, installerName, saveRollbackCopy, signatureCheckEnv, signatureOf, zipName };
