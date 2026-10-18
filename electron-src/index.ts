@@ -1354,7 +1354,7 @@ async function createWindow() {
     } catch (error) {
       Logger.warn("Could not create startup splash", error);
     }
-  }, 400);
+  }, 1000);
 
   updateSplashMessage("Initializing Database");
   await initDb();
@@ -1408,7 +1408,8 @@ async function createWindow() {
 
   mainWindow.once("ready-to-show", async () => {
     Logger.info("Main window ready to show");
-    await createScheduledTasks();
+    // Show the ready main window before scheduler setup so slow initialization
+    // cannot leave startup without a visible window or revive a late splash.
     startupComplete = true;
     clearTimeout(splashTimer);
     if (windowState) {
@@ -1419,6 +1420,11 @@ async function createWindow() {
     mainWindow?.show();
     splash?.destroy();
     splash = null;
+    try {
+      await createScheduledTasks();
+    } catch (error) {
+      Logger.error("Could not initialize scheduled tasks", error);
+    }
   });
 
   mainWindow.on("close", (e) => {
