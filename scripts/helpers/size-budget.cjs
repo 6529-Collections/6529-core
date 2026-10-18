@@ -8,6 +8,9 @@ const { spawnSync } = require("node:child_process");
 // report next to the installers, and fails the build when a budget in
 // config/desktop-size-budget.json is exceeded. Tighten the budgets as the
 // packaging shrinks; never raise them to make a build pass without review.
+// Without Python 3 the check is skipped with a warning, so a tooling gap on a
+// release machine cannot block a signed build; CI sets
+// DESKTOP_SIZE_BUDGET_REQUIRED=1 so it can never be skipped there.
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const FOOTPRINT_SCRIPT = path.join(ROOT, "scripts", "desktop-footprint.py");
@@ -36,13 +39,12 @@ function findPython() {
       windowsHide: true,
     });
     // The Windows Store alias for python3 exists but only prints a hint.
-    if (probe.status === 0 && /^Python 3\./.test(`${probe.stdout}${probe.stderr}`.trim())) {
+    const major = Number(`${probe.stdout}${probe.stderr}`.trim().match(/^Python (\d+)\./)?.[1]);
+    if (probe.status === 0 && major >= 3) {
       return { command, prefix };
     }
   }
-  throw new Error(
-    "[size-budget] Python 3 is required to check the desktop size budget (scripts/desktop-footprint.py).",
-  );
+  return null;
 }
 
 function readBudget(platformKey, budgetFile = BUDGET_FILE) {
@@ -77,6 +79,15 @@ function platformKeyFor(electronPlatformName, arch) {
 function checkSizeBudget({ appOutDir, outDir, platformKey, budgetFile }) {
   const budget = readBudget(platformKey, budgetFile);
   const python = findPython();
+  if (!python) {
+    const message =
+      "[size-budget] Python 3 is required to check the desktop size budget (scripts/desktop-footprint.py).";
+    if (process.env.DESKTOP_SIZE_BUDGET_REQUIRED === "1") {
+      throw new Error(message);
+    }
+    console.warn(`${message} Skipped for ${platformKey}.`);
+    return null;
+  }
   fs.mkdirSync(outDir, { recursive: true });
   const jsonPath = path.join(outDir, `desktop-footprint-${platformKey}.json`);
   const reportPath = path.join(outDir, `desktop-footprint-${platformKey}.md`);

@@ -215,7 +215,9 @@ export class AppSession {
   readMainLog(): MainLogLine[] {
     if (!fs.existsSync(this.mainLogPath)) return [];
     const lines: MainLogLine[] = [];
-    const text = fs.readFileSync(this.mainLogPath).subarray(this.logOffset).toString("utf8");
+    const data = fs.readFileSync(this.mainLogPath);
+    // A log that shrank since launch was rotated or truncated: read it all.
+    const text = data.subarray(data.length < this.logOffset ? 0 : this.logOffset).toString("utf8");
     for (const raw of text.split(/\r?\n/)) {
       const match = raw.match(/^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}\.\d{3})\] \[(\w+)\]\s+(.*)$/);
       if (match) {
