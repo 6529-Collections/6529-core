@@ -100,18 +100,16 @@ export async function runShellChecks(ctx: SuiteContext): Promise<void> {
   }
 
   // F7 server functions of the renderer
-  let previewImage: string | undefined;
   await r.check("F7", "link-preview", "Link preview (Open Graph) for a public page", async () => {
     const { status, body } = await getJson(`${baseUrl}/api/open-graph?url=${encodeURIComponent("https://6529.io/")}`);
     assert(status === 200, `HTTP ${status}: ${JSON.stringify(body).slice(0, 200)}`);
-    const image = body?.image?.secureUrl ?? body?.image?.url ?? body?.image;
-    if (typeof image === "string" && image.startsWith("https://")) previewImage = image;
     return typeof body === "object" ? Object.keys(body).slice(0, 8).join(", ") : String(body).slice(0, 80);
   });
   await r.check("F7", "image-proxy", "Drop image proxy answers and keeps to its host allowlist", async () => {
     // The proxy only serves image hosts that refuse hotlinking (an allowlist
-    // in the route), so any other host must be refused.
-    const target = previewImage ?? "https://6529.io/museum.png";
+    // in the route), so any other host must be refused. A fixed host keeps
+    // the check independent of the live page's preview image.
+    const target = "https://example.com/suite.png";
     const response = await fetch(`${baseUrl}/api/open-graph/proxy-image?url=${encodeURIComponent(target)}`, {
       signal: AbortSignal.timeout(45_000),
     });

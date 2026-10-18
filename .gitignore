@@ -28,6 +28,8 @@ release-work
 /renderer/out
 /out
 /main
+/main-bundle
+/main-previous
 
 # Generated from next.config.ts
 next.config.mjs

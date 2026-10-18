@@ -241,6 +241,11 @@
           }
         };
         img.onerror = function () {
+          // A saved image that cannot be read falls back to the card's own.
+          if (card.preloadedImageDataUrl && card.scaled && img.src !== card.scaled) {
+            img.src = card.scaled;
+            return;
+          }
           img.classList.remove("splash-image-loading", "splash-card-loaded");
         };
         img.src = card.preloadedImageDataUrl || card.scaled;

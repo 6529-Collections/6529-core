@@ -25,6 +25,17 @@ test("pnpm.cmd is run through a shell when pnpm's entry is unknown", () => {
   }
 });
 
+test("npm's or yarn's entry is not taken for pnpm's", () => {
+  for (const entry of ["C:\\npm\\bin\\npm-cli.js", "C:\\yarn\\bin\\yarn.js"]) {
+    const resolved = resolvePnpmCommand("pnpm", ["install"], { npm_execpath: entry });
+    if (process.platform === "win32") {
+      assert.deepEqual(resolved, { executable: "pnpm.cmd", args: ["install"], shell: true });
+    } else {
+      assert.deepEqual(resolved, { executable: "pnpm", args: ["install"] });
+    }
+  }
+});
+
 test("other commands are spawned unchanged", () => {
   assert.deepEqual(resolvePnpmCommand("git", ["status"], {}), {
     executable: "git",

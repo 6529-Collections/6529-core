@@ -13,6 +13,8 @@ const source = ts.createSourceFile(
   true,
 );
 const functions = [
+  "appIconPath",
+  "initCoreOnce",
   "createWindow",
   "createSplash",
   "updateSplashMessage",
@@ -40,13 +42,17 @@ function createHarness(
 ) {
   const timers = new Map<number, () => void>();
   const timerDelays: number[] = [];
+  const calls = { initDb: 0, migrations: 0, scheduledTasks: 0 };
+  const sent: Array<{ channel: string; payload: unknown }> = [];
   const errors: unknown[][] = [];
   const windows: FakeWindow[] = [];
   let nextTimer = 0;
   class FakeWindow extends EventEmitter {
     destroyed = false;
     visible = false;
-    webContents = Object.assign(new EventEmitter(), { send: () => undefined });
+    webContents = Object.assign(new EventEmitter(), {
+      send: (channel: string, payload: unknown) => sent.push({ channel, payload }),
+    });
     constructor(readonly options: { show?: boolean }) {
       super();
       windows.push(this);
@@ -71,7 +77,7 @@ function createHarness(
     mainWindow: null,
     splash: null,
     splashCardData: null,
-    preloadSplashImagePromise: null,
+    savedSplashImage: null,
     latestSplashMessage: "Loading",
     BrowserWindow: FakeWindow,
     path,
@@ -88,14 +94,23 @@ function createHarness(
       key === "card" && savedArtwork ? { id: 1, scaled: "fake" } : null,
     isValidSplashCard: (value: unknown) => value !== null,
     SPLASH_CARD_STORE_KEY: "card",
-    loadSplashImageFromFile: () => new Promise(() => undefined),
-    preloadSplashImage: noop,
-    initDb: async () => undefined,
-    runCoreMigrations: async () => undefined,
+    savedSplashImageUrl: () => "file:///FAKE/splash-image",
+    initDb: async () => {
+      calls.initDb++;
+    },
+    runCoreMigrations: async () => {
+      calls.migrations++;
+    },
+    coreReady: null,
+    scheduledTasksStarted: false,
     getDb: noop,
     IPFS_SERVER: { start: async () => "starting" },
     localShortcut: { register: noop },
-    createScheduledTasks,
+    hideBackgroundTray: noop,
+    createScheduledTasks: () => {
+      calls.scheduledTasks++;
+      return createScheduledTasks();
+    },
     process: { on: noop },
     initListeners: noop,
     screen: {
@@ -121,6 +136,9 @@ function createHarness(
   });
   vm.runInContext(compiled, context);
   return {
+    context,
+    calls,
+    sent,
     windows,
     timers,
     timerDelays,
@@ -147,6 +165,51 @@ test("fast startup cancels the splash before creating a native window", async ()
   h.elapseDelay();
   assert.equal(h.windows.length, 1);
   assert.equal(h.windows[0].visible, true);
+});
+
+test("reopening the window from background mode keeps the database and jobs", async () => {
+  const h = createHarness();
+  await h.launch();
+  await h.ready();
+  // Background mode destroys the main window; a second launch reopens it.
+  h.windows[0].destroy();
+  h.context.mainWindow = null;
+  await h.launch();
+  const reopened = h.windows.at(-1)!;
+  reopened.emit("ready-to-show");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(reopened.visible, true);
+  assert.deepEqual(h.calls, { initDb: 1, migrations: 1, scheduledTasks: 1 });
+});
+
+test("a window reopened after failed scheduler setup tries the setup again", async () => {
+  let attempts = 0;
+  const h = createHarness(false, async () => {
+    attempts++;
+    if (attempts === 1) throw new Error("setup failed");
+  });
+  await h.launch();
+  await h.ready();
+  h.windows[0].destroy();
+  h.context.mainWindow = null;
+  await h.launch();
+  h.windows.at(-1)!.emit("ready-to-show");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(attempts, 2);
+  assert.deepEqual(h.calls, { initDb: 1, migrations: 1, scheduledTasks: 2 });
+});
+
+test("the splash gets the saved image as a file URL, never as data", async () => {
+  const h = createHarness(true);
+  await h.launch();
+  h.elapseDelay();
+  const splash = h.windows[1];
+  splash.webContents.emit("did-finish-load");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const card = h.sent.find((entry) => entry.channel === "splash-card")?.payload as
+    | { preloadedImageDataUrl?: string }
+    | undefined;
+  assert.equal(card?.preloadedImageDataUrl, "file:///FAKE/splash-image");
 });
 
 test("main window is visible before scheduler setup starts or finishes", async () => {

@@ -17,6 +17,7 @@ import { app, BrowserWindow, dialog, Menu, Notification } from "electron/main";
 import fs from "fs";
 import { getPort } from "get-port-please";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import open, { apps } from "open";
 import { platform } from "os";
 import { Tail } from "tail";
@@ -75,6 +76,7 @@ import { sanitizeNativeSessionResponse } from "./native-auth-session";
 import {
   ResettableScheduledWorker,
   ScheduledWorker,
+  setScheduledTasksDir,
   TransactionsScheduledWorker,
 } from "./scheduled-tasks/scheduled-worker";
 import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
@@ -104,6 +106,7 @@ import {
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
+import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import { shouldOpenInExternalBrowser } from "./navigation-policy";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
@@ -118,6 +121,10 @@ contextMenu({
 crashReporter.start({
   uploadToServer: false,
 });
+
+// Worker scripts sit beside this file's folder in both the compiled and the
+// bundled main process.
+setScheduledTasksDir(path.join(__dirname, "scheduled-tasks"));
 
 let mainWindow: BrowserWindow | null = null;
 let closeConfirmationPromise: Promise<void> | null = null;
@@ -921,37 +928,28 @@ function isValidSplashCard(data: unknown): data is SplashCard {
 
 let splashCardData: SplashCard | null = null;
 
-let preloadSplashImagePromise: Promise<string | null> | null = null;
+// The saved splash image, as a file URL for the splash window.
+let savedSplashImage: string | null = null;
 let latestSplashMessage = "Loading";
 
-function preloadSplashImage(url: string): Promise<string | null> {
-  return fetch(url)
-    .then((res) => {
-      const ct =
-        res.headers.get("content-type")?.split(";")[0]?.trim() || "image/png";
-      return res.arrayBuffer().then((buf) => ({ ct, buf }));
-    })
-    .then(({ ct, buf }) => {
-      const b64 = Buffer.from(buf).toString("base64");
-      return `data:${ct};base64,${b64}`;
-    })
-    .catch(() => null);
-}
+// Larger images are not saved; the splash then loads the card's image from
+// the network, as it does before the first save.
+const SPLASH_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
-function loadSplashImageFromFile(card: SplashCard): Promise<string | null> {
-  const storedCardId = getValue(SPLASH_IMAGE_CARD_ID_STORE_KEY);
-  if (storedCardId !== card.id) return Promise.resolve(null);
-  const ct = getValue(SPLASH_IMAGE_TYPE_STORE_KEY);
-  if (typeof ct !== "string" || !ct) return Promise.resolve(null);
+/**
+ * The saved image of this card as a file URL, or null. The splash window
+ * loads it from disk, so the image is never copied into the main process.
+ */
+function savedSplashImageUrl(card: SplashCard): string | null {
+  if (getValue(SPLASH_IMAGE_CARD_ID_STORE_KEY) !== card.id) return null;
   const filePath = getSplashImagePath();
   try {
-    if (!fs.existsSync(filePath)) return Promise.resolve(null);
-    const buf = fs.readFileSync(filePath);
-    const b64 = buf.toString("base64");
-    return Promise.resolve(`data:${ct};base64,${b64}`);
+    const { size } = fs.statSync(filePath);
+    if (size === 0 || size > SPLASH_IMAGE_MAX_BYTES) return null;
   } catch {
-    return Promise.resolve(null);
+    return null;
   }
+  return pathToFileURL(filePath).href;
 }
 
 function saveSplashCardAndImage(data: SplashCard): Promise<void> {
@@ -962,8 +960,9 @@ function saveSplashCardAndImage(data: SplashCard): Promise<void> {
       return res.arrayBuffer().then((buf) => ({ ct, buf: Buffer.from(buf) }));
     })
     .then(({ ct, buf }) => {
-      fs.writeFileSync(getSplashImagePath(), buf);
       setValue(SPLASH_CARD_STORE_KEY, data);
+      if (buf.length === 0 || buf.length > SPLASH_IMAGE_MAX_BYTES) return;
+      fs.writeFileSync(getSplashImagePath(), buf);
       setValue(SPLASH_IMAGE_TYPE_STORE_KEY, ct);
       setValue(SPLASH_IMAGE_CARD_ID_STORE_KEY, data.id);
     })
@@ -1079,18 +1078,40 @@ if (!gotTheLock) {
     }
   }
 
+  /**
+   * Hands a deep link to the renderer, waiting for the page when the main
+   * window is still loading (just reopened from background mode). Links that
+   * arrive during one load are handled in order once it finishes.
+   */
+  function deliverDeepLink(url: string) {
+    const window = mainWindow;
+    if (!window || window.isDestroyed()) {
+      return;
+    }
+    if (window.webContents.isLoading()) {
+      window.webContents.once("did-finish-load", () => handleUrl(url));
+      return;
+    }
+    handleUrl(url);
+  }
+
   app.on("second-instance", (_event, commandLine, _workingDirectory) => {
+    const url = commandLine.find((arg) => arg.startsWith(getScheme()));
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
 
-      const scheme = getScheme();
-
-      const url = commandLine.find((arg) => arg.startsWith(scheme));
       if (url) {
-        handleUrl(url);
+        deliverDeepLink(url);
       }
+      return;
     }
+    // Launching the app again while it runs in the background reopens it.
+    void restoreFromBackground().then(() => {
+      if (url) {
+        deliverDeepLink(url);
+      }
+    });
   });
 
   app.on("open-url", (event, url) => {
@@ -1153,7 +1174,7 @@ if (!gotTheLock) {
 
     app.on("activate", async () => {
       if (!mainWindow || mainWindow.isDestroyed()) {
-        await createWindow();
+        await restoreFromBackground();
       } else if (splash && !splash.isDestroyed()) {
         splash.focus();
       } else {
@@ -1168,22 +1189,12 @@ async function sendSplashCardIfReady() {
   if (!splashCardData || !splash || splash.isDestroyed() || !splash.webContents)
     return;
   const splashWindow = splash;
-  let payload: SplashCard & { preloadedImageDataUrl?: string } = {
+  // splash.html reads the saved image's URL from preloadedImageDataUrl and
+  // falls back to the card's own image.
+  const payload: SplashCard & { preloadedImageDataUrl?: string } = {
     ...splashCardData,
+    ...(savedSplashImage ? { preloadedImageDataUrl: savedSplashImage } : {}),
   };
-  if (preloadSplashImagePromise) {
-    try {
-      const dataUrl = await Promise.race([
-        preloadSplashImagePromise,
-        new Promise<string | null>((_, rej) =>
-          setTimeout(() => rej(new Error("timeout")), 5000),
-        ),
-      ]);
-      if (dataUrl) payload.preloadedImageDataUrl = dataUrl;
-    } catch {
-      // send without preloaded image
-    }
-  }
   if (splash === splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.send("splash-card", payload);
   }
@@ -1317,6 +1328,54 @@ function updateSplashMessage(newMessage: string) {
   }
 }
 
+function appIconPath(): string {
+  if (isWindows()) {
+    return path.join(__dirname, "assets", "icon.ico");
+  }
+  if (isMac()) {
+    return path.join(__dirname, "assets", "icon.icns");
+  }
+  return path.join(__dirname, "assets", "icon.png");
+}
+
+/**
+ * Tray icons load through nativeImage, which reads ICO on Windows and PNG
+ * everywhere, but not the macOS ICNS file the windows use.
+ */
+function trayIconPath(): string {
+  return path.join(__dirname, "assets", isWindows() ? "icon.ico" : "icon.png");
+}
+
+let coreReady: Promise<void> | null = null;
+
+/**
+ * The database, its migrations and the process error handlers: once per run.
+ * Reopening the window from background mode must not open a second database
+ * connection or register the IPC handlers again.
+ */
+function initCoreOnce(): Promise<void> {
+  coreReady ??= (async () => {
+    updateSplashMessage("Initializing Database");
+    await initDb();
+
+    updateSplashMessage("Running Database Migrations");
+    await runCoreMigrations(getDb());
+
+    process.on("uncaughtException", (error) => {
+      Logger.error("Uncaught Exception:", error);
+    });
+
+    process.on("unhandledRejection", (reason, promise) => {
+      Logger.error("Unhandled Rejection at:", promise, "reason:", reason);
+    });
+  })();
+  return coreReady;
+}
+
+// The background jobs start with the first window and keep running while the
+// app is in the background; reopening the window does not restart them.
+let scheduledTasksStarted = false;
+
 /** Open the main window and start IPFS without blocking renderer loading. */
 async function createWindow() {
   Logger.info("Creating window");
@@ -1326,24 +1385,15 @@ async function createWindow() {
   }
   latestSplashMessage = "Loading";
 
-  let iconPath: string;
-  if (isWindows()) {
-    iconPath = path.join(__dirname, "assets", "icon.ico");
-  } else if (isMac()) {
-    iconPath = path.join(__dirname, "assets", "icon.icns");
-  } else {
-    iconPath = path.join(__dirname, "assets", "icon.png");
-  }
+  const iconPath = appIconPath();
 
   const savedCard = getValue(SPLASH_CARD_STORE_KEY);
   if (isValidSplashCard(savedCard)) {
     splashCardData = savedCard;
-    preloadSplashImagePromise = loadSplashImageFromFile(splashCardData).then(
-      (dataUrl) => dataUrl ?? preloadSplashImage(splashCardData!.scaled),
-    );
+    savedSplashImage = savedSplashImageUrl(splashCardData);
   } else {
     splashCardData = null;
-    preloadSplashImagePromise = null;
+    savedSplashImage = null;
   }
 
   let startupComplete = false;
@@ -1358,11 +1408,7 @@ async function createWindow() {
     }
   }, 1000);
 
-  updateSplashMessage("Initializing Database");
-  await initDb();
-
-  updateSplashMessage("Running Database Migrations");
-  await runCoreMigrations(getDb());
+  await initCoreOnce();
 
   const windowState = getValue("window-state");
 
@@ -1422,9 +1468,18 @@ async function createWindow() {
     mainWindow?.show();
     splash?.destroy();
     splash = null;
+    // Reopened from background mode: the window is visible, so the tray
+    // icon can go. It stays while the window loads, in case loading stalls.
+    hideBackgroundTray();
+    if (scheduledTasksStarted) {
+      return;
+    }
+    scheduledTasksStarted = true;
     try {
       await createScheduledTasks();
     } catch (error) {
+      // Let the next window (reopened from background mode) try again.
+      scheduledTasksStarted = false;
       Logger.error("Could not initialize scheduled tasks", error);
     }
   });
@@ -1446,14 +1501,6 @@ async function createWindow() {
     e.preventDefault();
     mainWindow?.focus();
     requestMainWindowCloseConfirmation();
-  });
-
-  process.on("uncaughtException", (error) => {
-    Logger.error("Uncaught Exception:", error);
-  });
-
-  process.on("unhandledRejection", (reason, promise) => {
-    Logger.error("Unhandled Rejection at:", promise, "reason:", reason);
   });
 
   initListeners(mainWindow);
@@ -1720,7 +1767,7 @@ ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
       closeLogs(logFile);
       logWindowsMap.delete(logFile);
     });
-    openLogs(logsWindow, name, logFile);
+    openLogs(logsWindow, name, logFile, path.join(__dirname, "assets", "logs.html"));
   } else {
     logsWindow.focus();
   }
@@ -1754,17 +1801,42 @@ function runInBackground(): void {
       delete tails[k];
     }
 
-    if (!splash) {
-      createSplash();
+    // No window stays open in the background: the tray icon (and on macOS
+    // the Dock, or a second launch anywhere) reopens the app. Without a tray
+    // icon the window only minimizes, so the app is never left unreachable.
+    try {
+      showBackgroundTray(trayIconPath(), {
+        open: () => void restoreFromBackground(),
+        quit: () => void quitApplication(),
+      });
+    } catch (error) {
+      Logger.error("Could not show the tray icon; minimizing instead", error);
+      mainWindow.minimize();
+      return;
     }
-    splash?.minimize();
-    splash?.on("restore", async () => {
-      Logger.info("Splash window restored");
-      await createWindow();
-    });
 
     destroyMainWindow();
   }
+}
+
+let restoring: Promise<void> | null = null;
+
+/**
+ * Reopens the main window from background mode. A tray click and a second
+ * launch at the same moment share one window. The tray icon goes once the
+ * new window is shown (in createWindow), so the app can still be reopened
+ * or quit if the window fails to load.
+ */
+function restoreFromBackground(): Promise<void> {
+  restoring ??= (async () => {
+    Logger.info("Restoring from background");
+    try {
+      await createWindow();
+    } finally {
+      restoring = null;
+    }
+  })();
+  return restoring;
 }
 
 function destroyMainWindow(): void {
@@ -1786,6 +1858,7 @@ function destroyMainWindow(): void {
 }
 
 async function quitApplication(): Promise<void> {
+  hideBackgroundTray();
   if (mainWindow) {
     const bounds = mainWindow.getBounds();
     setValue("window-state", {
