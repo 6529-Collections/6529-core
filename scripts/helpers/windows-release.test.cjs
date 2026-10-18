@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { azureSignToolArgs, hasSigningSettings, signFile } = require("../windows-sign-hook.cjs");
-const { installerName, mergeLatest, RELEASES, saveRollbackCopy, zipName } = require("../windows-release.cjs");
+const { installerName, mergeLatest, RELEASES, saveRollbackCopy, signatureCheckEnv, signatureOf, zipName } = require("../windows-release.cjs");
 
 const SETTINGS = {
   AZURE_KEY_VAULT_URL: "https://vault.example",
@@ -84,3 +84,38 @@ test("the rollback copy of latest.yml is taken, skipped only when the feed has n
   const failedCopy = fakeAws({ status: 0, stderr: "" }, { status: 1 });
   assert.throws(() => saveRollbackCopy(RELEASES.staging, "rollback.yml", failedCopy.spawn), /could not copy/);
 });
+
+test("the signature check drops PowerShell 7's module path", () => {
+  const env = signatureCheckEnv({ PSModulePath: "C:\\ps7\\Modules", Path: "C:\\Windows" }, "app.exe");
+  assert.deepEqual(env, { Path: "C:\\Windows", SIGNED_FILE: "app.exe" });
+  assert.equal("PSModulePath" in signatureCheckEnv({ psmodulepath: "x" }, "a.exe"), false);
+});
+
+test(
+  "Windows PowerShell reads a signature even under PowerShell 7's module path",
+  { skip: process.platform !== "win32" && "needs Windows PowerShell" },
+  () => {
+    const fs = require("node:fs");
+    const os = require("node:os");
+    const path = require("node:path");
+    // A stand-in for PowerShell 7's Core-only Microsoft.PowerShell.Security,
+    // listed first as a PowerShell 7 step lists it.
+    const modules = fs.mkdtempSync(path.join(os.tmpdir(), "6529-ps7-"));
+    const dir = path.join(modules, "Microsoft.PowerShell.Security", "7.0.0");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "Microsoft.PowerShell.Security.psd1"),
+      "@{ ModuleVersion = '7.0.0'; PowerShellVersion = '7.0'; CompatiblePSEditions = @('Core'); CmdletsToExport = @('Get-AuthenticodeSignature'); RootModule = 'missing.dll' }",
+    );
+    const saved = process.env.PSModulePath;
+    try {
+      process.env.PSModulePath = `${modules};${saved ?? ""}`;
+      const { status } = signatureOf(path.join(process.env.SystemRoot ?? "C:\\Windows", "explorer.exe"));
+      assert.equal(status, "Valid");
+    } finally {
+      if (saved === undefined) delete process.env.PSModulePath;
+      else process.env.PSModulePath = saved;
+      fs.rmSync(modules, { recursive: true, force: true });
+    }
+  },
+);
