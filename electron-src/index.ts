@@ -1819,22 +1819,41 @@ function runInBackground(): void {
     }
 
     // No window stays open in the background: the tray icon (and on macOS
-    // the Dock, or a second launch anywhere) reopens the app.
-    showBackgroundTray(trayIconPath(), {
-      open: () => void restoreFromBackground(),
-      quit: () => void quitApplication(),
-    });
+    // the Dock, or a second launch anywhere) reopens the app. Without a tray
+    // icon the window only minimizes, so the app is never left unreachable.
+    try {
+      showBackgroundTray(trayIconPath(), {
+        open: () => void restoreFromBackground(),
+        quit: () => void quitApplication(),
+      });
+    } catch (error) {
+      Logger.error("Could not show the tray icon; minimizing instead", error);
+      mainWindow.minimize();
+      return;
+    }
 
     destroyMainWindow();
   }
 }
 
-/** Reopens the main window from background mode. */
-// The tray icon goes once the new window is shown (in createWindow), so the
-// app can still be reopened or quit if the window fails to load.
-async function restoreFromBackground(): Promise<void> {
-  Logger.info("Restoring from background");
-  await createWindow();
+let restoring: Promise<void> | null = null;
+
+/**
+ * Reopens the main window from background mode. A tray click and a second
+ * launch at the same moment share one window. The tray icon goes once the
+ * new window is shown (in createWindow), so the app can still be reopened
+ * or quit if the window fails to load.
+ */
+function restoreFromBackground(): Promise<void> {
+  restoring ??= (async () => {
+    Logger.info("Restoring from background");
+    try {
+      await createWindow();
+    } finally {
+      restoring = null;
+    }
+  })();
+  return restoring;
 }
 
 function destroyMainWindow(): void {

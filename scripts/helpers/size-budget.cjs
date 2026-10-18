@@ -39,8 +39,11 @@ function findPython() {
       windowsHide: true,
     });
     // The Windows Store alias for python3 exists but only prints a hint.
-    const major = Number(`${probe.stdout}${probe.stderr}`.trim().match(/^Python (\d+)\./)?.[1]);
-    if (probe.status === 0 && major >= 3) {
+    // Python prints its version on stdout (older ones on stderr).
+    const majors = [probe.stdout, probe.stderr].map((stream) =>
+      Number(String(stream ?? "").trim().match(/^Python (\d+)\./)?.[1]),
+    );
+    if (probe.status === 0 && majors.some((major) => major >= 3)) {
       return { command, prefix };
     }
   }

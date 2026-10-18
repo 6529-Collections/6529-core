@@ -209,17 +209,22 @@ async function main(): Promise<number> {
     fs.rmSync(backupYml, { force: true });
     guard.restore();
   };
-  // finally blocks do not run when a signal or an uncaught error ends Node.
+  let app: AppSession | null = null;
+  // finally blocks do not run when a signal or an uncaught error ends Node:
+  // restore the files, stop the app and the feed server, then exit.
+  const abort = (code: number) => {
+    restoreTestChanges();
+    server?.close();
+    void Promise.resolve(app?.kill())
+      .catch(() => undefined)
+      .finally(() => process.exit(code));
+  };
   for (const signal of ["SIGINT", "SIGTERM", "SIGBREAK"] as const) {
-    process.once(signal, () => {
-      restoreTestChanges();
-      process.exit(130);
-    });
+    process.once(signal, () => abort(130));
   }
   process.once("uncaughtException", (error) => {
-    restoreTestChanges();
     console.error(error);
-    process.exit(1);
+    abort(1);
   });
   const result: Record<string, unknown> = {
     fromVersion,
@@ -228,7 +233,6 @@ async function main(): Promise<number> {
     signatureCheck: Boolean(publisher) && args["no-signature-check"] !== true,
     arch: process.arch,
   };
-  let app: AppSession | null = null;
   let exitCode = 1;
   try {
     fs.writeFileSync(updateYml, testYml + "\n");

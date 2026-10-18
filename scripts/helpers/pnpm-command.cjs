@@ -12,6 +12,8 @@ function resolvePnpmCommand(command, args, env = process.env) {
   if (pnpmEntry && /^pnpm\.[cm]?js$/i.test(path.basename(pnpmEntry))) {
     return { executable: process.execPath, args: [pnpmEntry, ...args] };
   }
+  // Through a shell, cmd.exe parses the arguments again. Callers pass only
+  // fixed build arguments (script names and flags), never outside input.
   return { executable: "pnpm.cmd", args, shell: true };
 }
 
