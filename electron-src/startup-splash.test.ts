@@ -13,6 +13,8 @@ const source = ts.createSourceFile(
   true,
 );
 const functions = [
+  "appIconPath",
+  "initCoreOnce",
   "createWindow",
   "createSplash",
   "updateSplashMessage",
@@ -40,6 +42,7 @@ function createHarness(
 ) {
   const timers = new Map<number, () => void>();
   const timerDelays: number[] = [];
+  const calls = { initDb: 0, migrations: 0, scheduledTasks: 0 };
   const errors: unknown[][] = [];
   const windows: FakeWindow[] = [];
   let nextTimer = 0;
@@ -90,12 +93,21 @@ function createHarness(
     SPLASH_CARD_STORE_KEY: "card",
     loadSplashImageFromFile: () => new Promise(() => undefined),
     preloadSplashImage: noop,
-    initDb: async () => undefined,
-    runCoreMigrations: async () => undefined,
+    initDb: async () => {
+      calls.initDb++;
+    },
+    runCoreMigrations: async () => {
+      calls.migrations++;
+    },
+    coreReady: null,
+    scheduledTasksStarted: false,
     getDb: noop,
     IPFS_SERVER: { start: async () => "starting" },
     localShortcut: { register: noop },
-    createScheduledTasks,
+    createScheduledTasks: () => {
+      calls.scheduledTasks++;
+      return createScheduledTasks();
+    },
     process: { on: noop },
     initListeners: noop,
     screen: {
@@ -121,6 +133,8 @@ function createHarness(
   });
   vm.runInContext(compiled, context);
   return {
+    context,
+    calls,
     windows,
     timers,
     timerDelays,
@@ -147,6 +161,21 @@ test("fast startup cancels the splash before creating a native window", async ()
   h.elapseDelay();
   assert.equal(h.windows.length, 1);
   assert.equal(h.windows[0].visible, true);
+});
+
+test("reopening the window from background mode keeps the database and jobs", async () => {
+  const h = createHarness();
+  await h.launch();
+  await h.ready();
+  // Background mode destroys the main window; a second launch reopens it.
+  h.windows[0].destroy();
+  h.context.mainWindow = null;
+  await h.launch();
+  const reopened = h.windows.at(-1)!;
+  reopened.emit("ready-to-show");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(reopened.visible, true);
+  assert.deepEqual(h.calls, { initDb: 1, migrations: 1, scheduledTasks: 1 });
 });
 
 test("main window is visible before scheduler setup starts or finishes", async () => {

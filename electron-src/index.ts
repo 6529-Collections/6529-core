@@ -103,6 +103,7 @@ import {
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
+import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import { shouldOpenInExternalBrowser } from "./navigation-policy";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
@@ -1083,17 +1084,22 @@ if (!gotTheLock) {
   }
 
   app.on("second-instance", (_event, commandLine, _workingDirectory) => {
+    const url = commandLine.find((arg) => arg.startsWith(getScheme()));
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
 
-      const scheme = getScheme();
-
-      const url = commandLine.find((arg) => arg.startsWith(scheme));
       if (url) {
         handleUrl(url);
       }
+      return;
     }
+    // Launching the app again while it runs in the background reopens it.
+    void restoreFromBackground().then(() => {
+      if (url) {
+        mainWindow?.webContents.once("did-finish-load", () => handleUrl(url));
+      }
+    });
   });
 
   app.on("open-url", (event, url) => {
@@ -1156,7 +1162,7 @@ if (!gotTheLock) {
 
     app.on("activate", async () => {
       if (!mainWindow || mainWindow.isDestroyed()) {
-        await createWindow();
+        await restoreFromBackground();
       } else if (splash && !splash.isDestroyed()) {
         splash.focus();
       } else {
@@ -1320,6 +1326,46 @@ function updateSplashMessage(newMessage: string) {
   }
 }
 
+function appIconPath(): string {
+  if (isWindows()) {
+    return path.join(__dirname, "assets", "icon.ico");
+  }
+  if (isMac()) {
+    return path.join(__dirname, "assets", "icon.icns");
+  }
+  return path.join(__dirname, "assets", "icon.png");
+}
+
+let coreReady: Promise<void> | null = null;
+
+/**
+ * The database, its migrations and the process error handlers: once per run.
+ * Reopening the window from background mode must not open a second database
+ * connection or register the IPC handlers again.
+ */
+function initCoreOnce(): Promise<void> {
+  coreReady ??= (async () => {
+    updateSplashMessage("Initializing Database");
+    await initDb();
+
+    updateSplashMessage("Running Database Migrations");
+    await runCoreMigrations(getDb());
+
+    process.on("uncaughtException", (error) => {
+      Logger.error("Uncaught Exception:", error);
+    });
+
+    process.on("unhandledRejection", (reason, promise) => {
+      Logger.error("Unhandled Rejection at:", promise, "reason:", reason);
+    });
+  })();
+  return coreReady;
+}
+
+// The background jobs start with the first window and keep running while the
+// app is in the background; reopening the window does not restart them.
+let scheduledTasksStarted = false;
+
 /** Open the main window and start IPFS without blocking renderer loading. */
 async function createWindow() {
   Logger.info("Creating window");
@@ -1329,14 +1375,7 @@ async function createWindow() {
   }
   latestSplashMessage = "Loading";
 
-  let iconPath: string;
-  if (isWindows()) {
-    iconPath = path.join(__dirname, "assets", "icon.ico");
-  } else if (isMac()) {
-    iconPath = path.join(__dirname, "assets", "icon.icns");
-  } else {
-    iconPath = path.join(__dirname, "assets", "icon.png");
-  }
+  const iconPath = appIconPath();
 
   const savedCard = getValue(SPLASH_CARD_STORE_KEY);
   if (isValidSplashCard(savedCard)) {
@@ -1361,11 +1400,7 @@ async function createWindow() {
     }
   }, 1000);
 
-  updateSplashMessage("Initializing Database");
-  await initDb();
-
-  updateSplashMessage("Running Database Migrations");
-  await runCoreMigrations(getDb());
+  await initCoreOnce();
 
   const windowState = getValue("window-state");
 
@@ -1425,6 +1460,10 @@ async function createWindow() {
     mainWindow?.show();
     splash?.destroy();
     splash = null;
+    if (scheduledTasksStarted) {
+      return;
+    }
+    scheduledTasksStarted = true;
     try {
       await createScheduledTasks();
     } catch (error) {
@@ -1449,14 +1488,6 @@ async function createWindow() {
     e.preventDefault();
     mainWindow?.focus();
     requestMainWindowCloseConfirmation();
-  });
-
-  process.on("uncaughtException", (error) => {
-    Logger.error("Uncaught Exception:", error);
-  });
-
-  process.on("unhandledRejection", (reason, promise) => {
-    Logger.error("Unhandled Rejection at:", promise, "reason:", reason);
   });
 
   initListeners(mainWindow);
@@ -1757,16 +1788,31 @@ function runInBackground(): void {
       delete tails[k];
     }
 
-    if (!splash) {
-      createSplash();
-    }
-    splash?.minimize();
-    splash?.on("restore", async () => {
-      Logger.info("Splash window restored");
-      await createWindow();
-    });
+    // No window stays open in the background: the tray icon (and on macOS
+    // the Dock, or a second launch anywhere) reopens the app.
+    showBackgroundTray(
+      path.join(__dirname, "assets", isWindows() ? "icon.ico" : "icon.png"),
+      {
+        open: () => void restoreFromBackground(),
+        quit: () => void quitApplication(),
+      },
+    );
 
     destroyMainWindow();
+  }
+}
+
+/** Reopens the main window from background mode. */
+async function restoreFromBackground(): Promise<void> {
+  Logger.info("Restoring from background");
+  try {
+    await createWindow();
+  } finally {
+    // Keep the tray if the window could not be created, so the app can
+    // still be reopened or quit.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      hideBackgroundTray();
+    }
   }
 }
 
@@ -1789,6 +1835,7 @@ function destroyMainWindow(): void {
 }
 
 async function quitApplication(): Promise<void> {
+  hideBackgroundTray();
   if (mainWindow) {
     const bounds = mainWindow.getBounds();
     setValue("window-state", {
