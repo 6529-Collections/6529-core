@@ -1,14 +1,14 @@
 {
-  "$comment": "Size budget for packaged desktop builds, checked by scripts/helpers/size-budget.cjs in afterPack before installers are made. Sizes in MB (10^6 bytes) of file contents, measured by scripts/desktop-footprint.py. Stage 0 (2026-10-15) holds the 0.3.14 baseline (Windows x64: total 4,008.5, tooling 1,581.0, source maps 1,265.2, duplicate package files 1,725.2, 154,283 archive files) with a small margin; each slimming stage lowers these.",
+  "$comment": "Size budget for packaged desktop builds, checked by scripts/helpers/size-budget.cjs in afterPack before installers are made. Sizes in MB (10^6 bytes) of file contents, measured by scripts/desktop-footprint.py. Stage 1 (2026-10-18): Windows x64 measured 1,070.8 total, 0.0 tooling, 0.0 source maps, 0.2 duplicate package files, 22,430 archive files (0.3.14 was 4,008.5 / 1,581.0 / 1,265.2 / 1,725.2 / 154,283). Budgets keep a margin for normal growth; each slimming stage lowers them.",
   "default": {
-    "maxTotalMb": 4500,
-    "maxToolingMb": 1650,
-    "maxSourceMapsMb": 1330,
-    "maxDuplicatesMb": 1800,
-    "maxArchiveFiles": 162000
+    "maxTotalMb": 1350,
+    "maxToolingMb": 10,
+    "maxSourceMapsMb": 10,
+    "maxDuplicatesMb": 25,
+    "maxArchiveFiles": 30000
   },
   "platforms": {
-    "win-x64": { "maxTotalMb": 4200 },
-    "win-arm64": { "maxTotalMb": 4200 }
+    "win-x64": { "maxTotalMb": 1200 },
+    "win-arm64": { "maxTotalMb": 1200 }
   }
 }
