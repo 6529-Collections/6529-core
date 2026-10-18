@@ -4,6 +4,7 @@ import { app } from "electron";
 import Logger from "electron-log";
 import * as fs from "fs";
 import * as path from "path";
+import { IPFS_DAEMON_ARGS, withStorageLimits } from "./ipfs-config";
 import {
   createReadyLineDetector,
   IPFS_BOOTSTRAP_NODES,
@@ -256,6 +257,8 @@ export default class IPFSServer {
     // Set only our trusted bootstrap nodes here
     config.Bootstrap = [...IPFS_BOOTSTRAP_NODES];
 
+    config.Datastore = withStorageLimits(config.Datastore);
+
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
     Logger.info(
       `[IPFS] Config updated with Gateway port ${this.ipfsPort} and RPC port ${this.rpcPort}.`,
@@ -338,7 +341,7 @@ export default class IPFSServer {
   /** Await daemon readiness with a timeout while tracking late readiness and exit. */
   private startDaemon(ipfsBinaryPath: string): Promise<void> {
     Logger.info("[IPFS] Spawning a new daemon...");
-    const daemon = spawn(ipfsBinaryPath, ["daemon", "--migrate"], {
+    const daemon = spawn(ipfsBinaryPath, IPFS_DAEMON_ARGS, {
       stdio: "pipe",
       env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
       windowsHide: true,
