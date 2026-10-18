@@ -2,7 +2,10 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { copyResolvedTree } = require("./helpers/copy-resolved-tree.cjs");
+const {
+  copyResolvedTree,
+  isUnneededRuntimeFile,
+} = require("./helpers/copy-resolved-tree.cjs");
 
 const ROOT = process.cwd();
 const OUT_NODE_MODULES_PATHS = [
@@ -16,6 +19,9 @@ const SOURCE_NODE_MODULES_PATHS = [
   path.join(ROOT, "node_modules", ".pnpm", "node_modules"),
 ];
 const REQUIRED_RENDERER_RUNTIME_PACKAGES = ["next", "react", "react-dom"];
+// Optional dependencies the built renderer never loads: next's SWC compiler
+// binaries are only used to compile, never by the running server.
+const UNNEEDED_OPTIONAL_PACKAGES = /^@next\/swc-/;
 
 const materializeSymlinksInTree = (rootPath, basePath, allowedRoots) => {
   const directoriesToVisit = [rootPath];
@@ -34,7 +40,10 @@ const materializeSymlinksInTree = (rootPath, basePath, allowedRoots) => {
       if (entryStats.isSymbolicLink()) {
         const resolvedPath = fs.realpathSync(entryPath);
         fs.rmSync(entryPath, { recursive: true, force: true });
-        copyResolvedTree(resolvedPath, entryPath, { allowedRoots });
+        copyResolvedTree(resolvedPath, entryPath, {
+          allowedRoots,
+          skipFile: isUnneededRuntimeFile,
+        });
         const relativeEntryPath = path.relative(basePath, entryPath);
         console.log(
           `[materialize-renderer-out-node-modules] Materialized ${path.relative(
@@ -103,6 +112,9 @@ const enqueueDependencies = (queue, manifest) => {
     queue.push({ dependencyName, required: true });
   }
   for (const dependencyName of Object.keys(manifest.optionalDependencies ?? {})) {
+    if (UNNEEDED_OPTIONAL_PACKAGES.test(dependencyName)) {
+      continue;
+    }
     queue.push({ dependencyName, required: false });
   }
 };
@@ -181,6 +193,7 @@ const seedRequiredRuntimePackages = (outNodeModulesPath) => {
 
     copyResolvedTree(sourcePackagePath, targetPackagePath, {
       allowedRoots: SOURCE_NODE_MODULES_PATHS,
+      skipFile: isUnneededRuntimeFile,
     });
     console.log(
       `[materialize-renderer-out-node-modules] Seeded ${dependencyName} in ${path.relative(ROOT, outNodeModulesPath)} from ${path.relative(ROOT, sourcePackagePath)}`,
@@ -240,6 +253,7 @@ const hydrateDependenciesInOutNodeModules = (outNodeModulesPath) => {
 
       copyResolvedTree(sourcePackagePath, targetPackagePath, {
         allowedRoots: SOURCE_NODE_MODULES_PATHS,
+        skipFile: isUnneededRuntimeFile,
       });
       console.log(
         `[materialize-renderer-out-node-modules] Hydrated ${dependencyName} in ${path.relative(ROOT, outNodeModulesPath)} from ${path.relative(ROOT, sourcePackagePath)}`,

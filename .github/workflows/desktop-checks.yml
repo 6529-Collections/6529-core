@@ -28,6 +28,7 @@ jobs:
     env:
       SEIZE_6529_COMMAND: "1"
       SEIZE_SECURE_INSTALL: "1"
+      DESKTOP_SIZE_BUDGET_REQUIRED: "1"
       GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
       HAS_AWS: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 

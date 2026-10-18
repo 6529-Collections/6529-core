@@ -123,6 +123,10 @@ jobs:
 
       - name: Build for arm64
         if: ${{ inputs.should_run }}
+        env:
+          # The renderer's ESLint pass runs out of the default heap on the
+          # 7 GB macOS runner (exit 134).
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           if [ "${{ inputs.env }}" = "Staging" ]; then
             echo "Building for Staging..."
@@ -248,6 +252,10 @@ jobs:
           find ./ipfs-binaries/mac -type f -name ipfs -exec chmod +x {} \;
 
       - name: Build for x64
+        env:
+          # The renderer's ESLint pass runs out of the default heap on the
+          # 7 GB macOS runner (exit 134).
+          NODE_OPTIONS: --max-old-space-size=6144
         if: ${{ inputs.should_run }}
         run: pnpm run dist-mac-production-x64
 

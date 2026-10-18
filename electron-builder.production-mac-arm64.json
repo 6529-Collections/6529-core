@@ -22,8 +22,16 @@
     "renderer/out/**/*",
     "!renderer/out/cache{,/**/*}",
     "!renderer/out/dev/cache{,/**/*}",
-    "renderer/public/**/*"
+    "renderer/public/**/*",
+    "!**/*.map",
+    "!renderer/out/diagnostics{,/**}",
+    "!renderer/out/types{,/**}",
+    "!renderer/out/trace",
+    "!renderer/out/trace-build",
+    "!renderer/out/turbopack",
+    "!renderer/out/**/*.nft.json"
   ],
+  "electronLanguages": ["en-US", "en-GB", "de", "es", "es-419", "fr"],
   "extraResources": [
     "assets/**/*",
     {

@@ -20,6 +20,9 @@ const CORE_SCHEMES = {
 };
 
 const COMMANDS = {
+  // Windows builds stop at the unsigned app folder, zipped per
+  // architecture; CI signs it and builds the installers
+  // (scripts/windows-release.cjs).
   "dist-win-staging": {
     appEnvironment: "staging",
     prebuild: [["pnpm", ["run", "download-signed-ipfs"]]],
@@ -28,6 +31,7 @@ const COMMANDS = {
       "--config",
       "electron-builder.staging.json",
       "--win",
+      "zip",
       "--x64",
       "--publish",
       "never",
@@ -41,6 +45,7 @@ const COMMANDS = {
       "--config",
       "electron-builder.production.json",
       "--win",
+      "zip",
       "--x64",
       "--arm64",
       "--publish",
@@ -278,6 +283,8 @@ function main() {
     ["exec", "electron-builder", ...commandConfig.electronBuilder],
     env
   );
+  // Source maps are not packaged; keep them beside the build.
+  run("node", ["scripts/archive-source-maps.cjs"], env);
 }
 
 try {

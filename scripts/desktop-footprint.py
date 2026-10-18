@@ -431,7 +431,9 @@ def main(argv=None):
         elif arg == "--json" and argv:
             json_out = Path(argv.pop(0))
         elif arg in flags and argv and cmd == "check":
-            budgets[flags[arg]] = float(argv.pop(0))
+            key = flags[arg]
+            value = argv.pop(0)
+            budgets[key] = int(value) if key == "files" else float(value)
         else:
             print("unknown argument: %s" % arg)
             return 2

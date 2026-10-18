@@ -89,6 +89,32 @@ test("a build within budget passes and writes its footprint report", async () =>
   }
 });
 
+test("without Python the check warns and skips, unless it is required", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-budget-"));
+  const saved = { PATH: process.env.PATH, Path: process.env.Path, required: process.env.DESKTOP_SIZE_BUDGET_REQUIRED };
+  try {
+    const build = await makeFakeBuild(root);
+    const options = {
+      appOutDir: build,
+      outDir: path.join(root, "dist"),
+      platformKey: "win-x64",
+      budgetFile: writeBudget(root, { maxToolingMb: 1 }),
+    };
+    process.env.PATH = "";
+    process.env.Path = "";
+    delete process.env.DESKTOP_SIZE_BUDGET_REQUIRED;
+    assert.equal(checkSizeBudget(options), null);
+    process.env.DESKTOP_SIZE_BUDGET_REQUIRED = "1";
+    assert.throws(() => checkSizeBudget(options), /Python 3 is required/);
+  } finally {
+    for (const [key, value] of [["PATH", saved.PATH], ["Path", saved.Path], ["DESKTOP_SIZE_BUDGET_REQUIRED", saved.required]]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a build over budget fails with the exceeded budgets", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-budget-"));
   try {
