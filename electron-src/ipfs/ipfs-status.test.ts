@@ -49,6 +49,11 @@ function createServerHarness() {
     module: startup,
     exports: startup.exports,
   });
+  const config = { exports: {} };
+  vm.runInNewContext(compile(read("electron-src/ipfs/ipfs-config.ts")), {
+    module: config,
+    exports: config.exports,
+  });
   const serverModule = { exports: {} };
   const dependencies: Record<string, unknown> = {
     axios: {
@@ -62,6 +67,7 @@ function createServerHarness() {
     fs: {},
     path,
     "./ipfs-startup": startup.exports,
+    "./ipfs-config": config.exports,
   };
   vm.runInNewContext(compile(read("electron-src/ipfs/ipfs.server.ts")), {
     module: serverModule,
