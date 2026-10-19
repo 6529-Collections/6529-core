@@ -320,7 +320,7 @@ const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir, tar
     materializePackagedNodeModules(tempDir, projectDir, allowedRoots);
     assertElectronUpdaterRuntime(tempDir);
     logPrunedReviewVersions(pruneInactiveReviewVersions(tempDir));
-    const sqliteBytes = pruneSqliteModule(tempDir, target.platform, target.arch);
+    const sqliteBytes = pruneSqliteModule(tempDir, target.platform, target.arch, { requireModule: true });
     await repackAsar(tempDir, asarPath, unpackedPaths);
     // The repack rewrites app.asar.unpacked but leaves the files it no longer lists.
     pruneSqliteModule(`${asarPath}.unpacked`, target.platform, target.arch);
@@ -414,7 +414,7 @@ async function copyRendererNodeModules(context) {
   assertElectronUpdaterRuntime(appDir);
   logPrunedReviewVersions(pruneInactiveReviewVersions(appDir));
   const { platform, arch } = sqliteTargetFor(context);
-  logPrunedSqlite(pruneSqliteModule(appDir, platform, arch));
+  logPrunedSqlite(pruneSqliteModule(appDir, platform, arch, { requireModule: true }));
   assertNoPackagedBuildCache(resourcesDir, false);
 }
 
