@@ -36,8 +36,12 @@ function pruneInactiveReviewVersions(appRoot) {
     } catch {
       continue;
     }
-    if (typeof activeVersion !== "string" || !fs.existsSync(path.join(versionsDir, activeVersion))) continue;
-    for (const version of fs.readdirSync(versionsDir, { withFileTypes: true })) {
+    if (!fs.existsSync(versionsDir)) continue;
+    const versions = fs.readdirSync(versionsDir, { withFileTypes: true });
+    // The active version must name one of the version folders exactly, so a
+    // value such as "" or ".." cannot pass for a folder that exists.
+    if (!versions.some((version) => version.isDirectory() && version.name === activeVersion)) continue;
+    for (const version of versions) {
       if (!version.isDirectory() || version.name === activeVersion) continue;
       const dir = path.join(versionsDir, version.name);
       const bytes = folderSize(dir);

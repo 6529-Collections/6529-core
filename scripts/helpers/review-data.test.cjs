@@ -41,10 +41,13 @@ test("a review whose index is missing or names no present version is left alone"
   try {
     const noIndex = makeReview(appRoot, "no-index", undefined, ["a", "b"]);
     const wrongActive = makeReview(appRoot, "wrong-active", "missing", ["a", "b"]);
+    const emptyActive = makeReview(appRoot, "empty-active", "", ["a", "b"]);
+    const parentActive = makeReview(appRoot, "parent-active", "..", ["a", "b"]);
 
     assert.deepEqual(pruneInactiveReviewVersions(appRoot), []);
-    assert.equal(fs.readdirSync(path.join(noIndex, "versions")).length, 2);
-    assert.equal(fs.readdirSync(path.join(wrongActive, "versions")).length, 2);
+    for (const review of [noIndex, wrongActive, emptyActive, parentActive]) {
+      assert.equal(fs.readdirSync(path.join(review, "versions")).length, 2);
+    }
   } finally {
     fs.rmSync(appRoot, { recursive: true, force: true });
   }
