@@ -15,6 +15,10 @@ if (!isDev) {
 }
 
 const nextDir = path.join(app.getAppPath(), "renderer");
+// The frontend reads public/ and content/ (the public review data and
+// pages) from DESKTOP_RENDERER_DIR, because this server does not run from
+// the frontend folder.
+process.env.DESKTOP_RENDERER_DIR = nextDir;
 Logger.info("NEXT DIR:", nextDir);
 
 const rendererConfigTs = path.join(nextDir, "next.config.ts");

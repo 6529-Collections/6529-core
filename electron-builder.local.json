@@ -25,6 +25,7 @@
     "!renderer/out/cache{,/**/*}",
     "!renderer/out/dev/cache{,/**/*}",
     "renderer/public/**/*",
+    "renderer/content/public-reviews/**/*",
     "!**/*.map",
     "!renderer/out/diagnostics{,/**}",
     "!renderer/out/types{,/**}",
