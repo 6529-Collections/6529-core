@@ -24,8 +24,11 @@ import { readPackagedFile, runRouteChecks } from "./checks/pages";
 import { runDesktopChecks, runDesktopCleanup } from "./checks/desktop";
 import { runLifecycleChecks, runShellChecks } from "./checks/shell";
 
-// The app's splash delay (electron-src/index.ts, createWindow).
+// The app's splash delay (electron-src/index.ts, openMainWindow).
 const SPLASH_DELAY_MS = 1000;
+// The splash timer runs only when the busy startup yields, so a main window
+// ready a little after the delay can still, correctly, have had no splash.
+const SPLASH_TIMER_SLACK_MS = 1000;
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const extraArgs: string[] = [];
@@ -116,10 +119,13 @@ async function main(): Promise<number> {
         // than a second (SPLASH_DELAY_MS); a faster launch has none by design.
         const windowCreated = session.logMilestone(/Creating window/);
         const shownAt = shownLog ? shownLog.time - session.startedAt : null;
-        if (windowCreated !== null && shownAt !== null && shownAt - windowCreated <= SPLASH_DELAY_MS) {
-          return `no splash needed: main window ready ${((shownAt - windowCreated) / 1000).toFixed(1)} s after it was created`;
+        const readyAfter = windowCreated !== null && shownAt !== null ? shownAt - windowCreated : null;
+        if (readyAfter !== null && readyAfter <= SPLASH_DELAY_MS + SPLASH_TIMER_SLACK_MS) {
+          return `no splash needed: main window ready ${(readyAfter / 1000).toFixed(2)} s after it was created`;
         }
-        throw new Error("no splash window seen");
+        throw new Error(
+          `no splash window seen; main window ready ${readyAfter === null ? "at an unknown time" : `${(readyAfter / 1000).toFixed(2)} s after it was created`}`,
+        );
       }
       await waitFor("the splash to close", () => !session.pages().some((p) => p.url().includes("splash.html")), 30_000);
       return `splash at ${((splashSeenAt ?? created ?? 0) / 1000).toFixed(1)} s, main window shown at ${
