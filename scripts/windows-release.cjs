@@ -26,6 +26,7 @@ const path = require("node:path");
 const yaml = require("js-yaml");
 const { signFile } = require("./windows-sign-hook.cjs");
 const { resolvePnpmCommand } = require("./helpers/pnpm-command.cjs");
+const { assertWindowsUpdateArtifacts } = require("./helpers/windows-update-artifacts.cjs");
 
 const ROOT = path.resolve(__dirname, "..");
 const DIST = path.join(ROOT, "dist");
@@ -234,10 +235,13 @@ function signPublish(release) {
   }
 
   const merged = mergeLatest(release, perArch);
-  fs.writeFileSync(path.join(DIST, "latest.yml"), yaml.dump(merged, { lineWidth: -1 }));
 
   const artifacts = release.archs.flatMap((arch) => [installerName(release, arch), `${installerName(release, arch)}.blockmap`]);
   for (const arch of release.archs) assertSigned(path.join(DIST, installerName(release, arch)));
+  // electron-builder writes maps after its signing hook. Independently verify
+  // every final EXE chunk and manifest hash before publishing any artifacts.
+  assertWindowsUpdateArtifacts(DIST, merged);
+  fs.writeFileSync(path.join(DIST, "latest.yml"), yaml.dump(merged, { lineWidth: -1 }));
   for (const name of [...artifacts, "latest.yml"]) {
     if (!fs.existsSync(path.join(DIST, name))) throw new Error(`missing ${name}`);
   }
