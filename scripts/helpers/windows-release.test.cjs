@@ -1,5 +1,13 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { createRequire } = require("node:module");
+const { assertWindowsUpdateArtifacts } = require("./windows-update-artifacts.cjs");
+const builderRequire = createRequire(require.resolve("electron-builder"));
+const { buildBlockMap } = builderRequire("app-builder-lib/out/targets/blockmap/blockmap");
 const { azureSignToolArgs, hasSigningSettings, signFile } = require("../windows-sign-hook.cjs");
 const { installerName, mergeLatest, RELEASES, saveRollbackCopy, signatureCheckEnv, signatureOf, zipName } = require("../windows-release.cjs");
 
@@ -119,3 +127,126 @@ test(
     }
   },
 );
+
+const INSTALLERS = [
+  // Legacy universal filenames remain supported by the verifier, but the
+  // current production pipeline deliberately builds only x64 and ARM64.
+  "6529-DESKTOP-win-0.3.15.exe",
+  "6529-DESKTOP-win-x64-0.3.15.exe",
+  "6529-DESKTOP-win-arm64-0.3.15.exe",
+];
+
+/** Small binary fixtures only: never sign or rewrite a real release artifact. */
+async function installerFixture(t) {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "6529-blockmap-test-"),
+  );
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const files = [];
+  for (const name of INSTALLERS) {
+    const file = path.join(directory, name);
+    fs.writeFileSync(file, crypto.randomBytes(96000));
+    files.push({
+      url: name,
+      ...(await buildBlockMap(file, "gzip", `${file}.blockmap`)),
+    });
+  }
+  const manifest = {
+    version: "0.3.15",
+    files,
+    path: files[0].url,
+    sha512: files[0].sha512,
+  };
+  return { directory, manifest };
+}
+
+/** Model the manifest updater without relying on blockmap generation's hash. */
+function refreshFixtureHashes(directory, manifest) {
+  for (const entry of manifest.files) {
+    const contents = fs.readFileSync(path.join(directory, entry.url));
+    entry.size = contents.length;
+    entry.sha512 = crypto
+      .createHash("sha512")
+      .update(contents)
+      .digest("base64");
+  }
+  manifest.sha512 = manifest.files[0].sha512;
+}
+
+test("post-signing maps validate combined, x64 and ARM64 final EXEs and manifest hashes", async (t) => {
+  const { directory, manifest } = await installerFixture(t);
+  assert.doesNotThrow(() => assertWindowsUpdateArtifacts(directory, manifest));
+  for (const entry of manifest.files) {
+    // Azure signing appends a certificate: the old maps no longer cover it.
+    fs.appendFileSync(
+      path.join(directory, entry.url),
+      Buffer.alloc(12124, 0x53),
+    );
+    refreshFixtureHashes(directory, manifest);
+    assert.throws(
+      () => assertWindowsUpdateArtifacts(directory, manifest),
+      /blockmap does not match final EXE/,
+    );
+    // Regenerate from the final signed file, never the unsigned installer.
+    const file = path.join(directory, entry.url);
+    Object.assign(entry, await buildBlockMap(file, "gzip", `${file}.blockmap`));
+    manifest.sha512 = manifest.files[0].sha512;
+    assert.doesNotThrow(() =>
+      assertWindowsUpdateArtifacts(directory, manifest),
+    );
+  }
+});
+
+test("a stale map is rejected even when the final EXE has the same size", async (t) => {
+  const { directory, manifest } = await installerFixture(t);
+  const file = path.join(directory, INSTALLERS[1]);
+  const contents = fs.readFileSync(file);
+  contents[20000] ^= 0xff;
+  fs.writeFileSync(file, contents);
+  refreshFixtureHashes(directory, manifest);
+  assert.throws(
+    () => assertWindowsUpdateArtifacts(directory, manifest),
+    /blockmap does not match final EXE/,
+  );
+});
+
+test("correct maps do not excuse an incorrect manifest hash or size", async (t) => {
+  const { directory, manifest } = await installerFixture(t);
+  const entry = manifest.files[2];
+  const hash = entry.sha512;
+  entry.sha512 = "wrong";
+  assert.throws(
+    () => assertWindowsUpdateArtifacts(directory, manifest),
+    /manifest hash\/size/,
+  );
+  entry.sha512 = hash;
+  entry.size++;
+  assert.throws(
+    () => assertWindowsUpdateArtifacts(directory, manifest),
+    /manifest hash\/size/,
+  );
+  entry.size--;
+  manifest.sha512 = "wrong legacy hash";
+  assert.throws(
+    () => assertWindowsUpdateArtifacts(directory, manifest),
+    /manifest path\/sha512/,
+  );
+});
+
+test("installer metadata rejects missing maps and nonlocal paths", async (t) => {
+  const { directory, manifest } = await installerFixture(t);
+  fs.unlinkSync(path.join(directory, `${INSTALLERS[0]}.blockmap`));
+  assert.throws(
+    () => assertWindowsUpdateArtifacts(directory, manifest),
+    /ENOENT/,
+  );
+  manifest.files[0].url = "../other.exe";
+  assert.throws(
+    () => assertWindowsUpdateArtifacts(directory, manifest),
+    /local installer filenames/,
+  );
+  assert.throws(
+    () => assertWindowsUpdateArtifacts(directory, { files: [] }),
+    /no installers/,
+  );
+});
