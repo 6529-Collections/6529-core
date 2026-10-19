@@ -2,6 +2,7 @@
   "appId": "com.6529.6529stagingcore",
   "productName": "6529 Desktop Staging",
   "asar": true,
+  "npmRebuild": false,
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "afterSign": "scripts/notarize.js",
   "extraMetadata": {
@@ -62,6 +63,7 @@
     }
   ],
   "mac": {
+    "minimumSystemVersion": "13.0",
     "identity": "6529 Collection LLC (4962266Y3D)",
     "icon": "assets/icon.icns",
     "hardenedRuntime": true,

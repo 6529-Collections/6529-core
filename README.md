@@ -245,14 +245,10 @@ gitignored:
 GIPHY_API_KEY=your-giphy-api-key
 ```
 
-### Rebuilding SQL
+### SQLite
 
-This project uses `better-sqlite3`
-When changing between building different platforms, you need to rebuild this package first by running:
+This project uses `better-sqlite3`, which ships a prebuilt N-API binary for each platform, so nothing needs rebuilding when you switch between Electron versions or build platforms. afterPack keeps only the target platform's binary in the app.
 
-```
-6529 run rebuild-sql
-```
 
 Use the following steps to build for each platform:
 

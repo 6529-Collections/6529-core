@@ -129,9 +129,14 @@ function checkSizeBudget({ appOutDir, outDir, platformKey, budgetFile }) {
   return { jsonPath, reportPath };
 }
 
+/** The name of an electron-builder Arch value, such as "x64". */
+function archName(arch) {
+  return ARCH_NAMES[arch] ?? String(arch);
+}
+
 /** electron-builder afterPack entry point. */
 function checkPackedAppSizeBudget(context) {
-  const arch = ARCH_NAMES[context.arch] ?? String(context.arch);
+  const arch = archName(context.arch);
   return checkSizeBudget({
     appOutDir: context.appOutDir,
     outDir: context.outDir,
@@ -140,6 +145,7 @@ function checkPackedAppSizeBudget(context) {
 }
 
 module.exports = {
+  archName,
   budgetArgs,
   checkPackedAppSizeBudget,
   checkSizeBudget,
