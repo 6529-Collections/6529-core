@@ -336,3 +336,87 @@ test(
     assert.equal(h.splash.destroyed, true);
   },
 );
+
+// Exercise the actual F9 callback without launching a packaged app or CDP.
+const suiteSource = ts.createSourceFile(
+  "run.ts",
+  fs.readFileSync(path.join(process.cwd(), "e2e/desktop/run.ts"), "utf8"),
+  ts.ScriptTarget.Latest,
+  true,
+);
+let splashCheck: ts.Expression | undefined;
+function findSplashCheck(node: ts.Node): void {
+  if (
+    ts.isCallExpression(node) &&
+    node.expression.getText(suiteSource) === "recorder.check" &&
+    ts.isStringLiteral(node.arguments[0]) &&
+    node.arguments[0].text === "F9"
+  ) {
+    splashCheck = node.arguments[3];
+  }
+  ts.forEachChild(node, findSplashCheck);
+}
+findSplashCheck(suiteSource);
+assert.ok(splashCheck, "The function suite must register its F9 splash check");
+const compiledSplashCheck = ts.transpileModule(
+  `const runCheck = ${splashCheck.getText(suiteSource)}; runCheck();`,
+  { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
+).outputText;
+
+function runFunctionSuiteSplashCheck({
+  created = 0,
+  observed = null,
+  shown = 25,
+  staysOpen = false,
+}: {
+  created?: number | null;
+  observed?: number | null;
+  shown?: number | null;
+  staysOpen?: boolean;
+} = {}): Promise<string> {
+  return vm.runInNewContext(compiledSplashCheck, {
+    splashSeenAt: observed,
+    shownLog: shown === null ? null : { time: 1000 + shown },
+    session: {
+      startedAt: 1000,
+      logMilestone: () => created,
+      pages: () => (staysOpen ? [{ url: () => "file:///splash.html" }] : []),
+    },
+    waitFor: async (_label: string, condition: () => boolean) => {
+      assert.ok(condition(), "the splash did not close");
+    },
+  }) as Promise<string>;
+}
+
+test("function suite rejects a missing splash even on a fast launch", async () => {
+  await assert.rejects(
+    runFunctionSuiteSplashCheck({ created: null }),
+    /every launch must create the splash/,
+  );
+});
+
+test("function suite accepts a brief splash logged before CDP attached", async () => {
+  assert.match(await runFunctionSuiteSplashCheck(), /splash at 0\.0 s/);
+});
+
+test("function suite accepts an observed splash and requires it to close", async () => {
+  assert.match(
+    await runFunctionSuiteSplashCheck({ created: null, observed: 10 }),
+    /splash at/,
+  );
+  await assert.rejects(
+    runFunctionSuiteSplashCheck({ staysOpen: true }),
+    /splash did not close/,
+  );
+});
+
+test("function suite requires main readiness and rejects a late splash", async () => {
+  await assert.rejects(
+    runFunctionSuiteSplashCheck({ shown: null }),
+    /main window readiness was not logged/,
+  );
+  await assert.rejects(
+    runFunctionSuiteSplashCheck({ created: 50, shown: 25 }),
+    /splash was created after the main window was ready/,
+  );
+});
