@@ -5,6 +5,7 @@
     "output": "dist-local"
   },
   "asar": true,
+  "npmRebuild": false,
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "extraMetadata": {
     "env": {
@@ -44,6 +45,7 @@
     }
   ],
   "mac": {
+    "minimumSystemVersion": "13.0",
     "identity": null,
     "icon": "assets/icon.icns",
     "hardenedRuntime": true,
