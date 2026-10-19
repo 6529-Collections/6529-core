@@ -19,6 +19,8 @@ function entrySize(target) {
 
 /** The prebuilt binaries a build for this platform and arch loads. */
 function keptBinaries(platform, arch) {
+  // Electron's Linux AppImage/zip targets run on glibc, not Alpine/musl.
+  // Keep linux-<arch>.node; linuxmusl-<arch>.node is not a desktop target.
   const archs = arch === "universal" ? ["x64", "arm64"] : [arch];
   return archs.map((name) => `${platform}-${name}.node`);
 }
@@ -27,11 +29,19 @@ function keptBinaries(platform, arch) {
  * Removes the sources and every other platform's binary from better-sqlite3
  * under `root` (an extracted app, or app.asar.unpacked). Returns the bytes
  * removed. Throws when a binary the app loads is missing, so a build cannot
- * ship without one.
+ * ship without one. The complete app must have its direct dependency at the
+ * top level after materializePackagedNodeModules; requireModule makes a
+ * missing/unexpected nested-only layout fail instead of silently skipping it.
+ * The app.asar.unpacked overlay may legitimately omit the module entirely.
  */
-function pruneSqliteModule(root, platform, arch) {
+function pruneSqliteModule(root, platform, arch, { requireModule = false } = {}) {
   const dir = path.join(root, MODULE_DIR);
-  if (!fs.existsSync(dir)) return 0;
+  if (!fs.existsSync(dir)) {
+    if (requireModule) {
+      throw new Error(`[afterPack] Required better-sqlite3 is missing at ${dir}; materialize the app's direct dependency before pruning`);
+    }
+    return 0;
+  }
   const keep = keptBinaries(platform, arch);
   let bytes = 0;
   const remove = (target) => {
