@@ -4,6 +4,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { createRequire } = require("node:module");
 const { test } = require("node:test");
+const asar = require("@electron/asar");
+const { getUnpackedPaths, repackAsar } = require("./repack-asar.cjs");
 const { keptBinaries, pruneSqliteModule } = require("./sqlite-binary.cjs");
 
 const PREBUILDS = [
@@ -112,3 +114,56 @@ test("an app without better-sqlite3 is fine", () => {
     assert.equal(pruneSqliteModule(root, "win32", "x64"), 0);
   });
 });
+
+for (const [platform, arch] of [
+  ["darwin", "arm64"],
+  ["darwin", "x64"],
+  ["darwin", "universal"],
+  ["win32", "x64"],
+  ["win32", "arm64"],
+  ["linux", "x64"],
+]) {
+  test(`repacking puts SQLite ${platform}/${arch} binaries in the unpacked overlay`, async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-sqlite-asar-"));
+    try {
+      const source = path.join(root, "source");
+      makeModule(source);
+      const archive = path.join(root, "app.asar");
+      // Start with packed native files, so the test does not rely on previous
+      // unpacking metadata supplied by electron-builder.
+      await asar.createPackage(source, archive);
+      const previousUnpackedPaths = getUnpackedPaths(archive);
+      const keep = keptBinaries(platform, arch);
+      const relative = (name) => path.join("node_modules", "better-sqlite3", "prebuilds", name);
+      for (const name of keep) {
+        assert.notEqual(asar.statFile(archive, relative(name)).unpacked, true);
+      }
+      pruneSqliteModule(source, platform, arch, { requireModule: true });
+      await repackAsar(source, archive, previousUnpackedPaths);
+
+      const overlay = `${archive}.unpacked`;
+      for (const name of keep) {
+        assert.equal(asar.statFile(archive, relative(name)).unpacked, true);
+        assert.deepEqual(
+          fs.readFileSync(path.join(overlay, relative(name))),
+          fs.readFileSync(path.join(source, relative(name))),
+        );
+      }
+      // Simulate stale files left by a prior archive: only the target's
+      // physical binaries may survive the overlay cleanup pass.
+      const stale = PREBUILDS.find((name) => !keep.includes(name));
+      fs.writeFileSync(path.join(overlay, relative(stale)), "stale");
+      assert.equal(pruneSqliteModule(overlay, platform, arch), 5);
+      assert.deepEqual(
+        fs.readdirSync(path.join(overlay, "node_modules", "better-sqlite3", "prebuilds")).sort(),
+        [...keep].sort(),
+      );
+      // Do not soften the guard: a target binary missing from the physical
+      // overlay really is a broken artifact, even if its header entry exists.
+      fs.unlinkSync(path.join(overlay, relative(keep[0])));
+      assert.throws(() => pruneSqliteModule(overlay, platform, arch), /no prebuilt binary for this build/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+}

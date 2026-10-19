@@ -323,6 +323,9 @@ const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir, tar
     const sqliteBytes = pruneSqliteModule(tempDir, target.platform, target.arch, { requireModule: true });
     await repackAsar(tempDir, asarPath, unpackedPaths);
     // The repack rewrites app.asar.unpacked but leaves the files it no longer lists.
+    // repackAsar always unpacks .node files, including every retained SQLite
+    // prebuild. Keep the missing-binary guard: absence here means corruption,
+    // not an otherwise-valid binary living only inside app.asar.
     pruneSqliteModule(`${asarPath}.unpacked`, target.platform, target.arch);
     logPrunedSqlite(sqliteBytes);
   } finally {
