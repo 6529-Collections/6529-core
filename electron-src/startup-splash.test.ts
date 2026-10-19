@@ -36,26 +36,27 @@ const compiled = ts.transpileModule(code, {
   },
 }).outputText;
 
-/** Run the real window lifecycle with fake native windows and virtual timers. */
+/** Run the real lifecycle with fake windows; record any startup delay. */
 function createHarness(
   savedArtwork = false,
   createScheduledTasks: () => Promise<void> = async () => undefined,
+  initializeDatabase: () => Promise<void> = async () => undefined,
 ) {
-  const timers = new Map<number, () => void>();
   const timerDelays: number[] = [];
   const calls = { initDb: 0, migrations: 0, scheduledTasks: 0 };
   const sent: Array<{ channel: string; payload: unknown }> = [];
   const errors: unknown[][] = [];
   const windows: FakeWindow[] = [];
-  let nextTimer = 0;
   class FakeWindow extends EventEmitter {
     destroyed = false;
     visible = false;
     webContents = Object.assign(new EventEmitter(), {
-      send: (channel: string, payload: unknown) => sent.push({ channel, payload }),
+      send: (channel: string, payload: unknown) =>
+        sent.push({ channel, payload }),
     });
-    constructor(readonly options: { show?: boolean }) {
+    constructor(readonly options: { show?: boolean; frame?: boolean }) {
       super();
+      this.visible = options.show !== false;
       windows.push(this);
     }
     isDestroyed() {
@@ -69,6 +70,7 @@ function createHarness(
     }
     destroy() {
       this.destroyed = true;
+      this.visible = false;
     }
     maximize() {}
     setBounds() {}
@@ -99,6 +101,7 @@ function createHarness(
     savedSplashImageUrl: () => "file:///FAKE/splash-image",
     initDb: async () => {
       calls.initDb++;
+      await initializeDatabase();
     },
     runCoreMigrations: async () => {
       calls.migrations++;
@@ -129,12 +132,11 @@ function createHarness(
     fetchSplashCard: async () => {
       throw new Error("Network disabled");
     },
-    setTimeout: (callback: () => void, delay: number) => {
+    setTimeout: (_callback: () => void, delay: number) => {
       timerDelays.push(delay);
-      timers.set(++nextTimer, callback);
-      return nextTimer;
+      return timerDelays.length;
     },
-    clearTimeout: (id: number) => timers.delete(id),
+    clearTimeout: noop,
   });
   vm.runInContext(compiled, context);
   return {
@@ -142,31 +144,47 @@ function createHarness(
     calls,
     sent,
     windows,
-    timers,
     timerDelays,
     errors,
+    get main() {
+      return windows.filter((window) => window.options.frame !== false).at(-1)!;
+    },
+    get splash() {
+      return windows.filter((window) => window.options.frame === false).at(-1)!;
+    },
     launch: () => vm.runInContext("createWindow()", context) as Promise<void>,
     async ready() {
-      windows[0].emit("ready-to-show");
+      this.main.emit("ready-to-show");
       await new Promise<void>((resolve) => setImmediate(resolve));
-    },
-    elapseDelay() {
-      for (const [id, callback] of [...timers]) {
-        timers.delete(id);
-        callback();
-      }
     },
   };
 }
 
-test("fast startup cancels the splash before creating a native window", async () => {
+test("startup shows the splash immediately while database initialization is pending", async () => {
+  let finishDatabase!: () => void;
+  const database = new Promise<void>((resolve) => {
+    finishDatabase = resolve;
+  });
+  const h = createHarness(false, undefined, () => database);
+  const launch = h.launch();
+  assert.equal(h.windows.length, 1);
+  assert.equal(h.splash.options.show, true);
+  assert.equal(h.splash.visible, true);
+  assert.deepEqual(h.timerDelays, []);
+  finishDatabase();
+  await launch;
+  assert.equal(h.main.visible, false);
+});
+
+test("even fast startup shows a splash and switches to the ready main window without a delay", async () => {
   const h = createHarness();
   await h.launch();
-  assert.deepEqual(h.timerDelays, [1000]);
+  assert.deepEqual(h.timerDelays, []);
+  assert.equal(h.splash.visible, true);
   await h.ready();
-  h.elapseDelay();
-  assert.equal(h.windows.length, 1);
-  assert.equal(h.windows[0].visible, true);
+  assert.equal(h.windows.length, 2);
+  assert.equal(h.main.visible, true);
+  assert.equal(h.splash.destroyed, true);
 });
 
 test("reopening the window from background mode keeps the database and jobs", async () => {
@@ -174,7 +192,7 @@ test("reopening the window from background mode keeps the database and jobs", as
   await h.launch();
   await h.ready();
   // Background mode destroys the main window; a second launch reopens it.
-  h.windows[0].destroy();
+  h.main.destroy();
   h.context.mainWindow = null;
   await h.launch();
   const reopened = h.windows.at(-1)!;
@@ -192,7 +210,7 @@ test("a window reopened after failed scheduler setup tries the setup again", asy
   });
   await h.launch();
   await h.ready();
-  h.windows[0].destroy();
+  h.main.destroy();
   h.context.mainWindow = null;
   await h.launch();
   h.windows.at(-1)!.emit("ready-to-show");
@@ -204,13 +222,11 @@ test("a window reopened after failed scheduler setup tries the setup again", asy
 test("the splash gets the saved image as a file URL, never as data", async () => {
   const h = createHarness(true);
   await h.launch();
-  h.elapseDelay();
-  const splash = h.windows[1];
+  const splash = h.splash;
   splash.webContents.emit("did-finish-load");
   await new Promise<void>((resolve) => setImmediate(resolve));
-  const card = h.sent.find((entry) => entry.channel === "splash-card")?.payload as
-    | { preloadedImageDataUrl?: string }
-    | undefined;
+  const card = h.sent.find((entry) => entry.channel === "splash-card")
+    ?.payload as { preloadedImageDataUrl?: string } | undefined;
   assert.equal(card?.preloadedImageDataUrl, "file:///FAKE/splash-image");
 });
 
@@ -218,7 +234,7 @@ test("requests that arrive while the window opens share one window", async () =>
   const h = createHarness();
   // Startup and a second launch ask for the window at the same moment.
   await Promise.all([h.launch(), h.launch()]);
-  assert.equal(h.windows.length, 1);
+  assert.equal(h.windows.length, 2);
   assert.equal(h.calls.initDb, 1);
 });
 
@@ -229,18 +245,17 @@ test("main window is visible before scheduler setup starts or finishes", async (
   });
   let visibleDuringSetup = false;
   const h = createHarness(false, () => {
-    visibleDuringSetup = h.windows[0].visible;
+    visibleDuringSetup = h.main.visible;
     return setup;
   });
   await h.launch();
   await h.ready();
-  h.elapseDelay();
-  assert.equal(h.windows.length, 1);
-  assert.equal(h.windows[0].visible, true);
+  assert.equal(h.windows.length, 2);
+  assert.equal(h.main.visible, true);
   assert.equal(visibleDuringSetup, true);
   finishSetup();
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.equal(h.windows[0].visible, true);
+  assert.equal(h.main.visible, true);
 });
 
 test("late splash paint stays hidden while ready main window finishes scheduler setup", async () => {
@@ -250,30 +265,28 @@ test("late splash paint stays hidden while ready main window finishes scheduler 
   });
   const h = createHarness(false, () => setup);
   await h.launch();
-  h.elapseDelay();
-  const splash = h.windows[1];
+  const splash = h.splash;
   await h.ready();
   splash.emit("ready-to-show");
   splash.webContents.emit("did-finish-load");
   assert.equal(splash.visible, false);
   assert.equal(splash.destroyed, true);
-  assert.equal(h.windows[0].visible, true);
+  assert.equal(h.main.visible, true);
   finishSetup();
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(splash.destroyed, true);
-  assert.equal(h.windows[0].visible, true);
+  assert.equal(h.main.visible, true);
 });
 
 test("visible splash closes without waiting for scheduler setup", async () => {
   const h = createHarness(false, () => new Promise<void>(() => undefined));
   await h.launch();
-  h.elapseDelay();
-  const splash = h.windows[1];
+  const splash = h.splash;
   splash.emit("ready-to-show");
   splash.webContents.emit("did-finish-load");
   assert.equal(splash.visible, true);
   await h.ready();
-  assert.equal(h.windows[0].visible, true);
+  assert.equal(h.main.visible, true);
   assert.equal(splash.destroyed, true);
 });
 
@@ -284,35 +297,30 @@ test("scheduler setup failure is logged without hiding the main window", async (
   });
   await h.launch();
   await h.ready();
-  assert.equal(h.windows[0].visible, true);
-  assert.deepEqual(h.errors, [["Could not initialize scheduled tasks", failure]]);
+  assert.equal(h.main.visible, true);
+  assert.deepEqual(h.errors, [
+    ["Could not initialize scheduled tasks", failure],
+  ]);
 });
 
-test("slow startup shows a painted splash and closes it immediately when ready", async () => {
+test("splash paint and artwork events do not gate main-window display", async () => {
   const h = createHarness();
   await h.launch();
-  h.elapseDelay();
-  const splash = h.windows[1];
-  assert.equal(splash.options.show, false);
-  assert.equal(splash.visible, false);
-  splash.emit("ready-to-show");
-  assert.equal(splash.visible, false);
-  splash.webContents.emit("did-finish-load");
+  const splash = h.splash;
   assert.equal(splash.visible, true);
   await h.ready();
   assert.equal(splash.destroyed, true);
-  assert.equal(h.windows[0].visible, true);
+  assert.equal(h.main.visible, true);
 });
 
 test("a late splash paint cannot show after the main window is ready", async () => {
   const h = createHarness();
   await h.launch();
-  h.elapseDelay();
-  const splash = h.windows[1];
+  const splash = h.splash;
   await h.ready();
   splash.emit("ready-to-show");
-  assert.equal(splash.visible, false);
   assert.equal(splash.destroyed, true);
+  assert.equal(h.main.visible, true);
 });
 
 test(
@@ -320,9 +328,11 @@ test(
   { timeout: 1000 },
   async () => {
     const h = createHarness(true);
+    h.context.fetchSplashCard = () => new Promise(() => undefined);
     await h.launch();
-    assert.equal(h.windows.length, 1);
+    assert.equal(h.windows.length, 2);
     await h.ready();
-    assert.equal(h.windows[0].visible, true);
+    assert.equal(h.main.visible, true);
+    assert.equal(h.splash.destroyed, true);
   },
 );

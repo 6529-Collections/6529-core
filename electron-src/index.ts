@@ -1261,8 +1261,8 @@ function getRightPanelWidth(totalWidth: number): number {
   return totalWidth - leftWidth;
 }
 
-/** Gate startup display on a complete paint while preserving background mode. */
-function createSplash(shouldShow?: () => boolean) {
+/** Show startup feedback immediately; artwork never gates either window. */
+function createSplash() {
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
   let width =
@@ -1307,7 +1307,7 @@ function createSplash(shouldShow?: () => boolean) {
     frame: false,
     backgroundColor: "#000",
     transparent: false,
-    show: shouldShow === undefined,
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, "preload-splash.js"),
       additionalArguments: [
@@ -1319,17 +1319,6 @@ function createSplash(shouldShow?: () => boolean) {
     },
   });
   const splashWindow = splash;
-  let painted = false;
-  let loaded = false;
-  const showIfReady = () => {
-    if (painted && loaded && shouldShow?.() && !splashWindow.isDestroyed()) {
-      splashWindow.show();
-    }
-  };
-  splashWindow.once("ready-to-show", () => {
-    painted = true;
-    showIfReady();
-  });
   const splashPath = path.join(__dirname, "assets", "splash.html");
   const splashURL = `file://${splashPath}`;
   splash.loadURL(splashURL);
@@ -1350,10 +1339,8 @@ function createSplash(shouldShow?: () => boolean) {
 
   splash.webContents.once("did-finish-load", () => {
     if (splashWindow.isDestroyed()) return;
-    loaded = true;
     splashWindow.webContents.send("update-message", latestSplashMessage);
     void sendSplashCardIfReady();
-    showIfReady();
   });
 }
 
@@ -1446,17 +1433,11 @@ async function openMainWindow() {
     savedSplashImage = null;
   }
 
-  let startupComplete = false;
-  // Fast launches skip the splash. Slower launches show it only after its
-  // first paint, without delaying the main window for artwork or a minimum time.
-  const splashTimer = setTimeout(() => {
-    if (startupComplete || splash) return;
-    try {
-      createSplash(() => !startupComplete);
-    } catch (error) {
-      Logger.warn("Could not create startup splash", error);
-    }
-  }, 1000);
+  try {
+    createSplash();
+  } catch (error) {
+    Logger.warn("Could not create startup splash", error);
+  }
 
   await initCoreOnce();
 
@@ -1506,10 +1487,7 @@ async function openMainWindow() {
 
   mainWindow.once("ready-to-show", async () => {
     Logger.info("Main window ready to show");
-    // Show the ready main window before scheduler setup so slow initialization
-    // cannot leave startup without a visible window or revive a late splash.
-    startupComplete = true;
-    clearTimeout(splashTimer);
+    // Scheduler setup must never hold back the ready main window.
     if (windowState) {
       mainWindow?.setBounds(windowState);
     } else {
