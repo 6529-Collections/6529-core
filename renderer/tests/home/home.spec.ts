@@ -6,6 +6,15 @@ import {
 } from "../testHelpers";
 import { devices, type Page } from "@playwright/test";
 import { buildSync } from "esbuild";
+import {
+  decodeFunctionData,
+  encodeFunctionResult,
+  multicall3Abi,
+  toFunctionSelector,
+  zeroAddress,
+  zeroHash,
+} from "viem";
+import { MEMES_MANIFOLD_PROXY_ABI } from "../../abis/abis";
 import { getAppEnvironment } from "../../config/appEnvironment";
 import {
   isDesktopWebProject,
@@ -37,7 +46,8 @@ async function installLoadingTestArtwork(page: Page) {
     })
   );
   await page.route("https://rpc.walletconnect.org/**", (route) =>
-    route.abort()
+    // A terminal response exercises the unavailable state without transport retries.
+    route.fulfill({ status: 400, json: { error: "Fixture RPC unavailable" } })
   );
 }
 
@@ -88,57 +98,234 @@ async function installComingUpFixture(page: Page) {
   );
 }
 
+test("Subscription Minting stays readable on phones and keeps its desktop layout @smoke @medium @large", async ({
+  page,
+}, testInfo) => {
+  await installComingUpFixture(page);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const documentStyle = await page.evaluate(() => ({
+    styles: Array.from(
+      document.head.querySelectorAll('link[rel="stylesheet"], style'),
+      (element) => element.outerHTML
+    ).join(""),
+    bodyClass: document.body.className,
+  }));
+  const fixtureUrl = new URL("/__subscription-layout-fixture", page.url()).href;
+  await page.route(fixtureUrl, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<html><head><meta name="viewport" content="width=device-width, initial-scale=1">${documentStyle.styles}</head>
+      <body class="${documentStyle.bodyClass}"><main class="tailwind-scope" style="width:calc(100% - 72px);max-width:600px;margin:24px auto">
+        <div id="subscription-fixture"></div></main></body></html>`,
+    })
+  );
+  await page.goto(fixtureUrl);
+  const script = buildSync({
+    stdin: {
+      resolveDir: process.cwd(),
+      contents: `
+        import { createElement } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import Row from './components/home/now-minting/MemeSubscriptionAwarenessRow';
+        const states = [
+          { subscribed: false, subscriptionsCount: 564, profileCoverageSummary: 'Not configured · 0 ETH' },
+          { subscribed: true, subscribedCount: 12, subscriptionsCount: 123456789, profileCoverageSummary: 'Ready · 12 mints · 0.78348 ETH' },
+          { subscribed: false, subscriptionsCountLoading: true }
+        ];
+        createRoot(document.getElementById('subscription-fixture')).render(
+          createElement('div', { className: 'tw-space-y-6' }, ...states.map((props, index) =>
+            createElement('section', { key: index, 'aria-label': 'Subscription state ' + index },
+              createElement(Row, { ...props, tooltipLabel: 'Subscription status', profileSubscriptionsHref: '/fixture/subscriptions' })
+            )
+          ))
+        );`,
+    },
+    outfile: "subscription-layout-fixture.js",
+    bundle: true,
+    format: "iife",
+    jsx: "automatic",
+    define: { "process.env.NODE_ENV": '\"production\"', "process.env": "{}" },
+    write: false,
+  });
+  for (const file of script.outputFiles) {
+    if (file.path.endsWith(".css"))
+      await page.addStyleTag({ content: file.text });
+    else await page.addScriptTag({ content: file.text });
+  }
+  await expect(
+    page.getByText("Subscription Minting", { exact: true })
+  ).toHaveCount(3);
+  await page.evaluate(() => document.fonts.ready);
+  for (const width of [320, 360, 375, 390, 430, 640, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const region of await page.getByRole("region").all()) {
+      const heading = await region
+        .getByText("Subscription Minting", { exact: true })
+        .boundingBox();
+      const action = region.getByRole("link", { name: /^(Set up|Manage)$/ });
+      const actionBox = await action.boundingBox();
+      const infoBox = await region
+        .getByRole("link", { name: "Learn more about The Memes subscriptions" })
+        .boundingBox();
+      if (!heading || !actionBox || !infoBox)
+        throw new Error("Subscription controls must be visible");
+      if (width < 640) {
+        expect(heading.height).toBeLessThanOrEqual(20);
+        expect(actionBox.y).toBeGreaterThan(heading.y + heading.height);
+        expect(actionBox.height).toBeGreaterThanOrEqual(24);
+        expect(actionBox.y).toBeCloseTo(infoBox.y, 0);
+      } else {
+        expect(Math.abs(actionBox.y - heading.y)).toBeLessThanOrEqual(5);
+        expect(infoBox.y).toBeGreaterThan(heading.y + heading.height);
+      }
+      expect(
+        await region.evaluate((element) =>
+          Array.from(element.querySelectorAll("*")).every((child) => {
+            if (
+              !(child instanceof HTMLElement) ||
+              child.clientWidth === 0 ||
+              child.classList.contains("tw-sr-only")
+            )
+              return true;
+            return child.scrollWidth <= child.clientWidth + 1;
+          })
+        )
+      ).toBe(true);
+    }
+    await expectNoHorizontalOverflow(page);
+    if (width === 390 || width === 1280) {
+      await page.screenshot({
+        path: testInfo.outputPath(`subscription-${width}.png`),
+        fullPage: true,
+      });
+    }
+  }
+});
+
 for (const cardCount of [1, 3]) {
   test(`Coming Up sizes ${cardCount} cards for the available width @smoke @medium @large`, async ({
     page,
   }, testInfo) => {
     await installComingUpFixture(page);
+    await page.route("**/coming-up-layout-*.png", (route) => {
+      const rank = Number(
+        /coming-up-layout-(\d)/.exec(route.request().url())?.[1]
+      );
+      const height = [400, 600, 200][rank - 1]!;
+      return route.fulfill({
+        contentType: "image/svg+xml",
+        body: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="${height}"><rect width="400" height="${height}" fill="#777"/></svg>`,
+      });
+    });
     await page.route(comingUpLeaderboardPattern, (route) =>
       route.fulfill({
         json: {
           ...comingUpLeaderboard,
           count: cardCount,
-          drops: comingUpLeaderboard.drops.slice(0, cardCount),
+          drops: comingUpLeaderboard.drops
+            .slice(0, cardCount)
+            .map((drop, index) => ({
+              ...drop,
+              media: [
+                {
+                  mime_type: "image/png",
+                  url: `https://d3lqz0a4bldqgf.cloudfront.net/drops/coming-up-layout-${index + 1}.png`,
+                },
+              ],
+            })),
         },
       })
     );
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const carousel = page
+    const cards = page
       .getByRole("region", { name: "Coming up", exact: true })
-      .locator(".tw-snap-x");
+      .getByTestId("coming-up-cards");
     await expect(
-      carousel.getByRole("link", { name: /^Coming Up artwork / })
+      cards.getByRole("link", { name: /^Coming Up artwork / })
     ).toHaveCount(cardCount);
-    const widths = isMobileWebProject(testInfo.project.name)
-      ? [320, 639, 640, 767]
-      : [1280];
+    const artworkFrames = cards.getByTestId("coming-up-artwork");
+    for (const frame of await artworkFrames.all()) {
+      await frame.scrollIntoViewIfNeeded();
+      await expect(frame.getByRole("img")).toHaveCSS("opacity", "1");
+    }
+    const widths = [320, 390, 639, 640, 767, 768, 1024, 1280];
     for (const width of widths) {
       await page.setViewportSize({ width, height: 900 });
-      const geometry = await carousel.evaluate((element) => {
+      await cards
+        .getByRole("link", { name: /^Coming Up artwork / })
+        .first()
+        .scrollIntoViewIfNeeded();
+      const geometry = await cards.evaluate((element) => {
         const style = getComputedStyle(element);
         return {
           available:
             element.clientWidth -
             Number.parseFloat(style.paddingLeft) -
             Number.parseFloat(style.paddingRight),
-          card: element.firstElementChild!.getBoundingClientRect().width,
+          cards: Array.from(element.children, (card) =>
+            card.getBoundingClientRect().toJSON()
+          ),
+          top: element.getBoundingClientRect().top,
           overflow: element.scrollWidth - element.clientWidth,
         };
       });
+      expect(geometry.overflow).toBeLessThanOrEqual(1);
       if (width < 768) {
-        expect(geometry.card).toBeCloseTo(
-          geometry.available * (cardCount === 1 && width < 640 ? 1 : 0.8),
+        for (const [index, card] of geometry.cards.entries()) {
+          expect(card.width).toBeCloseTo(geometry.available, 0);
+          if (index > 0) {
+            const previous = geometry.cards[index - 1]!;
+            expect(card.top - previous.bottom).toBeCloseTo(24, 0);
+            expect(card.left).toBeCloseTo(previous.left, 0);
+          }
+        }
+        // Every card participates in page scrolling; there is no nested swipe row.
+        const lastCard = cards.getByRole("link", {
+          name: `Coming Up artwork ${cardCount}`,
+          exact: true,
+        });
+        await lastCard.scrollIntoViewIfNeeded();
+        await expect(lastCard).toBeInViewport();
+        if (cardCount > 1) {
+          expect(
+            await cards.evaluate(
+              (element) => element.getBoundingClientRect().top
+            )
+          ).toBeLessThan(geometry.top);
+        }
+      } else {
+        const columns = width < 1024 ? 2 : 3;
+        const gap = width < 1024 ? 16 : 20;
+        expect(geometry.cards[0]!.width).toBeCloseTo(
+          (geometry.available - gap * (columns - 1)) / columns,
           0
         );
-        expect(geometry.overflow > 1).toBe(cardCount > 1);
-      } else {
-        expect(geometry.card).toBeLessThan(geometry.available / 2);
-        expect(geometry.overflow).toBeLessThanOrEqual(1);
+      }
+      for (const frame of await artworkFrames.all()) {
+        const artwork = await frame.evaluate((element) => {
+          const image = element.querySelector("img")!;
+          const bounds = element.getBoundingClientRect();
+          return {
+            width: bounds.width,
+            height: bounds.height,
+            imageHeight: image.getBoundingClientRect().height,
+            ratio: image.naturalHeight / image.naturalWidth,
+            fit: getComputedStyle(image).objectFit,
+          };
+        });
+        expect(artwork.fit).toBe("contain");
+        expect(artwork.height).toBeCloseTo(
+          artwork.width * (width < 768 ? artwork.ratio : 4 / 3),
+          0
+        );
+        if (width < 768) {
+          expect(artwork.imageHeight).toBeCloseTo(artwork.height, 0);
+        }
       }
       await expectNoHorizontalOverflow(page);
     }
-    await carousel.scrollIntoViewIfNeeded();
-    await carousel.screenshot({
+    await cards.scrollIntoViewIfNeeded();
+    await cards.screenshot({
       path: testInfo.outputPath(`coming-up-${cardCount}-cards.png`),
     });
   });
@@ -495,7 +682,7 @@ test("Coming Up does not mislabel the current artwork while Latest Drop is delay
     releaseArtwork();
     await expect(
       page.getByRole("link", { name: loadingTestArtwork.name, exact: true })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
     await expect(comingUp.getByText("NEXT MINT", { exact: true })).toHaveCount(
       0
     );
@@ -507,7 +694,7 @@ test("Coming Up does not mislabel the current artwork while Latest Drop is delay
   }
 });
 
-test("homepage artwork survives slow settings and failed mint status @smoke @medium @large", async ({
+test("homepage waits for initial settings and recovers from failed mint status @smoke @medium @large", async ({
   page,
 }) => {
   await installLoadingTestArtwork(page);
@@ -518,27 +705,29 @@ test("homepage artwork survives slow settings and failed mint status @smoke @med
   const settingsReady = new Promise<void>((resolve) => {
     releaseSettings = resolve;
   });
+  await page.route("**/api/v2/waves/*/decisions?*", (route) =>
+    route.fulfill({ json: { data: [], page: 1, count: 0, next: false } })
+  );
   await page.route("**/api/settings", async (route) => {
     await settingsReady;
-    await route.fallback();
+    await route.fulfill({ json: comingUpSettings });
   });
   try {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const artwork = page
       .getByRole("main")
       .locator('[data-home-section="Latest drop"]');
-    await expect(
-      artwork.getByRole("link", { name: loadingTestArtwork.name, exact: true })
-    ).toBeVisible();
+    await expect(page.getByText("Latest Drop", { exact: true })).toBeVisible();
+    await expect(artwork).toHaveCount(0);
+    releaseSettings();
     const image = artwork.getByRole("img", {
       name: loadingTestArtwork.name,
       exact: true,
     });
-    await expect(image).toBeVisible();
+    await expect(image).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
     await expect
       .poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth))
       .toBeGreaterThan(0);
-    releaseSettings();
     await expect(
       artwork.getByText("Unavailable", { exact: true }).first()
     ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
@@ -546,6 +735,158 @@ test("homepage artwork survives slow settings and failed mint status @smoke @med
     await expectNoHorizontalOverflow(page);
   } finally {
     releaseSettings();
+  }
+});
+
+test("homepage selects Next Drop without flashing the previous artwork @smoke @medium @large", async ({
+  page,
+}) => {
+  await installComingUpFixture(page);
+  const winner = {
+    ...comingUpLeaderboard.drops[0],
+    id: "next-drop-loading-fixture",
+    title: "Upcoming artwork fixture",
+    wave: comingUpWave,
+    media: [{ mime_type: "image/png", url: loadingTestArtwork.image }],
+    metadata: [],
+    collaborators: [],
+    submission_context: {
+      meme_card_id: 537,
+      voting: { current_calculated_vote: 0 },
+    },
+  };
+  await page.route(`**/api/waves/${comingUpWave.id}`, (route) =>
+    route.fulfill({
+      json: {
+        ...comingUpWave,
+        author: winner.author,
+        description_drop: { id: "description" },
+        voting: { scope: {}, credit_type: "TDH" },
+        participation: { scope: {} },
+        chat: { scope: {} },
+        visibility: { scope: {} },
+        wave: { admin_group: {} },
+      },
+    })
+  );
+  let releaseWinner!: () => void;
+  const winnerReady = new Promise<void>((resolve) => {
+    releaseWinner = resolve;
+  });
+  await page.route("**/api/v2/waves/*/decisions?*", async (route) => {
+    await winnerReady;
+    await route.fulfill({
+      json: {
+        data: [
+          {
+            decision_time: 1,
+            winners: [{ place: 1, awards: [], drop: winner }],
+          },
+        ],
+        page: 1,
+        count: 1,
+        next: false,
+      },
+    });
+  });
+  const claimResult = encodeFunctionResult({
+    abi: MEMES_MANIFOLD_PROXY_ABI,
+    functionName: "getClaimForToken",
+    result: [
+      1n,
+      {
+        total: 328,
+        totalMax: 328,
+        walletMax: 0,
+        startDate: 1,
+        endDate: 2,
+        storageProtocol: 0,
+        merkleRoot: zeroHash,
+        location: "",
+        tokenId: 536n,
+        cost: 0n,
+        paymentReceiver: zeroAddress,
+        erc20: zeroAddress,
+        signingAddress: zeroAddress,
+      },
+    ],
+  });
+  let releaseStatus!: () => void;
+  const statusReady = new Promise<void>((resolve) => {
+    releaseStatus = resolve;
+  });
+  const selector = toFunctionSelector("getClaimForToken(address,uint256)");
+  await page.route("https://rpc.walletconnect.org/**", async (route) => {
+    const rpc = route.request().postDataJSON();
+    if (rpc.method !== "eth_call") {
+      await route.abort();
+      return;
+    }
+    await statusReady;
+    let result = claimResult;
+    if (!rpc.params[0].data.startsWith(selector)) {
+      const { args, functionName } = decodeFunctionData({
+        abi: multicall3Abi,
+        data: rpc.params[0].data,
+      });
+      if (functionName !== "aggregate3")
+        throw new Error("Unexpected fixture RPC call");
+      result = encodeFunctionResult({
+        abi: multicall3Abi,
+        functionName,
+        result: args[0].map((call) => ({
+          success: call.callData.startsWith(selector),
+          returnData: call.callData.startsWith(selector) ? claimResult : "0x",
+        })),
+      });
+    }
+    await route.fulfill({ json: { jsonrpc: "2.0", id: rpc.id, result } });
+  });
+  await page.addInitScript(() => {
+    new MutationObserver(() => {
+      if (document.querySelector('[data-home-section="Latest drop"]')) {
+        document.documentElement.dataset["previousDropRendered"] = "true";
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  try {
+    const artworkResponse = page.waitForResponse("**/api/memes_latest");
+    const statusRequest = page.waitForRequest(
+      (request) =>
+        request.url().startsWith("https://rpc.walletconnect.org/") &&
+        request.postDataJSON()?.method === "eth_call"
+    );
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await artworkResponse;
+    await statusRequest;
+    await expect(page.getByText("Latest Drop", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("main").locator('[data-home-section="Latest drop"]')
+    ).toHaveCount(0);
+    const winnerResponse = page.waitForResponse(
+      "**/api/v2/waves/*/decisions?*"
+    );
+    releaseWinner();
+    await winnerResponse;
+    await expect(
+      page.getByRole("link", { name: winner.title, exact: true })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("main").locator('[data-home-section="Latest drop"]')
+    ).toHaveCount(0);
+    releaseStatus();
+    await expect(page.getByText("Next Drop", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: winner.title, exact: true })
+    ).toBeVisible();
+    await expect(page.locator("html")).not.toHaveAttribute(
+      "data-previous-drop-rendered",
+      "true"
+    );
+    await expectNoHorizontalOverflow(page);
+  } finally {
+    releaseWinner();
+    releaseStatus();
   }
 });
 
@@ -572,7 +913,7 @@ test("homepage artwork request has a visible failure and retry @smoke @medium @l
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await expect(
     page.getByRole("link", { name: loadingTestArtwork.name, exact: true })
-  ).toBeVisible();
+  ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
   await expect(
     page.getByRole("button", { name: "Try again", exact: true })
   ).toHaveCount(0);
@@ -748,39 +1089,18 @@ test.describe("Home Page @smoke @medium @large", () => {
     }
 
     if (isNarrowViewport) {
-      const carousel = page
-        .getByRole("region", { name: "Coming up", exact: true })
-        .locator(".tw-snap-x");
-      const cards = page
-        .getByRole("region", { name: "Coming up", exact: true })
-        .locator(".tw-snap-x > div");
-      if ((await cards.count()) > 1) {
-        // A directional scroll beyond the next card must stop at that card,
-        // instead of skipping it. Check both forward and backward movement.
-        const nextCardOffset = await carousel.evaluate((element) => {
-          const first = element.children[0]!.getBoundingClientRect();
-          const second = element.children[1]!.getBoundingClientRect();
-          element.scrollBy({
-            left: element.clientWidth * 2,
-            behavior: "instant",
-          });
-          return Math.min(
-            second.left - first.left,
-            element.scrollWidth - element.clientWidth
-          );
-        });
-        await expect
-          .poll(() => carousel.evaluate((element) => element.scrollLeft))
-          .toBeCloseTo(nextCardOffset, 0);
-        await carousel.evaluate((element) => {
-          element.scrollBy({
-            left: -element.clientWidth * 2,
-            behavior: "instant",
-          });
-        });
-        await expect
-          .poll(() => carousel.evaluate((element) => element.scrollLeft))
-          .toBe(0);
+      const cards = comingUp.getByTestId("coming-up-cards");
+      const layout = await cards.evaluate((element) => ({
+        overflow: element.scrollWidth - element.clientWidth,
+        boxes: Array.from(element.children, (card) =>
+          card.getBoundingClientRect().toJSON()
+        ),
+      }));
+      expect(layout.overflow).toBeLessThanOrEqual(1);
+      for (let index = 1; index < layout.boxes.length; index++) {
+        expect(
+          layout.boxes[index]!.top - layout.boxes[index - 1]!.bottom
+        ).toBeCloseTo(24, 0);
       }
     }
 
@@ -949,7 +1269,7 @@ test.describe("Home Page @smoke @medium @large", () => {
         name: loadingTestArtwork.name,
         exact: true,
       });
-      await expect(dropTitle).toBeVisible();
+      await expect(dropTitle).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
       await dropTitle.hover();
       await expect(dropTitle).toHaveCSS("color", "rgb(206, 207, 212)");
 
