@@ -37,6 +37,18 @@ test("without signing settings files stay unsigned, unless signing is required",
   assert.throws(() => signFile("app.exe", { WINDOWS_SIGNING_REQUIRED: "1" }), /signing settings are missing/);
 });
 
+test("unsigned builds skip signing without even inspecting available credentials", () => {
+  const env = new Proxy({ ...SETTINGS, WINDOWS_SIGNING_REQUIRED: "0" }, {
+    get(target, name) {
+      if (Object.hasOwn(SETTINGS, name)) {
+        assert.fail(`Unsigned build inspected signing credential ${name}`);
+      }
+      return Reflect.get(target, name);
+    },
+  });
+  assert.equal(signFile("ipfs.exe", env), false);
+});
+
 test("the production feed lists one installer per architecture, x64 first", () => {
   const release = RELEASES.production;
   const merged = mergeLatest(release, {
