@@ -5,6 +5,8 @@
 // build, so the installer's block map and latest.yml are computed from the
 // signed file and differential updates work.
 //
+// The unsigned Windows build targets set WINDOWS_SIGNING_REQUIRED=0 to skip
+// this hook before inspecting credentials. The signing workflow is unchanged.
 // With the Azure Key Vault settings of the "Sign Windows" workflow present,
 // files are signed with AzureSignTool. Without them (local and off-CI
 // builds) files stay unsigned; set WINDOWS_SIGNING_REQUIRED=1 to make a
@@ -49,6 +51,10 @@ function azureSignToolArgs(filePath, env = process.env) {
 }
 
 function signFile(filePath, env = process.env) {
+  if (env.WINDOWS_SIGNING_REQUIRED === "0") {
+    console.log(`[windows-sign] signing disabled; leaving ${path.basename(filePath)} unsigned`);
+    return false;
+  }
   if (!hasSigningSettings(env)) {
     if (env.WINDOWS_SIGNING_REQUIRED === "1") {
       throw new Error(`Windows signing settings are missing; cannot sign ${filePath}`);
