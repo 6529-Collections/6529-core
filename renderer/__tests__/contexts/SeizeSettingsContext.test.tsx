@@ -2,7 +2,7 @@ import {
   SeizeSettingsProvider,
   useSeizeSettings,
 } from "@/contexts/SeizeSettingsContext";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { render as pureRender } from "@testing-library/react/pure";
 
 jest.mock("@/services/6529api", () => ({ fetchUrl: jest.fn() }));
@@ -10,6 +10,39 @@ const { fetchUrl } = jest.requireMock("@/services/6529api");
 
 beforeEach(() => {
   fetchUrl.mockReset();
+});
+
+test("accepts settings that take more than 15 seconds to load", async () => {
+  jest.useFakeTimers();
+  let resolveSettings!: (settings: { memes_wave_id: string }) => void;
+  fetchUrl.mockReturnValueOnce(
+    new Promise((resolve) => {
+      resolveSettings = resolve;
+    })
+  );
+  function Consumer() {
+    const { isLoaded, loadError } = useSeizeSettings();
+    return <p>{isLoaded ? "Ready" : (loadError?.name ?? "Loading")}</p>;
+  }
+  const view = render(
+    <SeizeSettingsProvider>
+      <Consumer />
+    </SeizeSettingsProvider>
+  );
+  try {
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(20_000);
+    });
+    expect(screen.getByText("Loading")).toBeInTheDocument();
+    expect(fetchUrl).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolveSettings({ memes_wave_id: "slow-wave" });
+    });
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+  } finally {
+    view.unmount();
+    jest.useRealTimers();
+  }
 });
 
 test("provides settings and helper", async () => {
