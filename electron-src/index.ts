@@ -131,6 +131,7 @@ crashReporter.start({
 setScheduledTasksDir(path.join(__dirname, "scheduled-tasks"));
 
 let mainWindow: BrowserWindow | null = null;
+let myIpfsWindow: BrowserWindow | null = null;
 let closeConfirmationPromise: Promise<void> | null = null;
 let isMainWindowCloseAuthorized = false;
 let scheduledWorkers: ScheduledWorker[] = [];
@@ -863,6 +864,13 @@ function isLocalIpfsApiUrl(url: string): boolean {
 }
 
 function openIpfsWindow(url: string): void {
+  if (myIpfsWindow && !myIpfsWindow.isDestroyed()) {
+    if (myIpfsWindow.isMinimized()) myIpfsWindow.restore();
+    myIpfsWindow.show();
+    myIpfsWindow.focus();
+    return;
+  }
+
   const bounds = mainWindow?.getBounds();
   const isFullScreen = mainWindow?.isFullScreen() ?? false;
   const isMaximized = mainWindow?.isMaximized() ?? false;
@@ -885,6 +893,11 @@ function openIpfsWindow(url: string): void {
       spellcheck: true,
     },
     show: false,
+  });
+  // Retain it before loading so repeated clicks cannot create duplicates.
+  myIpfsWindow = ipfsWindow;
+  ipfsWindow.once("closed", () => {
+    if (myIpfsWindow === ipfsWindow) myIpfsWindow = null;
   });
 
   if (isFullScreen) {
