@@ -1,8 +1,15 @@
 # 7 days, in minutes.
 minimumReleaseAge: 10080
 onlyBuiltDependencies:
-  - better-sqlite3
   - electron
+# better-sqlite3 ships prebuilt N-API binaries and loads them first; its
+# node-gyp step would only find that prebuilt and build nothing.
+ignoredBuiltDependencies:
+  - better-sqlite3
+peerDependencyRules:
+  allowedVersions:
+    # TypeORM 0.3.31 lists better-sqlite3 up to 12; 13 keeps the same API on N-API.
+    typeorm>better-sqlite3: '13'
 overrides:
   '@tootallnate/once': 3.0.1
   '@babel/core@<7.29.6': 7.29.7

@@ -341,6 +341,10 @@ jobs:
           echo "path: $DEFAULT_NAME" >> $YAML_FILE
           echo "sha512: $DEFAULT_SHA" >> $YAML_FILE
           echo "releaseDate: '$DATE'" >> $YAML_FILE
+          # Electron 44 needs macOS 13. electron-updater compares this with
+          # os.release(), the Darwin version (macOS 13 is Darwin 22), so Macs on
+          # macOS 12 are not offered an update they could not open.
+          echo "minimumSystemVersion: 22.0.0" >> $YAML_FILE
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

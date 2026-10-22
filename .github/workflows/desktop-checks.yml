@@ -7,7 +7,8 @@ name: Desktop checks
 
 on:
   pull_request:
-    branches: [main]
+    # Exercise Electron runtime upgrades while they are stacked on the SQLite PR.
+    branches: [main, claude/desktop-sqlite-napi]
     paths-ignore:
       - "**/*.md"
       - "ops/**"

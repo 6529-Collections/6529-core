@@ -5,6 +5,7 @@
     "output": "dist-local"
   },
   "asar": true,
+  "npmRebuild": false,
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "extraMetadata": {
     "env": {
@@ -25,6 +26,7 @@
     "!renderer/out/cache{,/**/*}",
     "!renderer/out/dev/cache{,/**/*}",
     "renderer/public/**/*",
+    "renderer/content/public-reviews/**/*",
     "!**/*.map",
     "!renderer/out/diagnostics{,/**}",
     "!renderer/out/types{,/**}",
@@ -43,6 +45,7 @@
     }
   ],
   "mac": {
+    "minimumSystemVersion": "13.0",
     "identity": null,
     "icon": "assets/icon.icns",
     "hardenedRuntime": true,

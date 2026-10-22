@@ -24,9 +24,6 @@ import { readPackagedFile, runRouteChecks } from "./checks/pages";
 import { runDesktopChecks, runDesktopCleanup } from "./checks/desktop";
 import { runLifecycleChecks, runShellChecks } from "./checks/shell";
 
-// The app's splash delay (electron-src/index.ts, createWindow).
-const SPLASH_DELAY_MS = 1000;
-
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const extraArgs: string[] = [];
 
@@ -111,19 +108,20 @@ async function main(): Promise<number> {
 
     await recorder.check("F9", "splash", "The splash shows at launch and closes when the main window shows", async () => {
       const created = session.logMilestone(/Creating splash/);
+      // Every launch creates a splash. A fast splash may close before CDP
+      // attaches, so retain the startup-log evidence as well as observation.
       if (splashSeenAt === null && created === null) {
-        // The app shows the splash only when the main window takes longer
-        // than a second (SPLASH_DELAY_MS); a faster launch has none by design.
-        const windowCreated = session.logMilestone(/Creating window/);
-        const shownAt = shownLog ? shownLog.time - session.startedAt : null;
-        if (windowCreated !== null && shownAt !== null && shownAt - windowCreated <= SPLASH_DELAY_MS) {
-          return `no splash needed: main window ready ${((shownAt - windowCreated) / 1000).toFixed(1)} s after it was created`;
-        }
-        throw new Error("no splash window seen");
+        throw new Error("no splash window seen or creation logged; every launch must create the splash");
+      }
+      if (!shownLog) {
+        throw new Error("main window readiness was not logged");
+      }
+      if (created !== null && created > shownLog.time - session.startedAt) {
+        throw new Error("the splash was created after the main window was ready");
       }
       await waitFor("the splash to close", () => !session.pages().some((p) => p.url().includes("splash.html")), 30_000);
       return `splash at ${((splashSeenAt ?? created ?? 0) / 1000).toFixed(1)} s, main window shown at ${
-        shownLog ? ((shownLog.time - session.startedAt) / 1000).toFixed(1) : "?"
+        ((shownLog.time - session.startedAt) / 1000).toFixed(1)
       } s`;
     });
 

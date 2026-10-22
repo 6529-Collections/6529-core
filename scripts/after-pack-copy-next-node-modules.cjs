@@ -11,9 +11,11 @@ const {
 } = require("./helpers/copy-resolved-tree.cjs");
 const { getUnpackedPaths, repackAsar } = require("./helpers/repack-asar.cjs");
 const { assertNoPackagedBuildCache } = require("./helpers/packaged-build-cache.cjs");
-const { checkPackedAppSizeBudget } = require("./helpers/size-budget.cjs");
+const { archName, checkPackedAppSizeBudget } = require("./helpers/size-budget.cjs");
 const { writeWindowsAppUpdateConfig } = require("./helpers/app-update-config.cjs");
 const { refreshPackedAsarIntegrity } = require("./helpers/asar-integrity.cjs");
+const { pruneInactiveReviewVersions } = require("./helpers/review-data.cjs");
+const { pruneSqliteModule } = require("./helpers/sqlite-binary.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -306,7 +308,7 @@ const resolveResourcesDir = (context) => {
   return path.join(appOutDir, "resources");
 };
 
-const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir) => {
+const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir, target) => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "6529-afterpack-"));
   try {
     const unpackedPaths = getUnpackedPaths(asarPath);
@@ -317,11 +319,38 @@ const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir) => 
     }
     materializePackagedNodeModules(tempDir, projectDir, allowedRoots);
     assertElectronUpdaterRuntime(tempDir);
+    logPrunedReviewVersions(pruneInactiveReviewVersions(tempDir));
+    const sqliteBytes = pruneSqliteModule(tempDir, target.platform, target.arch, { requireModule: true });
     await repackAsar(tempDir, asarPath, unpackedPaths);
+    // The repack rewrites app.asar.unpacked but leaves the files it no longer lists.
+    // repackAsar always unpacks .node files, including every retained SQLite
+    // prebuild. Keep the missing-binary guard: absence here means corruption,
+    // not an otherwise-valid binary living only inside app.asar.
+    pruneSqliteModule(`${asarPath}.unpacked`, target.platform, target.arch);
+    logPrunedSqlite(sqliteBytes);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 };
+
+const logPrunedReviewVersions = (removed) => {
+  for (const { review, version, bytes } of removed) {
+    console.log(
+      `[afterPack] Left out review ${review} version ${version} (${(bytes / 1e6).toFixed(1)} MB); the app loads it from the site`,
+    );
+  }
+};
+
+const logPrunedSqlite = (bytes) => {
+  console.log(
+    `[afterPack] Left out better-sqlite3 sources and other platforms' binaries (${(bytes / 1e6).toFixed(1)} MB)`,
+  );
+};
+
+const sqliteTargetFor = (context) => ({
+  platform: context.electronPlatformName,
+  arch: archName(context.arch),
+});
 
 module.exports = async function afterPack(context) {
   await copyRendererNodeModules(context);
@@ -362,6 +391,7 @@ async function copyRendererNodeModules(context) {
       copyEntries,
       allowedSourceRoots,
       context.packager.projectDir,
+      sqliteTargetFor(context),
     );
     assertNoPackagedBuildCache(resourcesDir, true);
     for (const { relativePath } of copyEntries) {
@@ -385,6 +415,9 @@ async function copyRendererNodeModules(context) {
     allowedSourceRoots,
   );
   assertElectronUpdaterRuntime(appDir);
+  logPrunedReviewVersions(pruneInactiveReviewVersions(appDir));
+  const { platform, arch } = sqliteTargetFor(context);
+  logPrunedSqlite(pruneSqliteModule(appDir, platform, arch, { requireModule: true }));
   assertNoPackagedBuildCache(resourcesDir, false);
 }
 

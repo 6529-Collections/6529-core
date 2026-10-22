@@ -106,6 +106,7 @@ import {
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
+import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import {
   pinnedWindowNavigation,
@@ -1260,8 +1261,8 @@ function getRightPanelWidth(totalWidth: number): number {
   return totalWidth - leftWidth;
 }
 
-/** Gate startup display on a complete paint while preserving background mode. */
-function createSplash(shouldShow?: () => boolean) {
+/** Show startup feedback immediately; artwork never gates either window. */
+function createSplash() {
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
   let width =
@@ -1306,7 +1307,7 @@ function createSplash(shouldShow?: () => boolean) {
     frame: false,
     backgroundColor: "#000",
     transparent: false,
-    show: shouldShow === undefined,
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, "preload-splash.js"),
       additionalArguments: [
@@ -1318,17 +1319,6 @@ function createSplash(shouldShow?: () => boolean) {
     },
   });
   const splashWindow = splash;
-  let painted = false;
-  let loaded = false;
-  const showIfReady = () => {
-    if (painted && loaded && shouldShow?.() && !splashWindow.isDestroyed()) {
-      splashWindow.show();
-    }
-  };
-  splashWindow.once("ready-to-show", () => {
-    painted = true;
-    showIfReady();
-  });
   const splashPath = path.join(__dirname, "assets", "splash.html");
   const splashURL = `file://${splashPath}`;
   splash.loadURL(splashURL);
@@ -1349,10 +1339,8 @@ function createSplash(shouldShow?: () => boolean) {
 
   splash.webContents.once("did-finish-load", () => {
     if (splashWindow.isDestroyed()) return;
-    loaded = true;
     splashWindow.webContents.send("update-message", latestSplashMessage);
     void sendSplashCardIfReady();
-    showIfReady();
   });
 }
 
@@ -1445,17 +1433,11 @@ async function openMainWindow() {
     savedSplashImage = null;
   }
 
-  let startupComplete = false;
-  // Fast launches skip the splash. Slower launches show it only after its
-  // first paint, without delaying the main window for artwork or a minimum time.
-  const splashTimer = setTimeout(() => {
-    if (startupComplete || splash) return;
-    try {
-      createSplash(() => !startupComplete);
-    } catch (error) {
-      Logger.warn("Could not create startup splash", error);
-    }
-  }, 1000);
+  try {
+    createSplash();
+  } catch (error) {
+    Logger.warn("Could not create startup splash", error);
+  }
 
   await initCoreOnce();
 
@@ -1505,10 +1487,7 @@ async function openMainWindow() {
 
   mainWindow.once("ready-to-show", async () => {
     Logger.info("Main window ready to show");
-    // Show the ready main window before scheduler setup so slow initialization
-    // cannot leave startup without a visible window or revive a late splash.
-    startupComplete = true;
-    clearTimeout(splashTimer);
+    // Scheduler setup must never hold back the ready main window.
     if (windowState) {
       mainWindow?.setBounds(windowState);
     } else {
@@ -1759,40 +1738,30 @@ ipcMain.on("open-external", (event, url) => {
   }
 });
 
+const browserLaunchDeps: BrowserLaunchDeps = {
+  openWithApp: (url, name) => open(url, { app: { name: name as string | string[] } }),
+  openDefault: (url) => shell.openExternal(url),
+  log: (message, detail) => Logger.error(message, detail),
+  platform: process.platform,
+};
+
 ipcMain.on("open-external-chrome", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Chrome:", url);
-  open(url, { app: { name: apps.chrome } }).catch((err) => {
-    Logger.error(
-      "Failed to open in Chrome, falling back to default browser:",
-      err,
-    );
-    shell.openExternal(url);
-  });
+  openInBrowser(url, apps.chrome, "Chrome", browserLaunchDeps);
 });
 
 ipcMain.on("open-external-firefox", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Firefox:", url);
-  open(url, { app: { name: apps.firefox } }).catch((err) => {
-    Logger.error(
-      "Failed to open in Firefox, falling back to default browser:",
-      err,
-    );
-    shell.openExternal(url);
-  });
+  openInBrowser(url, apps.firefox, "Firefox", browserLaunchDeps);
 });
 
 ipcMain.on("open-external-brave", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Brave:", url);
-  open(url, { app: { name: "Brave Browser" } }).catch((err) => {
-    Logger.error(
-      "Failed to open in Brave, falling back to default browser:",
-      err,
-    );
-    shell.openExternal(url);
-  });
+  // apps.brave names Brave per platform; "Brave Browser" is its macOS name only.
+  openInBrowser(url, apps.brave, "Brave", browserLaunchDeps);
 });
 
 ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
