@@ -25,6 +25,7 @@ interface TestServer {
   getStatus: () => IpfsStatus;
   whenSettled: () => Promise<IpfsStatus>;
   shutdown: () => Promise<void>;
+  ensureWebUi: () => Promise<void>;
 }
 
 /** Exercise the real daemon lifecycle without processes, network or wall-clock waits. */
@@ -68,6 +69,7 @@ function createServerHarness() {
     path,
     "./ipfs-startup": startup.exports,
     "./ipfs-config": config.exports,
+    "./ipfs-webui": {},
   };
   vm.runInNewContext(compile(read("electron-src/ipfs/ipfs.server.ts")), {
     module: serverModule,
@@ -91,6 +93,7 @@ function createServerHarness() {
     statuses.push(status),
   );
   server.init = () => server.startDaemon("FAKE");
+  server.ensureWebUi = async () => undefined;
   const expireTimers = () => {
     for (const [id, callback] of [...timers]) {
       timers.delete(id);
@@ -112,6 +115,8 @@ test("daemon timeout, late readiness and exit publish live status changes", asyn
   daemon.stdout.emit("data", Buffer.from("Daemon is r"));
   assert.equal(server.getStatus(), "unavailable");
   daemon.stdout.emit("data", Buffer.from("eady\n"));
+  await Promise.resolve();
+  await Promise.resolve();
   assert.equal(await server.whenSettled(), "ready");
   daemon.emit("close", 1);
   assert.equal(await server.whenSettled(), "unavailable");
@@ -295,3 +300,67 @@ test("IPFS info returns a live snapshot without waiting for startup", () => {
   }
   assert.equal(endpointReads, 3);
 });
+
+test("daemon exit during optional WebUI setup cannot be overwritten by startup success", async () => {
+  const { server, daemon } = createServerHarness();
+  let finish!: () => void;
+  const webUiSetup = new Promise<void>((resolve) => { finish = resolve; });
+  server.init = async () => {
+    await server.startDaemon("FAKE");
+    await webUiSetup;
+  };
+  const startup = server.start(3000);
+  daemon.stdout.emit("data", Buffer.from("Daemon is ready\n"));
+  await Promise.resolve();
+  daemon.emit("close", 1);
+  finish();
+  assert.equal(await startup, "unavailable");
+});
+
+test("late daemon readiness waits for WebUI pinning before publishing ready", async () => {
+  const { server, daemon, expireTimers } = createServerHarness();
+  let finish!: () => void;
+  server.ensureWebUi = () => new Promise<void>((resolve) => { finish = resolve; });
+  const startup = server.start(3000);
+  expireTimers();
+  await startup;
+  daemon.stdout.emit("data", Buffer.from("Daemon is ready\n"));
+  assert.equal(server.getStatus(), "unavailable");
+  finish();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(server.getStatus(), "ready");
+});
+
+test("late WebUI setup failure leaves the running daemon available until it exits", async () => {
+  const { server, daemon, expireTimers } = createServerHarness();
+  server.ensureWebUi = async () => { throw new Error("missing archive"); };
+  const startup = server.start(3000);
+  expireTimers();
+  await startup;
+  daemon.stdout.emit("data", Buffer.from("Daemon is ready\n"));
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(server.getStatus(), "ready");
+  daemon.emit("close", 1);
+  assert.equal(server.getStatus(), "unavailable");
+});
+
+for (const stoppedBy of ["shutdown", "exit"] as const) {
+  test(`late WebUI failure cannot restore readiness after daemon ${stoppedBy}`, async () => {
+    const { server, daemon, expireTimers } = createServerHarness();
+    let fail!: (error: Error) => void;
+    server.ensureWebUi = () => new Promise<void>((_, reject) => { fail = reject; });
+    const startup = server.start(3000);
+    expireTimers();
+    await startup;
+    daemon.stdout.emit("data", Buffer.from("Daemon is ready\n"));
+    const shutdown = stoppedBy === "shutdown" ? server.shutdown() : undefined;
+    daemon.emit("close", 0);
+    fail(new Error("missing archive"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await shutdown;
+    assert.equal(server.getStatus(), "unavailable");
+  });
+}

@@ -39,7 +39,12 @@
     {
       "from": "ipfs-binaries/mac/x64",
       "to": "ipfs-binaries",
-      "filter": ["**/*"]
+      "filter": ["ipfs", "ipfs.exe"]
+    },
+    {
+      "from": "ipfs-binaries/webui",
+      "to": "ipfs-webui",
+      "filter": ["ipfs-webui.car"]
     }
   ],
   "publish": [

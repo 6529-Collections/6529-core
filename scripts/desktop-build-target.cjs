@@ -26,7 +26,7 @@ const COMMANDS = {
   "dist-win-staging": {
     appEnvironment: "staging",
     env: { WINDOWS_SIGNING_REQUIRED: "0" },
-    prebuild: [["pnpm", ["run", "download-signed-ipfs"]]],
+    prebuild: [["pnpm", ["run", "download-ipfs"]]],
     build: ["pnpm", ["run", "build-win"]],
     electronBuilder: [
       "--config",
@@ -41,7 +41,7 @@ const COMMANDS = {
   "dist-win-production": {
     appEnvironment: "production",
     env: { WINDOWS_SIGNING_REQUIRED: "0" },
-    prebuild: [["pnpm", ["run", "download-signed-ipfs"]]],
+    prebuild: [["pnpm", ["run", "download-ipfs"]]],
     build: ["pnpm", ["run", "build-win"]],
     electronBuilder: [
       "--config",
@@ -57,6 +57,7 @@ const COMMANDS = {
   "dist-mac-local": {
     appEnvironment: "local",
     env: { NEXT_LOCAL_DEBUG: "true" },
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -70,6 +71,7 @@ const COMMANDS = {
   },
   "dist-mac-staging": {
     appEnvironment: "staging",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -82,6 +84,7 @@ const COMMANDS = {
   },
   "dist-mac-production": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -95,6 +98,7 @@ const COMMANDS = {
   },
   "dist-mac-production-x64": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -106,6 +110,7 @@ const COMMANDS = {
   },
   "dist-mac-production-arm64": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -117,6 +122,7 @@ const COMMANDS = {
   },
   "dist-linux-staging": {
     appEnvironment: "staging",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "linux"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -128,7 +134,8 @@ const COMMANDS = {
     ],
   },
   // CI checks: the unpacked staging app only, for the size budget and the
-  // function suite. Never publishes.
+  // function suite. Never publishes. The workflow prepares Kubo only when
+  // AWS credentials are available; do not bypass that guard here.
   "check-linux-staging": {
     appEnvironment: "staging",
     build: ["pnpm", ["run", "build"]],
@@ -144,6 +151,7 @@ const COMMANDS = {
   },
   "dist-linux-production": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "linux"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",

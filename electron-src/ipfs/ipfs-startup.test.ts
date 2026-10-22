@@ -52,6 +52,9 @@ function createFakeSteps(options: FakeOptions = {}) {
     startDaemon: async () => {
       events.push("daemon");
     },
+    ensureWebUi: async () => {
+      events.push("webui");
+    },
     isCancelled: () => cancelled,
     log: { info: () => undefined, warn: () => undefined },
   };
@@ -91,6 +94,7 @@ describe("IPFS startup sequence", () => {
       "write config",
       "attach",
       "daemon",
+      "webui",
     ]);
   });
 
@@ -101,7 +105,7 @@ describe("IPFS startup sequence", () => {
     await runIpfsStartup(fake.steps);
 
     assert.ok(fake.events.includes("write config"));
-    assert.equal(fake.events.at(-1), "daemon");
+    assert.deepEqual(fake.events.slice(-2), ["daemon", "webui"]);
     // The second add never starts after the first one fails.
     assert.equal(
       fake.events.filter((event) => event.startsWith("start bootstrap add"))
@@ -124,7 +128,58 @@ describe("IPFS startup sequence", () => {
     const fake = createFakeSteps({ attach: true });
     await runIpfsStartup(fake.steps);
 
-    assert.equal(fake.events.at(-1), "attach");
+    assert.deepEqual(fake.events.slice(-2), ["attach", "webui"]);
+    assert.ok(!fake.events.includes("daemon"));
+  });
+
+  for (const attach of [false, true]) {
+    it(`keeps a ${attach ? "reused" : "new"} daemon available when WebUI setup fails`, async () => {
+      const fake = createFakeSteps({ attach });
+      const failure = new Error("archive missing");
+      const warnings: unknown[][] = [];
+      fake.steps.log.warn = (...args) => {
+        warnings.push(args);
+      };
+      fake.steps.ensureWebUi = async () => {
+        throw failure;
+      };
+
+      await runIpfsStartup(fake.steps);
+
+      assert.equal(warnings.length, 1);
+      assert.match(
+        String(warnings[0][0]),
+        /WebUI setup failed; daemon remains available/,
+      );
+      assert.equal(warnings[0][1], failure);
+    });
+  }
+
+  for (const fails of [false, true]) {
+    it(`preserves cancellation when WebUI setup ${fails ? "fails" : "succeeds"}`, async () => {
+      const fake = createFakeSteps();
+      let cancelled = false;
+      fake.steps.isCancelled = () => cancelled;
+      fake.steps.ensureWebUi = async () => {
+        cancelled = true;
+        if (fails) throw new Error("WebUI setup cancelled");
+      };
+
+      await assert.rejects(
+        runIpfsStartup(fake.steps),
+        IpfsStartupCancelledError,
+      );
+    });
+  }
+
+  it("still rejects daemon startup failure before attempting WebUI setup", async () => {
+    const fake = createFakeSteps();
+    fake.steps.startDaemon = async () => {
+      throw new Error("daemon failed");
+    };
+
+    await assert.rejects(runIpfsStartup(fake.steps), /daemon failed/);
+    assert.ok(!fake.events.includes("webui"));
   });
 
   it("stops before spawning the daemon when the app starts quitting", async () => {
