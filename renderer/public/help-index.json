@@ -3854,6 +3854,7 @@
         "With `Collapse replies under each drop` on, replies stay out of the main chat. A drop with replies shows `Show N replies`; selecting it opens the thread under the drop, oldest first, and `Hide replies` closes it.",
         "The reply count includes replies to replies throughout the thread. Direct and nested replies refresh the original drop's count live; duplicate updates do not add extra replies.",
         "Sending a reply opens its thread for the sender. The pending reply remains visible while saving and loading, then becomes the saved reply; unsuccessful sends are removed or show the existing moderation rejection state.",
+        "Reply previews show the original author's handle and a placeholder avatar when the author has no profile picture. A missing profile picture does not mean the drop is missing. Removed content still follows moderation visibility rules.",
         "If loading a collapsed reply thread fails, it shows `Couldn't load replies.` and a Retry button. Already-loaded replies stay visible; Retry loads the thread again.",
         "Slow mode and disabled links still apply to replies from non-admins. Emoji reactions stay open to everyone who can see the wave.",
         "Collapsed replies do not count as unread and do not notify followers subscribed to every drop; the replied-to author and mentioned profiles are still notified.",
@@ -3866,6 +3867,7 @@
       "source_refs": [
         "components/waves/specs/WaveChatReplies.tsx",
         "components/waves/drops/reply-threads/WaveDropReplyThread.tsx",
+        "ops/docs/waves/drop-actions/feature-reply-preview-rows.md",
         "components/waves/PrivilegedDropCreator.tsx",
         "generated/models/ApiWaveChatRepliesConfig.ts"
       ]
@@ -4037,6 +4039,7 @@
         "Leaderboard availability depends on the wave type and configuration.",
         "Use the selected competition’s main Leaderboard tab to inspect its entries and ranking.",
         "Competition leaderboard cards appear with each page. Background score refreshes keep loaded artwork visible; opening a card loads its full drop.",
+        "Non-Memes Grid view and Content only cards show previews for supported NFT marketplace links when no media is uploaded. Content only hides the text summary for those previews. Unsupported links stay readable as text, and unavailable NFT previews show a marketplace fallback card.",
         "Full wave leaderboard list, grid, and Memes gallery views update scores and ranks live while preserving the visible artwork's position. During touch or momentum scrolling, scores keep updating and card reordering waits until scrolling settles."
       ],
       "canonical_path": "/waves",
