@@ -25,6 +25,7 @@ interface TestServer {
   getStatus: () => IpfsStatus;
   whenSettled: () => Promise<IpfsStatus>;
   shutdown: () => Promise<void>;
+  ensureWebUi: () => Promise<void>;
 }
 
 /** Exercise the real daemon lifecycle without processes, network or wall-clock waits. */
@@ -68,6 +69,7 @@ function createServerHarness() {
     path,
     "./ipfs-startup": startup.exports,
     "./ipfs-config": config.exports,
+    "./ipfs-webui": {},
   };
   vm.runInNewContext(compile(read("electron-src/ipfs/ipfs.server.ts")), {
     module: serverModule,
@@ -91,6 +93,7 @@ function createServerHarness() {
     statuses.push(status),
   );
   server.init = () => server.startDaemon("FAKE");
+  server.ensureWebUi = async () => undefined;
   const expireTimers = () => {
     for (const [id, callback] of [...timers]) {
       timers.delete(id);
@@ -112,6 +115,7 @@ test("daemon timeout, late readiness and exit publish live status changes", asyn
   daemon.stdout.emit("data", Buffer.from("Daemon is r"));
   assert.equal(server.getStatus(), "unavailable");
   daemon.stdout.emit("data", Buffer.from("eady\n"));
+  await Promise.resolve();
   assert.equal(await server.whenSettled(), "ready");
   daemon.emit("close", 1);
   assert.equal(await server.whenSettled(), "unavailable");
@@ -294,4 +298,30 @@ test("IPFS info returns a live snapshot without waiting for startup", () => {
     assert.equal("mfsPath" in result, state === "ready");
   }
   assert.equal(endpointReads, 3);
+});
+
+test("late daemon readiness waits for WebUI pinning before publishing ready", async () => {
+  const { server, daemon, expireTimers } = createServerHarness();
+  let finish!: () => void;
+  server.ensureWebUi = () => new Promise<void>((resolve) => { finish = resolve; });
+  const startup = server.start(3000);
+  expireTimers();
+  await startup;
+  daemon.stdout.emit("data", Buffer.from("Daemon is ready\n"));
+  assert.equal(server.getStatus(), "unavailable");
+  finish();
+  await Promise.resolve();
+  assert.equal(server.getStatus(), "ready");
+});
+
+test("late WebUI setup failure never publishes ready", async () => {
+  const { server, daemon, expireTimers } = createServerHarness();
+  server.ensureWebUi = async () => { throw new Error("missing archive"); };
+  const startup = server.start(3000);
+  expireTimers();
+  await startup;
+  daemon.stdout.emit("data", Buffer.from("Daemon is ready\n"));
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(server.getStatus(), "unavailable");
 });

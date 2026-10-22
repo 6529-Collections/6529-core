@@ -29,6 +29,8 @@ release-work
 /main
 /main-bundle
 /main-previous
+/ipfs-binaries/webui/
+/ipfs-binaries/.kubo-*/
 
 # Generated from next.config.ts
 next.config.mjs

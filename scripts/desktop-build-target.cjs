@@ -57,6 +57,7 @@ const COMMANDS = {
   "dist-mac-local": {
     appEnvironment: "local",
     env: { NEXT_LOCAL_DEBUG: "true" },
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -70,6 +71,7 @@ const COMMANDS = {
   },
   "dist-mac-staging": {
     appEnvironment: "staging",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -82,6 +84,7 @@ const COMMANDS = {
   },
   "dist-mac-production": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -95,6 +98,7 @@ const COMMANDS = {
   },
   "dist-mac-production-x64": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -106,6 +110,7 @@ const COMMANDS = {
   },
   "dist-mac-production-arm64": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "mac"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -117,6 +122,7 @@ const COMMANDS = {
   },
   "dist-linux-staging": {
     appEnvironment: "staging",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "linux"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -131,6 +137,7 @@ const COMMANDS = {
   // function suite. Never publishes.
   "check-linux-staging": {
     appEnvironment: "staging",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "linux"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",
@@ -144,6 +151,7 @@ const COMMANDS = {
   },
   "dist-linux-production": {
     appEnvironment: "production",
+    prebuild: [["node", ["scripts/download-kubo.cjs", "linux"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",

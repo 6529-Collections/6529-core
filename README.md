@@ -219,6 +219,24 @@ Production app builds must not target the Test backend. Commands such as
 The same optional `live`/`test` argument applies to the Windows, macOS, and
 Linux `dist-*` scripts.
 
+Distribution targets prepare the Kubo binaries and matching IPFS WebUI before
+building. `config/kubo.json` pins the binary checksums, WebUI release/CID,
+archive SHA-256 and size. Verified cached files are reused; missing binaries
+require AWS S3 read access, and a missing WebUI archive is fetched from its
+official GitHub release. `6529 ci` installs npm dependencies but does not fetch
+these resources. For development without packaging, prepare them explicitly:
+
+```bash
+6529 exec node scripts/download-kubo.cjs mac  # or win / linux
+```
+
+The WebUI CAR is packaged outside ASAR. After the IPFS daemon has started and
+finished any repository migration, the app imports and recursively pins the
+matching UI if it is not already pinned. MyIPFS therefore loads local files
+without needing DHT discovery or a peer to serve the interface. Existing user
+pins are not removed. Test fresh profiles and upgrades on disposable copies:
+normal Local, Staging and Production launches can share the same user data.
+
 Test backend builds require a local staging access key:
 
 ```bash

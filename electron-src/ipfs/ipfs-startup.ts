@@ -40,6 +40,8 @@ export interface IpfsStartupSteps {
   attachToRunningDaemon(): Promise<boolean>;
   /** Spawns the daemon and resolves once it reports that it is ready. */
   startDaemon(): Promise<void>;
+  /** Import and pin the bundled WebUI after daemon migration/readiness. */
+  ensureWebUi(): Promise<void>;
   isCancelled(): boolean;
   log: IpfsStartupLogger;
 }
@@ -91,11 +93,12 @@ export async function runIpfsStartup(steps: IpfsStartupSteps): Promise<void> {
 
   if (await steps.attachToRunningDaemon()) {
     steps.log.info("[IPFS] Successfully attached to existing daemon.");
-    return;
+  } else {
+    throwIfCancelled(steps);
+    await steps.startDaemon();
   }
   throwIfCancelled(steps);
-
-  await steps.startDaemon();
+  await steps.ensureWebUi();
 }
 
 /** Watches daemon output for the readiness line, which can arrive split across chunks. */

@@ -5,6 +5,7 @@ import Logger from "electron-log";
 import * as fs from "fs";
 import * as path from "path";
 import { IPFS_DAEMON_ARGS, withStorageLimits } from "./ipfs-config";
+import { ensureIpfsWebUi } from "./ipfs-webui";
 import {
   createReadyLineDetector,
   IPFS_BOOTSTRAP_NODES,
@@ -146,8 +147,25 @@ export default class IPFSServer {
       writeConfig: () => this.writeConfig(configFilePath, appPort),
       attachToRunningDaemon: () => this.attachToDaemon(),
       startDaemon: () => this.startDaemon(ipfsBinaryPath),
+      ensureWebUi: () => this.ensureWebUi(ipfsBinaryPath),
       isCancelled: () => this.shuttingDown,
       log: Logger,
+    });
+  }
+
+  private ensureWebUi(ipfsBinaryPath: string): Promise<void> {
+    return ensureIpfsWebUi({
+      archivePath: path.join(
+        app.isPackaged
+          ? process.resourcesPath
+          : path.join(app.getAppPath(), "ipfs-binaries"),
+        app.isPackaged ? "ipfs-webui" : "webui",
+        "ipfs-webui.car",
+      ),
+      runCommand: (args, timeoutMs) =>
+        this.runCommand(ipfsBinaryPath, args, timeoutMs),
+      isCancelled: () => this.shuttingDown,
+      log: (message) => Logger.info(message),
     });
   }
 
@@ -377,7 +395,14 @@ export default class IPFSServer {
           );
           if (settled) {
             Logger.info("[IPFS] Daemon became ready after the startup timeout");
-            this.setStatus("ready");
+            void this.ensureWebUi(ipfsBinaryPath)
+              .then(() => {
+                if (!this.shuttingDown && this.ipfsProcess === daemon)
+                  this.setStatus("ready");
+              })
+              .catch((error: unknown) => {
+                Logger.error("[IPFS] Bundled WebUI setup failed:", error);
+              });
           } else {
             settled = true;
             resolve();

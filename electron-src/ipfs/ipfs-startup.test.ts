@@ -52,6 +52,9 @@ function createFakeSteps(options: FakeOptions = {}) {
     startDaemon: async () => {
       events.push("daemon");
     },
+    ensureWebUi: async () => {
+      events.push("webui");
+    },
     isCancelled: () => cancelled,
     log: { info: () => undefined, warn: () => undefined },
   };
@@ -91,6 +94,7 @@ describe("IPFS startup sequence", () => {
       "write config",
       "attach",
       "daemon",
+      "webui",
     ]);
   });
 
@@ -101,7 +105,7 @@ describe("IPFS startup sequence", () => {
     await runIpfsStartup(fake.steps);
 
     assert.ok(fake.events.includes("write config"));
-    assert.equal(fake.events.at(-1), "daemon");
+    assert.deepEqual(fake.events.slice(-2), ["daemon", "webui"]);
     // The second add never starts after the first one fails.
     assert.equal(
       fake.events.filter((event) => event.startsWith("start bootstrap add"))
@@ -124,7 +128,16 @@ describe("IPFS startup sequence", () => {
     const fake = createFakeSteps({ attach: true });
     await runIpfsStartup(fake.steps);
 
-    assert.equal(fake.events.at(-1), "attach");
+    assert.deepEqual(fake.events.slice(-2), ["attach", "webui"]);
+    assert.ok(!fake.events.includes("daemon"));
+  });
+
+  it("reports setup failure instead of declaring a missing WebUI ready", async () => {
+    const fake = createFakeSteps();
+    fake.steps.ensureWebUi = async () => {
+      throw new Error("archive missing");
+    };
+    await assert.rejects(runIpfsStartup(fake.steps), /archive missing/);
   });
 
   it("stops before spawning the daemon when the app starts quitting", async () => {
