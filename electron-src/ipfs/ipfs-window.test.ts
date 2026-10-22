@@ -17,9 +17,15 @@ function createHarness() {
     focuses = 0;
     restores = 0;
     loads: string[] = [];
+    committedUrl = "";
+    private pendingLoads: {
+      url: string;
+      resolve: () => void;
+      reject: (error: Error) => void;
+    }[] = [];
     webContents = Object.assign(new EventEmitter(), {
       setWindowOpenHandler: () => undefined,
-      getURL: () => this.loads.at(-1) ?? "",
+      getURL: () => this.committedUrl,
     });
     constructor(readonly options: Record<string, unknown>) {
       super();
@@ -45,7 +51,17 @@ function createHarness() {
     setFullScreen() {}
     loadURL(url: string) {
       this.loads.push(url);
-      return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        this.pendingLoads.push({ url, resolve, reject });
+      });
+    }
+    commitLoad(index = this.pendingLoads.length - 1) {
+      const load = this.pendingLoads[index];
+      this.committedUrl = load.url;
+      load.resolve();
+    }
+    failLoad(index = this.pendingLoads.length - 1) {
+      this.pendingLoads[index].reject(new Error("Navigation failed"));
     }
   }
 
@@ -68,8 +84,23 @@ function createHarness() {
       ),
   );
   assert.ok(state, "window reference is retained in the main process");
+  const pendingState = source.statements.find(
+    (node) =>
+      ts.isVariableStatement(node) &&
+      node.declarationList.declarations.some(
+        (declaration) =>
+          declaration.name.getText(source) === "pendingIpfsWindowLoads",
+      ),
+  );
+  const navigate = source.statements.find(
+    (node) =>
+      ts.isFunctionDeclaration(node) &&
+      node.name?.text === "navigateIpfsWindow",
+  );
+  assert.ok(pendingState);
+  assert.ok(navigate);
   const compiled = ts.transpileModule(
-    `${state.getText(source)}\n${opener.getText(source)}\nopenIpfsWindow;`,
+    `${state.getText(source)}\n${pendingState.getText(source)}\n${navigate.getText(source)}\n${opener.getText(source)}\nopenIpfsWindow;`,
     {
       compilerOptions: {
         target: ts.ScriptTarget.ES2022,
@@ -137,6 +168,65 @@ test("distinct permitted links navigate the existing window without duplicates o
   assert.equal(windows.length, 1);
   assert.deepEqual(windows[0].loads, [WEBUI, files, peers]);
   assert.equal(windows[0].focuses, 4);
+});
+
+test("a repeated explicit link does not interrupt a pending load, or reload after commit", async () => {
+  const { open, windows } = createHarness();
+  const files = `${WEBUI}/#/files`;
+  open(WEBUI);
+  const window = windows[0];
+  window.commitLoad();
+  await Promise.resolve();
+  open(files);
+  assert.equal(
+    window.webContents.getURL(),
+    WEBUI,
+    "requested is not committed",
+  );
+  open(files);
+  assert.deepEqual(window.loads, [WEBUI, files]);
+  window.commitLoad();
+  await Promise.resolve();
+  open(files);
+  assert.deepEqual(window.loads, [WEBUI, files]);
+});
+
+test("failed loads can be retried without reusing stale pending state", async () => {
+  const { open, windows } = createHarness();
+  const files = `${WEBUI}/#/files`;
+  open(files);
+  const window = windows[0];
+  window.failLoad();
+  await Promise.resolve();
+  open(files);
+  assert.deepEqual(window.loads, [files, files]);
+});
+
+test("superseded completions cannot clear a newer pending request for the same URL", async () => {
+  const { open, windows } = createHarness();
+  const files = `${WEBUI}/#/files`;
+  const peers = `${WEBUI}/#/peers`;
+  open(files);
+  const window = windows[0];
+  open(peers);
+  open(files);
+  window.failLoad(0);
+  window.failLoad(1);
+  await Promise.resolve();
+  open(files);
+  assert.deepEqual(window.loads, [files, peers, files]);
+});
+
+test("a different pending navigation does not block returning to the committed URL", async () => {
+  const { open, windows } = createHarness();
+  const files = `${WEBUI}/#/files`;
+  const peers = `${WEBUI}/#/peers`;
+  open(files);
+  windows[0].commitLoad();
+  await Promise.resolve();
+  open(peers);
+  open(files);
+  assert.deepEqual(windows[0].loads, [files, peers, files]);
 });
 
 test("the sidebar focuses a window first opened with a specific IPFS link", () => {
