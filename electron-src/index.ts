@@ -131,6 +131,8 @@ crashReporter.start({
 setScheduledTasksDir(path.join(__dirname, "scheduled-tasks"));
 
 let mainWindow: BrowserWindow | null = null;
+let myIpfsWindow: BrowserWindow | null = null;
+const pendingIpfsWindowLoads = new WeakMap<BrowserWindow, { url: string }>();
 let closeConfirmationPromise: Promise<void> | null = null;
 let isMainWindowCloseAuthorized = false;
 let scheduledWorkers: ScheduledWorker[] = [];
@@ -862,7 +864,46 @@ function isLocalIpfsApiUrl(url: string): boolean {
   return url.startsWith(IPFS_SERVER.getApiEndpoint());
 }
 
+/** Deduplicate requested URLs until Electron commits or rejects their load. */
+function navigateIpfsWindow(window: BrowserWindow, url: string): void {
+  const pending = pendingIpfsWindowLoads.get(window);
+  if (
+    pending?.url === url ||
+    (!pending && window.webContents.getURL() === url)
+  ) {
+    return;
+  }
+
+  const navigation = { url };
+  pendingIpfsWindowLoads.set(window, navigation);
+  const finish = () => {
+    // A superseded load must not clear a newer request, even for the same URL.
+    if (pendingIpfsWindowLoads.get(window) === navigation) {
+      pendingIpfsWindowLoads.delete(window);
+    }
+  };
+  void window.loadURL(url).then(finish, (error: unknown) => {
+    finish();
+    Logger.error("Failed to load IPFS window URL:", url, error);
+  });
+}
+
 function openIpfsWindow(url: string): void {
+  const apiEndpoint = IPFS_SERVER.getApiEndpoint();
+  const ipfsOrigin = new URL(apiEndpoint).origin;
+  if (pinnedWindowNavigation(ipfsOrigin, url) !== "stay") return;
+
+  if (myIpfsWindow && !myIpfsWindow.isDestroyed()) {
+    // The sidebar is an entry/focus action; explicit IPFS links still navigate.
+    if (url !== `${apiEndpoint}/webui`) {
+      navigateIpfsWindow(myIpfsWindow, url);
+    }
+    if (myIpfsWindow.isMinimized()) myIpfsWindow.restore();
+    myIpfsWindow.show();
+    myIpfsWindow.focus();
+    return;
+  }
+
   const bounds = mainWindow?.getBounds();
   const isFullScreen = mainWindow?.isFullScreen() ?? false;
   const isMaximized = mainWindow?.isMaximized() ?? false;
@@ -886,6 +927,11 @@ function openIpfsWindow(url: string): void {
     },
     show: false,
   });
+  // Retain it before loading so repeated clicks cannot create duplicates.
+  myIpfsWindow = ipfsWindow;
+  ipfsWindow.once("closed", () => {
+    if (myIpfsWindow === ipfsWindow) myIpfsWindow = null;
+  });
 
   if (isFullScreen) {
     ipfsWindow.setFullScreen(true);
@@ -900,7 +946,6 @@ function openIpfsWindow(url: string): void {
   // The window stays on the daemon's origin. Files the WebUI links to (on
   // the gateway) and other sites open in the system browser; anything else
   // is dropped.
-  const ipfsOrigin = new URL(url).origin;
   const openOutside = (target: string) => {
     shell.openExternal(target).catch((error) => {
       Logger.error("Failed to open external web URL:", target, error);
@@ -909,7 +954,7 @@ function openIpfsWindow(url: string): void {
   ipfsWindow.webContents.setWindowOpenHandler(({ url: target }) => {
     const decision = pinnedWindowNavigation(ipfsOrigin, target);
     if (decision === "stay") {
-      void ipfsWindow.loadURL(target);
+      navigateIpfsWindow(ipfsWindow, target);
     } else if (decision === "external") {
       openOutside(target);
     }
@@ -926,7 +971,7 @@ function openIpfsWindow(url: string): void {
     }
   });
 
-  ipfsWindow.loadURL(url);
+  navigateIpfsWindow(ipfsWindow, url);
 }
 
 type SplashCard = {

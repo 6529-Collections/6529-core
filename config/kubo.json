@@ -1,0 +1,18 @@
+{
+  "$comment": "The Kubo (IPFS) binaries and offline WebUI bundled with the app. scripts/download-kubo.cjs verifies the binaries from s3://6529bucket/ipfs-binaries/kubo-v<version>/ and the official WebUI release archive. Binary archives matched their published .sha512; the WebUI SHA-256 is the official GitHub release asset digest. Restoring an older binary version does not undo an IPFS repository migration.",
+  "version": "0.43.1",
+  "webui": {
+    "version": "4.13.0",
+    "cid": "bafybeiciqeyipumpmhxzlxnbqdbbv6u5uij4hy4wax64dmj7kvrhusiq6y",
+    "url": "https://github.com/ipfs/ipfs-webui/releases/download/v4.13.0/ipfs-webui%40v4.13.0.car",
+    "sha256": "0f26ce282643f26fc699451f3b71bcac6bacdd96c052612406337d69e8a5e55b",
+    "size": 29165916
+  },
+  "files": {
+    "win/x64/ipfs.exe": "fd0d46df76f455d938713c98c7fca5fa117b74c934c9fc0d37730fdb33313651",
+    "win/arm64/ipfs.exe": "2e71fa1c5a233d67a29cfe262d344b76407c001b2c18ecb01b71d93b113720d5",
+    "mac/x64/ipfs": "5f3a8f9844e7d868bd3363d26a00600ae1ccc72a40834f0738787f0caa195a29",
+    "mac/arm64/ipfs": "9b8e75bca4fa666338b45fd4353aed1716fa4262c61bb5bae2c1e0f91d902b56",
+    "linux/x64/ipfs": "8768c8a2907f429f177917091e8abe250d3368d1b82ea0348332cf7e53807bf0"
+  }
+}
