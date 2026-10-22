@@ -864,7 +864,18 @@ function isLocalIpfsApiUrl(url: string): boolean {
 }
 
 function openIpfsWindow(url: string): void {
+  const apiEndpoint = IPFS_SERVER.getApiEndpoint();
+  const ipfsOrigin = new URL(apiEndpoint).origin;
+  if (pinnedWindowNavigation(ipfsOrigin, url) !== "stay") return;
+
   if (myIpfsWindow && !myIpfsWindow.isDestroyed()) {
+    // The sidebar is an entry/focus action; explicit IPFS links still navigate.
+    if (
+      url !== `${apiEndpoint}/webui` &&
+      url !== myIpfsWindow.webContents.getURL()
+    ) {
+      void myIpfsWindow.loadURL(url);
+    }
     if (myIpfsWindow.isMinimized()) myIpfsWindow.restore();
     myIpfsWindow.show();
     myIpfsWindow.focus();
@@ -913,7 +924,6 @@ function openIpfsWindow(url: string): void {
   // The window stays on the daemon's origin. Files the WebUI links to (on
   // the gateway) and other sites open in the system browser; anything else
   // is dropped.
-  const ipfsOrigin = new URL(url).origin;
   const openOutside = (target: string) => {
     shell.openExternal(target).catch((error) => {
       Logger.error("Failed to open external web URL:", target, error);

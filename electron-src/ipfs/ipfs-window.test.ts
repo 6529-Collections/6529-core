@@ -19,6 +19,7 @@ function createHarness() {
     loads: string[] = [];
     webContents = Object.assign(new EventEmitter(), {
       setWindowOpenHandler: () => undefined,
+      getURL: () => this.loads.at(-1) ?? "",
     });
     constructor(readonly options: Record<string, unknown>) {
       super();
@@ -81,6 +82,7 @@ function createHarness() {
     mainWindow: null,
     URL,
     pinnedWindowNavigation,
+    IPFS_SERVER: { getApiEndpoint: () => "http://127.0.0.1:9256" },
     shell: { openExternal: async () => undefined },
     Logger: { error: () => undefined },
   }) as (url: string) => void;
@@ -121,6 +123,47 @@ test("reopening restores and focuses without resetting the current IPFS page", (
   assert.equal(window.shows, 1);
   assert.equal(window.focuses, 1);
   assert.deepEqual(window.loads, [WEBUI, `${WEBUI}/#/files`]);
+});
+
+test("distinct permitted links navigate the existing window without duplicates or repeat reloads", () => {
+  const { open, windows } = createHarness();
+  const files = `${WEBUI}/#/files`;
+  const peers = `${WEBUI}/#/peers`;
+  open(WEBUI);
+  open(files);
+  open(files);
+  open(peers);
+  open(WEBUI);
+  assert.equal(windows.length, 1);
+  assert.deepEqual(windows[0].loads, [WEBUI, files, peers]);
+  assert.equal(windows[0].focuses, 4);
+});
+
+test("the sidebar focuses a window first opened with a specific IPFS link", () => {
+  const { open, windows } = createHarness();
+  const files = `${WEBUI}/#/files`;
+  open(files);
+  open(WEBUI);
+  assert.equal(windows.length, 1);
+  assert.deepEqual(windows[0].loads, [files]);
+  assert.equal(windows[0].focuses, 1);
+});
+
+test("disallowed links cannot create or navigate the pinned IPFS window", () => {
+  const { open, windows } = createHarness();
+  const blocked = [
+    "http://127.0.0.1:92560/webui",
+    "http://127.0.0.1:9256.attacker.test/webui",
+    "https://example.com/webui",
+    "javascript:alert(1)",
+    "not a URL",
+  ];
+  for (const url of blocked) open(url);
+  assert.equal(windows.length, 0);
+  open(WEBUI);
+  for (const url of blocked) open(url);
+  assert.equal(windows.length, 1);
+  assert.deepEqual(windows[0].loads, [WEBUI]);
 });
 
 test("closing MyIPFS allows exactly one replacement window", () => {
