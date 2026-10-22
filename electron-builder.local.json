@@ -41,7 +41,12 @@
     {
       "from": "ipfs-binaries/${os}/${arch}",
       "to": "ipfs-binaries",
-      "filter": ["**/*"]
+      "filter": ["ipfs", "ipfs.exe"]
+    },
+    {
+      "from": "ipfs-binaries/webui",
+      "to": "ipfs-webui",
+      "filter": ["ipfs-webui.car"]
     }
   ],
   "mac": {

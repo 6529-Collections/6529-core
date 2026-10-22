@@ -81,15 +81,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Download ipfs-binaries
+      - name: Download the Kubo binaries (config/kubo.json)
         if: ${{ inputs.should_run }}
-        run: |
-          aws s3 cp s3://6529bucket/ipfs-binaries/linux ./ipfs-binaries/linux --recursive
-
-      - name: Make all ipfs binaries executable
-        if: ${{ inputs.should_run }}
-        run: |
-          find ./ipfs-binaries/linux -type f -name ipfs -exec chmod +x {} \;
+        run: node scripts/download-kubo.cjs linux
 
       - name: Build for Linux
         if: ${{ inputs.should_run }}

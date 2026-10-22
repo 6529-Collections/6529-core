@@ -128,17 +128,22 @@ export async function runDesktopChecks(ctx: SuiteContext): Promise<void> {
   });
   await r.check("F5", "ipfs-webui-window", "The IPFS WebUI opens in its own window", async () => {
     if (!ipfs.apiEndpoint) skip("IPFS unavailable");
-    const webui = await fetch(`${ipfs.apiEndpoint}/webui`, { redirect: "manual", signal: AbortSignal.timeout(15_000) });
-    assert(webui.status < 400, `webui: HTTP ${webui.status}`);
+    const webui = await fetch(`${ipfs.apiEndpoint}/webui`, { signal: AbortSignal.timeout(15_000) });
+    assert(webui.ok, `webui: HTTP ${webui.status}`);
+    const html = await webui.text();
+    assert(/<div[^>]+id=["']root["']/.test(html) && /<script\b/.test(html), "WebUI did not return its app shell");
     await bridge(page, "api", "openExternal", `${ipfs.apiEndpoint}/webui`);
-    // Playwright does not list a window whose first navigation is still
-    // pending (Kubo fetches the WebUI from its peers), so read CDP's targets.
+    // A redirect or an IPFS 504 error page must never count as success.
     const target = await waitFor(
       "the IPFS window",
       async () => (await ctx.app.cdpTargets()).find((entry) => entry.type === "page" && entry.url.startsWith(ipfs.apiEndpoint!)),
       20_000,
       500,
     );
+    await waitFor("the rendered IPFS WebUI", async () => {
+      const window = ctx.app.pages().find((candidate) => candidate.url().startsWith(ipfs.apiEndpoint!));
+      return window && await window.locator("#root").innerText().then((text) => text.trim().length > 0).catch(() => false);
+    }, 20_000, 500);
     await ctx.app.closeTarget(target.id);
     return target.url;
   });
