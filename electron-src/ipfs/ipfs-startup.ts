@@ -98,7 +98,18 @@ export async function runIpfsStartup(steps: IpfsStartupSteps): Promise<void> {
     await steps.startDaemon();
   }
   throwIfCancelled(steps);
-  await steps.ensureWebUi();
+  try {
+    await steps.ensureWebUi();
+  } catch (error) {
+    if (error instanceof IpfsStartupCancelledError) throw error;
+    throwIfCancelled(steps);
+    // WebUI assets are optional for daemon-backed file operations.
+    steps.log.warn(
+      "[IPFS] Bundled WebUI setup failed; daemon remains available:",
+      error,
+    );
+  }
+  throwIfCancelled(steps);
 }
 
 /** Watches daemon output for the readiness line, which can arrive split across chunks. */

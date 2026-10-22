@@ -134,10 +134,10 @@ const COMMANDS = {
     ],
   },
   // CI checks: the unpacked staging app only, for the size budget and the
-  // function suite. Never publishes.
+  // function suite. Never publishes. The workflow prepares Kubo only when
+  // AWS credentials are available; do not bypass that guard here.
   "check-linux-staging": {
     appEnvironment: "staging",
-    prebuild: [["node", ["scripts/download-kubo.cjs", "linux"]]],
     build: ["pnpm", ["run", "build"]],
     electronBuilder: [
       "--config",

@@ -84,7 +84,8 @@ export default class IPFSServer {
       this.setStatus("starting");
       this.startup = this.init(appPort).then(
         () => {
-          this.setStatus("ready");
+          // The daemon can exit while the optional WebUI setup is pending.
+          if (this.status === "starting") this.setStatus("ready");
           return this.status;
         },
         (error: unknown) => {
@@ -396,12 +397,15 @@ export default class IPFSServer {
           if (settled) {
             Logger.info("[IPFS] Daemon became ready after the startup timeout");
             void this.ensureWebUi(ipfsBinaryPath)
+              .catch((error: unknown) => {
+                Logger.warn(
+                  "[IPFS] Bundled WebUI setup failed; daemon remains available:",
+                  error,
+                );
+              })
               .then(() => {
                 if (!this.shuttingDown && this.ipfsProcess === daemon)
                   this.setStatus("ready");
-              })
-              .catch((error: unknown) => {
-                Logger.error("[IPFS] Bundled WebUI setup failed:", error);
               });
           } else {
             settled = true;

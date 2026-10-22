@@ -15,6 +15,26 @@ const {
 
 const hash = (text) => crypto.createHash("sha256").update(text).digest("hex");
 
+test("CI packaging leaves Kubo download behind the workflow credentials guard", () => {
+  const root = path.resolve(__dirname, "../..");
+  const build = fs.readFileSync(
+    path.join(root, "scripts/desktop-build-target.cjs"),
+    "utf8",
+  );
+  const target = build.match(/"check-linux-staging": \{([\s\S]*?)\n  \},/);
+  assert.ok(target, "CI packaging target exists");
+  assert.doesNotMatch(target[1], /prebuild|download-kubo/);
+  assert.match(target[1], /build: \["pnpm", \["run", "build"\]\]/);
+  const workflow = fs.readFileSync(
+    path.join(root, ".github/workflows/desktop-checks.yml"),
+    "utf8",
+  );
+  assert.match(
+    workflow,
+    /name: Download the Kubo binary\s+if: \$\{\{ steps\.aws\.outcome == 'success' \}\}\s+run: node scripts\/download-kubo.cjs linux/,
+  );
+});
+
 test("packaging includes only the binary plus a shared WebUI archive on every platform", () => {
   const root = path.resolve(__dirname, "../..");
   for (const name of [

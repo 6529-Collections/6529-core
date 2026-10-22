@@ -234,7 +234,10 @@ The WebUI CAR is packaged outside ASAR. After the IPFS daemon has started and
 finished any repository migration, the app imports and recursively pins the
 matching UI if it is not already pinned. MyIPFS therefore loads local files
 without needing DHT discovery or a peer to serve the interface. Existing user
-pins are not removed. Test fresh profiles and upgrades on disposable copies:
+pins are not removed. WebUI setup errors are logged without disabling an
+otherwise running daemon or its file operations. CI-only `check-linux-staging`
+leaves resource downloads to the workflow's AWS-credential-gated step.
+Test fresh profiles and upgrades on disposable copies:
 normal Local, Staging and Production launches can share the same user data.
 
 Test backend builds require a local staging access key:
