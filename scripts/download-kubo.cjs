@@ -3,6 +3,8 @@
 // Downloads the bundled Kubo (IPFS) binaries for one platform into
 // ipfs-binaries/<platform>, from the S3 folder of the version that
 // config/kubo.json names, and checks each file's SHA-256 against that file.
+// These public objects are downloaded unsigned: AWS CLI is needed, credentials
+// are not. Downloaded binaries are local build inputs, not Git/LFS assets.
 //
 //   node scripts/download-kubo.cjs <win|mac|linux>
 
@@ -93,6 +95,7 @@ function downloadBinaries(config, platform, binariesRoot, spawn = spawnSync) {
           `${kuboS3Folder(config.version)}/${relative}`,
           target,
           "--only-show-errors",
+          "--no-sign-request",
         ],
         { stdio: "inherit" },
       );
