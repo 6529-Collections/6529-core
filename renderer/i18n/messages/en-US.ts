@@ -3170,6 +3170,7 @@ export const EN_US_MESSAGES = {
   "desktop.localIpfs.restartRequired": "Restart the app to apply your saved preference.",
   "desktop.localIpfs.loading": "Loading IPFS preference…",
   "desktop.localIpfs.saving": "Saving…",
+  "desktop.localIpfs.saved": "Preference saved. No restart is needed.",
   "desktop.localIpfs.loadError": "Could not load the IPFS preference. Reopen this page to try again.",
   "desktop.localIpfs.saveError": "Could not save the IPFS preference. Your selection has not changed; please try again.",
   ...MEME_COLLABORATION_MESSAGES,

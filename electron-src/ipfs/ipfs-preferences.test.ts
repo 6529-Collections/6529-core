@@ -136,3 +136,57 @@ test("the real preferences IPC handlers only persist the next-launch choice", ()
   assert.throws(() => set({}, "false"), /must be a boolean/);
   assert.deepEqual(writes, [false]);
 });
+
+test("settings announce action feedback without repeating session copy or guessing checkbox state", () => {
+  const source = ts.createSourceFile(
+    "LocalIpfsSettings.tsx",
+    fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "renderer/components/core/app-info/LocalIpfsSettings.tsx",
+      ),
+      "utf8",
+    ),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const liveRegions: ts.JsxElement[] = [];
+  let checkbox: ts.JsxSelfClosingElement | undefined;
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isJsxElement(node) &&
+      node.openingElement.attributes.properties.some(
+        (attribute) =>
+          ts.isJsxAttribute(attribute) &&
+          attribute.name.getText(source) === "role" &&
+          attribute.initializer &&
+          ts.isStringLiteral(attribute.initializer) &&
+          attribute.initializer.text === "status",
+      )
+    )
+      liveRegions.push(node);
+    if (
+      ts.isJsxSelfClosingElement(node) &&
+      node.tagName.getText(source) === "input"
+    )
+      checkbox = node;
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  assert.equal(liveRegions.length, 1);
+  const live = liveRegions[0].getText(source);
+  assert.match(live, /aria-live="polite"/);
+  assert.match(live, /aria-atomic="true"/);
+  assert.match(live, /desktop\.localIpfs\.restartRequired/);
+  assert.doesNotMatch(live, /sessionEnabled|sessionDisabled/);
+  assert.ok(checkbox);
+  assert.match(checkbox.getText(source), /checked=\{preferences.enabled\}/);
+  assert.match(source.text, /\{preferences && \(/);
+  assert.match(checkbox.getText(source), /aria-disabled=\{saving\}/);
+  assert.doesNotMatch(
+    checkbox.getText(source),
+    /\sdisabled=/,
+    "saving must not remove keyboard focus",
+  );
+});

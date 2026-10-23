@@ -259,6 +259,9 @@ not a repository downgrade or backup mechanism, and public resolvers cannot
 serve content available only on the stopped local node. Local, Staging and
 Production builds sharing a user-data profile also share this preference.
 
+The new settings copy currently falls back to English in untranslated locales;
+see the [desktop IPFS localization follow-up](ops/workstreams/desktop-ipfs-localization.md).
+
 Test backend builds require a local staging access key:
 
 ```bash
