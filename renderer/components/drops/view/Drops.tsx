@@ -52,6 +52,7 @@ export default function Drops({
       {
         handleOrWallet,
         context_profile: connectedProfile?.handle ?? null,
+        public_only: true,
       },
     ],
     queryFn: async ({ pageParam }: { pageParam: number | null }) => {
@@ -59,6 +60,7 @@ export default function Drops({
         limit: `${REQUEST_SIZE}`,
         author: handleOrWallet,
         include_replies: "true",
+        public_only: "true",
       };
       if (pageParam) {
         params["serial_no_less_than"] = `${pageParam}`;
