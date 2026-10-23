@@ -15,7 +15,20 @@ const {
 
 const hash = (text) => crypto.createHash("sha256").update(text).digest("hex");
 
-test("CI packaging leaves Kubo download behind the workflow credentials guard", () => {
+test("downloaded Kubo resources are ignored and no longer use Git LFS", () => {
+  const root = path.resolve(__dirname, "../..");
+  const ignored = fs
+    .readFileSync(path.join(root, ".gitignore"), "utf8")
+    .split(/\r?\n/);
+  for (const platform of ["linux", "mac", "win", "webui"]) {
+    assert.ok(ignored.includes(`/ipfs-binaries/${platform}/`), platform);
+  }
+  const attributes = fs.readFileSync(path.join(root, ".gitattributes"), "utf8");
+  assert.doesNotMatch(attributes, /filter=lfs|diff=lfs|merge=lfs/);
+  assert.match(attributes, /renderer\/content\/public-reviews\/\*\* text eol=lf/);
+});
+
+test("CI downloads and verifies Kubo before packaging without AWS credentials", () => {
   const root = path.resolve(__dirname, "../..");
   const build = fs.readFileSync(
     path.join(root, "scripts/desktop-build-target.cjs"),
@@ -31,7 +44,16 @@ test("CI packaging leaves Kubo download behind the workflow credentials guard", 
   );
   assert.match(
     workflow,
-    /name: Download the Kubo binary\s+if: \$\{\{ steps\.aws\.outcome == 'success' \}\}\s+run: node scripts\/download-kubo.cjs linux/,
+    /name: Download the Kubo binary\s+run: node scripts\/download-kubo.cjs linux/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /HAS_AWS|steps\.aws|configure-aws-credentials|AWS_ACCESS_KEY_ID/,
+  );
+  assert.ok(
+    workflow.indexOf("node scripts/download-kubo.cjs linux") <
+      workflow.indexOf("node scripts/desktop-build-target.cjs check-linux-staging"),
+    "verified resources must be prepared before packaging",
   );
 });
 
@@ -81,6 +103,10 @@ test("binary downloads request exact keys and do not promote partial or tampered
     const spawn = (command, args) => {
       assert.equal(command, "aws");
       assert.ok(!args.includes("--recursive"));
+      assert.ok(
+        args.includes("--no-sign-request"),
+        "public downloads never use credentials",
+      );
       requests.push(args[2]);
       const arch = args[2].includes("/x64/") ? "x64" : "arm64";
       fs.writeFileSync(args[3], tamper && arch === "arm64" ? "bad" : arch);
@@ -105,6 +131,32 @@ test("binary downloads request exact keys and do not promote partial or tampered
     downloadBinaries(config, "mac", root, () => {
       throw new Error("valid cache should not download");
     });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("failed anonymous Linux downloads preserve existing binaries and stop", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "core-kubo-failure-"));
+  const relative = "linux/x64/ipfs";
+  const target = path.join(root, relative);
+  const config = { version: "1.2.3", files: { [relative]: hash("new") } };
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, "old");
+    let requests = 0;
+    assert.throws(
+      () => downloadBinaries(config, "linux", root, (_command, args) => {
+        requests++;
+        assert.ok(args.includes("--no-sign-request"));
+        fs.writeFileSync(args[3], "partial");
+        return { status: 1 };
+      }),
+      /aws s3 cp exited with code 1/,
+    );
+    assert.equal(requests, 1, "no authenticated fallback or unverified reuse");
+    assert.equal(fs.readFileSync(target, "utf8"), "old");
+    assert.deepEqual(fs.readdirSync(root), ["linux"]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
