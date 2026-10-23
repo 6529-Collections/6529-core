@@ -31,7 +31,6 @@ jobs:
       SEIZE_SECURE_INSTALL: "1"
       DESKTOP_SIZE_BUDGET_REQUIRED: "1"
       GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
-      HAS_AWS: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 
     steps:
       - name: Check out
@@ -60,17 +59,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
 
-      - name: Configure AWS credentials for the Kubo binary
-        id: aws
-        if: ${{ env.HAS_AWS == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Download the Kubo binary
-        if: ${{ steps.aws.outcome == 'success' }}
         run: node scripts/download-kubo.cjs linux
 
       - name: Build the unpacked staging app (runs the size budget)

@@ -222,7 +222,8 @@ Linux `dist-*` scripts.
 Distribution targets prepare the Kubo binaries and matching IPFS WebUI before
 building. `config/kubo.json` pins the binary checksums, WebUI release/CID,
 archive SHA-256 and size. Verified cached files are reused; missing binaries
-require AWS S3 read access, and a missing WebUI archive is fetched from its
+require the AWS CLI but no AWS credentials (public S3 downloads use
+`--no-sign-request`), and a missing WebUI archive is fetched from its
 official GitHub release. `6529 ci` installs npm dependencies but does not fetch
 these resources. For development without packaging, prepare them explicitly:
 
@@ -236,7 +237,9 @@ matching UI if it is not already pinned. MyIPFS therefore loads local files
 without needing DHT discovery or a peer to serve the interface. Existing user
 pins are not removed. WebUI setup errors are logged without disabling an
 otherwise running daemon or its file operations. CI-only `check-linux-staging`
-leaves resource downloads to the workflow's AWS-credential-gated step.
+leaves resource downloads to an unconditional workflow step, including on PRs
+without AWS secrets. Downloaded binaries and the WebUI are ignored build inputs,
+not tracked Git/LFS assets; preparing them does not dirty the checkout.
 Test fresh profiles and upgrades on disposable copies:
 normal Local, Staging and Production launches can share the same user data.
 

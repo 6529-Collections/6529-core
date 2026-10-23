@@ -134,8 +134,8 @@ const COMMANDS = {
     ],
   },
   // CI checks: the unpacked staging app only, for the size budget and the
-  // function suite. Never publishes. The workflow prepares Kubo only when
-  // AWS credentials are available; do not bypass that guard here.
+  // function suite. Never publishes. The workflow prepares and verifies the
+  // public Kubo resources unconditionally before invoking this target.
   "check-linux-staging": {
     appEnvironment: "staging",
     build: ["pnpm", ["run", "build"]],
