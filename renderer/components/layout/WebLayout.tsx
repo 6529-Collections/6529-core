@@ -2,6 +2,7 @@
 
 import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
 import { useSearch } from "@/contexts/SearchContext";
+import { usePathname } from "next/navigation";
 import type { CSSProperties, RefObject } from "react";
 import { type ReactNode, useEffect, useMemo } from "react";
 import { SIDEBAR_WIDTHS } from "../../constants/sidebar";
@@ -33,6 +34,9 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
   const searchContext = useSearch();
   const searchContainerRef: RefObject<HTMLDivElement | null> =
     searchContext.containerRef;
+  const pathname = usePathname();
+  const smallWebOverflow =
+    pathname === "/the-memes" ? "tw-overflow-x-clip" : "tw-overflow-auto";
 
   // Changing responsive chrome must not remount page state or live uploads.
   // Close the old menu just as the previous separate layout did on unmount.
@@ -67,7 +71,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
     <div
       className={
         isSmall
-          ? "tw-overflow-auto tw-bg-black"
+          ? `${smallWebOverflow} tw-bg-black`
           : "layout-root tw-relative tw-flex tw-w-full tw-justify-between"
       }
       style={isSmall ? undefined : cssVars}
