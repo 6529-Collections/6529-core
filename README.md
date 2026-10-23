@@ -243,6 +243,22 @@ not tracked Git/LFS assets; preparing them does not dirty the checkout.
 Test fresh profiles and upgrades on disposable copies:
 normal Local, Staging and Production launches can share the same user data.
 
+### Optional local IPFS node
+
+Desktop → About (`/core/core-info`) has an **Enable local IPFS node** checkbox.
+It defaults to on and is saved in the current user-data profile. Changes take
+effect only after fully quitting and reopening the app, not after refreshing
+the renderer or closing a window while the app remains in the background.
+The page shows the session's startup choice and whether a restart is required.
+
+When disabled, the app does not initialize, migrate, configure, attach to or
+start Kubo. Public IPFS media uses the remote resolver; My IPFS/local file and
+pinning operations are unavailable. The existing `ipfs-repo`, files and pins
+are not deleted. Re-enabling and restarting uses the same repository. This is
+not a repository downgrade or backup mechanism, and public resolvers cannot
+serve content available only on the stopped local node. Local, Staging and
+Production builds sharing a user-data profile also share this preference.
+
 Test backend builds require a local staging access key:
 
 ```bash

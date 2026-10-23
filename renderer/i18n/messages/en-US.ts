@@ -445,6 +445,7 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "desktop.myIpfs": "My IPFS",
   "desktop.ipfsStarting": "My IPFS: starting",
   "desktop.ipfsUnavailable": "My IPFS: unavailable",
+  "desktop.ipfsDisabled": "My IPFS: disabled in Desktop About settings",
   "primary.nfts": "NFTs",
   "primary.waves": "Waves",
   "primary.dms": "DMs",
@@ -3160,6 +3161,17 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 
 export const EN_US_MESSAGES = {
+  "desktop.localIpfs.title": "Local IPFS",
+  "desktop.localIpfs.enable": "Enable local IPFS node",
+  "desktop.localIpfs.help":
+    "On by default. Changes apply after fully quitting and reopening the app. When off, public IPFS media uses the remote resolver; My IPFS, local files and pinning require the local node. Your existing repository, files and pins are preserved.",
+  "desktop.localIpfs.sessionEnabled": "Local IPFS is enabled for this session.",
+  "desktop.localIpfs.sessionDisabled": "Local IPFS is disabled for this session.",
+  "desktop.localIpfs.restartRequired": "Restart the app to apply your saved preference.",
+  "desktop.localIpfs.loading": "Loading IPFS preference…",
+  "desktop.localIpfs.saving": "Saving…",
+  "desktop.localIpfs.loadError": "Could not load the IPFS preference. Reopen this page to try again.",
+  "desktop.localIpfs.saveError": "Could not save the IPFS preference. Your selection has not changed; please try again.",
   ...MEME_COLLABORATION_MESSAGES,
   ...VOTING_CREDIT_RETURN_MESSAGES,
   "network.prenodes.title": "Prenodes",

@@ -8,6 +8,7 @@ import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import {
   faExternalLinkAlt,
+  faPowerOff,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -28,9 +29,11 @@ export default function DesktopIpfsNavItem({
     ? label
     : t(
         DEFAULT_LOCALE,
-        starting
-          ? "navigation.desktop.ipfsStarting"
-          : "navigation.desktop.ipfsUnavailable"
+        ipfsStatus === "disabled"
+          ? "navigation.desktop.ipfsDisabled"
+          : starting
+            ? "navigation.desktop.ipfsStarting"
+            : "navigation.desktop.ipfsUnavailable"
       );
 
   return (
@@ -68,7 +71,13 @@ export default function DesktopIpfsNavItem({
           ) : (
             <FontAwesomeIcon
               aria-hidden="true"
-              icon={ready ? faExternalLinkAlt : faTriangleExclamation}
+              icon={
+                ready
+                  ? faExternalLinkAlt
+                  : ipfsStatus === "disabled"
+                    ? faPowerOff
+                    : faTriangleExclamation
+              }
               className="tw-h-4 tw-w-4"
             />
           )}

@@ -71,6 +71,10 @@ import {
   getTransactionReconciliationState,
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
 import IPFSServer from "./ipfs/ipfs.server";
+import {
+  LOCAL_IPFS_ENABLED_KEY,
+  LocalIpfsPreferences,
+} from "./ipfs/ipfs-preferences";
 import { menuTemplate } from "./menu";
 import { sanitizeNativeSessionResponse } from "./native-auth-session";
 import {
@@ -889,6 +893,7 @@ function navigateIpfsWindow(window: BrowserWindow, url: string): void {
 }
 
 function openIpfsWindow(url: string): void {
+  if (IPFS_SERVER.getStatus() !== "ready") return;
   const apiEndpoint = IPFS_SERVER.getApiEndpoint();
   const ipfsOrigin = new URL(apiEndpoint).origin;
   if (pinnedWindowNavigation(ipfsOrigin, url) !== "stay") return;
@@ -1058,6 +1063,7 @@ let IPFS_PORT: number;
 let IPFS_RPC_PORT: number;
 let IPFS_SWARM_PORT: number;
 let IPFS_SERVER: IPFSServer;
+let localIpfsPreferences: LocalIpfsPreferences;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -1236,6 +1242,11 @@ if (!gotTheLock) {
     await initLogs();
     initStore();
 
+    localIpfsPreferences = new LocalIpfsPreferences(
+      getValue(LOCAL_IPFS_ENABLED_KEY),
+      (enabled) => setValue(LOCAL_IPFS_ENABLED_KEY, enabled),
+    );
+
     IPFS_SERVER = new IPFSServer(
       IPFS_PORT,
       IPFS_RPC_PORT,
@@ -1249,6 +1260,7 @@ if (!gotTheLock) {
           mainWindow.webContents.send("ipfs-status-change", status);
         }
       },
+      localIpfsPreferences.enabledAtStartup,
     );
 
     await createWindow();
@@ -2052,6 +2064,14 @@ ipcMain.handle("get-ipfs-info", () => {
     mfsPath: IPFS_SERVER.getMfsPath(),
   };
 });
+
+// Persist only the next-launch preference. Never restart or stop a live node.
+ipcMain.handle("get-local-ipfs-preferences", () =>
+  localIpfsPreferences.getSnapshot(),
+);
+ipcMain.handle("set-local-ipfs-enabled", (_event, enabled: unknown) =>
+  localIpfsPreferences.setEnabled(enabled),
+);
 
 ipcMain.handle("get-main-worker", () => {
   const mainTask = {

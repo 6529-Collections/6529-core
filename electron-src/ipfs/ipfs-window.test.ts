@@ -8,7 +8,7 @@ import ts from "typescript";
 import { pinnedWindowNavigation } from "../navigation-policy";
 
 /** Run the real window opener with inert windows, never Electron or a profile. */
-function createHarness() {
+function createHarness(status = "ready") {
   const windows: FakeWindow[] = [];
   class FakeWindow extends EventEmitter {
     destroyed = false;
@@ -113,7 +113,7 @@ function createHarness() {
     mainWindow: null,
     URL,
     pinnedWindowNavigation,
-    IPFS_SERVER: { getApiEndpoint: () => "http://127.0.0.1:9256" },
+    IPFS_SERVER: { getStatus: () => status, getApiEndpoint: () => "http://127.0.0.1:9256" },
     shell: { openExternal: async () => undefined },
     Logger: { error: () => undefined },
   }) as (url: string) => void;
@@ -121,6 +121,14 @@ function createHarness() {
 }
 
 const WEBUI = "http://127.0.0.1:9256/webui";
+
+test("disabled or unavailable local nodes cannot open a MyIPFS window", () => {
+  for (const status of ["disabled", "stopped", "starting", "unavailable"]) {
+    const { open, windows } = createHarness(status);
+    open(WEBUI);
+    assert.equal(windows.length, 0);
+  }
+});
 
 test("repeated MyIPFS clicks reuse the window even before loading finishes", () => {
   const { open, windows } = createHarness();
