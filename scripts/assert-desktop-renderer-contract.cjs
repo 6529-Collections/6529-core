@@ -2383,6 +2383,21 @@ assertContract(
   ipfsContextPath,
   "desktop IPFS availability must follow native changes, ignore stale reads and unsubscribe on unmount",
 );
+assertContract(
+  ipfsContextSource.includes('ipfsInfo.status === "disabled"'),
+  ipfsContextPath,
+  "disabled local IPFS must not fall back to local ports or initialize a file service",
+);
+const ipfsSettingsPath = "renderer/components/core/app-info/LocalIpfsSettings.tsx";
+const ipfsSettings = parseSource(ipfsSettingsPath).text;
+assertContract(
+  parseSource("renderer/components/core/app-info/AppInfo.tsx").text.includes("<LocalIpfsSettings") &&
+    ipfsSettings.includes("getLocalIpfsPreferences") &&
+    ipfsSettings.includes("setLocalIpfsEnabled") &&
+    ipfsSettings.includes("preferences.restartRequired"),
+  ipfsSettingsPath,
+  "Desktop About must retain the saved, restart-required local IPFS preference",
+);
 const desktopIpfsItemPath = "renderer/components/layout/sidebar/nav/DesktopIpfsNavItem.tsx";
 const desktopIpfsItem = parseSource(desktopIpfsItemPath).text;
 assertContract(

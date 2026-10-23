@@ -29,7 +29,7 @@ describe("Desktop IPFS menu availability", () => {
     });
   });
 
-  it.each(["stopped", "starting", "unavailable"] as const)(
+  it.each(["disabled", "stopped", "starting", "unavailable"] as const)(
     "preserves an initial %s snapshot after the bridge response resolves",
     async (status) => {
       let notify: (status: "ready") => void = () => undefined;
@@ -52,11 +52,18 @@ describe("Desktop IPFS menu availability", () => {
         );
       });
       const unavailable = status === "unavailable";
+      const disabled = status === "disabled";
       const row = screen.getByRole("link", {
-        name: unavailable ? "My IPFS: unavailable" : "My IPFS: starting",
+        name: disabled
+          ? "My IPFS: disabled in Desktop About settings"
+          : unavailable
+            ? "My IPFS: unavailable"
+            : "My IPFS: starting",
       });
       const icon = row.querySelector("svg");
-      if (unavailable) {
+      if (disabled) {
+        expect(icon).toHaveAttribute("data-icon", "power-off");
+      } else if (unavailable) {
         expect(icon).toHaveAttribute("data-icon", "triangle-exclamation");
       } else {
         expect(icon).toHaveClass("tw-text-primary-400", "tw-animate-spin");
