@@ -256,8 +256,10 @@ Desktop → About (`/core/core-info`) has an **Enable local IPFS node** switch.
 It defaults to on and is saved in the current user-data profile. Changes take
 effect only after fully quitting and reopening the app, not after refreshing
 the renderer or closing a window while the app remains in the background.
-The compact panel shows the session's startup choice and highlights a pending
-restart. More details expands the full explanation. When IPFS is off, the
+The compact panel keeps a stable status/action row when the preference changes.
+**Restart now** directly restarts the same app/profile after stopping workers
+and IPFS; it does not show the Quit/Run in Background chooser. Saving alone
+never restarts the app. More details expands the explanation. When IPFS is off, the
 My IPFS menu item shows an Off badge and links directly to this setting.
 
 When disabled, the app does not initialize, migrate, configure, attach to or

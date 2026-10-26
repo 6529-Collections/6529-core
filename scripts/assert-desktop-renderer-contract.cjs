@@ -2395,6 +2395,7 @@ assertContract(
     ipfsSettings.includes("getLocalIpfsPreferences") &&
     ipfsSettings.includes("setLocalIpfsEnabled") &&
     ipfsSettings.includes("preferences.restartRequired") &&
+    ipfsSettings.includes("restartForLocalIpfs") &&
     ipfsSettings.includes('id="local-ipfs"') &&
     ipfsSettings.includes('role="switch"') &&
     ipfsSettings.includes("<details"),

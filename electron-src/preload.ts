@@ -100,6 +100,8 @@ export const api = {
     ipcRenderer.invoke("get-local-ipfs-preferences"),
   setLocalIpfsEnabled: (enabled: boolean): Promise<LocalIpfsPreferencesSnapshot> =>
     ipcRenderer.invoke("set-local-ipfs-enabled", enabled),
+  restartForLocalIpfs: (): Promise<void> =>
+    ipcRenderer.invoke("restart-for-local-ipfs"),
   onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => {
     const listener = (_event: IpcRendererEvent, status: IpfsStatus) =>
       callback(status);

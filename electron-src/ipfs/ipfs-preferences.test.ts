@@ -178,13 +178,12 @@ test("settings announce action feedback without repeating session copy or guessi
   const live = liveRegions[0].getText(source);
   assert.match(live, /aria-live="polite"/);
   assert.match(live, /aria-atomic="true"/);
-  assert.match(live, /desktop\.localIpfs\.restartRequired/);
-  assert.doesNotMatch(live, /sessionEnabled|sessionDisabled/);
+  assert.match(live, /t\(locale, sessionMessage\)/);
   assert.ok(checkbox);
   assert.match(checkbox.getText(source), /role="switch"/);
   assert.match(checkbox.getText(source), /checked=\{preferences.enabled\}/);
   assert.match(source.text, /\{preferences && \(/);
-  assert.match(checkbox.getText(source), /aria-disabled=\{saving\}/);
+  assert.match(checkbox.getText(source), /aria-disabled=\{busy\}/);
   assert.doesNotMatch(
     checkbox.getText(source),
     /\sdisabled=/,

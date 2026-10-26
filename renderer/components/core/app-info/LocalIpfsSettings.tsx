@@ -11,8 +11,9 @@ export default function LocalIpfsSettings() {
   const [preferences, setPreferences] =
     useState<LocalIpfsPreferencesSnapshot>();
   const [saving, setSaving] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<"load" | "save">();
+  const [error, setError] = useState<"load" | "save" | "restart">();
   const mounted = useRef(false);
   const inFlight = useRef(false);
 
@@ -53,6 +54,31 @@ export default function LocalIpfsSettings() {
     }
   }
 
+  async function restart() {
+    if (inFlight.current || !preferences?.restartRequired) return;
+    inFlight.current = true;
+    setRestarting(true);
+    setError(undefined);
+    try {
+      await window.api.restartForLocalIpfs();
+    } catch {
+      if (mounted.current) {
+        inFlight.current = false;
+        setRestarting(false);
+        setError("restart");
+      }
+    }
+  }
+
+  const sessionMessage = preferences?.restartRequired
+    ? preferences.enabled
+      ? "desktop.localIpfs.restartEnable"
+      : "desktop.localIpfs.restartDisable"
+    : preferences?.enabledAtStartup
+      ? "desktop.localIpfs.sessionEnabled"
+      : "desktop.localIpfs.sessionDisabled";
+  const busy = saving || restarting;
+
   return (
     <section
       id="local-ipfs"
@@ -61,27 +87,55 @@ export default function LocalIpfsSettings() {
       className="tw-scroll-mt-6 tw-rounded-xl tw-bg-iron-950 tw-p-4 tw-ring-1 tw-ring-inset tw-ring-iron-800 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
     >
       <div className="tw-flex tw-items-start tw-justify-between tw-gap-4">
-        <div className="tw-min-w-0">
+        <div className="tw-min-w-0 tw-flex-1">
           <h2 id={`${id}-title`} className="tw-m-0 tw-text-xl tw-font-semibold">
             {t(locale, "desktop.localIpfs.title")}
           </h2>
           {preferences && (
-            <p
-              id={`${id}-session`}
-              className="tw-mb-0 tw-mt-1 tw-text-sm tw-text-iron-400"
-            >
-              {t(
-                locale,
-                preferences.enabledAtStartup
-                  ? "desktop.localIpfs.sessionEnabled"
-                  : "desktop.localIpfs.sessionDisabled"
-              )}
-            </p>
+            <div className="tw-mt-1 tw-flex tw-items-center tw-gap-3">
+              <div className="tw-grid tw-min-w-0 tw-text-sm tw-text-iron-400">
+                {/* Reserve both pending messages' wrapping height at this width. */}
+                <span
+                  aria-hidden="true"
+                  className="tw-invisible tw-col-start-1 tw-row-start-1"
+                >
+                  {t(locale, "desktop.localIpfs.restartEnable")}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="tw-invisible tw-col-start-1 tw-row-start-1"
+                >
+                  {t(locale, "desktop.localIpfs.restartDisable")}
+                </span>
+                <span
+                  id={`${id}-session`}
+                  className="tw-col-start-1 tw-row-start-1 tw-self-center"
+                >
+                  {t(locale, sessionMessage)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void restart();
+                }}
+                disabled={busy || !preferences.restartRequired}
+                aria-hidden={!preferences.restartRequired}
+                className={`tw-min-h-9 tw-min-w-28 tw-flex-shrink-0 tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-px-3 tw-py-1.5 tw-text-sm tw-font-semibold tw-text-iron-50 hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 disabled:tw-cursor-wait disabled:tw-opacity-60 ${preferences.restartRequired ? "" : "tw-invisible"}`}
+              >
+                {t(
+                  locale,
+                  restarting
+                    ? "desktop.localIpfs.restarting"
+                    : "desktop.localIpfs.restartNow"
+                )}
+              </button>
+            </div>
           )}
         </div>
         {preferences && (
           <label
-            className={`tw-relative tw-inline-flex tw-min-h-11 tw-w-11 tw-flex-shrink-0 tw-items-center tw-rounded-full ${saving ? "tw-cursor-wait tw-opacity-60" : "tw-cursor-pointer"}`}
+            className={`tw-relative tw-inline-flex tw-min-h-11 tw-w-11 tw-flex-shrink-0 tw-items-center tw-rounded-full ${busy ? "tw-cursor-wait tw-opacity-60" : "tw-cursor-pointer"}`}
             htmlFor={`${id}-enabled`}
           >
             <span className="tw-sr-only">
@@ -92,7 +146,7 @@ export default function LocalIpfsSettings() {
               type="checkbox"
               role="switch"
               checked={preferences.enabled}
-              aria-disabled={saving}
+              aria-disabled={busy}
               aria-describedby={`${id}-help ${id}-session`}
               onChange={(event) => {
                 void save(event.target.checked);
@@ -121,21 +175,23 @@ export default function LocalIpfsSettings() {
         aria-live="polite"
         aria-atomic="true"
         className={
-          preferences?.restartRequired || (!preferences && !error)
+          !preferences && !error
             ? "tw-mb-0 tw-mt-2 tw-text-sm tw-font-medium tw-text-iron-50"
             : "tw-sr-only"
         }
       >
         {!error &&
-          (saving
-            ? t(locale, "desktop.localIpfs.saving")
-            : preferences && preferences.restartRequired
-              ? t(locale, "desktop.localIpfs.restartRequired")
-              : saved
-                ? t(locale, "desktop.localIpfs.saved")
-                : !preferences
-                  ? t(locale, "desktop.localIpfs.loading")
-                  : null)}
+          (restarting
+            ? t(locale, "desktop.localIpfs.restarting")
+            : saving
+              ? t(locale, "desktop.localIpfs.saving")
+              : preferences && preferences.restartRequired
+                ? t(locale, sessionMessage)
+                : saved
+                  ? t(locale, "desktop.localIpfs.saved")
+                  : !preferences
+                    ? t(locale, "desktop.localIpfs.loading")
+                    : null)}
       </p>
       <details className="tw-mt-1 tw-text-sm tw-text-iron-400">
         <summary className="tw-w-fit tw-cursor-pointer tw-rounded-md tw-py-1 tw-text-iron-300 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400">
@@ -149,7 +205,9 @@ export default function LocalIpfsSettings() {
             locale,
             error === "load"
               ? "desktop.localIpfs.loadError"
-              : "desktop.localIpfs.saveError"
+              : error === "restart"
+                ? "desktop.localIpfs.restartError"
+                : "desktop.localIpfs.saveError"
           )}
         </p>
       )}

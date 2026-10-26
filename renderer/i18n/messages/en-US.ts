@@ -3165,15 +3165,19 @@ export const EN_US_MESSAGES = {
   "desktop.localIpfs.title": "Local IPFS",
   "desktop.localIpfs.enable": "Enable local IPFS node",
   "desktop.localIpfs.help":
-    "On by default. Changes apply after fully quitting and reopening the app. When off, public IPFS media uses the remote resolver; My IPFS, local files and pinning require the local node. Your existing repository, files and pins are preserved.",
+    "Changes apply after fully quitting and reopening the app. When off, public IPFS media loads remotely. My IPFS, local file access and pinning require the local node. Your existing repository, files and pins are preserved.",
   "desktop.localIpfs.summary":
     "Public IPFS media remains available. Files and pins are preserved.",
   "desktop.localIpfs.moreDetails": "More details",
   "desktop.localIpfs.sessionEnabled":
-    "On for this session. Changes apply after restarting the app.",
+    "On for this session.",
   "desktop.localIpfs.sessionDisabled":
-    "Off for this session. Changes apply after restarting the app.",
-  "desktop.localIpfs.restartRequired": "Restart the app to apply your saved preference.",
+    "Off for this session.",
+  "desktop.localIpfs.restartEnable": "Off for this session. Restart to turn on.",
+  "desktop.localIpfs.restartDisable": "On for this session. Restart to turn off.",
+  "desktop.localIpfs.restartNow": "Restart now",
+  "desktop.localIpfs.restarting": "Restarting…",
+  "desktop.localIpfs.restartError": "Could not restart the app. Fully quit and reopen it to apply your saved preference.",
   "desktop.localIpfs.loading": "Loading IPFS preference…",
   "desktop.localIpfs.saving": "Saving…",
   "desktop.localIpfs.saved": "Preference saved. No restart is needed.",

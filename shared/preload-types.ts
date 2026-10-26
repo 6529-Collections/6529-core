@@ -44,6 +44,7 @@ export interface ElectronAPI {
   getIpfsInfo: () => Promise<any>;
   getLocalIpfsPreferences: () => Promise<LocalIpfsPreferencesSnapshot>;
   setLocalIpfsEnabled: (enabled: boolean) => Promise<LocalIpfsPreferencesSnapshot>;
+  restartForLocalIpfs: () => Promise<void>;
   onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => () => void;
   getMainWorker: () => Promise<any>;
   getScheduledWorkers: () => Promise<any>;

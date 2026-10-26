@@ -139,6 +139,7 @@ let myIpfsWindow: BrowserWindow | null = null;
 const pendingIpfsWindowLoads = new WeakMap<BrowserWindow, { url: string }>();
 let closeConfirmationPromise: Promise<void> | null = null;
 let isMainWindowCloseAuthorized = false;
+let quitApplicationPromise: Promise<void> | null = null;
 let scheduledWorkers: ScheduledWorker[] = [];
 let rpcProviders: RPCProvider[] = [];
 const logWindowsMap = new Map<string, BrowserWindow>();
@@ -1882,7 +1883,7 @@ function runInBackground(): void {
     try {
       showBackgroundTray(trayIconPath(), {
         open: () => void restoreFromBackground(),
-        quit: () => void quitApplication(),
+        quit: () => void requestApplicationQuit(),
       });
     } catch (error) {
       Logger.error("Could not show the tray icon; minimizing instead", error);
@@ -1920,6 +1921,15 @@ function destroyMainWindow(): void {
   } finally {
     isMainWindowCloseAuthorized = false;
   }
+}
+
+function requestApplicationQuit(options: { restart?: boolean } = {}): Promise<void> {
+  if (quitApplicationPromise) return quitApplicationPromise;
+  // Electron preserves this executable and its arguments (including an isolated
+  // user-data-dir). Schedule once, before teardown, so failure leaves the UI open.
+  if (options.restart) app.relaunch();
+  quitApplicationPromise = quitApplication();
+  return quitApplicationPromise;
 }
 
 async function quitApplication(): Promise<void> {
@@ -1976,7 +1986,7 @@ function requestMainWindowCloseConfirmation(): void {
 
     const action = getAppCloseAction(result.response);
     if (action === "quit") {
-      await quitApplication();
+      await requestApplicationQuit();
       return;
     }
     if (action === "run-background") {
@@ -2072,6 +2082,20 @@ ipcMain.handle("get-local-ipfs-preferences", () =>
 ipcMain.handle("set-local-ipfs-enabled", (_event, enabled: unknown) =>
   localIpfsPreferences.setEnabled(enabled),
 );
+ipcMain.handle("restart-for-local-ipfs", (event) => {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    event.senderFrame !== mainWindow.webContents.mainFrame
+  ) {
+    throw new Error("IPFS restart is only available from the main app window");
+  }
+  if (!localIpfsPreferences.getSnapshot().restartRequired) {
+    throw new Error("No local IPFS preference change requires a restart");
+  }
+  // Direct user-requested restart: bypass the window-close/background chooser.
+  return requestApplicationQuit({ restart: true });
+});
 
 ipcMain.handle("get-main-worker", () => {
   const mainTask = {
