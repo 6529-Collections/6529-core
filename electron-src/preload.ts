@@ -9,7 +9,10 @@ import type {
   NotificationNavigatePayload,
 } from "../shared/preload-types";
 
-import type { IpfsStatus } from "../shared/ipfs-status";
+import type {
+  IpfsStatus,
+  LocalIpfsPreferencesSnapshot,
+} from "../shared/ipfs-status";
 
 // The channels the renderer reaches through the generic send, sendSync and
 // invoke calls (the names in electron-constants.ts that renderer/electron.ts
@@ -93,6 +96,12 @@ export const api = {
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
   getIpfsInfo: () => ipcRenderer.invoke("get-ipfs-info"),
+  getLocalIpfsPreferences: (): Promise<LocalIpfsPreferencesSnapshot> =>
+    ipcRenderer.invoke("get-local-ipfs-preferences"),
+  setLocalIpfsEnabled: (enabled: boolean): Promise<LocalIpfsPreferencesSnapshot> =>
+    ipcRenderer.invoke("set-local-ipfs-enabled", enabled),
+  restartForLocalIpfs: (): Promise<void> =>
+    ipcRenderer.invoke("restart-for-local-ipfs"),
   onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => {
     const listener = (_event: IpcRendererEvent, status: IpfsStatus) =>
       callback(status);

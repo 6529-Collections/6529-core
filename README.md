@@ -243,6 +243,36 @@ not tracked Git/LFS assets; preparing them does not dirty the checkout.
 Test fresh profiles and upgrades on disposable copies:
 normal Local, Staging and Production launches can share the same user data.
 
+### Desktop headings
+
+Desktop-owned top-level page titles use the same typography as FE Network
+page titles: semibold near-white, 22px below 640px and 26px from 640px up.
+Only those page titles lose the muted-prefix/bold-suffix treatment. Section
+headings, labels, wallet cards, body copy and the IPFS WebUI retain their styling.
+
+### Optional local IPFS node
+
+Desktop → About (`/core/core-info`) has an **Enable local IPFS node** switch.
+It defaults to on and is saved in the current user-data profile. Changes take
+effect only after fully quitting and reopening the app, not after refreshing
+the renderer or closing a window while the app remains in the background.
+The compact panel keeps a stable status/action row when the preference changes.
+**Restart now** directly restarts the same app/profile after stopping workers
+and IPFS; it does not show the Quit/Run in Background chooser. Saving alone
+never restarts the app. More details expands the explanation. When IPFS is off, the
+My IPFS menu item shows an Off badge and links directly to this setting.
+
+When disabled, the app does not initialize, migrate, configure, attach to or
+start Kubo. Public IPFS media uses the remote resolver; My IPFS/local file and
+pinning operations are unavailable. The existing `ipfs-repo`, files and pins
+are not deleted. Re-enabling and restarting uses the same repository. This is
+not a repository downgrade or backup mechanism, and public resolvers cannot
+serve content available only on the stopped local node. Local, Staging and
+Production builds sharing a user-data profile also share this preference.
+
+The new settings copy currently falls back to English in untranslated locales;
+see the [desktop IPFS localization follow-up](ops/workstreams/desktop-ipfs-localization.md).
+
 Test backend builds require a local staging access key:
 
 ```bash

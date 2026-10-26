@@ -445,6 +445,8 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "desktop.myIpfs": "My IPFS",
   "desktop.ipfsStarting": "My IPFS: starting",
   "desktop.ipfsUnavailable": "My IPFS: unavailable",
+  "desktop.ipfsDisabled": "My IPFS: off. Open Local IPFS settings.",
+  "desktop.ipfsOff": "Off",
   "primary.nfts": "NFTs",
   "primary.waves": "Waves",
   "primary.dms": "DMs",
@@ -3160,6 +3162,27 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 
 export const EN_US_MESSAGES = {
+  "desktop.localIpfs.title": "Local IPFS",
+  "desktop.localIpfs.enable": "Enable local IPFS node",
+  "desktop.localIpfs.help":
+    "Changes apply after fully quitting and reopening the app. When off, public IPFS media loads remotely. My IPFS, local file access and pinning require the local node. Your existing repository, files and pins are preserved.",
+  "desktop.localIpfs.summary":
+    "Public IPFS media remains available. Files and pins are preserved.",
+  "desktop.localIpfs.moreDetails": "More details",
+  "desktop.localIpfs.sessionEnabled":
+    "On for this session.",
+  "desktop.localIpfs.sessionDisabled":
+    "Off for this session.",
+  "desktop.localIpfs.restartEnable": "Off for this session. Restart to turn on.",
+  "desktop.localIpfs.restartDisable": "On for this session. Restart to turn off.",
+  "desktop.localIpfs.restartNow": "Restart now",
+  "desktop.localIpfs.restarting": "Restarting…",
+  "desktop.localIpfs.restartError": "Could not restart the app. Fully quit and reopen it to apply your saved preference.",
+  "desktop.localIpfs.loading": "Loading IPFS preference…",
+  "desktop.localIpfs.saving": "Saving…",
+  "desktop.localIpfs.saved": "Preference saved. No restart is needed.",
+  "desktop.localIpfs.loadError": "Could not load the IPFS preference. Reopen this page to try again.",
+  "desktop.localIpfs.saveError": "Could not save the IPFS preference. Your selection has not changed; please try again.",
   ...MEME_COLLABORATION_MESSAGES,
   ...VOTING_CREDIT_RETURN_MESSAGES,
   "network.prenodes.title": "Prenodes",

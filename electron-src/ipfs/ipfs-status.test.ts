@@ -29,7 +29,7 @@ interface TestServer {
 }
 
 /** Exercise the real daemon lifecycle without processes, network or wall-clock waits. */
-function createServerHarness() {
+function createServerHarness(enabled = true) {
   const timers = new Map<number, () => void>();
   let nextTimer = 0;
   const daemon = Object.assign(new EventEmitter(), {
@@ -90,7 +90,7 @@ function createServerHarness() {
   ).default;
   const statuses: IpfsStatus[] = [];
   const server = new Server(8080, 5001, 4001, (status: IpfsStatus) =>
-    statuses.push(status),
+    statuses.push(status), enabled,
   );
   server.init = () => server.startDaemon("FAKE");
   server.ensureWebUi = async () => undefined;
@@ -102,6 +102,45 @@ function createServerHarness() {
   };
   return { server, daemon, statuses, timers, expireTimers };
 }
+
+test("disabled IPFS never initializes, migrates, attaches, spawns or shuts down a daemon", async () => {
+  const { server, statuses, timers } = createServerHarness(false);
+  let starts = 0;
+  server.init = async () => { starts++; throw new Error("must not touch the repo"); };
+  assert.equal(server.getStatus(), "disabled");
+  assert.equal(await server.start(3000), "disabled");
+  assert.equal(await server.start(3000), "disabled");
+  assert.equal(await server.whenSettled(), "disabled");
+  await server.shutdown();
+  assert.equal(server.getStatus(), "disabled");
+  assert.equal(starts, 0);
+  assert.equal(timers.size, 0);
+  assert.deepEqual(statuses, []);
+});
+
+test("disabled renderer snapshots cannot fall back to local endpoints", async () => {
+  const source = ts.createSourceFile(
+    "IPFSContext.tsx", read("renderer/components/ipfs/IPFSContext.tsx"),
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX,
+  );
+  const snapshot = source.statements.find((node) =>
+    ts.isVariableStatement(node) && node.declarationList.declarations.some(
+      (declaration) => declaration.name.getText(source) === "readIpfsSnapshot",
+    ),
+  );
+  assert.ok(snapshot);
+  const resolve = vm.runInNewContext(compile(`${snapshot.getText(source)}\nreadIpfsSnapshot;`), {
+    window: { api: {
+      getIpfsInfo: async () => ({ status: "disabled" }),
+      getInfo: () => { throw new Error("must not request local ports"); },
+    } },
+    buildIpfsConfig: () => { throw new Error("must not configure local endpoints"); },
+    console,
+  });
+  const result = await resolve();
+  assert.equal(result.status, "disabled");
+  assert.equal(result.config, null);
+});
 
 test("daemon timeout, late readiness and exit publish live status changes", async () => {
   const { server, daemon, statuses, timers, expireTimers } = createServerHarness();
@@ -289,7 +328,7 @@ test("IPFS info returns a live snapshot without waiting for startup", () => {
     },
   });
   assert.ok(handler);
-  for (const state of ["stopped", "starting", "unavailable", "ready", "unavailable"] as const) {
+  for (const state of ["disabled", "stopped", "starting", "unavailable", "ready", "unavailable"] as const) {
     status = state;
     const result = handler();
     assert.equal(result.status, state);

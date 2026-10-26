@@ -146,7 +146,8 @@ const readIpfsSnapshot = async (): Promise<IpfsSnapshot> => {
     typeof ipfsInfo === "object" &&
     ipfsInfo !== null &&
     "status" in ipfsInfo &&
-    (ipfsInfo.status === "stopped" ||
+    (ipfsInfo.status === "disabled" ||
+      ipfsInfo.status === "stopped" ||
       ipfsInfo.status === "starting" ||
       ipfsInfo.status === "unavailable")
   ) {

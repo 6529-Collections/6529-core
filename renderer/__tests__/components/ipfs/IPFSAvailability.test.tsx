@@ -8,6 +8,11 @@ import {
 import { IpfsProvider } from "@/components/ipfs/IPFSContext";
 import DesktopIpfsNavItem from "@/components/layout/sidebar/nav/DesktopIpfsNavItem";
 
+const mockPush = jest.fn();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
 jest.mock("@/helpers", () => ({ isElectron: () => true }));
 jest.mock("@/components/ipfs/IPFSService", () =>
   jest.fn().mockImplementation(() => ({ init: () => Promise.resolve() }))
@@ -23,17 +28,19 @@ describe("Desktop IPFS menu availability", () => {
   const originalApi = window.api;
 
   afterEach(() => {
+    mockPush.mockClear();
     Object.defineProperty(window, "api", {
       configurable: true,
       value: originalApi,
     });
   });
 
-  it.each(["stopped", "starting", "unavailable"] as const)(
+  it.each(["disabled", "stopped", "starting", "unavailable"] as const)(
     "preserves an initial %s snapshot after the bridge response resolves",
     async (status) => {
       let notify: (status: "ready") => void = () => undefined;
       const getIpfsInfo = jest.fn().mockResolvedValue({ status });
+      const onNavigate = jest.fn();
       Object.defineProperty(window, "api", {
         configurable: true,
         value: {
@@ -47,23 +54,58 @@ describe("Desktop IPFS menu availability", () => {
       await act(async () => {
         render(
           <IpfsProvider>
-            <DesktopIpfsNavItem className="" />
+            <DesktopIpfsNavItem className="" onNavigate={onNavigate} />
           </IpfsProvider>
         );
       });
       const unavailable = status === "unavailable";
+      const disabled = status === "disabled";
       const row = screen.getByRole("link", {
-        name: unavailable ? "My IPFS: unavailable" : "My IPFS: starting",
+        name: disabled
+          ? "My IPFS: off. Open Local IPFS settings."
+          : unavailable
+            ? "My IPFS: unavailable"
+            : "My IPFS: starting",
       });
       const icon = row.querySelector("svg");
-      if (unavailable) {
+      if (disabled) {
+        expect(icon).toBeNull();
+        expect(row).toHaveTextContent("Off");
+        expect(row).not.toHaveAttribute("aria-disabled");
+        expect(row).toHaveAttribute("href", "/core/core-info#local-ipfs");
+        fireEvent.click(row);
+        expect(mockPush).toHaveBeenCalledWith("/core/core-info#local-ipfs");
+        expect(onNavigate).toHaveBeenCalledTimes(1);
+        for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey"]) {
+          const click = new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            [modifier]: true,
+          });
+          fireEvent(row, click);
+          expect(click.defaultPrevented).toBe(true);
+        }
+        const middleClick = new MouseEvent("auxclick", {
+          bubbles: true,
+          cancelable: true,
+          button: 1,
+        });
+        fireEvent(row, middleClick);
+        expect(middleClick.defaultPrevented).toBe(true);
+        expect(mockPush).toHaveBeenCalledTimes(6);
+        expect(onNavigate).toHaveBeenCalledTimes(6);
+      } else if (unavailable) {
         expect(icon).toHaveAttribute("data-icon", "triangle-exclamation");
       } else {
         expect(icon).toHaveClass("tw-text-primary-400", "tw-animate-spin");
       }
-      expect(icon).toHaveClass("tw-h-4", "tw-w-4");
-      expect(row).toHaveAttribute("aria-disabled", "true");
-      expect(row).not.toHaveAttribute("href");
+      if (!disabled) {
+        expect(icon).toHaveClass("tw-h-4", "tw-w-4");
+        expect(row).toHaveAttribute("aria-disabled", "true");
+        expect(row).not.toHaveAttribute("href");
+        fireEvent.click(row);
+        expect(mockPush).not.toHaveBeenCalled();
+      }
       expect(getIpfsInfo).toHaveBeenCalledTimes(1);
 
       getIpfsInfo.mockResolvedValue(readyInfo);
