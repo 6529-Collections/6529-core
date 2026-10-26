@@ -2416,10 +2416,9 @@ const desktopHeadingsPath = "renderer/components/core/DesktopHeadings.tsx";
 const desktopHeadings = parseSource(desktopHeadingsPath).text;
 assertContract(
   desktopHeadings.includes("NETWORK_PAGE_TITLE_CLASSES") &&
-    desktopHeadings.includes("NETWORK_REFERENCE_SECTION_HEADING_CLASSES") &&
     desktopHeadings.includes('className="tailwind-scope"'),
   desktopHeadingsPath,
-  "Desktop headings must reuse FE Network typography and isolate legacy global heading styles",
+  "Desktop page titles must reuse FE Network typography and isolate legacy global heading styles",
 );
 const desktopIpfsItemPath = "renderer/components/layout/sidebar/nav/DesktopIpfsNavItem.tsx";
 const desktopIpfsItem = parseSource(desktopIpfsItemPath).text;

@@ -1,10 +1,7 @@
 "use client";
 
 import DotLoader from "@/components/dotLoader/DotLoader";
-import {
-  DesktopPageHeading,
-  DesktopSectionHeading,
-} from "../DesktopHeadings";
+import { DesktopPageHeading } from "../DesktopHeadings";
 import { ScheduledWorkerNames, ScheduledWorkerStatus } from "@/shared/types";
 import { useEffect, useState } from "react";
 import { AddRpcProviderModal } from "./RpcProviderModal";
@@ -75,7 +72,10 @@ export default function ETHScanner() {
         ) : (
           <>
             <div className="tw-flex tw-items-center tw-justify-between tw-gap-3 tw-pt-6">
-              <DesktopSectionHeading>RPC Providers</DesktopSectionHeading>
+              <h3 className="tw-m-0">
+                <span className="tw-font-light tw-text-iron-400">RPC</span>{" "}
+                Providers
+              </h3>
               <RPCProviderAdd
                 onClick={() => setShowAddRpcProviderModal(true)}
               />
@@ -87,7 +87,10 @@ export default function ETHScanner() {
               />
             </div>
             <div className="tw-pt-6">
-              <DesktopSectionHeading>App Workers</DesktopSectionHeading>
+              <h3 className="tw-m-0">
+                <span className="tw-font-light tw-text-iron-400">App</span>{" "}
+                Workers
+              </h3>
             </div>
             <div className="tw-pt-4">
               <WorkerCards rpcProviders={rpcProviders} tasks={tasks} />

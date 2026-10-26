@@ -245,10 +245,10 @@ normal Local, Staging and Production launches can share the same user data.
 
 ### Desktop headings
 
-Desktop-owned pages use the same uniform heading typography as FE Network
-pages: page titles are semibold near-white, 22px below 640px and 26px from
-640px up; section headings are 18px/20px. The muted-prefix/bold-suffix treatment
-is removed without changing labels, wallet cards, body copy or the IPFS WebUI.
+Desktop-owned top-level page titles use the same typography as FE Network
+page titles: semibold near-white, 22px below 640px and 26px from 640px up.
+Only those page titles lose the muted-prefix/bold-suffix treatment. Section
+headings, labels, wallet cards, body copy and the IPFS WebUI retain their styling.
 
 ### Optional local IPFS node
 

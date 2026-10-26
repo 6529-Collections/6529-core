@@ -52,11 +52,6 @@ test("Desktop heading markup reuses FE Network tokens inside a narrowly scoped w
   );
   for (const [component, tag, token] of [
     ["DesktopPageHeading", "h1", "NETWORK_PAGE_TITLE_CLASSES"],
-    [
-      "DesktopSectionHeading",
-      "h2",
-      "NETWORK_REFERENCE_SECTION_HEADING_CLASSES",
-    ],
   ]) {
     const wrapper = module.exports[component]({
       children: "ETH Transactions",
@@ -81,14 +76,6 @@ test("Desktop heading markup reuses FE Network tokens inside a narrowly scoped w
     /sm:tw-text-\[26px\]/,
   );
   assert.match(network.exports.NETWORK_PAGE_TITLE_CLASSES, /tw-text-iron-50/);
-  assert.match(
-    network.exports.NETWORK_REFERENCE_SECTION_HEADING_CLASSES,
-    /tw-text-lg/,
-  );
-  assert.match(
-    network.exports.NETWORK_REFERENCE_SECTION_HEADING_CLASSES,
-    /sm:tw-text-xl/,
-  );
 });
 
 for (const [file, title] of [
