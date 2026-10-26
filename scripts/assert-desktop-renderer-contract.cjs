@@ -2383,6 +2383,47 @@ assertContract(
   ipfsContextPath,
   "desktop IPFS availability must follow native changes, ignore stale reads and unsubscribe on unmount",
 );
+assertContract(
+  ipfsContextSource.includes('ipfsInfo.status === "disabled"'),
+  ipfsContextPath,
+  "disabled local IPFS must not fall back to local ports or initialize a file service",
+);
+const ipfsSettingsPath = "renderer/components/core/app-info/LocalIpfsSettings.tsx";
+const ipfsSettings = parseSource(ipfsSettingsPath).text;
+assertContract(
+  parseSource("renderer/components/core/app-info/AppInfo.tsx").text.includes("<LocalIpfsSettings") &&
+    ipfsSettings.includes("getLocalIpfsPreferences") &&
+    ipfsSettings.includes("setLocalIpfsEnabled") &&
+    ipfsSettings.includes("preferences.restartRequired") &&
+    ipfsSettings.includes("restartForLocalIpfs") &&
+    ipfsSettings.includes('id="local-ipfs"') &&
+    ipfsSettings.includes('role="switch"') &&
+    ipfsSettings.includes("<details"),
+  ipfsSettingsPath,
+  "Desktop About must retain the compact restart-required IPFS switch, details and navigation anchor",
+);
+for (const page of [
+  "core-wallet/SeedWallets",
+  "core-wallet/SeedWalletImport",
+  "eth-scanner/ETHScanner",
+  "tdh-calculation/TDHCalculation",
+  "app-info/AppInfo",
+]) {
+  const headingPath = `renderer/components/core/${page}.tsx`;
+  assertContract(
+    parseSource(headingPath).text.includes("<DesktopPageHeading>"),
+    headingPath,
+    "Core page titles must retain the shared, uniformly styled Desktop heading",
+  );
+}
+const desktopHeadingsPath = "renderer/components/core/DesktopHeadings.tsx";
+const desktopHeadings = parseSource(desktopHeadingsPath).text;
+assertContract(
+  desktopHeadings.includes("NETWORK_PAGE_TITLE_CLASSES") &&
+    desktopHeadings.includes('className="tailwind-scope"'),
+  desktopHeadingsPath,
+  "Desktop page titles must reuse FE Network typography and isolate legacy global heading styles",
+);
 const desktopIpfsItemPath = "renderer/components/layout/sidebar/nav/DesktopIpfsNavItem.tsx";
 const desktopIpfsItem = parseSource(desktopIpfsItemPath).text;
 assertContract(
@@ -2392,6 +2433,14 @@ assertContract(
     desktopIpfsItem.includes("event.preventDefault()"),
   desktopIpfsItemPath,
   "desktop IPFS menu must keep starting and unavailable states non-navigable with distinct status icons",
+);
+assertContract(
+  desktopIpfsItem.includes('"/core/core-info#local-ipfs"') &&
+    desktopIpfsItem.includes("router.push(settingsHref)") &&
+    desktopIpfsItem.includes('"navigation.desktop.ipfsOff"') &&
+    desktopIpfsItem.includes("aria-disabled={ready || off ? undefined : true}"),
+  desktopIpfsItemPath,
+  "deliberately disabled IPFS must retain an actionable Off menu entry leading to its setting",
 );
 const desktopSectionsPath = "renderer/hooks/useSidebarSections.ts";
 const desktopSections = parseSource(desktopSectionsPath);

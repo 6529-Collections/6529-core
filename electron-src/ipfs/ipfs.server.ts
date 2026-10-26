@@ -54,7 +54,9 @@ export default class IPFSServer {
     rpcPort: number,
     swarmPort: number,
     private readonly onStatusChange?: (status: IpfsStatus) => void,
+    private readonly enabled = true,
   ) {
+    this.status = enabled ? "stopped" : "disabled";
     this.ipfsRepoPath = path.join(app.getPath("userData"), "ipfs-repo");
     this.ipfsPort = ipfsPort;
     this.rpcPort = rpcPort;
@@ -80,6 +82,8 @@ export default class IPFSServer {
    * app keeps working without it.
    */
   start(appPort: number): Promise<IpfsStatus> {
+    // Opting out must not initialize, migrate, configure or attach to a repo.
+    if (!this.enabled) return Promise.resolve("disabled");
     if (!this.startup) {
       this.setStatus("starting");
       this.startup = this.init(appPort).then(
@@ -482,6 +486,8 @@ export default class IPFSServer {
 
   /** Stop the owned or attached daemon and cancel any remaining startup steps. */
   async shutdown(): Promise<void> {
+    // No daemon was started/attached; do not probe or touch an existing repo.
+    if (!this.enabled) return;
     this.shuttingDown = true;
     this.setStatus("unavailable");
     const daemon = this.ipfsProcess;

@@ -1,6 +1,7 @@
 "use client";
 
 import { getSeedWallets } from "@/electron";
+import { DesktopPageHeading } from "../DesktopHeadings";
 import { ISeedWallet } from "@/shared/types";
 import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -32,9 +33,7 @@ export default function SeedWallets() {
 
   return (
     <div className="tw-py-8">
-      <h1 className="tw-m-0">
-        <span className="tw-text-iron-400">6529 Desktop</span> Wallets
-      </h1>
+      <DesktopPageHeading>6529 Desktop Wallets</DesktopPageHeading>
       <div className="tw-pt-6">
         <div className="tw-grid tw-grid-cols-1 tw-gap-4 sm:tw-grid-cols-2 md:tw-grid-cols-3">
           {seedWallets.map((s) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import DotLoader from "@/components/dotLoader/DotLoader";
+import { DesktopPageHeading } from "../DesktopHeadings";
 import { ScheduledWorkerNames, ScheduledWorkerStatus } from "@/shared/types";
 import { useEffect, useState } from "react";
 import { AddRpcProviderModal } from "./RpcProviderModal";
@@ -63,10 +64,7 @@ export default function ETHScanner() {
   return (
     <>
       <div className="tw-py-8">
-        <h1 className="tw-m-0">
-          <span className="tw-font-light tw-text-iron-400">ETH</span>{" "}
-          Transactions
-        </h1>
+        <DesktopPageHeading>ETH Transactions</DesktopPageHeading>
         {fetchingTasks ? (
           <div className="tw-pt-6">
             Fetching <DotLoader />

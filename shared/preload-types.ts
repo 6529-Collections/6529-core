@@ -5,7 +5,10 @@ import type {
   SeedWalletRequest,
 } from "./types";
 import type { NativeAuthResult } from "./native-auth-result";
-import type { IpfsStatus } from "./ipfs-status";
+import type {
+  IpfsStatus,
+  LocalIpfsPreferencesSnapshot,
+} from "./ipfs-status";
 
 export interface NotificationNavigationContext {
   readonly targetAddress?: string | null;
@@ -39,6 +42,9 @@ export interface ElectronAPI {
   offSeedWalletsChange: (callback: any) => void;
   getInfo: () => Promise<any>;
   getIpfsInfo: () => Promise<any>;
+  getLocalIpfsPreferences: () => Promise<LocalIpfsPreferencesSnapshot>;
+  setLocalIpfsEnabled: (enabled: boolean) => Promise<LocalIpfsPreferencesSnapshot>;
+  restartForLocalIpfs: () => Promise<void>;
   onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => () => void;
   getMainWorker: () => Promise<any>;
   getScheduledWorkers: () => Promise<any>;

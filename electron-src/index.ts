@@ -71,6 +71,10 @@ import {
   getTransactionReconciliationState,
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
 import IPFSServer from "./ipfs/ipfs.server";
+import {
+  LOCAL_IPFS_ENABLED_KEY,
+  LocalIpfsPreferences,
+} from "./ipfs/ipfs-preferences";
 import { menuTemplate } from "./menu";
 import { sanitizeNativeSessionResponse } from "./native-auth-session";
 import {
@@ -135,6 +139,7 @@ let myIpfsWindow: BrowserWindow | null = null;
 const pendingIpfsWindowLoads = new WeakMap<BrowserWindow, { url: string }>();
 let closeConfirmationPromise: Promise<void> | null = null;
 let isMainWindowCloseAuthorized = false;
+let quitApplicationPromise: Promise<void> | null = null;
 let scheduledWorkers: ScheduledWorker[] = [];
 let rpcProviders: RPCProvider[] = [];
 const logWindowsMap = new Map<string, BrowserWindow>();
@@ -889,6 +894,7 @@ function navigateIpfsWindow(window: BrowserWindow, url: string): void {
 }
 
 function openIpfsWindow(url: string): void {
+  if (IPFS_SERVER.getStatus() !== "ready") return;
   const apiEndpoint = IPFS_SERVER.getApiEndpoint();
   const ipfsOrigin = new URL(apiEndpoint).origin;
   if (pinnedWindowNavigation(ipfsOrigin, url) !== "stay") return;
@@ -1058,6 +1064,7 @@ let IPFS_PORT: number;
 let IPFS_RPC_PORT: number;
 let IPFS_SWARM_PORT: number;
 let IPFS_SERVER: IPFSServer;
+let localIpfsPreferences: LocalIpfsPreferences;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -1236,6 +1243,11 @@ if (!gotTheLock) {
     await initLogs();
     initStore();
 
+    localIpfsPreferences = new LocalIpfsPreferences(
+      getValue(LOCAL_IPFS_ENABLED_KEY),
+      (enabled) => setValue(LOCAL_IPFS_ENABLED_KEY, enabled),
+    );
+
     IPFS_SERVER = new IPFSServer(
       IPFS_PORT,
       IPFS_RPC_PORT,
@@ -1249,6 +1261,7 @@ if (!gotTheLock) {
           mainWindow.webContents.send("ipfs-status-change", status);
         }
       },
+      localIpfsPreferences.enabledAtStartup,
     );
 
     await createWindow();
@@ -1870,7 +1883,7 @@ function runInBackground(): void {
     try {
       showBackgroundTray(trayIconPath(), {
         open: () => void restoreFromBackground(),
-        quit: () => void quitApplication(),
+        quit: () => void requestApplicationQuit(),
       });
     } catch (error) {
       Logger.error("Could not show the tray icon; minimizing instead", error);
@@ -1910,17 +1923,30 @@ function destroyMainWindow(): void {
   }
 }
 
+function requestApplicationQuit(options: { restart?: boolean } = {}): Promise<void> {
+  if (quitApplicationPromise) return quitApplicationPromise;
+  // Electron preserves this executable and its arguments (including an isolated
+  // user-data-dir). Schedule once, before teardown, so failure leaves the UI open.
+  if (options.restart) app.relaunch();
+  quitApplicationPromise = quitApplication();
+  return quitApplicationPromise;
+}
+
 async function quitApplication(): Promise<void> {
   hideBackgroundTray();
   if (mainWindow) {
-    const bounds = mainWindow.getBounds();
-    setValue("window-state", {
-      x: bounds.x,
-      y: bounds.y,
-      width: bounds.width,
-      height: bounds.height,
-      isMaximized: mainWindow.isMaximized(),
-    });
+    try {
+      const bounds = mainWindow.getBounds();
+      setValue("window-state", {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        isMaximized: mainWindow.isMaximized(),
+      });
+    } catch (error) {
+      Logger.error("Failed to save window state while quitting", error);
+    }
   }
 
   destroyMainWindow();
@@ -1964,7 +1990,7 @@ function requestMainWindowCloseConfirmation(): void {
 
     const action = getAppCloseAction(result.response);
     if (action === "quit") {
-      await quitApplication();
+      await requestApplicationQuit();
       return;
     }
     if (action === "run-background") {
@@ -2051,6 +2077,28 @@ ipcMain.handle("get-ipfs-info", () => {
     gatewayEndpoint: IPFS_SERVER.getGatewayEndpoint(),
     mfsPath: IPFS_SERVER.getMfsPath(),
   };
+});
+
+// Persist only the next-launch preference. Never restart or stop a live node.
+ipcMain.handle("get-local-ipfs-preferences", () =>
+  localIpfsPreferences.getSnapshot(),
+);
+ipcMain.handle("set-local-ipfs-enabled", (_event, enabled: unknown) =>
+  localIpfsPreferences.setEnabled(enabled),
+);
+ipcMain.handle("restart-for-local-ipfs", (event) => {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    event.senderFrame !== mainWindow.webContents.mainFrame
+  ) {
+    throw new Error("IPFS restart is only available from the main app window");
+  }
+  if (!localIpfsPreferences.getSnapshot().restartRequired) {
+    throw new Error("No local IPFS preference change requires a restart");
+  }
+  // Direct user-requested restart: bypass the window-close/background chooser.
+  return requestApplicationQuit({ restart: true });
 });
 
 ipcMain.handle("get-main-worker", () => {
