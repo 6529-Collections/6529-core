@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import DotLoader from "../../dotLoader/DotLoader";
 import { Task } from "../eth-scanner/Workers";
 import LogsViewer from "../logs-viewer/LogsViewer";
+import LocalIpfsSettings from "./LocalIpfsSettings";
+import { DesktopPageHeading } from "../DesktopHeadings";
 
 interface ProgressInfo {
   total: number;
@@ -167,11 +169,11 @@ export default function AppInfo() {
 
   return (
     <div className="tw-py-8">
-      <h1 className="tw-m-0">
-        <span className="tw-font-light tw-text-iron-400">6529 Desktop</span>{" "}
-        About
-      </h1>
+      <DesktopPageHeading>6529 Desktop About</DesktopPageHeading>
       <div className="tw-mt-6">{printAppVersion()}</div>
+      <div className="tw-mt-6">
+        <LocalIpfsSettings />
+      </div>
       {mainTask?.logFile && (
         <div className="tw-mt-6">{printMainWorkerLogs(mainTask.logFile)}</div>
       )}

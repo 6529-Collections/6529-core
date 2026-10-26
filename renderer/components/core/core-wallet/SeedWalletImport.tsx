@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { MNEMONIC_NA } from "@/electron-constants";
+import { DesktopPageHeading } from "../DesktopHeadings";
 import { useToast } from "../../../contexts/ToastContext";
 import { getRandomKey } from "../../../helpers";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
@@ -34,9 +35,7 @@ export default function SeedWalletImport() {
           </Link>
         </div>
         <div className="tw-pt-4">
-          <h1 className="tw-m-0">
-            <span className="tw-text-iron-400">Import</span> Seed Wallet
-          </h1>
+          <DesktopPageHeading>Import Seed Wallet</DesktopPageHeading>
         </div>
         <div className="tw-grid tw-grid-cols-2 tw-gap-2 tw-pt-4">
           <button

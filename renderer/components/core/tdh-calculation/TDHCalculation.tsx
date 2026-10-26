@@ -1,6 +1,7 @@
 "use client";
 
 import DotLoader from "@/components/dotLoader/DotLoader";
+import { DesktopPageHeading } from "../DesktopHeadings";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { formatDate } from "@/i18n/format";
 import { t } from "@/i18n/messages";
@@ -155,10 +156,7 @@ export default function TDHCalculation() {
   return (
     <>
       <div className="tw-py-8">
-        <h1 className="tw-m-0">
-          <span className="tw-font-light tw-text-iron-400">TDH</span>{" "}
-          Calculation
-        </h1>
+        <DesktopPageHeading>TDH Calculation</DesktopPageHeading>
         <div className="tw-pt-6">
           <h4>TDH Consensus</h4>
           <p className="tw-m-0">
