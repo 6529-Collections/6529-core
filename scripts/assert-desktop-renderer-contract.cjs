@@ -2398,6 +2398,29 @@ assertContract(
   ipfsSettingsPath,
   "Desktop About must retain the saved, restart-required local IPFS preference",
 );
+for (const page of [
+  "core-wallet/SeedWallets",
+  "core-wallet/SeedWalletImport",
+  "eth-scanner/ETHScanner",
+  "tdh-calculation/TDHCalculation",
+  "app-info/AppInfo",
+]) {
+  const headingPath = `renderer/components/core/${page}.tsx`;
+  assertContract(
+    parseSource(headingPath).text.includes("<DesktopPageHeading>"),
+    headingPath,
+    "Core page titles must retain the shared, uniformly styled Desktop heading",
+  );
+}
+const desktopHeadingsPath = "renderer/components/core/DesktopHeadings.tsx";
+const desktopHeadings = parseSource(desktopHeadingsPath).text;
+assertContract(
+  desktopHeadings.includes("NETWORK_PAGE_TITLE_CLASSES") &&
+    desktopHeadings.includes("NETWORK_REFERENCE_SECTION_HEADING_CLASSES") &&
+    desktopHeadings.includes('className="tailwind-scope"'),
+  desktopHeadingsPath,
+  "Desktop headings must reuse FE Network typography and isolate legacy global heading styles",
+);
 const desktopIpfsItemPath = "renderer/components/layout/sidebar/nav/DesktopIpfsNavItem.tsx";
 const desktopIpfsItem = parseSource(desktopIpfsItemPath).text;
 assertContract(

@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
 import type { LocalIpfsPreferencesSnapshot } from "@/shared/ipfs-status";
+import { DesktopSectionHeading } from "../DesktopHeadings";
 
 export default function LocalIpfsSettings() {
   const locale = useBrowserLocale();
@@ -58,9 +59,9 @@ export default function LocalIpfsSettings() {
       aria-labelledby={`${id}-title`}
       className="tw-rounded-xl tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800"
     >
-      <h2 id={`${id}-title`} className="tw-m-0 tw-text-xl tw-font-semibold">
+      <DesktopSectionHeading id={`${id}-title`}>
         {t(locale, "desktop.localIpfs.title")}
-      </h2>
+      </DesktopSectionHeading>
       {preferences && (
         <label
           className="tw-mt-4 tw-flex tw-items-center tw-gap-3"

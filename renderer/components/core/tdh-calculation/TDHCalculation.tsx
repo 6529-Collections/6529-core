@@ -1,6 +1,10 @@
 "use client";
 
 import DotLoader from "@/components/dotLoader/DotLoader";
+import {
+  DesktopPageHeading,
+  DesktopSectionHeading,
+} from "../DesktopHeadings";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { formatDate } from "@/i18n/format";
 import { t } from "@/i18n/messages";
@@ -155,19 +159,18 @@ export default function TDHCalculation() {
   return (
     <>
       <div className="tw-py-8">
-        <h1 className="tw-m-0">
-          <span className="tw-font-light tw-text-iron-400">TDH</span>{" "}
-          Calculation
-        </h1>
+        <DesktopPageHeading>TDH Calculation</DesktopPageHeading>
         <div className="tw-pt-6">
-          <h4>TDH Consensus</h4>
+          <DesktopSectionHeading>TDH Consensus</DesktopSectionHeading>
           <p className="tw-m-0">
             6529 Desktop nodes calculate TDH independently. This is the core
             decentralized consensus algorithm of the protocol.
           </p>
         </div>
         <div className="tw-pt-6">
-          <h4>TDH (TestNet Mode Phase 1)</h4>
+          <DesktopSectionHeading>
+            TDH (TestNet Mode Phase 1)
+          </DesktopSectionHeading>
           <p className="tw-m-0">
             6529 Desktop is currently running in testnet mode phase 1. During
             this phase, you can compare your node's TDH calculation with the

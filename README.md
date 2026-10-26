@@ -243,6 +243,13 @@ not tracked Git/LFS assets; preparing them does not dirty the checkout.
 Test fresh profiles and upgrades on disposable copies:
 normal Local, Staging and Production launches can share the same user data.
 
+### Desktop headings
+
+Desktop-owned pages use the same uniform heading typography as FE Network
+pages: page titles are semibold near-white, 22px below 640px and 26px from
+640px up; section headings are 18px/20px. The muted-prefix/bold-suffix treatment
+is removed without changing labels, wallet cards, body copy or the IPFS WebUI.
+
 ### Optional local IPFS node
 
 Desktop → About (`/core/core-info`) has an **Enable local IPFS node** checkbox.
