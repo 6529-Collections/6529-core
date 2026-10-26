@@ -114,22 +114,24 @@ export default function LocalIpfsSettings() {
                   {t(locale, sessionMessage)}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  void restart();
-                }}
-                disabled={busy || !preferences.restartRequired}
-                aria-hidden={!preferences.restartRequired}
-                className={`tw-min-h-9 tw-min-w-28 tw-flex-shrink-0 tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-px-3 tw-py-1.5 tw-text-sm tw-font-semibold tw-text-iron-50 hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 disabled:tw-cursor-wait disabled:tw-opacity-60 ${preferences.restartRequired ? "" : "tw-invisible"}`}
-              >
-                {t(
-                  locale,
-                  restarting
-                    ? "desktop.localIpfs.restarting"
-                    : "desktop.localIpfs.restartNow"
-                )}
-              </button>
+              <span className="tailwind-scope tw-inline-flex tw-min-h-9 tw-min-w-28 tw-flex-shrink-0 tw-items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void restart();
+                  }}
+                  disabled={busy || !preferences.restartRequired}
+                  aria-hidden={!preferences.restartRequired}
+                  className={`tw-min-h-[30px] tw-rounded-lg tw-border-0 tw-bg-iron-50 tw-px-3 tw-py-1 tw-text-sm tw-font-medium tw-leading-5 tw-text-iron-950 hover:tw-bg-iron-200 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-400 disabled:tw-cursor-wait disabled:tw-opacity-60 ${preferences.restartRequired ? "" : "tw-invisible"}`}
+                >
+                  {t(
+                    locale,
+                    restarting
+                      ? "desktop.localIpfs.restarting"
+                      : "desktop.localIpfs.restartNow"
+                  )}
+                </button>
+              </span>
             </div>
           )}
         </div>
