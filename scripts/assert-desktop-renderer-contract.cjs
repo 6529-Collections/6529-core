@@ -2394,9 +2394,12 @@ assertContract(
   parseSource("renderer/components/core/app-info/AppInfo.tsx").text.includes("<LocalIpfsSettings") &&
     ipfsSettings.includes("getLocalIpfsPreferences") &&
     ipfsSettings.includes("setLocalIpfsEnabled") &&
-    ipfsSettings.includes("preferences.restartRequired"),
+    ipfsSettings.includes("preferences.restartRequired") &&
+    ipfsSettings.includes('id="local-ipfs"') &&
+    ipfsSettings.includes('role="switch"') &&
+    ipfsSettings.includes("<details"),
   ipfsSettingsPath,
-  "Desktop About must retain the saved, restart-required local IPFS preference",
+  "Desktop About must retain the compact restart-required IPFS switch, details and navigation anchor",
 );
 for (const page of [
   "core-wallet/SeedWallets",
@@ -2429,6 +2432,14 @@ assertContract(
     desktopIpfsItem.includes("event.preventDefault()"),
   desktopIpfsItemPath,
   "desktop IPFS menu must keep starting and unavailable states non-navigable with distinct status icons",
+);
+assertContract(
+  desktopIpfsItem.includes('"/core/core-info#local-ipfs"') &&
+    desktopIpfsItem.includes("router.push(settingsHref)") &&
+    desktopIpfsItem.includes('"navigation.desktop.ipfsOff"') &&
+    desktopIpfsItem.includes("aria-disabled={ready || off ? undefined : true}"),
+  desktopIpfsItemPath,
+  "deliberately disabled IPFS must retain an actionable Off menu entry leading to its setting",
 );
 const desktopSectionsPath = "renderer/hooks/useSidebarSections.ts";
 const desktopSections = parseSource(desktopSectionsPath);

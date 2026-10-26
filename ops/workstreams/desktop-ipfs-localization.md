@@ -3,8 +3,9 @@
 - Route/components: `/core/core-info` → `LocalIpfsSettings`, and the shared
   desktop `DesktopIpfsNavItem` navigation row.
 - Untranslated surface: `desktop.localIpfs.*` and
-  `navigation.desktop.ipfsDisabled` (labels, help, session state, save/restart
-  feedback, errors and the disabled navigation accessible name).
+  `navigation.desktop.ipfsDisabled` / `navigation.desktop.ipfsOff` (switch label,
+  summary, expandable details, session state, save/restart feedback, errors,
+  Off badge and the navigation link's accessible name).
 - Current behavior: the settings panel uses `t(locale, key)` with canonical
   `en-US` messages. Missing entries in `en-GB`, `fr-FR`, `es-ES` and `de-DE`
   fall back to that English copy. The existing Core navigation row explicitly

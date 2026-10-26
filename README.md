@@ -252,11 +252,13 @@ headings, labels, wallet cards, body copy and the IPFS WebUI retain their stylin
 
 ### Optional local IPFS node
 
-Desktop → About (`/core/core-info`) has an **Enable local IPFS node** checkbox.
+Desktop → About (`/core/core-info`) has an **Enable local IPFS node** switch.
 It defaults to on and is saved in the current user-data profile. Changes take
 effect only after fully quitting and reopening the app, not after refreshing
 the renderer or closing a window while the app remains in the background.
-The page shows the session's startup choice and whether a restart is required.
+The compact panel shows the session's startup choice and highlights a pending
+restart. More details expands the full explanation. When IPFS is off, the
+My IPFS menu item shows an Off badge and links directly to this setting.
 
 When disabled, the app does not initialize, migrate, configure, attach to or
 start Kubo. Public IPFS media uses the remote resolver; My IPFS/local file and

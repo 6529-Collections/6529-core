@@ -137,7 +137,7 @@ test("the real preferences IPC handlers only persist the next-launch choice", ()
   assert.deepEqual(writes, [false]);
 });
 
-test("settings announce action feedback without repeating session copy or guessing checkbox state", () => {
+test("settings announce action feedback without repeating session copy or guessing switch state", () => {
   const source = ts.createSourceFile(
     "LocalIpfsSettings.tsx",
     fs.readFileSync(
@@ -181,6 +181,7 @@ test("settings announce action feedback without repeating session copy or guessi
   assert.match(live, /desktop\.localIpfs\.restartRequired/);
   assert.doesNotMatch(live, /sessionEnabled|sessionDisabled/);
   assert.ok(checkbox);
+  assert.match(checkbox.getText(source), /role="switch"/);
   assert.match(checkbox.getText(source), /checked=\{preferences.enabled\}/);
   assert.match(source.text, /\{preferences && \(/);
   assert.match(checkbox.getText(source), /aria-disabled=\{saving\}/);

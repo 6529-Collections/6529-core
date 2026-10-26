@@ -8,6 +8,11 @@ import {
 import { IpfsProvider } from "@/components/ipfs/IPFSContext";
 import DesktopIpfsNavItem from "@/components/layout/sidebar/nav/DesktopIpfsNavItem";
 
+const mockPush = jest.fn();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
 jest.mock("@/helpers", () => ({ isElectron: () => true }));
 jest.mock("@/components/ipfs/IPFSService", () =>
   jest.fn().mockImplementation(() => ({ init: () => Promise.resolve() }))
@@ -23,6 +28,7 @@ describe("Desktop IPFS menu availability", () => {
   const originalApi = window.api;
 
   afterEach(() => {
+    mockPush.mockClear();
     Object.defineProperty(window, "api", {
       configurable: true,
       value: originalApi,
@@ -55,22 +61,31 @@ describe("Desktop IPFS menu availability", () => {
       const disabled = status === "disabled";
       const row = screen.getByRole("link", {
         name: disabled
-          ? "My IPFS: disabled in Desktop About settings"
+          ? "My IPFS: off. Open Local IPFS settings."
           : unavailable
             ? "My IPFS: unavailable"
             : "My IPFS: starting",
       });
       const icon = row.querySelector("svg");
       if (disabled) {
-        expect(icon).toHaveAttribute("data-icon", "power-off");
+        expect(icon).toBeNull();
+        expect(row).toHaveTextContent("Off");
+        expect(row).not.toHaveAttribute("aria-disabled");
+        expect(row).toHaveAttribute("href", "/core/core-info#local-ipfs");
+        fireEvent.click(row);
+        expect(mockPush).toHaveBeenCalledWith("/core/core-info#local-ipfs");
       } else if (unavailable) {
         expect(icon).toHaveAttribute("data-icon", "triangle-exclamation");
       } else {
         expect(icon).toHaveClass("tw-text-primary-400", "tw-animate-spin");
       }
-      expect(icon).toHaveClass("tw-h-4", "tw-w-4");
-      expect(row).toHaveAttribute("aria-disabled", "true");
-      expect(row).not.toHaveAttribute("href");
+      if (!disabled) {
+        expect(icon).toHaveClass("tw-h-4", "tw-w-4");
+        expect(row).toHaveAttribute("aria-disabled", "true");
+        expect(row).not.toHaveAttribute("href");
+        fireEvent.click(row);
+        expect(mockPush).not.toHaveBeenCalled();
+      }
       expect(getIpfsInfo).toHaveBeenCalledTimes(1);
 
       getIpfsInfo.mockResolvedValue(readyInfo);
