@@ -36,8 +36,12 @@ const lifecycleSource = [...lifecycle, registration]
   .map((node) => node.getText(source))
   .join("\n");
 
-function harness(stop: () => Promise<void> = async () => undefined) {
+function harness(
+  stop: () => Promise<void> = async () => undefined,
+  saveWindowState: () => void = () => undefined,
+) {
   const calls: string[] = [];
+  const errors: string[] = [];
   const webContents = { mainFrame: {}, removeAllListeners() {} };
   let restartRequired = true;
   let failRelaunch = false;
@@ -62,8 +66,11 @@ function harness(stop: () => Promise<void> = async () => undefined) {
     },
     runShutdownStepWithTimeout,
     hideBackgroundTray: () => calls.push("hide-tray"),
-    setValue: (key: string) => calls.push(`save:${key}`),
-    Logger: { info() {}, error() {} },
+    setValue: (key: string) => {
+      calls.push(`save:${key}`);
+      saveWindowState();
+    },
+    Logger: { info() {}, error: (message: string) => errors.push(message) },
     app: {
       relaunch: (...args: unknown[]) => {
         assert.equal(
@@ -93,6 +100,7 @@ function harness(stop: () => Promise<void> = async () => undefined) {
   );
   return {
     calls,
+    errors,
     restart: () =>
       handler({ sender: webContents, senderFrame: webContents.mainFrame }),
     request: (event: unknown) => handler(event),
@@ -152,6 +160,35 @@ test("ordinary quit does not relaunch, even when a shutdown step fails", async (
   await app.quit();
   assert.ok(!app.calls.includes("relaunch"));
   assert.equal(app.calls.at(-1), "quit");
+});
+
+test("a window-state write failure cannot block quit or a requested restart", async () => {
+  for (const restart of [false, true]) {
+    const app = harness(undefined, () => {
+      throw new Error("window-state write failed: disk full");
+    });
+    const quitting = restart ? app.restart() : app.quit();
+    assert.equal(
+      app.quit(),
+      quitting,
+      "concurrent requests share a settling shutdown",
+    );
+    await assert.doesNotReject(quitting);
+    assert.deepEqual(app.errors, [
+      "Failed to save window state while quitting",
+    ]);
+    assert.deepEqual(app.calls.slice(-4), [
+      "destroy",
+      "workers",
+      "ipfs",
+      "quit",
+    ]);
+    assert.equal(
+      app.calls.filter((call) => call === "relaunch").length,
+      restart ? 1 : 0,
+    );
+    assert.equal(app.calls.filter((call) => call === "quit").length, 1);
+  }
 });
 
 test("restart rejects other windows/frames and unchanged preferences without teardown", () => {

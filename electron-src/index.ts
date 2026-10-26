@@ -1935,14 +1935,18 @@ function requestApplicationQuit(options: { restart?: boolean } = {}): Promise<vo
 async function quitApplication(): Promise<void> {
   hideBackgroundTray();
   if (mainWindow) {
-    const bounds = mainWindow.getBounds();
-    setValue("window-state", {
-      x: bounds.x,
-      y: bounds.y,
-      width: bounds.width,
-      height: bounds.height,
-      isMaximized: mainWindow.isMaximized(),
-    });
+    try {
+      const bounds = mainWindow.getBounds();
+      setValue("window-state", {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        isMaximized: mainWindow.isMaximized(),
+      });
+    } catch (error) {
+      Logger.error("Failed to save window state while quitting", error);
+    }
   }
 
   destroyMainWindow();
