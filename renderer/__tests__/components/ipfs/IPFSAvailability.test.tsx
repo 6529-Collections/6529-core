@@ -40,6 +40,7 @@ describe("Desktop IPFS menu availability", () => {
     async (status) => {
       let notify: (status: "ready") => void = () => undefined;
       const getIpfsInfo = jest.fn().mockResolvedValue({ status });
+      const onNavigate = jest.fn();
       Object.defineProperty(window, "api", {
         configurable: true,
         value: {
@@ -53,7 +54,7 @@ describe("Desktop IPFS menu availability", () => {
       await act(async () => {
         render(
           <IpfsProvider>
-            <DesktopIpfsNavItem className="" />
+            <DesktopIpfsNavItem className="" onNavigate={onNavigate} />
           </IpfsProvider>
         );
       });
@@ -74,6 +75,25 @@ describe("Desktop IPFS menu availability", () => {
         expect(row).toHaveAttribute("href", "/core/core-info#local-ipfs");
         fireEvent.click(row);
         expect(mockPush).toHaveBeenCalledWith("/core/core-info#local-ipfs");
+        expect(onNavigate).toHaveBeenCalledTimes(1);
+        for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey"]) {
+          const click = new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            [modifier]: true,
+          });
+          fireEvent(row, click);
+          expect(click.defaultPrevented).toBe(true);
+        }
+        const middleClick = new MouseEvent("auxclick", {
+          bubbles: true,
+          cancelable: true,
+          button: 1,
+        });
+        fireEvent(row, middleClick);
+        expect(middleClick.defaultPrevented).toBe(true);
+        expect(mockPush).toHaveBeenCalledTimes(6);
+        expect(onNavigate).toHaveBeenCalledTimes(6);
       } else if (unavailable) {
         expect(icon).toHaveAttribute("data-icon", "triangle-exclamation");
       } else {

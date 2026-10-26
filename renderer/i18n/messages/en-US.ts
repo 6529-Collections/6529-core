@@ -3169,9 +3169,10 @@ export const EN_US_MESSAGES = {
   "desktop.localIpfs.summary":
     "Public IPFS media remains available. Files and pins are preserved.",
   "desktop.localIpfs.moreDetails": "More details",
-  "desktop.localIpfs.restartHint": "Changes apply after restarting the app.",
-  "desktop.localIpfs.sessionEnabled": "On for this session",
-  "desktop.localIpfs.sessionDisabled": "Off for this session",
+  "desktop.localIpfs.sessionEnabled":
+    "On for this session. Changes apply after restarting the app.",
+  "desktop.localIpfs.sessionDisabled":
+    "Off for this session. Changes apply after restarting the app.",
   "desktop.localIpfs.restartRequired": "Restart the app to apply your saved preference.",
   "desktop.localIpfs.loading": "Loading IPFS preference…",
   "desktop.localIpfs.saving": "Saving…",

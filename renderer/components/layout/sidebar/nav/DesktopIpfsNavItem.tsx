@@ -56,8 +56,6 @@ export default function DesktopIpfsNavItem({
       }`}
       onClick={(event) => {
         if (off) {
-          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
-            return;
           event.preventDefault();
           onNavigate?.();
           router.push(settingsHref);
@@ -69,6 +67,13 @@ export default function DesktopIpfsNavItem({
           return;
         }
         onNavigate?.();
+      }}
+      onAuxClick={(event) => {
+        if (off && event.button === 1) {
+          event.preventDefault();
+          onNavigate?.();
+          router.push(settingsHref);
+        }
       }}
     >
       <span className="tw-flex tw-min-w-0 tw-items-center tw-gap-2">

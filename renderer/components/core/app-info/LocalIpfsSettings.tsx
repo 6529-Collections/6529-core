@@ -76,8 +76,6 @@ export default function LocalIpfsSettings() {
                   ? "desktop.localIpfs.sessionEnabled"
                   : "desktop.localIpfs.sessionDisabled"
               )}
-              <span aria-hidden="true"> · </span>
-              {t(locale, "desktop.localIpfs.restartHint")}
             </p>
           )}
         </div>
