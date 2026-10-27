@@ -837,15 +837,18 @@ const WAVE_COMPETITION_BADGE_MESSAGES = objectMessages(
 );
 
 const WAVE_VOTE_RATIONALE_MESSAGES = objectMessages("waves.voteRationale", {
-  explain: "Explain",
-  explainAriaLabel: "Reply with vote rationale",
+  explain: "Explain vote",
+  explainAriaLabel: "Explain vote",
+  savedDescription: "Post a public reply in the wave about your saved vote.",
+  publicReplyDescription:
+    "Posts a public reply in the wave after your vote is saved.",
   fieldLabel: "Optional rationale reply",
   fieldDescription:
-    "Editing this text turns on Vote with reply until you choose the switch setting yourself.",
-  switchLabel: "Vote with reply",
+    "Posts a public reply in the wave after your vote is saved. Editing this text turns on Explain vote until you choose the switch setting yourself.",
+  switchLabel: "Explain vote",
   stateOn: "On",
   stateOff: "Off",
-  emptyBlockReason: "Add rationale text or turn Vote with reply off.",
+  emptyBlockReason: "Add rationale text or turn Explain vote off.",
   submitLabel: "Vote + reply",
   postErrorTitle: "Vote saved, but couldn't post your rationale reply.",
   postErrorRetry: "Please try posting the reply again.",
@@ -1355,9 +1358,19 @@ const USER_CIC_TYPE_MESSAGES = objectMessages("user.cicType", {
 } as const);
 
 const FOLLOWERS_MESSAGES = objectMessages("followers", {
+  "following.title": "Following",
+  "following.open": "Open your following list: {count}",
+  "following.loadingCount": "…",
+  "following.unavailableCount": "Unavailable",
+  "following.loading": "Loading following list…",
+  "following.empty": "You aren't following anyone yet.",
+  "following.error": "Couldn't load your following list. Please try again.",
+  "following.retry": "Retry",
+  "following.loadMore": "Load more",
   "modal.title": "Followers",
   "list.label": "Followers",
   "list.loading": "Loading followers",
+  "list.empty": "No followers yet.",
   "profile.linkAriaLabel": "View {handle}'s profile",
   "profile.avatarAlt": "{handle}'s profile image",
 } as const);
@@ -3038,6 +3051,7 @@ const HEADER_SEARCH_MESSAGES = objectMessages("headerSearch", {
   "category.pages": "Pages",
   "category.profiles": "Profiles",
   "category.waves": "Waves",
+  "category.messages": "Messages",
   "category.error": "Some results could not be loaded",
   "category.loading": "Loading {category} results",
   clear: "Clear search",
@@ -3045,7 +3059,7 @@ const HEADER_SEARCH_MESSAGES = objectMessages("headerSearch", {
   close: "Close search",
   "dialogTitle.site": "Search 6529",
   "dialogTitle.wave": "Search this Wave",
-  "dialogDescription.site": "Find pages, NFTs, profiles, and Waves.",
+  "dialogDescription.site": "Find pages, NFTs, profiles, Waves, and messages.",
   error: "Something went wrong while searching. Please try again.",
   "error.partial.one": "{category} results could not be loaded.",
   "error.partial.other": "Some result types could not be loaded: {categories}.",
@@ -3169,12 +3183,16 @@ export const EN_US_MESSAGES = {
   "desktop.localIpfs.summary":
     "Public IPFS media remains available. Files and pins are preserved.",
   "desktop.localIpfs.moreDetails": "More details",
+  "desktop.localIpfs.stateOn": "On",
+  "desktop.localIpfs.stateOff": "Off",
+  "desktop.localIpfs.stateOnLower": "on",
+  "desktop.localIpfs.stateOffLower": "off",
   "desktop.localIpfs.sessionEnabled":
-    "On for this session.",
+    "{on} for this session.",
   "desktop.localIpfs.sessionDisabled":
-    "Off for this session.",
-  "desktop.localIpfs.restartEnable": "Off for this session. Restart to turn on.",
-  "desktop.localIpfs.restartDisable": "On for this session. Restart to turn off.",
+    "{off} for this session.",
+  "desktop.localIpfs.restartEnable": "{off} for this session. Restart to turn {onLower}.",
+  "desktop.localIpfs.restartDisable": "{on} for this session. Restart to turn {offLower}.",
   "desktop.localIpfs.restartNow": "Restart now",
   "desktop.localIpfs.restarting": "Restarting…",
   "desktop.localIpfs.restartError": "Could not restart the app. Fully quit and reopen it to apply your saved preference.",
@@ -3621,11 +3639,15 @@ export const EN_US_MESSAGES = {
   "headerShare.connectionNotice.loadingMessage":
     "Creating a one-time connection code.",
   "headerShare.connectionNotice.errorMessage":
-    "We couldn't prepare this device connection. Close this dialog and try again.",
+    "We couldn't prepare this device connection. Use Generate new code to try again.",
   "headerShare.connectionNotice.unauthenticatedMessage":
     "Connect and authenticate your wallet before connecting a device.",
   "headerShare.connectionNotice.cancel": "Cancel",
   "headerShare.connectionNotice.update": "Update",
+  "headerShare.connectionRefresh.ready": "Connection ready",
+  "headerShare.connectionRefresh.action": "Generate new code",
+  "headerShare.connectionRefresh.loading": "Preparing connection…",
+  "headerShare.connectionRefresh.unavailable": "Connection unavailable",
   "headerShare.invalidConnectTarget": "Invalid connection target",
   "headerShare.copy.ariaLabel": "Copy link",
   "headerShare.copy.default": "Copy Link",

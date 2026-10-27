@@ -442,6 +442,22 @@ const PACKS = [
     ),
     triggers: ["pr-ci", "manual"],
   },
+  {
+    ...sandboxPack(
+      "test:e2e:submission-artwork-sandbox",
+      "Submission artwork loading, GIF animation and HD controls in an isolated media sandbox.",
+      ["tests/media/submission-artwork-sandbox.spec.ts"],
+      {
+        ...AUTH_SANDBOX_ENV,
+        PLAYWRIGHT_BASE_URL: "http://localhost:3297",
+        PLAYWRIGHT_WEB_SERVER_URL: "http://localhost:3297",
+        PLAYWRIGHT_COMPOSER_SANDBOX_API_PORT: "4297",
+        NEXT_DEV_DIST_DIR: ".next-playwright-submission-artwork",
+      },
+      [DESKTOP, MOBILE]
+    ),
+    triggers: ["pr-ci", "manual"],
+  },
   sandboxPack(
     "test:e2e:signature-sandbox",
     "Signed participation sandbox that fails closed unsigned.",
@@ -476,6 +492,20 @@ const PACKS = [
     ],
     AUTH_SANDBOX_ENV
   ),
+  {
+    ...sandboxPack(
+      "test:e2e:profile-following-sandbox",
+      "Own-profile Following dialog, pagination, navigation and recovery.",
+      ["tests/social/profile-following-sandbox.spec.ts"],
+      {
+        ...AUTH_SANDBOX_ENV,
+        USE_DEV_AUTH: "false",
+        NEXT_DEV_DIST_DIR: ".next-playwright-following",
+      },
+      [DESKTOP, MOBILE, "capacitor-ios-sim", "capacitor-android-sim"]
+    ),
+    triggers: ["pr-ci", "manual"],
+  },
   {
     ...sandboxPack(
       "test:e2e:wave-creation-sandbox",

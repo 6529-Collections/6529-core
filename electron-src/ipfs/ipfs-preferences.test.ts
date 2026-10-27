@@ -178,7 +178,7 @@ test("settings announce action feedback without repeating session copy or guessi
   const live = liveRegions[0].getText(source);
   assert.match(live, /aria-live="polite"/);
   assert.match(live, /aria-atomic="true"/);
-  assert.match(live, /t\(locale, sessionMessage\)/);
+  assert.match(live, /sessionText/);
   assert.ok(checkbox);
   assert.match(checkbox.getText(source), /role="switch"/);
   assert.match(checkbox.getText(source), /checked=\{preferences.enabled\}/);
