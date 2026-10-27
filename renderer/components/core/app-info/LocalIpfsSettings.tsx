@@ -215,8 +215,8 @@ export default function LocalIpfsSettings() {
                     ? t(locale, "desktop.localIpfs.loading")
                     : null)}
       </p>
-      <details className="tw-mt-1 tw-text-sm">
-        <summary className="tw-w-fit tw-cursor-pointer tw-rounded-md tw-py-1 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400">
+      <details className="tw-mt-1 tw-text-sm tw-text-iron-300">
+        <summary className="tw-w-fit tw-cursor-pointer tw-rounded-md tw-py-1 hover:tw-text-white focus-visible:tw-text-white focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400">
           {t(locale, "desktop.localIpfs.moreDetails")}
         </summary>
         <p className="tw-mb-0 tw-mt-1">{t(locale, "desktop.localIpfs.help")}</p>
