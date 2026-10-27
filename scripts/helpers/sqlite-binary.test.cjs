@@ -65,6 +65,22 @@ test("a universal macOS build keeps both macOS binaries", () => {
   });
 });
 
+test("SQLite install tools are pruned without removing a runtime dependency or binary", () => {
+  withRoot((root) => {
+    const dir = makeModule(root);
+    const tooling = path.join(dir, "node_modules", "prebuild-install", "node_modules", "deep-tool");
+    const runtime = path.join(dir, "node_modules", "runtime-dependency");
+    fs.mkdirSync(tooling, { recursive: true });
+    fs.mkdirSync(runtime, { recursive: true });
+    fs.writeFileSync(path.join(tooling, "index.js"), "build only");
+    fs.writeFileSync(path.join(runtime, "index.js"), "runtime");
+    pruneSqliteModule(root, "win32", "x64", { requireModule: true });
+    assert.equal(fs.existsSync(path.join(dir, "node_modules", "prebuild-install")), false);
+    assert.equal(fs.readFileSync(path.join(runtime, "index.js"), "utf8"), "runtime");
+    assert.equal(fs.existsSync(path.join(dir, "prebuilds", "win32-x64.node")), true);
+  });
+});
+
 test("a build whose binary is missing fails", () => {
   withRoot((root) => {
     makeModule(root);

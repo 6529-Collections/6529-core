@@ -27,6 +27,7 @@ const yaml = require("js-yaml");
 const { signFile } = require("./windows-sign-hook.cjs");
 const { resolvePnpmCommand } = require("./helpers/pnpm-command.cjs");
 const { assertWindowsUpdateArtifacts } = require("./helpers/windows-update-artifacts.cjs");
+const { assertWindowsInstallPaths } = require("./helpers/windows-install-paths.cjs");
 
 const ROOT = path.resolve(__dirname, "..");
 const DIST = path.join(ROOT, "dist");
@@ -216,6 +217,9 @@ function signPublish(release) {
     const zip = path.join(WORK, zipName(release, arch));
     if (!fs.existsSync(zip)) throw new Error(`missing ${zipName(release, arch)} in win-unsigned`);
     const appDir = extractZip(zip, path.join(WORK, `unpacked-${arch}`));
+    // Recheck downloaded/prepackaged apps too: the signing workflow must not
+    // publish an older unsigned archive containing unsafe unpacked paths.
+    assertWindowsInstallPaths(appDir);
     // Without it the installed app cannot find the update feed.
     if (!fs.existsSync(path.join(appDir, "resources", "app-update.yml"))) {
       throw new Error(`${zipName(release, arch)} has no resources/app-update.yml`);
