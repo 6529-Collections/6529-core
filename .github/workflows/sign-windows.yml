@@ -85,6 +85,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Validate legacy Windows upgrade compatibility
+        if: ${{ inputs.should_run }}
+        shell: pwsh
+        run: pnpm exec node --test scripts/helpers/windows-installer.test.cjs
+
       - name: Sign, build the installers & upload to S3
         if: ${{ inputs.should_run }}
         shell: pwsh

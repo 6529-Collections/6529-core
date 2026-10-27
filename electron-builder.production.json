@@ -113,6 +113,7 @@
     }
   },
   "nsis": {
+    "include": "scripts/windows-installer.nsh",
     "buildUniversalInstaller": false,
     "oneClick": false,
     "perMachine": true,

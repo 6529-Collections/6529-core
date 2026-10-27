@@ -7,7 +7,7 @@ const path = require("node:path");
 // sources are left out.
 
 const MODULE_DIR = path.join("node_modules", "better-sqlite3");
-const SOURCES = ["deps", "src", "build", "binding.gyp"];
+const SOURCES = ["deps", "src", "build", "binding.gyp", "node_modules/prebuild-install"];
 
 function entrySize(target) {
   const stat = fs.lstatSync(target);

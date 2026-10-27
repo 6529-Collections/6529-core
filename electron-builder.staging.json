@@ -109,6 +109,7 @@
     }
   },
   "nsis": {
+    "include": "scripts/windows-installer.nsh",
     "oneClick": false,
     "perMachine": true,
     "allowToChangeInstallationDirectory": true,
