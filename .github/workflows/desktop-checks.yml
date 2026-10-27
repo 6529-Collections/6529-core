@@ -3,7 +3,8 @@ name: Desktop checks
 # Builds the unpacked Linux staging app on every pull request, which runs the
 # desktop size budget (config/desktop-size-budget.json) before packaging, and
 # then runs the desktop function suite (e2e/desktop) against it. Nothing is
-# signed or published.
+# signed or published. Windows also executes the isolated installer
+# compatibility fixtures, so runtime failures are caught before release signing.
 
 on:
   pull_request:
@@ -22,6 +23,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-installer:
+    name: Installer compatibility (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install test dependencies without building native modules
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Validate Windows installer compatibility and path budget
+        run: pnpm exec node --test scripts/helpers/windows-installer.test.cjs scripts/helpers/windows-install-paths.test.cjs
+
   linux:
     name: Size budget and function suite (Linux)
     runs-on: ubuntu-latest
