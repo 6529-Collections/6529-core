@@ -3183,12 +3183,16 @@ export const EN_US_MESSAGES = {
   "desktop.localIpfs.summary":
     "Public IPFS media remains available. Files and pins are preserved.",
   "desktop.localIpfs.moreDetails": "More details",
+  "desktop.localIpfs.stateOn": "On",
+  "desktop.localIpfs.stateOff": "Off",
+  "desktop.localIpfs.stateOnLower": "on",
+  "desktop.localIpfs.stateOffLower": "off",
   "desktop.localIpfs.sessionEnabled":
-    "On for this session.",
+    "{on} for this session.",
   "desktop.localIpfs.sessionDisabled":
-    "Off for this session.",
-  "desktop.localIpfs.restartEnable": "Off for this session. Restart to turn on.",
-  "desktop.localIpfs.restartDisable": "On for this session. Restart to turn off.",
+    "{off} for this session.",
+  "desktop.localIpfs.restartEnable": "{off} for this session. Restart to turn {onLower}.",
+  "desktop.localIpfs.restartDisable": "{on} for this session. Restart to turn {offLower}.",
   "desktop.localIpfs.restartNow": "Restart now",
   "desktop.localIpfs.restarting": "Restarting…",
   "desktop.localIpfs.restartError": "Could not restart the app. Fully quit and reopen it to apply your saved preference.",

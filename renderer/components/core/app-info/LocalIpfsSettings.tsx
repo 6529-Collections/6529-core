@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
-import { t } from "@/i18n/messages";
+import { t, tRich } from "@/i18n/messages";
 import type { LocalIpfsPreferencesSnapshot } from "@/shared/ipfs-status";
 
 export default function LocalIpfsSettings() {
@@ -78,13 +78,28 @@ export default function LocalIpfsSettings() {
       ? "desktop.localIpfs.sessionEnabled"
       : "desktop.localIpfs.sessionDisabled";
   const busy = saving || restarting;
+  const stateWords = {
+    on: t(locale, "desktop.localIpfs.stateOn"),
+    off: t(locale, "desktop.localIpfs.stateOff"),
+    onLower: t(locale, "desktop.localIpfs.stateOnLower"),
+    offLower: t(locale, "desktop.localIpfs.stateOffLower"),
+  };
+  const emphasizedStates = Object.fromEntries(
+    Object.entries(stateWords).map(([key, word]) => [
+      key,
+      <strong key={key} className="tw-font-bold">
+        {word}
+      </strong>,
+    ])
+  );
+  const sessionText = t(locale, sessionMessage, stateWords);
 
   return (
     <section
       id="local-ipfs"
       tabIndex={-1}
       aria-labelledby={`${id}-title`}
-      className="tw-scroll-mt-6 tw-rounded-xl tw-bg-iron-950 tw-p-4 tw-ring-1 tw-ring-inset tw-ring-iron-800 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
+      className="tw-scroll-mt-6 tw-rounded-xl tw-bg-iron-950 tw-p-4 tw-text-white tw-ring-1 tw-ring-inset tw-ring-iron-800 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
     >
       <div className="tw-flex tw-items-start tw-justify-between tw-gap-4">
         <div className="tw-min-w-0 tw-flex-1">
@@ -93,25 +108,33 @@ export default function LocalIpfsSettings() {
           </h2>
           {preferences && (
             <div className="tw-mt-1 tw-flex tw-items-center tw-gap-3">
-              <div className="tw-grid tw-min-w-0 tw-text-sm tw-text-iron-400">
+              <div className="tw-grid tw-min-w-0 tw-text-sm">
                 {/* Reserve both pending messages' wrapping height at this width. */}
                 <span
                   aria-hidden="true"
                   className="tw-invisible tw-col-start-1 tw-row-start-1"
                 >
-                  {t(locale, "desktop.localIpfs.restartEnable")}
+                  {tRich(
+                    locale,
+                    "desktop.localIpfs.restartEnable",
+                    emphasizedStates
+                  )}
                 </span>
                 <span
                   aria-hidden="true"
                   className="tw-invisible tw-col-start-1 tw-row-start-1"
                 >
-                  {t(locale, "desktop.localIpfs.restartDisable")}
+                  {tRich(
+                    locale,
+                    "desktop.localIpfs.restartDisable",
+                    emphasizedStates
+                  )}
                 </span>
                 <span
                   id={`${id}-session`}
                   className="tw-col-start-1 tw-row-start-1 tw-self-center"
                 >
-                  {t(locale, sessionMessage)}
+                  {tRich(locale, sessionMessage, emphasizedStates)}
                 </span>
               </div>
               <span className="tailwind-scope tw-inline-flex tw-min-h-9 tw-min-w-28 tw-flex-shrink-0 tw-items-center">
@@ -166,10 +189,7 @@ export default function LocalIpfsSettings() {
           </label>
         )}
       </div>
-      <p
-        id={`${id}-help`}
-        className="tw-mb-0 tw-mt-2 tw-text-sm tw-text-iron-400"
-      >
+      <p id={`${id}-help`} className="tw-mb-0 tw-mt-2 tw-text-sm">
         {t(locale, "desktop.localIpfs.summary")}
       </p>
       <p
@@ -178,7 +198,7 @@ export default function LocalIpfsSettings() {
         aria-atomic="true"
         className={
           !preferences && !error
-            ? "tw-mb-0 tw-mt-2 tw-text-sm tw-font-medium tw-text-iron-50"
+            ? "tw-mb-0 tw-mt-2 tw-text-sm tw-font-medium"
             : "tw-sr-only"
         }
       >
@@ -188,15 +208,15 @@ export default function LocalIpfsSettings() {
             : saving
               ? t(locale, "desktop.localIpfs.saving")
               : preferences && preferences.restartRequired
-                ? t(locale, sessionMessage)
+                ? sessionText
                 : saved
                   ? t(locale, "desktop.localIpfs.saved")
                   : !preferences
                     ? t(locale, "desktop.localIpfs.loading")
                     : null)}
       </p>
-      <details className="tw-mt-1 tw-text-sm tw-text-iron-400">
-        <summary className="tw-w-fit tw-cursor-pointer tw-rounded-md tw-py-1 tw-text-iron-300 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400">
+      <details className="tw-mt-1 tw-text-sm">
+        <summary className="tw-w-fit tw-cursor-pointer tw-rounded-md tw-py-1 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400">
           {t(locale, "desktop.localIpfs.moreDetails")}
         </summary>
         <p className="tw-mb-0 tw-mt-1">{t(locale, "desktop.localIpfs.help")}</p>
