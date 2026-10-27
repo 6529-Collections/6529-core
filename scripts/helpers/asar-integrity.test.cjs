@@ -11,6 +11,9 @@ const {
 } = require("./asar-integrity.cjs");
 
 const electronExe = path.join(path.dirname(require.resolve("electron/package.json")), "dist", "electron.exe");
+const builderDir = path.dirname(require.resolve("electron-builder/package.json"));
+const libDir = path.dirname(require.resolve("app-builder-lib/package.json", { paths: [builderDir] }));
+const plist = require(require.resolve("plist", { paths: [libDir] }));
 
 async function makeArchive(root, files) {
   const source = path.join(root, "source");
@@ -72,7 +75,94 @@ test(
   },
 );
 
-test("afterPack leaves other platforms and builds without an integrity list alone", () => {
+async function makeMacBundle(root, { enabled = true, integrity = true } = {}) {
+  const contents = path.join(root, "6529 Test.app", "Contents");
+  const resources = path.join(contents, "Resources");
+  fs.mkdirSync(resources, { recursive: true });
+  const archive = path.join(resources, "app.asar");
+  fs.copyFileSync(await makeArchive(root, { "index.js": "before" }), archive);
+  const info = {
+    CFBundleIdentifier: "com.6529.integrity-test",
+    CFBundleVersion: "0.3.16",
+    CFBundleURLTypes: [{ CFBundleURLSchemes: ["stagingcore6529"] }],
+    NSHighResolutionCapable: true,
+    ...(integrity ? { ElectronAsarIntegrity: {
+      "Resources/app.asar": { algorithm: "SHA256", hash: asarHeaderHash(archive) },
+    } } : {}),
+  };
+  const plistPath = path.join(contents, "Info.plist");
+  fs.writeFileSync(plistPath, plist.build(info));
+  return {
+    archive, plistPath, info,
+    context: {
+      electronPlatformName: "darwin",
+      appOutDir: root,
+      packager: {
+        getResourcesDir: () => resources,
+        config: { electronFuses: { enableEmbeddedAsarIntegrityValidation: enabled } },
+      },
+    },
+  };
+}
+
+test("macOS afterPack replaces the pre-repack hash and preserves bundle metadata", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-mac-integrity-"));
+  try {
+    const { archive, plistPath, info, context } = await makeMacBundle(root);
+    const stale = info.ElectronAsarIntegrity["Resources/app.asar"].hash;
+    fs.copyFileSync(await makeArchive(root, {
+      "index.js": "before",
+      "node_modules/next/index.js": "after",
+    }), archive);
+    assert.notEqual(asarHeaderHash(archive), stale);
+
+    refreshPackedAsarIntegrity(context);
+    const refreshed = plist.parse(fs.readFileSync(plistPath, "utf8"));
+    assert.equal(refreshed.ElectronAsarIntegrity["Resources/app.asar"].algorithm, "SHA256");
+    assert.equal(refreshed.ElectronAsarIntegrity["Resources/app.asar"].hash, asarHeaderHash(archive));
+    assert.notEqual(refreshed.ElectronAsarIntegrity["Resources/app.asar"].hash, stale);
+    const { ElectronAsarIntegrity: _integrity, ...metadata } = refreshed;
+    const { ElectronAsarIntegrity: _oldIntegrity, ...originalMetadata } = info;
+    assert.deepEqual(metadata, originalMetadata);
+    assert.equal(asar.extractFile(archive, "node_modules/next/index.js").toString(), "after");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("macOS refuses to package an integrity-enabled app without its hash entry", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-mac-integrity-"));
+  try {
+    const { context, plistPath, archive } = await makeMacBundle(root, { integrity: false });
+    const before = fs.readFileSync(plistPath);
+    assert.throws(() => refreshPackedAsarIntegrity(context), /missing the app.asar integrity entry/);
+    assert.deepEqual(fs.readFileSync(plistPath), before);
+    // An empty dictionary must fail too: otherwise the fuse still kills startup.
+    fs.writeFileSync(plistPath, plist.build({ ElectronAsarIntegrity: {} }));
+    assert.throws(() => refreshPackedAsarIntegrity(context), /missing the app.asar integrity entry/);
+    // Missing archives must not produce a signed bundle with a fabricated hash.
+    fs.writeFileSync(plistPath, plist.build({ ElectronAsarIntegrity: {
+      "Resources/app.asar": { algorithm: "SHA256", hash: "stale" },
+    } }));
+    fs.rmSync(archive);
+    assert.throws(() => refreshPackedAsarIntegrity(context), /ENOENT/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("macOS leaves explicitly non-validating builds without metadata untouched", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "6529-mac-integrity-"));
+  try {
+    const { context, plistPath } = await makeMacBundle(root, { enabled: false, integrity: false });
+    const before = fs.readFileSync(plistPath);
+    assert.equal(refreshPackedAsarIntegrity(context), null);
+    assert.deepEqual(fs.readFileSync(plistPath), before);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("afterPack leaves platforms without ASAR integrity enforcement alone", () => {
   assert.equal(refreshPackedAsarIntegrity({ electronPlatformName: "linux" }), null);
-  assert.equal(refreshPackedAsarIntegrity({ electronPlatformName: "darwin" }), null);
 });
