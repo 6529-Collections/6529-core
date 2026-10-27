@@ -1,5 +1,7 @@
+import { getStagingVideoFixtures } from "./stagingVideoFixtures";
 import { defineMobileVideoBatteryTest } from "./mobileVideoBatteryCases";
 import { defineCollectorsLeaderboardTests } from "./collectorsLeaderboardCases";
+import { defineNftMarketActivityTests } from "./nftMarketActivityCases";
 import {
   defineNftImageLayoutTests,
   expectContainedImage,
@@ -55,6 +57,7 @@ function isProductionBaseURL(baseURL?: string) {
 
 test.describe("Media, mint, and detail read-only coverage @surface @medium @large @readonly", () => {
   defineCollectorsLeaderboardTests();
+  defineNftMarketActivityTests();
   test("renders The Memes card detail shell", async ({ page }) => {
     await gotoReady(page, "/the-memes/1");
 
@@ -308,7 +311,7 @@ test.describe("Staging video artwork sizing @surface @medium @large @readonly", 
     } catch {
       return true;
     }
-  }, "video fixtures 549 and 550 are qualified on staging only");
+  }, "video fixture qualification runs on staging only");
 
   defineMobileVideoBatteryTest(
     "mobile browser artwork stops offscreen buffering and restores position after tab hiding",
@@ -381,12 +384,17 @@ test.describe("Staging video artwork sizing @surface @medium @large @readonly", 
     { width: 1440, height: 1000 },
     { width: 1440, height: 600 },
   ]) {
-    for (const tokenId of [549, 550]) {
-      test(`contains and centers video ${tokenId} at ${viewport.width}x${viewport.height}`, async ({
+    for (const shape of ["portrait", "square"] as const) {
+      test(`contains and centers ${shape} video at ${viewport.width}x${viewport.height}`, async ({
         page,
-      }) => {
+      }, testInfo) => {
         await page.setViewportSize(viewport);
-        await gotoReady(page, `/the-memes/${tokenId}`);
+        const fixture = (await getStagingVideoFixtures(page))[shape];
+        await testInfo.attach("qualified-video-fixture", {
+          body: Buffer.from(JSON.stringify({ shape, ...fixture })),
+          contentType: "application/json",
+        });
+        await gotoReady(page, `/the-memes/${fixture.id}`);
         const video = page.getByLabel("Video player", { exact: true });
         await expect(video).toBeVisible();
         await expect
@@ -394,6 +402,16 @@ test.describe("Staging video artwork sizing @surface @medium @large @readonly", 
             video.evaluate((element: HTMLVideoElement) => element.videoWidth)
           )
           .toBeGreaterThan(0);
+        const dimensions = await video.evaluate(
+          (element: HTMLVideoElement) => ({
+            width: element.videoWidth,
+            height: element.videoHeight,
+          })
+        );
+        expect(dimensions.width / dimensions.height).toBeCloseTo(
+          fixture.width / fixture.height,
+          2
+        );
         // Native metadata can load before React hydrates the artwork controls.
         await expect(
           page.getByRole("slider", { name: "Seek video" })
