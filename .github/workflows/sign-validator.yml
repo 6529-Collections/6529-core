@@ -280,6 +280,7 @@ jobs:
           hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$m" "$RUNNER_TEMP/in/$DMG_NAME" > /dev/null
           diskutil info -plist "$m" > "$RUNNER_TEMP/volume.plist"
           vol=$(plutil -extract VolumeName raw -o - "$RUNNER_TEMP/volume.plist")
+          [ -n "$vol" ] || { echo "::error::the disk image's volume has no name"; exit 1; }
           stage="$RUNNER_TEMP/app-stage"
           ditto "$m" "$stage"
           hdiutil detach "$m" > /dev/null || hdiutil detach -force "$m" > /dev/null
@@ -641,6 +642,9 @@ jobs:
           WINDOWS_SUMS: ${{ needs.windows.outputs.sums }}
           NOTARY: ${{ needs.macos.outputs.notary }}
           AUTHENTICODE: ${{ needs.windows.outputs.authenticode }}
+          # Also set for the whole workflow; named here because the checks below depend on them.
+          VERSION: ${{ inputs.version }}
+          KIND: ${{ inputs.kind || 'binaries' }}
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/sums"
