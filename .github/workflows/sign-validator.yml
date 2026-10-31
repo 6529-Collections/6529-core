@@ -8,8 +8,7 @@
 # this workflow on 2026-10-31.
 #
 # Started by hand only (workflow_dispatch):
-#   version         the validator's version, for example 0.1.0; the binaries
-#                   must print "validator <version> ..."
+#   version         the validator's version, for example 0.1.0 (names the results)
 #   bundle_url      an HTTPS link (a pre-signed URL) to a zip of the unsigned files:
 #                     aarch64-apple-darwin/validator
 #                     x86_64-apple-darwin/validator
@@ -42,8 +41,15 @@
 #
 # It publishes nothing: no release, no tag, no upload to the desktop app's
 # distribution, and no notifications. Secrets reach only the steps that use
-# them and are never printed. Running it needs write access to this
-# repository, as the other signing workflows do.
+# them and are never printed. The files it signs are never run here: a
+# compromised build must not run where the signing secrets are.
+#
+# Trust: whoever starts it chooses what 6529's identities sign. That takes
+# write access to this repository, which already reaches these secrets
+# through the other workflows. bundle_sha256 protects the transfer, not the
+# provenance: the operator takes the bundle from the validator repository's
+# release workflow (its build artifacts, checked against their
+# build-info.json) and runs the signed programs after this run.
 
 name: Sign validator
 
@@ -156,6 +162,7 @@ jobs:
           echo "::add-mask::$kpass"
           printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$p12"
           security create-keychain -p "$kpass" "$keychain"
+          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
           security set-keychain-settings -lut 7200 "$keychain"
           security default-keychain -s "$keychain"
           security unlock-keychain -p "$kpass" "$keychain"
@@ -163,7 +170,6 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "$kpass" "$keychain" > /dev/null
           # shellcheck disable=SC2046 # the search list, one keychain per word
           security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
-          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
           ids=$(security find-identity -v -p codesigning "$keychain")
           echo "$ids"
           id=$(awk '/"Developer ID Application: / { print $2; exit }' <<< "$ids")
@@ -185,9 +191,6 @@ jobs:
             grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$t/validator: no hardened runtime"; exit 1; }
             grep -q '^Timestamp=' <<< "$info" || { echo "::error::$t/validator: no secure timestamp"; exit 1; }
           done
-          out=$("$RUNNER_TEMP/out/aarch64-apple-darwin/validator" --version)
-          echo "$out"
-          case "$out" in "validator $VERSION "*) ;; *) echo "::error::the binary is not version $VERSION"; exit 1 ;; esac
 
       - name: One disk image per architecture, with a README, codesigned
         env:
@@ -285,7 +288,8 @@ jobs:
             echo "== $t/validator"
             codesign --verify --strict --verbose=2 "$b"
             if [ "$NOTARIZE" = true ]; then
-              # Informational: Apple's online record of the binary's notarization.
+              # Informational, never fatal: Apple's online record of the binary,
+              # notarized inside its .dmg (a bare binary cannot be stapled).
               codesign --verify --verbose=2 -R='notarized' --check-notarization "$b" 2>&1 || echo "(no online notarization record found for $t/validator)"
             fi
             m="$RUNNER_TEMP/mnt-$t"
@@ -454,9 +458,6 @@ jobs:
             if ($null -eq $s.TimeStamperCertificate) { throw "$($f.Name): the signature has no timestamp" }
             $lines += "$($f.Name): Authenticode Valid, timestamped, signer $($s.SignerCertificate.Subject)"
           }
-          $v = & (Join-Path $env:RUNNER_TEMP 'out\x86_64-pc-windows-msvc\validator.exe') --version
-          Write-Output $v
-          if (-not "$v".StartsWith("validator $env:VERSION ")) { throw "validator.exe is not version $env:VERSION" }
           "authenticode<<AUTH_EOF`n$($lines -join "`n")`nAUTH_EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
       - name: SHA-256 of the signed files, and encrypt them to recipient_cert
@@ -507,7 +508,11 @@ jobs:
             echo "::error::a malformed line in SHA256SUMS (above)"
             exit 1
           fi
-          [ "$(wc -l < "$s")" -ge 5 ] || { echo "::error::SHA256SUMS lists fewer than 5 files"; exit 1; }
+          for f in aarch64-apple-darwin/validator x86_64-apple-darwin/validator \
+            "validator-$VERSION-aarch64-apple-darwin.dmg" "validator-$VERSION-x86_64-apple-darwin.dmg" \
+            x86_64-pc-windows-msvc/validator.exe; do
+            cut -c67- "$s" | grep -qxF "$f" || { echo "::error::SHA256SUMS does not list $f"; exit 1; }
+          done
           cat "$s"
           {
             echo "### validator $VERSION, signed"
