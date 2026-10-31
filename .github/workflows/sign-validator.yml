@@ -21,12 +21,25 @@
 #                   are encrypted to it, because this repository is public, and
 #                   so are its logs and run artifacts
 #   notarize        false to codesign without notarizing (default true)
+#   kind            binaries (default): the bundle above.
+#                   installers: the installers the validator's release builds
+#                   from programs a binaries run signed, so that they hold
+#                   signed programs. The bundle is then
+#                     macos/<name>.dmg                     one disk image holding one .app
+#                     x86_64-pc-windows-msvc/<name>.msi    one or more
+#                   and other entries are listed and ignored.
 #
 # macOS (macos-latest): the certificate is imported as build-mac.yml imports
-# it, into a throwaway keychain that is deleted at the end. Each binary is
-# codesigned (hardened runtime, secure timestamp) and put with a README into
-# one .dmg per architecture. Each .dmg is codesigned, notarized (notarytool)
-# and stapled, then checked with spctl and codesign --verify --strict.
+# it, into a throwaway keychain that is deleted at the end.
+#   binaries: each binary is codesigned (hardened runtime, secure timestamp)
+#   and put with a README into one .dmg per architecture.
+#   installers: every program inside the .app must already carry this
+#   Developer ID's signature (hardened runtime, timestamp), and stays byte
+#   for byte as it is; the .app itself is codesigned (hardened runtime,
+#   secure timestamp) and the disk image is made again around it, with the
+#   rest of its contents unchanged.
+#   Each .dmg is codesigned, notarized (notarytool) and stapled, then checked
+#   with spctl and codesign --verify --strict.
 # Windows (windows-latest): AzureSignTool 6.0.1 signs each .exe and .msi with
 # the flags of scripts/windows-sign-hook.cjs (sha256, RFC 3161 timestamp), and
 # Get-AuthenticodeSignature checks each one.
@@ -53,7 +66,7 @@
 
 name: Sign validator
 
-run-name: Sign validator ${{ inputs.version }}
+run-name: Sign validator ${{ inputs.version }} (${{ inputs.kind || 'binaries' }})
 
 on:
   workflow_dispatch:
@@ -79,6 +92,14 @@ on:
         required: false
         type: boolean
         default: true
+      kind:
+        description: "binaries: the bare programs; installers: a .dmg (one .app) and .msi files built from programs signed here"
+        required: false
+        type: choice
+        options:
+          - binaries
+          - installers
+        default: binaries
 
 permissions:
   contents: read
@@ -90,6 +111,7 @@ concurrency:
 env:
   VERSION: ${{ inputs.version }}
   BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
+  KIND: ${{ inputs.kind || 'binaries' }}
 
 jobs:
   macos:
@@ -107,6 +129,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::version is not like 1.2.3 or 1.2.3-rc.1"; exit 1; }
+          [[ "$KIND" =~ ^(binaries|installers)$ ]] || { echo "::error::kind is binaries or installers"; exit 1; }
           want=$(printf '%s' "$BUNDLE_SHA256" | tr 'A-F' 'a-f')
           [[ "$want" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bundle_sha256 is not 64 hex digits"; exit 1; }
           url=$(jq -r '.inputs.bundle_url' "$GITHUB_EVENT_PATH")
@@ -134,6 +157,7 @@ jobs:
           openssl x509 -in recipient.pem -noout -checkend 3600 > /dev/null || { echo "::error::recipient_cert expires within the hour"; exit 1; }
 
       - name: Take the macOS binaries out of the bundle
+        if: inputs.kind != 'installers'
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP"
@@ -148,6 +172,22 @@ jobs:
           grep -vxE '(aarch64|x86_64)-apple-darwin/validator' entries.txt | grep -v '/$' | sed 's/^/ignored here: /' || true
           [ "$(lipo -archs out/aarch64-apple-darwin/validator)" = arm64 ] || { echo "::error::aarch64-apple-darwin/validator is not an arm64 program"; exit 1; }
           [ "$(lipo -archs out/x86_64-apple-darwin/validator)" = x86_64 ] || { echo "::error::x86_64-apple-darwin/validator is not an x86_64 program"; exit 1; }
+
+      - name: "Installers: take the disk image out of the bundle"
+        if: inputs.kind == 'installers'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          unzip -Z1 bundle.zip > entries.txt
+          dmgs=$(grep -E '^macos/[A-Za-z0-9][A-Za-z0-9._-]*\.dmg$' entries.txt || true)
+          [ "$(printf '%s' "$dmgs" | grep -c .)" = 1 ] || { echo "::error::an installers bundle holds exactly one macos/<name>.dmg"; exit 1; }
+          name=${dmgs#macos/}
+          mkdir -p in out
+          unzip -p bundle.zip "$dmgs" > "in/$name"
+          echo "DMG_NAME=$name" >> "$GITHUB_ENV"
+          echo "to sign: the app in $dmgs"
+          grep -vxF "$dmgs" entries.txt | grep -v '/$' | sed 's/^/ignored here: /' || true
+          hdiutil imageinfo "in/$name" > /dev/null || { echo "::error::$name is not a disk image"; exit 1; }
 
       - name: Import the Developer ID certificate into a throwaway keychain (as build-mac.yml)
         env:
@@ -177,6 +217,7 @@ jobs:
           echo "SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
 
       - name: Codesign the binaries (hardened runtime, secure timestamp)
+        if: inputs.kind != 'installers'
         run: |
           set -euo pipefail
           retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
@@ -193,6 +234,7 @@ jobs:
           done
 
       - name: One disk image per architecture, with a README, codesigned
+        if: inputs.kind != 'installers'
         env:
           NOTARIZE: ${{ inputs.notarize }}
         run: |
@@ -227,6 +269,60 @@ jobs:
             codesign --verify --strict --verbose=2 "$dmg"
           done
 
+      - name: "Installers: codesign the app (its programs already signed here), and the disk image again around it"
+        if: inputs.kind == 'installers'
+        run: |
+          set -euo pipefail
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
+          team=$(security find-identity -v -p codesigning "$KEYCHAIN" | grep -F "$SIGN_IDENTITY" | sed -nE 's/.*"Developer ID Application: .* \(([A-Z0-9]{10})\)".*/\1/p' | head -n 1)
+          [ -n "$team" ] || { echo "::error::no team identifier in the signing identity"; exit 1; }
+          m="$RUNNER_TEMP/mnt-in"
+          hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$m" "$RUNNER_TEMP/in/$DMG_NAME" > /dev/null
+          diskutil info -plist "$m" > "$RUNNER_TEMP/volume.plist"
+          vol=$(plutil -extract VolumeName raw -o - "$RUNNER_TEMP/volume.plist")
+          [ -n "$vol" ] || { echo "::error::the disk image's volume has no name"; exit 1; }
+          stage="$RUNNER_TEMP/app-stage"
+          ditto "$m" "$stage"
+          hdiutil detach "$m" > /dev/null || hdiutil detach -force "$m" > /dev/null
+          rm -rf "$stage/.fseventsd" "$stage/.Trashes" "$stage/.Spotlight-V100"
+          echo "volume \"$vol\":"
+          ls -la "$stage"
+          shopt -s nullglob
+          apps=("$stage"/*.app)
+          [ "${#apps[@]}" = 1 ] || { echo "::error::the disk image holds ${#apps[@]} apps at its top, not one"; exit 1; }
+          app=${apps[0]}
+          echo "APP_NAME=$(basename "$app")" >> "$GITHUB_ENV"
+          xattr -cr "$app"
+          # Every program inside must already carry this Developer ID's
+          # signature, each architecture: they are not signed again, so they
+          # stay byte for byte the release's programs.
+          n=0
+          while IFS= read -r -d '' f; do
+            file -b "$f" | grep -q '^Mach-O' || continue
+            n=$((n + 1))
+            for a in $(lipo -archs "$f"); do
+              rel=${f#"$app"/}
+              codesign --verify --strict -a "$a" "$f" || { echo "::error::$rel ($a): not validly signed"; exit 1; }
+              info=$(codesign --display --verbose=2 -a "$a" "$f" 2>&1)
+              grep -qx "TeamIdentifier=$team" <<< "$info" || { echo "::error::$rel ($a): not signed with this Developer ID (sign it with kind binaries first)"; exit 1; }
+              grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$rel ($a): no hardened runtime"; exit 1; }
+              grep -q '^Timestamp=' <<< "$info" || { echo "::error::$rel ($a): no secure timestamp"; exit 1; }
+              echo "already signed here: $rel ($a), $(grep '^Identifier=' <<< "$info")"
+            done
+          done < <(find "$app" -type f -print0)
+          [ "$n" -ge 1 ] || { echo "::error::the app holds no program"; exit 1; }
+          echo "== $(basename "$app")"
+          retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --sign "$SIGN_IDENTITY" "$app"
+          codesign --verify --strict --deep --verbose=2 "$app"
+          info=$(codesign --display --verbose=2 "$app" 2>&1)
+          grep -E '^(Identifier=|Format=|CodeDirectory |Authority=|Timestamp=|TeamIdentifier=)' <<< "$info"
+          grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::the app: no hardened runtime"; exit 1; }
+          grep -q '^Timestamp=' <<< "$info" || { echo "::error::the app: no secure timestamp"; exit 1; }
+          dmg="$RUNNER_TEMP/out/$DMG_NAME"
+          retry hdiutil create -volname "$vol" -srcfolder "$stage" -fs HFS+ -format UDZO -ov "$dmg"
+          retry codesign --force --timestamp --keychain "$KEYCHAIN" --sign "$SIGN_IDENTITY" "$dmg"
+          codesign --verify --strict --verbose=2 "$dmg"
+
       - name: Notarize and staple the disk images
         id: notarize
         if: inputs.notarize
@@ -238,8 +334,10 @@ jobs:
           set -euo pipefail
           retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
           summary=""
-          for t in aarch64-apple-darwin x86_64-apple-darwin; do
-            dmg="$RUNNER_TEMP/out/validator-$VERSION-$t.dmg"
+          shopt -s nullglob
+          dmgs=("$RUNNER_TEMP"/out/*.dmg)
+          [ "${#dmgs[@]}" -ge 1 ] || { echo "::error::no disk image to notarize"; exit 1; }
+          for dmg in "${dmgs[@]}"; do
             name=$(basename "$dmg")
             echo "== $name"
             rc=0
@@ -253,8 +351,8 @@ jobs:
             status=$(jq -r '.status // empty' "$RUNNER_TEMP/notary.json" 2> /dev/null || true)
             if [ -n "$id" ]; then
               if xcrun notarytool log "$id" --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
-                --team-id "$APPLE_TEAM_ID" "$RUNNER_TEMP/notary-log-$t.json" > /dev/null; then
-                jq '{status, statusSummary, statusCode, issues}' "$RUNNER_TEMP/notary-log-$t.json"
+                --team-id "$APPLE_TEAM_ID" "$RUNNER_TEMP/notary-log-$name.json" > /dev/null; then
+                jq '{status, statusSummary, statusCode, issues}' "$RUNNER_TEMP/notary-log-$name.json"
               fi
             fi
             if [ "$rc" != 0 ] || [ "$status" != Accepted ]; then
@@ -268,6 +366,7 @@ jobs:
           { echo "notary<<NOTARY_EOF"; printf '%s' "$summary"; echo "NOTARY_EOF"; } >> "$GITHUB_OUTPUT"
 
       - name: Verify (spctl, codesign --verify --strict, each disk image holds its signed binary)
+        if: inputs.kind != 'installers'
         env:
           NOTARIZE: ${{ inputs.notarize }}
         run: |
@@ -299,6 +398,44 @@ jobs:
             codesign --verify --strict --verbose=2 "$m/validator"
             hdiutil detach "$m" > /dev/null || hdiutil detach -force "$m" > /dev/null
           done
+
+      - name: "Installers: verify (spctl on the disk image and on the app in it, codesign --verify --strict --deep)"
+        if: inputs.kind == 'installers'
+        env:
+          NOTARIZE: ${{ inputs.notarize }}
+        run: |
+          set -euo pipefail
+          dmg="$RUNNER_TEMP/out/$DMG_NAME"
+          echo "== $DMG_NAME"
+          if [ "$NOTARIZE" = true ]; then
+            out=$(spctl -a -vv -t open --context context:primary-signature "$dmg" 2>&1) || { echo "$out"; echo "::error::spctl rejected $DMG_NAME"; exit 1; }
+            echo "$out"
+            grep -q 'source=Notarized Developer ID' <<< "$out" || { echo "::error::$DMG_NAME is not accepted as notarized"; exit 1; }
+            xcrun stapler validate "$dmg"
+          else
+            echo "::warning::$DMG_NAME is codesigned but not notarized (notarize=false)"
+          fi
+          codesign --verify --strict --verbose=2 "$dmg"
+          m="$RUNNER_TEMP/mnt-out"
+          hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$m" "$dmg" > /dev/null
+          ls -la "$m"
+          app="$m/$APP_NAME"
+          echo "== $APP_NAME"
+          codesign --verify --strict --deep --verbose=2 "$app"
+          if [ "$NOTARIZE" = true ]; then
+            # Gatekeeper's verdict on the app as a person opens it; the app's
+            # notarization is looked up online (the ticket is stapled to the
+            # disk image, not to the app).
+            ok=""
+            for n in 1 2 3 4 5; do
+              if out=$(spctl -a -vv -t exec "$app" 2>&1) && grep -q 'source=Notarized Developer ID' <<< "$out"; then ok=1; break; fi
+              echo "attempt $n: $out"
+              sleep 20
+            done
+            echo "$out"
+            [ -n "$ok" ] || { echo "::error::Gatekeeper does not accept $APP_NAME as notarized"; exit 1; }
+          fi
+          hdiutil detach "$m" > /dev/null || hdiutil detach -force "$m" > /dev/null
 
       - name: SHA-256 of the signed files, and encrypt them to recipient_cert
         id: encrypt
@@ -345,6 +482,7 @@ jobs:
       - name: Fetch the bundle and check its SHA-256 (before anything else)
         run: |
           if ($env:VERSION -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') { throw 'version is not like 1.2.3 or 1.2.3-rc.1' }
+          if ($env:KIND -cnotmatch '^(binaries|installers)$') { throw 'kind is binaries or installers' }
           $want = $env:BUNDLE_SHA256.ToLowerInvariant()
           if ($want -cnotmatch '^[0-9a-f]{64}$') { throw 'bundle_sha256 is not 64 hex digits' }
           $url = (Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH | ConvertFrom-Json).inputs.bundle_url
@@ -380,7 +518,8 @@ jobs:
           try {
             foreach ($e in $zip.Entries) {
               $n = $e.FullName
-              if ($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$') {
+              # kind installers: the .msi files only (their validator.exe was signed by a binaries run).
+              if (($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -and $env:KIND -ne 'installers') -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$') {
                 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path $out $e.Name), $false)
                 Write-Output "to sign: $n"
               } elseif (-not $n.EndsWith('/')) {
@@ -388,15 +527,19 @@ jobs:
               }
             }
           } finally { $zip.Dispose() }
-          $exe = Join-Path $out 'validator.exe'
-          if (-not (Test-Path -LiteralPath $exe)) { throw 'the bundle has no x86_64-pc-windows-msvc/validator.exe' }
-          $h = New-Object byte[] 4096
-          $fs = [System.IO.File]::OpenRead($exe)
-          try { [void]$fs.Read($h, 0, $h.Length) } finally { $fs.Dispose() }
-          $pe = [BitConverter]::ToInt32($h, 0x3C)
-          $isPe = $h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090
-          if (-not $isPe -or [BitConverter]::ToUInt32($h, $pe) -ne 0x00004550 -or [BitConverter]::ToUInt16($h, $pe + 4) -ne 0x8664) {
-            throw 'validator.exe is not an x86-64 Windows program'
+          if ($env:KIND -eq 'installers') {
+            if (@(Get-ChildItem -LiteralPath $out -Filter *.msi).Count -lt 1) { throw 'an installers bundle holds at least one x86_64-pc-windows-msvc/<name>.msi' }
+          } else {
+            $exe = Join-Path $out 'validator.exe'
+            if (-not (Test-Path -LiteralPath $exe)) { throw 'the bundle has no x86_64-pc-windows-msvc/validator.exe' }
+            $h = New-Object byte[] 4096
+            $fs = [System.IO.File]::OpenRead($exe)
+            try { [void]$fs.Read($h, 0, $h.Length) } finally { $fs.Dispose() }
+            $pe = [BitConverter]::ToInt32($h, 0x3C)
+            $isPe = $h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090
+            if (-not $isPe -or [BitConverter]::ToUInt32($h, $pe) -ne 0x00004550 -or [BitConverter]::ToUInt16($h, $pe + 4) -ne 0x8664) {
+              throw 'validator.exe is not an x86-64 Windows program'
+            }
           }
           foreach ($m in Get-ChildItem -LiteralPath $out -Filter *.msi) {
             $b = New-Object byte[] 8
@@ -499,6 +642,9 @@ jobs:
           WINDOWS_SUMS: ${{ needs.windows.outputs.sums }}
           NOTARY: ${{ needs.macos.outputs.notary }}
           AUTHENTICODE: ${{ needs.windows.outputs.authenticode }}
+          # Also set for the whole workflow; named here because the checks below depend on them.
+          VERSION: ${{ inputs.version }}
+          KIND: ${{ inputs.kind || 'binaries' }}
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/sums"
@@ -508,14 +654,19 @@ jobs:
             echo "::error::a malformed line in SHA256SUMS (above)"
             exit 1
           fi
-          for f in aarch64-apple-darwin/validator x86_64-apple-darwin/validator \
-            "validator-$VERSION-aarch64-apple-darwin.dmg" "validator-$VERSION-x86_64-apple-darwin.dmg" \
-            x86_64-pc-windows-msvc/validator.exe; do
-            cut -c67- "$s" | grep -qxF "$f" || { echo "::error::SHA256SUMS does not list $f"; exit 1; }
-          done
+          if [ "$KIND" = installers ]; then
+            cut -c67- "$s" | grep -qE '^[^/]+\.dmg$' || { echo "::error::SHA256SUMS lists no disk image"; exit 1; }
+            cut -c67- "$s" | grep -qE '^x86_64-pc-windows-msvc/[^/]+\.msi$' || { echo "::error::SHA256SUMS lists no .msi"; exit 1; }
+          else
+            for f in aarch64-apple-darwin/validator x86_64-apple-darwin/validator \
+              "validator-$VERSION-aarch64-apple-darwin.dmg" "validator-$VERSION-x86_64-apple-darwin.dmg" \
+              x86_64-pc-windows-msvc/validator.exe; do
+              cut -c67- "$s" | grep -qxF "$f" || { echo "::error::SHA256SUMS does not list $f"; exit 1; }
+            done
+          fi
           cat "$s"
           {
-            echo "### validator $VERSION, signed"
+            echo "### validator $VERSION, signed ($KIND)"
             echo
             echo '```'
             cat "$s"
