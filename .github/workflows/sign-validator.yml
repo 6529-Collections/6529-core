@@ -1,0 +1,534 @@
+# Signs the 6529 validator's macOS and Windows release files with 6529's
+# signing identities: the Developer ID certificate and Apple notarization of
+# build-mac.yml, and the Azure Key Vault certificate of sign-windows.yml.
+#
+# Why here: those identities live only in this repository's secrets. The
+# validator (a command-line program with a local web UI) is built and checked
+# in its own repository; only the signing happens here. The owner asked for
+# this workflow on 2026-10-31.
+#
+# Started by hand only (workflow_dispatch):
+#   version         the validator's version, for example 0.1.0 (names the results)
+#   bundle_url      an HTTPS link (a pre-signed URL) to a zip of the unsigned files:
+#                     aarch64-apple-darwin/validator
+#                     x86_64-apple-darwin/validator
+#                     x86_64-pc-windows-msvc/validator.exe
+#                     x86_64-pc-windows-msvc/<name>.msi    (optional, any number)
+#                   other entries (such as build-info.json) are listed and ignored.
+#                   The link is masked in the logs.
+#   bundle_sha256   the zip's SHA-256, checked before anything else
+#   recipient_cert  a PEM X.509 certificate with an RSA key. The signed files
+#                   are encrypted to it, because this repository is public, and
+#                   so are its logs and run artifacts
+#   notarize        false to codesign without notarizing (default true)
+#
+# macOS (macos-latest): the certificate is imported as build-mac.yml imports
+# it, into a throwaway keychain that is deleted at the end. Each binary is
+# codesigned (hardened runtime, secure timestamp) and put with a README into
+# one .dmg per architecture. Each .dmg is codesigned, notarized (notarytool)
+# and stapled, then checked with spctl and codesign --verify --strict.
+# Windows (windows-latest): AzureSignTool 6.0.1 signs each .exe and .msi with
+# the flags of scripts/windows-sign-hook.cjs (sha256, RFC 3161 timestamp), and
+# Get-AuthenticodeSignature checks each one.
+#
+# Results, kept 14 days as this run's artifacts:
+#   validator-<version>-macos-signed     a .tar of the signed files, encrypted
+#                                        to recipient_cert (.tar.p7m)
+#   validator-<version>-windows-signed   the same for Windows
+#   validator-<version>-SHA256SUMS       the SHA-256 of every signed file
+# To decrypt:
+#   openssl smime -decrypt -binary -inform DER -in <file>.tar.p7m -inkey <key> -out <file>.tar
+#
+# It publishes nothing: no release, no tag, no upload to the desktop app's
+# distribution, and no notifications. Secrets reach only the steps that use
+# them and are never printed. The files it signs are never run here: a
+# compromised build must not run where the signing secrets are.
+#
+# Trust: whoever starts it chooses what 6529's identities sign. That takes
+# write access to this repository, which already reaches these secrets
+# through the other workflows. bundle_sha256 protects the transfer, not the
+# provenance: the operator takes the bundle from the validator repository's
+# release workflow (its build artifacts, checked against their
+# build-info.json) and runs the signed programs after this run.
+
+name: Sign validator
+
+run-name: Sign validator ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Validator version, for example 0.1.0"
+        required: true
+        type: string
+      bundle_url:
+        description: "HTTPS link to the zip of unsigned files (masked in the logs)"
+        required: true
+        type: string
+      bundle_sha256:
+        description: "SHA-256 of the zip"
+        required: true
+        type: string
+      recipient_cert:
+        description: "PEM certificate (RSA) the signed files are encrypted to"
+        required: true
+        type: string
+      notarize:
+        description: "Notarize and staple the macOS disk images"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sign-validator
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version }}
+  BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
+
+jobs:
+  macos:
+    name: macOS (codesign, notarize, staple)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      sums: ${{ steps.encrypt.outputs.sums }}
+      notary: ${{ steps.notarize.outputs.notary }}
+    steps:
+      - name: Fetch the bundle and check its SHA-256 (before anything else)
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::version is not like 1.2.3 or 1.2.3-rc.1"; exit 1; }
+          want=$(printf '%s' "$BUNDLE_SHA256" | tr 'A-F' 'a-f')
+          [[ "$want" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bundle_sha256 is not 64 hex digits"; exit 1; }
+          url=$(jq -r '.inputs.bundle_url' "$GITHUB_EVENT_PATH")
+          echo "::add-mask::$(printf '%s' "$url" | sed 's/%/%25/g')"
+          [[ "$url" == https://* ]] || { echo "::error::bundle_url is not an https:// link"; exit 1; }
+          curl --proto '=https' --tlsv1.2 -fsS --retry 3 --retry-all-errors -o "$RUNNER_TEMP/bundle.zip" "$url"
+          got=$(shasum -a 256 "$RUNNER_TEMP/bundle.zip" | cut -d' ' -f1)
+          if [ "$got" != "$want" ]; then
+            echo "::error::the bundle's SHA-256 is $got, expected $want"
+            exit 1
+          fi
+          echo "bundle: $(stat -f %z "$RUNNER_TEMP/bundle.zip") bytes, SHA-256 $got, as expected"
+
+      - name: Check recipient_cert
+        env:
+          RECIPIENT_CERT: ${{ inputs.recipient_cert }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          printf '%s\n' "$RECIPIENT_CERT" > recipient.pem
+          openssl version
+          openssl x509 -in recipient.pem -noout -subject -enddate
+          text=$(openssl x509 -in recipient.pem -noout -text)
+          grep -q rsaEncryption <<< "$text" || { echo "::error::recipient_cert does not hold an RSA key"; exit 1; }
+          openssl x509 -in recipient.pem -noout -checkend 3600 > /dev/null || { echo "::error::recipient_cert expires within the hour"; exit 1; }
+
+      - name: Take the macOS binaries out of the bundle
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          unzip -Z1 bundle.zip > entries.txt
+          for t in aarch64-apple-darwin x86_64-apple-darwin; do
+            grep -qxF "$t/validator" entries.txt || { echo "::error::the bundle has no $t/validator"; exit 1; }
+            mkdir -p "out/$t"
+            unzip -p bundle.zip "$t/validator" > "out/$t/validator"
+            chmod 0755 "out/$t/validator"
+            echo "to sign: $t/validator"
+          done
+          grep -vxE '(aarch64|x86_64)-apple-darwin/validator' entries.txt | grep -v '/$' | sed 's/^/ignored here: /' || true
+          [ "$(lipo -archs out/aarch64-apple-darwin/validator)" = arm64 ] || { echo "::error::aarch64-apple-darwin/validator is not an arm64 program"; exit 1; }
+          [ "$(lipo -archs out/x86_64-apple-darwin/validator)" = x86_64 ] || { echo "::error::x86_64-apple-darwin/validator is not an x86_64 program"; exit 1; }
+
+      - name: Import the Developer ID certificate into a throwaway keychain (as build-mac.yml)
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/sign-validator.keychain-db"
+          p12="$RUNNER_TEMP/signing_certificate.p12"
+          trap 'rm -f "$p12"' EXIT
+          kpass=$(openssl rand -hex 24)
+          echo "::add-mask::$kpass"
+          printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$p12"
+          security create-keychain -p "$kpass" "$keychain"
+          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          security set-keychain-settings -lut 7200 "$keychain"
+          security default-keychain -s "$keychain"
+          security unlock-keychain -p "$kpass" "$keychain"
+          security import "$p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kpass" "$keychain" > /dev/null
+          # shellcheck disable=SC2046 # the search list, one keychain per word
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          ids=$(security find-identity -v -p codesigning "$keychain")
+          echo "$ids"
+          id=$(awk '/"Developer ID Application: / { print $2; exit }' <<< "$ids")
+          [ -n "$id" ] || { echo "::error::the certificate holds no Developer ID Application identity"; exit 1; }
+          echo "SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
+
+      - name: Codesign the binaries (hardened runtime, secure timestamp)
+        run: |
+          set -euo pipefail
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
+          for t in aarch64-apple-darwin x86_64-apple-darwin; do
+            b="$RUNNER_TEMP/out/$t/validator"
+            echo "== $t/validator"
+            retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" \
+              --identifier io.6529.validator --sign "$SIGN_IDENTITY" "$b"
+            codesign --verify --strict --verbose=2 "$b"
+            info=$(codesign --display --verbose=2 "$b" 2>&1)
+            grep -E '^(Identifier=|Format=|CodeDirectory |Authority=|Timestamp=|TeamIdentifier=)' <<< "$info"
+            grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$t/validator: no hardened runtime"; exit 1; }
+            grep -q '^Timestamp=' <<< "$info" || { echo "::error::$t/validator: no secure timestamp"; exit 1; }
+          done
+
+      - name: One disk image per architecture, with a README, codesigned
+        env:
+          NOTARIZE: ${{ inputs.notarize }}
+        run: |
+          set -euo pipefail
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
+          signed="signed with 6529's Developer ID"
+          [ "$NOTARIZE" = true ] && signed="$signed and notarized by Apple"
+          for t in aarch64-apple-darwin x86_64-apple-darwin; do
+            case "$t" in aarch64-*) arch="Apple silicon" ;; *) arch="Intel" ;; esac
+            stage="$RUNNER_TEMP/dmg/$t"
+            mkdir -p "$stage"
+            cp -p "$RUNNER_TEMP/out/$t/validator" "$stage/validator"
+            printf '%s\n' \
+              "6529 validator $VERSION for macOS ($arch)" \
+              "" \
+              "  validator    the program, $signed" \
+              "  README.txt   this file" \
+              "" \
+              "To install it, copy the program onto your PATH, for example:" \
+              "" \
+              "  sudo mkdir -p /usr/local/bin" \
+              "  sudo install -m 0755 \"/Volumes/6529 validator $VERSION/validator\" /usr/local/bin/validator" \
+              "  validator --help" \
+              "" \
+              "The install guide and how to check a download are in docs/install/ of the" \
+              "release (start with docs/install/README.md)." \
+              "One key, one machine: never run the same validator key on two machines." \
+              "6529 will never DM you or ask for a seed phrase." > "$stage/README.txt"
+            dmg="$RUNNER_TEMP/out/validator-$VERSION-$t.dmg"
+            retry hdiutil create -volname "6529 validator $VERSION" -srcfolder "$stage" -fs HFS+ -format UDZO -ov "$dmg"
+            retry codesign --force --timestamp --keychain "$KEYCHAIN" --sign "$SIGN_IDENTITY" "$dmg"
+            codesign --verify --strict --verbose=2 "$dmg"
+          done
+
+      - name: Notarize and staple the disk images
+        id: notarize
+        if: inputs.notarize
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
+          summary=""
+          for t in aarch64-apple-darwin x86_64-apple-darwin; do
+            dmg="$RUNNER_TEMP/out/validator-$VERSION-$t.dmg"
+            name=$(basename "$dmg")
+            echo "== $name"
+            rc=0
+            xcrun notarytool submit "$dmg" --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" --wait --timeout 1h --output-format json \
+              > "$RUNNER_TEMP/notary.json" 2> "$RUNNER_TEMP/notary.err" || rc=$?
+            cat "$RUNNER_TEMP/notary.err" >&2 || true
+            cat "$RUNNER_TEMP/notary.json" || true
+            echo
+            id=$(jq -r '.id // empty' "$RUNNER_TEMP/notary.json" 2> /dev/null || true)
+            status=$(jq -r '.status // empty' "$RUNNER_TEMP/notary.json" 2> /dev/null || true)
+            if [ -n "$id" ]; then
+              if xcrun notarytool log "$id" --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+                --team-id "$APPLE_TEAM_ID" "$RUNNER_TEMP/notary-log-$t.json" > /dev/null; then
+                jq '{status, statusSummary, statusCode, issues}' "$RUNNER_TEMP/notary-log-$t.json"
+              fi
+            fi
+            if [ "$rc" != 0 ] || [ "$status" != Accepted ]; then
+              echo "::error::notarization of $name: ${status:-no result} (notarytool exit $rc). The messages above say why."
+              exit 1
+            fi
+            echo "$name: Accepted by the notary service (submission $id), stapling the ticket"
+            retry xcrun stapler staple "$dmg"
+            summary+="$name: notarized (submission $id), ticket stapled"$'\n'
+          done
+          { echo "notary<<NOTARY_EOF"; printf '%s' "$summary"; echo "NOTARY_EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: Verify (spctl, codesign --verify --strict, each disk image holds its signed binary)
+        env:
+          NOTARIZE: ${{ inputs.notarize }}
+        run: |
+          set -euo pipefail
+          for t in aarch64-apple-darwin x86_64-apple-darwin; do
+            b="$RUNNER_TEMP/out/$t/validator"
+            dmg="$RUNNER_TEMP/out/validator-$VERSION-$t.dmg"
+            echo "== $(basename "$dmg")"
+            if [ "$NOTARIZE" = true ]; then
+              out=$(spctl -a -vv -t open --context context:primary-signature "$dmg" 2>&1) || { echo "$out"; echo "::error::spctl rejected $(basename "$dmg")"; exit 1; }
+              echo "$out"
+              grep -q 'source=Notarized Developer ID' <<< "$out" || { echo "::error::$(basename "$dmg") is not accepted as notarized"; exit 1; }
+              xcrun stapler validate "$dmg"
+            else
+              echo "::warning::$(basename "$dmg") is codesigned but not notarized (notarize=false)"
+            fi
+            codesign --verify --strict --verbose=2 "$dmg"
+            echo "== $t/validator"
+            codesign --verify --strict --verbose=2 "$b"
+            if [ "$NOTARIZE" = true ]; then
+              # Informational, never fatal: Apple's online record of the binary,
+              # notarized inside its .dmg (a bare binary cannot be stapled).
+              codesign --verify --verbose=2 -R='notarized' --check-notarization "$b" 2>&1 || echo "(no online notarization record found for $t/validator)"
+            fi
+            m="$RUNNER_TEMP/mnt-$t"
+            hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$m" "$dmg" > /dev/null
+            ls -l "$m"
+            cmp "$m/validator" "$b"
+            codesign --verify --strict --verbose=2 "$m/validator"
+            hdiutil detach "$m" > /dev/null || hdiutil detach -force "$m" > /dev/null
+          done
+
+      - name: SHA-256 of the signed files, and encrypt them to recipient_cert
+        id: encrypt
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/out"
+          find . -type f | sed 's|^\./||' | LC_ALL=C sort | while IFS= read -r f; do shasum -a 256 "$f"; done > ../macos.sums
+          cat ../macos.sums
+          { echo "sums<<SUMS_EOF"; cat ../macos.sums; echo "SUMS_EOF"; } >> "$GITHUB_OUTPUT"
+          tarball="../validator-$VERSION-macos-signed.tar"
+          COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -cf "$tarball" ./*
+          mkdir -p ../upload
+          openssl smime -encrypt -binary -aes256 -outform DER -in "$tarball" \
+            -out "../upload/validator-$VERSION-macos-signed.tar.p7m" ../recipient.pem
+          rm -f "$tarball"
+          ls -l ../upload
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: validator-${{ inputs.version }}-macos-signed
+          path: ${{ runner.temp }}/upload/validator-${{ inputs.version }}-macos-signed.tar.p7m
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Delete the keychain
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN:-}" ]; then security delete-keychain "$KEYCHAIN" || true; fi
+          security default-keychain -s login.keychain || true
+          rm -f "$RUNNER_TEMP/signing_certificate.p12"
+
+  windows:
+    name: Windows (AzureSignTool)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      sums: ${{ steps.encrypt.outputs.sums }}
+      authenticode: ${{ steps.verify.outputs.authenticode }}
+    steps:
+      - name: Fetch the bundle and check its SHA-256 (before anything else)
+        run: |
+          if ($env:VERSION -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') { throw 'version is not like 1.2.3 or 1.2.3-rc.1' }
+          $want = $env:BUNDLE_SHA256.ToLowerInvariant()
+          if ($want -cnotmatch '^[0-9a-f]{64}$') { throw 'bundle_sha256 is not 64 hex digits' }
+          $url = (Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH | ConvertFrom-Json).inputs.bundle_url
+          Write-Output "::add-mask::$($url.Replace('%', '%25'))"
+          if (-not $url.StartsWith('https://')) { throw 'bundle_url is not an https:// link' }
+          $zip = Join-Path $env:RUNNER_TEMP 'bundle.zip'
+          & curl.exe --proto '=https' --tlsv1.2 -fsS --retry 3 --retry-all-errors -o $zip $url
+          if ($LASTEXITCODE -ne 0) { throw "the download failed (curl exit $LASTEXITCODE)" }
+          $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+          if ($got -ne $want) { throw "the bundle's SHA-256 is $got, expected $want" }
+          Write-Output "bundle: $((Get-Item -LiteralPath $zip).Length) bytes, SHA-256 $got, as expected"
+
+      - name: Check recipient_cert
+        shell: bash
+        env:
+          RECIPIENT_CERT: ${{ inputs.recipient_cert }}
+        run: |
+          set -euo pipefail
+          cd "$(cygpath -u "$RUNNER_TEMP")"
+          printf '%s\n' "$RECIPIENT_CERT" > recipient.pem
+          openssl version
+          openssl x509 -in recipient.pem -noout -subject -enddate
+          text=$(openssl x509 -in recipient.pem -noout -text)
+          grep -q rsaEncryption <<< "$text" || { echo "::error::recipient_cert does not hold an RSA key"; exit 1; }
+          openssl x509 -in recipient.pem -noout -checkend 3600 > /dev/null || { echo "::error::recipient_cert expires within the hour"; exit 1; }
+
+      - name: Take the Windows files out of the bundle
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $out = Join-Path $env:RUNNER_TEMP 'out\x86_64-pc-windows-msvc'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          $zip = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $env:RUNNER_TEMP 'bundle.zip'))
+          try {
+            foreach ($e in $zip.Entries) {
+              $n = $e.FullName
+              if ($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$') {
+                [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path $out $e.Name), $false)
+                Write-Output "to sign: $n"
+              } elseif (-not $n.EndsWith('/')) {
+                Write-Output "ignored here: $n"
+              }
+            }
+          } finally { $zip.Dispose() }
+          $exe = Join-Path $out 'validator.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw 'the bundle has no x86_64-pc-windows-msvc/validator.exe' }
+          $h = New-Object byte[] 4096
+          $fs = [System.IO.File]::OpenRead($exe)
+          try { [void]$fs.Read($h, 0, $h.Length) } finally { $fs.Dispose() }
+          $pe = [BitConverter]::ToInt32($h, 0x3C)
+          $isPe = $h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090
+          if (-not $isPe -or [BitConverter]::ToUInt32($h, $pe) -ne 0x00004550 -or [BitConverter]::ToUInt16($h, $pe + 4) -ne 0x8664) {
+            throw 'validator.exe is not an x86-64 Windows program'
+          }
+          foreach ($m in Get-ChildItem -LiteralPath $out -Filter *.msi) {
+            $b = New-Object byte[] 8
+            $fs = [System.IO.File]::OpenRead($m.FullName)
+            try { [void]$fs.Read($b, 0, 8) } finally { $fs.Dispose() }
+            $magic = ($b | ForEach-Object { $_.ToString('x2') }) -join ''
+            if ($magic -ne 'd0cf11e0a1b11ae1') { throw "$($m.Name) is not an MSI package" }
+          }
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install AzureSignTool 6.0.1 (as sign-windows.yml)
+        run: |
+          dotnet tool install --global AzureSignTool --version 6.0.1
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+
+      - name: Sign each .exe and .msi (Azure Key Vault certificate, sha256, RFC 3161 timestamp)
+        env:
+          AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          CERT_NAME: ${{ secrets.CERT_NAME }}
+        run: |
+          # The flags of scripts/windows-sign-hook.cjs, passed as a list.
+          $common = @(
+            'sign',
+            '--azure-key-vault-url', $env:AZURE_KEY_VAULT_URL,
+            '--azure-key-vault-client-id', $env:AZURE_CLIENT_ID,
+            '--azure-key-vault-client-secret', $env:AZURE_CLIENT_SECRET,
+            '--azure-key-vault-tenant-id', $env:AZURE_TENANT_ID,
+            '--azure-key-vault-certificate', $env:CERT_NAME,
+            '--file-digest', 'sha256',
+            '--timestamp-rfc3161', 'http://timestamp.digicert.com',
+            '--timestamp-digest', 'sha256'
+          )
+          $files = @(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'out') -Recurse -File | Where-Object { $_.Extension -in '.exe', '.msi' } | Sort-Object FullName)
+          foreach ($f in $files) {
+            Write-Output "== $($f.Name)"
+            & azuresigntool @common $f.FullName
+            if ($LASTEXITCODE -ne 0) { throw "AzureSignTool failed on $($f.Name) (exit $LASTEXITCODE)" }
+          }
+
+      - name: Verify (Get-AuthenticodeSignature)
+        id: verify
+        run: |
+          $files = @(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'out') -Recurse -File | Where-Object { $_.Extension -in '.exe', '.msi' } | Sort-Object FullName)
+          $lines = @()
+          foreach ($f in $files) {
+            $s = Get-AuthenticodeSignature -LiteralPath $f.FullName
+            Write-Output ('{0}: {1} ({2})' -f $f.Name, $s.Status, $s.StatusMessage)
+            Write-Output ('  signer:     {0}' -f $s.SignerCertificate.Subject)
+            Write-Output ('  issuer:     {0}' -f $s.SignerCertificate.Issuer)
+            Write-Output ('  thumbprint: {0}' -f $s.SignerCertificate.Thumbprint)
+            Write-Output ('  timestamp:  {0}' -f $s.TimeStamperCertificate.Subject)
+            if ($s.Status -ne 'Valid') { throw "$($f.Name): the signature is $($s.Status)" }
+            if ($null -eq $s.TimeStamperCertificate) { throw "$($f.Name): the signature has no timestamp" }
+            $lines += "$($f.Name): Authenticode Valid, timestamped, signer $($s.SignerCertificate.Subject)"
+          }
+          "authenticode<<AUTH_EOF`n$($lines -join "`n")`nAUTH_EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
+      - name: SHA-256 of the signed files, and encrypt them to recipient_cert
+        id: encrypt
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$(cygpath -u "$RUNNER_TEMP")/out"
+          find . -type f | sed 's|^\./||' | LC_ALL=C sort | while IFS= read -r f; do
+            printf '%s  %s\n' "$(sha256sum -b "$f" | cut -d' ' -f1)" "$f"
+          done > ../windows.sums
+          cat ../windows.sums
+          { echo "sums<<SUMS_EOF"; cat ../windows.sums; echo "SUMS_EOF"; } >> "$GITHUB_OUTPUT"
+          tarball="../validator-$VERSION-windows-signed.tar"
+          tar -cf "$tarball" ./*
+          mkdir -p ../upload
+          openssl smime -encrypt -binary -aes256 -outform DER -in "$tarball" \
+            -out "../upload/validator-$VERSION-windows-signed.tar.p7m" ../recipient.pem
+          rm -f "$tarball"
+          ls -l ../upload
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: validator-${{ inputs.version }}-windows-signed
+          path: ${{ runner.temp }}/upload/validator-${{ inputs.version }}-windows-signed.tar.p7m
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+
+  sums:
+    name: SHA256SUMS
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: SHA256SUMS of every signed file
+        env:
+          MACOS_SUMS: ${{ needs.macos.outputs.sums }}
+          WINDOWS_SUMS: ${{ needs.windows.outputs.sums }}
+          NOTARY: ${{ needs.macos.outputs.notary }}
+          AUTHENTICODE: ${{ needs.windows.outputs.authenticode }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sums"
+          s="$RUNNER_TEMP/sums/SHA256SUMS"
+          printf '%s\n%s\n' "$MACOS_SUMS" "$WINDOWS_SUMS" | sed '/^$/d' | LC_ALL=C sort -k2 > "$s"
+          if grep -vE '^[0-9a-f]{64}  [A-Za-z0-9][A-Za-z0-9._/-]*$' "$s"; then
+            echo "::error::a malformed line in SHA256SUMS (above)"
+            exit 1
+          fi
+          for f in aarch64-apple-darwin/validator x86_64-apple-darwin/validator \
+            "validator-$VERSION-aarch64-apple-darwin.dmg" "validator-$VERSION-x86_64-apple-darwin.dmg" \
+            x86_64-pc-windows-msvc/validator.exe; do
+            cut -c67- "$s" | grep -qxF "$f" || { echo "::error::SHA256SUMS does not list $f"; exit 1; }
+          done
+          cat "$s"
+          {
+            echo "### validator $VERSION, signed"
+            echo
+            echo '```'
+            cat "$s"
+            echo '```'
+            echo
+            printf '%s\n%s\n' "$NOTARY" "$AUTHENTICODE" | sed '/^$/d; s/^/- /'
+            echo
+            echo "The signed files are this run's artifacts, encrypted to recipient_cert."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: validator-${{ inputs.version }}-SHA256SUMS
+          path: ${{ runner.temp }}/sums/SHA256SUMS
+          retention-days: 14
+          if-no-files-found: error
