@@ -28,6 +28,14 @@
 #                     macos/<name>.dmg                     one disk image holding one .app
 #                     x86_64-pc-windows-msvc/<name>.msi    one or more
 #                   and other entries are listed and ignored.
+#                   setup (Windows only): Setup.exe, the WiX Burn bundle the
+#                   release builds around a .msi an installers run signed:
+#                     x86_64-pc-windows-msvc/<name>.exe    one or more (not validator.exe)
+#                   Burn runs the installation from an elevated copy of its
+#                   engine, so the engine is signed on its own first: `wix
+#                   burn detach`, sign the engine, `wix burn reattach`, sign
+#                   the whole file (WiX 5.0.2). The results are each signed
+#                   Setup.exe and its signed engine, <name>.engine.exe.
 #
 # macOS (macos-latest): the certificate is imported as build-mac.yml imports
 # it, into a throwaway keychain that is deleted at the end.
@@ -93,12 +101,13 @@ on:
         type: boolean
         default: true
       kind:
-        description: "binaries: the bare programs; installers: a .dmg (one .app) and .msi files built from programs signed here"
+        description: "binaries: the bare programs; installers: a .dmg (one .app) and .msi files built from programs signed here; setup: Setup.exe (Burn) around a .msi signed here"
         required: false
         type: choice
         options:
           - binaries
           - installers
+          - setup
         default: binaries
 
 permissions:
@@ -116,6 +125,8 @@ env:
 jobs:
   macos:
     name: macOS (codesign, notarize, staple)
+    # kind setup is Windows only.
+    if: inputs.kind != 'setup'
     runs-on: macos-latest
     timeout-minutes: 90
     defaults:
@@ -129,7 +140,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::version is not like 1.2.3 or 1.2.3-rc.1"; exit 1; }
-          [[ "$KIND" =~ ^(binaries|installers)$ ]] || { echo "::error::kind is binaries or installers"; exit 1; }
+          [[ "$KIND" =~ ^(binaries|installers)$ ]] || { echo "::error::kind is binaries or installers (setup has no macOS job)"; exit 1; }
           want=$(printf '%s' "$BUNDLE_SHA256" | tr 'A-F' 'a-f')
           [[ "$want" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bundle_sha256 is not 64 hex digits"; exit 1; }
           url=$(jq -r '.inputs.bundle_url' "$GITHUB_EVENT_PATH")
@@ -482,7 +493,7 @@ jobs:
       - name: Fetch the bundle and check its SHA-256 (before anything else)
         run: |
           if ($env:VERSION -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') { throw 'version is not like 1.2.3 or 1.2.3-rc.1' }
-          if ($env:KIND -cnotmatch '^(binaries|installers)$') { throw 'kind is binaries or installers' }
+          if ($env:KIND -cnotmatch '^(binaries|installers|setup)$') { throw 'kind is binaries, installers or setup' }
           $want = $env:BUNDLE_SHA256.ToLowerInvariant()
           if ($want -cnotmatch '^[0-9a-f]{64}$') { throw 'bundle_sha256 is not 64 hex digits' }
           $url = (Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH | ConvertFrom-Json).inputs.bundle_url
@@ -518,8 +529,14 @@ jobs:
           try {
             foreach ($e in $zip.Entries) {
               $n = $e.FullName
-              # kind installers: the .msi files only (their validator.exe was signed by a binaries run).
-              if (($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -and $env:KIND -ne 'installers') -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$') {
+              if ($env:KIND -eq 'setup') {
+                # kind setup: the Setup.exe bundles only (their .msi was signed by an installers run).
+                $take = $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.exe$' -and $n -cne 'x86_64-pc-windows-msvc/validator.exe' -and -not $n.EndsWith('.engine.exe')
+              } else {
+                # kind installers: the .msi files only (their validator.exe was signed by a binaries run).
+                $take = ($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -and $env:KIND -ne 'installers') -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$'
+              }
+              if ($take) {
                 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path $out $e.Name), $false)
                 Write-Output "to sign: $n"
               } elseif (-not $n.EndsWith('/')) {
@@ -527,7 +544,19 @@ jobs:
               }
             }
           } finally { $zip.Dispose() }
-          if ($env:KIND -eq 'installers') {
+          if ($env:KIND -eq 'setup') {
+            $setups = @(Get-ChildItem -LiteralPath $out -Filter *.exe)
+            if ($setups.Count -lt 1) { throw 'a setup bundle holds at least one x86_64-pc-windows-msvc/<name>.exe' }
+            foreach ($s in $setups) {
+              $h = New-Object byte[] 4096
+              $fs = [System.IO.File]::OpenRead($s.FullName)
+              try { [void]$fs.Read($h, 0, $h.Length) } finally { $fs.Dispose() }
+              $pe = [BitConverter]::ToInt32($h, 0x3C)
+              if (-not ($h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090 -and [BitConverter]::ToUInt32($h, $pe) -eq 0x00004550)) {
+                throw "$($s.Name) is not a Windows program"
+              }
+            }
+          } elseif ($env:KIND -eq 'installers') {
             if (@(Get-ChildItem -LiteralPath $out -Filter *.msi).Count -lt 1) { throw 'an installers bundle holds at least one x86_64-pc-windows-msvc/<name>.msi' }
           } else {
             $exe = Join-Path $out 'validator.exe'
@@ -558,7 +587,55 @@ jobs:
           dotnet tool install --global AzureSignTool --version 6.0.1
           "$env:USERPROFILE\.dotnet\tools" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
 
+      - name: "Setup: WiX Toolset 5.0.2 (pinned), for wix burn detach and reattach"
+        if: inputs.kind == 'setup'
+        run: dotnet tool install --global wix --version 5.0.2
+
+      - name: "Setup: sign each Burn engine, put it back, then sign the whole file"
+        if: inputs.kind == 'setup'
+        env:
+          AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          CERT_NAME: ${{ secrets.CERT_NAME }}
+        run: |
+          # Burn runs the installation from an elevated copy of its engine, so
+          # the engine carries its own signature (the publisher UAC shows); the
+          # whole file is signed after the signed engine is put back.
+          $common = @(
+            'sign',
+            '--azure-key-vault-url', $env:AZURE_KEY_VAULT_URL,
+            '--azure-key-vault-client-id', $env:AZURE_CLIENT_ID,
+            '--azure-key-vault-client-secret', $env:AZURE_CLIENT_SECRET,
+            '--azure-key-vault-tenant-id', $env:AZURE_TENANT_ID,
+            '--azure-key-vault-certificate', $env:CERT_NAME,
+            '--file-digest', 'sha256',
+            '--timestamp-rfc3161', 'http://timestamp.digicert.com',
+            '--timestamp-digest', 'sha256'
+          )
+          $dir = Join-Path $env:RUNNER_TEMP 'out\x86_64-pc-windows-msvc'
+          $work = Join-Path $env:RUNNER_TEMP 'burn'
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter *.exe | Sort-Object Name)) {
+            $engine = Join-Path $dir ([IO.Path]::GetFileNameWithoutExtension($f.Name) + '.engine.exe')
+            $joined = Join-Path $work $f.Name
+            Write-Output "== $($f.Name): its engine"
+            & wix burn detach $f.FullName -engine $engine
+            if ($LASTEXITCODE -ne 0) { throw "wix burn detach failed on $($f.Name) (exit $LASTEXITCODE)" }
+            & azuresigntool @common $engine
+            if ($LASTEXITCODE -ne 0) { throw "AzureSignTool failed on the engine of $($f.Name) (exit $LASTEXITCODE)" }
+            Write-Output "== $($f.Name): the signed engine put back"
+            & wix burn reattach $f.FullName -engine $engine -o $joined
+            if ($LASTEXITCODE -ne 0) { throw "wix burn reattach failed on $($f.Name) (exit $LASTEXITCODE)" }
+            Move-Item -Force -LiteralPath $joined -Destination $f.FullName
+            Write-Output "== $($f.Name)"
+            & azuresigntool @common $f.FullName
+            if ($LASTEXITCODE -ne 0) { throw "AzureSignTool failed on $($f.Name) (exit $LASTEXITCODE)" }
+          }
+
       - name: Sign each .exe and .msi (Azure Key Vault certificate, sha256, RFC 3161 timestamp)
+        if: inputs.kind != 'setup'
         env:
           AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -601,6 +678,23 @@ jobs:
             if ($null -eq $s.TimeStamperCertificate) { throw "$($f.Name): the signature has no timestamp" }
             $lines += "$($f.Name): Authenticode Valid, timestamped, signer $($s.SignerCertificate.Subject)"
           }
+          if ($env:KIND -eq 'setup') {
+            # The engine Burn copies out of each signed Setup.exe and runs
+            # elevated: UAC names its signer as the publisher.
+            $dir = Join-Path $env:RUNNER_TEMP 'out\x86_64-pc-windows-msvc'
+            foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter *.exe | Where-Object { -not $_.Name.EndsWith('.engine.exe') } | Sort-Object Name)) {
+              $copy = Join-Path $env:RUNNER_TEMP ("check-" + [IO.Path]::GetFileNameWithoutExtension($f.Name) + '.engine.exe')
+              & wix burn detach $f.FullName -engine $copy
+              if ($LASTEXITCODE -ne 0) { throw "wix burn detach failed on the signed $($f.Name) (exit $LASTEXITCODE)" }
+              $s = Get-AuthenticodeSignature -LiteralPath $copy
+              $outer = (Get-AuthenticodeSignature -LiteralPath $f.FullName).SignerCertificate.Thumbprint
+              Write-Output ('{0}, its engine as Burn copies it: {1}, signer {2}' -f $f.Name, $s.Status, $s.SignerCertificate.Subject)
+              if ($s.Status -ne 'Valid' -or $s.SignerCertificate.Thumbprint -ne $outer) { throw "$($f.Name): the engine inside it is not signed like the file" }
+              $same = (Get-FileHash -LiteralPath $copy).Hash -eq (Get-FileHash -LiteralPath (Join-Path $dir ([IO.Path]::GetFileNameWithoutExtension($f.Name) + '.engine.exe'))).Hash
+              Write-Output "  the same bytes as the signed engine: $same"
+              $lines += "$($f.Name): its engine as Burn copies it is Authenticode Valid, signer $($s.SignerCertificate.Subject)"
+            }
+          }
           "authenticode<<AUTH_EOF`n$($lines -join "`n")`nAUTH_EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
       - name: SHA-256 of the signed files, and encrypt them to recipient_cert
@@ -633,6 +727,10 @@ jobs:
   sums:
     name: SHA256SUMS
     needs: [macos, windows]
+    # kind setup has no macOS job.
+    if: >-
+      always() && needs.windows.result == 'success'
+      && (needs.macos.result == 'success' || (inputs.kind == 'setup' && needs.macos.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -654,7 +752,13 @@ jobs:
             echo "::error::a malformed line in SHA256SUMS (above)"
             exit 1
           fi
-          if [ "$KIND" = installers ]; then
+          if [ "$KIND" = setup ]; then
+            setups=$(cut -c67- "$s" | grep -E '^x86_64-pc-windows-msvc/[^/]+\.exe$' | grep -v '\.engine\.exe$' || true)
+            [ -n "$setups" ] || { echo "::error::SHA256SUMS lists no Setup.exe"; exit 1; }
+            for f in $setups; do
+              cut -c67- "$s" | grep -qxF "${f%.exe}.engine.exe" || { echo "::error::SHA256SUMS lists no engine for $f"; exit 1; }
+            done
+          elif [ "$KIND" = installers ]; then
             cut -c67- "$s" | grep -qE '^[^/]+\.dmg$' || { echo "::error::SHA256SUMS lists no disk image"; exit 1; }
             cut -c67- "$s" | grep -qE '^x86_64-pc-windows-msvc/[^/]+\.msi$' || { echo "::error::SHA256SUMS lists no .msi"; exit 1; }
           else
