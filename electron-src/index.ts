@@ -113,6 +113,10 @@ import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import {
+  getDesktopNotificationOptions,
+  getNotificationNavigatePayload,
+} from "./desktop-notification";
+import {
   pinnedWindowNavigation,
   shouldOpenInExternalBrowser,
 } from "./navigation-policy";
@@ -2235,20 +2239,21 @@ ipcMain.on(
 
     shownNotifications.add(notificationKey);
 
-    const notification = new Notification({
-      title,
-      body,
-      icon: pfp,
-    });
+    const notification = new Notification(
+      getDesktopNotificationOptions({ title, body, icon: pfp }),
+    );
     notification.on("click", () => {
-      mainWindow?.webContents.send(
+      const window = mainWindow;
+      if (!window || window.isDestroyed()) {
+        return;
+      }
+      // Bring the app forward so the click visibly opens its target.
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+      window.webContents.send(
         "notification-navigate",
-        {
-          path: redirectPath || "/notifications",
-          targetAddress: navigationContext?.targetAddress ?? null,
-          targetProfileId: navigationContext?.targetProfileId ?? null,
-          targetProfileHandle: navigationContext?.targetProfileHandle ?? null,
-        },
+        getNotificationNavigatePayload(redirectPath, navigationContext),
       );
     });
     notification.show();
