@@ -11,6 +11,8 @@ import {
   requireSupportedSeedWalletChainId,
   type SeedWalletConnectionState,
 } from "./seedWalletConnectionState";
+import { signSeedWalletTypedData } from "./seedWalletTypedData";
+import { SIGN_TYPED_DATA_V4 } from "./typedDataRequest";
 
 export const SEED_WALLET_CONNECTOR_TYPE = "seed-wallet";
 
@@ -79,6 +81,15 @@ export function seedWalletConnector(parameters: {
       case "personal_sign": {
         const message = hexToString(params?.[0]);
         const signature = await wallet.signMessage(message);
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Message Signed!",
+        });
+        return signature;
+      }
+      case SIGN_TYPED_DATA_V4: {
+        // EIP-712: encrypted-messages and app device grants.
+        const signature = await signSeedWalletTypedData(wallet, params);
         window.seedConnector.showToast({
           type: "success",
           message: "Message Signed!",

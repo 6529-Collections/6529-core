@@ -29,6 +29,10 @@ import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import {
+  parseTypedDataRequest,
+  SIGN_TYPED_DATA_V4,
+} from "@/wagmiConfig/typedDataRequest";
+import {
   SEED_WALLET_REQUEST_BODY_CLASS,
   SEED_WALLET_REQUEST_DIALOG_CLASS,
   SEED_WALLET_REQUEST_FIXED_SECTION_CLASS,
@@ -189,6 +193,43 @@ export default function ConfirmSeedWalletRequest({
     return hexToString(param).replace(/^\n+/, "").split("\n");
   }
 
+  function formatTypedDataValue(value: unknown): string {
+    return typeof value === "string" ? value : JSON.stringify(value);
+  }
+
+  function printTypedData(request: SeedWalletRequest) {
+    let typedData: ReturnType<typeof parseTypedDataRequest>;
+    try {
+      typedData = parseTypedDataRequest(request.params);
+    } catch (error: unknown) {
+      return (
+        <code className="tw-block tw-break-all tw-pb-3 tw-pt-3 tw-text-red">
+          {error instanceof Error ? error.message : "Invalid typed data"}
+        </code>
+      );
+    }
+    const domainName =
+      typeof typedData.domain["name"] === "string"
+        ? typedData.domain["name"]
+        : "";
+    return (
+      <>
+        <span className="tw-block tw-pt-3">Typed data (EIP-712)</span>
+        <code className="tw-block tw-break-all tw-pb-3">
+          {domainName ? `${domainName}: ` : ""}
+          {typedData.primaryType}
+        </code>
+        {withStableKeys(Object.entries(typedData.message)).map(
+          ({ item: [name, value], key }) => (
+            <code key={key} className="tw-block tw-break-all tw-pb-1">
+              {name}: {formatTypedDataValue(value)}
+            </code>
+          )
+        )}
+      </>
+    );
+  }
+
   function printParams(request: SeedWalletRequest) {
     if (request.method === "personal_sign") {
       return (
@@ -272,6 +313,8 @@ export default function ConfirmSeedWalletRequest({
           )}
         </>
       );
+    } else if (request.method === SIGN_TYPED_DATA_V4) {
+      return printTypedData(request);
     } else {
       return withStableKeys(request?.params ?? []).map(
         ({ item: param, key }) => (
