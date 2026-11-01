@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const dotenv = require("dotenv");
 const { resolvePnpmCommand } = require("./helpers/pnpm-command.cjs");
+const { getDesktopFeatureFlags } = require("./helpers/desktop-feature-flags.cjs");
 
 const ROOT = path.resolve(__dirname, "..");
 const LIVE_BASE_ENDPOINT = "https://6529.io";
@@ -212,21 +213,19 @@ function getBuildEnvironment(commandConfig, backendTarget) {
           API_ENDPOINT: TEST_API_ENDPOINT,
           WS_ENDPOINT: TEST_WS_ENDPOINT,
           STAGING_API_KEY: stagingApiKey,
-          // Encrypted chats (D109) are staging-only for now.
-          NEXT_PUBLIC_E2EE_DM_ENABLED: "true",
         }
       : {
           BASE_ENDPOINT: LIVE_BASE_ENDPOINT,
           API_ENDPOINT: LIVE_API_ENDPOINT,
           WS_ENDPOINT: LIVE_WS_ENDPOINT,
           STAGING_API_KEY: "",
-          NEXT_PUBLIC_E2EE_DM_ENABLED: "",
         };
 
   return {
     ...process.env,
     ...commandConfig.env,
     ...endpointEnv,
+    ...getDesktopFeatureFlags(backendTarget),
     APP_ENVIRONMENT: commandConfig.appEnvironment,
     BACKEND_TARGET: backendTarget,
     CORE_SCHEME: getCoreScheme(commandConfig.appEnvironment),
@@ -297,10 +296,14 @@ function main() {
   run("node", ["scripts/archive-source-maps.cjs"], env);
 }
 
-try {
-  main();
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`[desktop-build-target] ${message}`);
-  process.exit(1);
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[desktop-build-target] ${message}`);
+    process.exit(1);
+  }
 }
+
+module.exports = { getBuildEnvironment };

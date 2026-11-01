@@ -53,7 +53,7 @@ export default function RootLayout({
   return (
     // Headless UI may add its focus-visible marker before React hydrates when
     // keyboard input arrives during startup. Keep that root-only mutation.
-    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang="en-US" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: SMALL_WEB_STARTUP_STYLES }} />
         <script

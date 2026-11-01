@@ -113,9 +113,14 @@ import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import {
+  getDesktopNotificationOptions,
+  getNotificationNavigatePayload,
+} from "./desktop-notification";
+import {
   pinnedWindowNavigation,
   shouldOpenInExternalBrowser,
 } from "./navigation-policy";
+import { RENDERER_PORT_STORE_KEY, resolveRendererPort } from "./renderer-port";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
 contextMenu({
@@ -1089,10 +1094,11 @@ const tails: TailInstances = {};
 
 async function resolvePorts() {
   if (!PORT) {
-    PORT = await getPort({
-      random: true,
-      port: 6529,
-      portRange: [3000, 8000],
+    // The renderer origin owns the device keys in browser storage; keep it.
+    PORT = await resolveRendererPort({
+      remembered: getValue(RENDERER_PORT_STORE_KEY),
+      findPort: (search) => getPort(search),
+      remember: (port) => setValue(RENDERER_PORT_STORE_KEY, port),
     });
     Logger.info("PORT:", PORT);
   }
@@ -1237,11 +1243,12 @@ if (!gotTheLock) {
       app.dock?.setIcon(path.join(__dirname, "assets", "icon.icns"));
     }
 
+    // The store holds the remembered renderer port, so load it first.
+    initStore();
     await resolvePorts();
 
     await prepareNext(PORT);
     await initLogs();
-    initStore();
 
     localIpfsPreferences = new LocalIpfsPreferences(
       getValue(LOCAL_IPFS_ENABLED_KEY),
@@ -2232,20 +2239,21 @@ ipcMain.on(
 
     shownNotifications.add(notificationKey);
 
-    const notification = new Notification({
-      title,
-      body,
-      icon: pfp,
-    });
+    const notification = new Notification(
+      getDesktopNotificationOptions({ title, body, icon: pfp }),
+    );
     notification.on("click", () => {
-      mainWindow?.webContents.send(
+      const window = mainWindow;
+      if (!window || window.isDestroyed()) {
+        return;
+      }
+      // Bring the app forward so the click visibly opens its target.
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+      window.webContents.send(
         "notification-navigate",
-        {
-          path: redirectPath || "/notifications",
-          targetAddress: navigationContext?.targetAddress ?? null,
-          targetProfileId: navigationContext?.targetProfileId ?? null,
-          targetProfileHandle: navigationContext?.targetProfileHandle ?? null,
-        },
+        getNotificationNavigatePayload(redirectPath, navigationContext),
       );
     });
     notification.show();

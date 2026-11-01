@@ -946,18 +946,29 @@ const createSignInSession = findVariable(
   authRequestSignIn,
   "createSignInSession",
 );
+// The frontend signs the challenge in signInWithChallenge, which
+// createSignInSession calls after preparing any device grant.
+const signInWithChallenge = findVariable(
+  authRequestSignIn,
+  "signInWithChallenge",
+);
+const readsSignatureCancellation = (node) =>
+  Boolean(
+    findDescendant(
+      node,
+      (candidate) =>
+        ts.isPropertyAccessExpression(candidate) &&
+        ts.isIdentifier(candidate.expression) &&
+        candidate.expression.text === "clientSignature" &&
+        candidate.name.text === "cancelled",
+    ),
+  );
 assertContract(
   createSignInSession &&
-    Boolean(
-      findDescendant(
-        createSignInSession,
-        (node) =>
-          ts.isPropertyAccessExpression(node) &&
-          ts.isIdentifier(node.expression) &&
-          node.expression.text === "clientSignature" &&
-          node.name.text === "cancelled",
-      ),
-    ),
+    (readsSignatureCancellation(createSignInSession) ||
+      (signInWithChallenge &&
+        callsIdentifier(createSignInSession, "signInWithChallenge") &&
+        readsSignatureCancellation(signInWithChallenge))),
   authRequestSignInPath,
   "auth request sign-in must preserve explicit cancellation results",
 );

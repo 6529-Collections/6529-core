@@ -416,6 +416,7 @@ interface PublicEnv {
   FARCASTER_WARPCAST_API_BASE?: string;
   FARCASTER_WARPCAST_API_KEY?: string;
   DROP_FORGE_TESTNET?: boolean;
+  NEXT_PUBLIC_E2EE_DM_ENABLED?: string;
 }
 
 const CORE_SCHEMES = {
@@ -572,7 +573,9 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
               allowUnsafeEval:
                 process.env.NODE_ENV === "development" ||
                 process.env.NODE_ENV === "local",
-              allowWasm: process.env.NEXT_PUBLIC_E2EE_DM_ENABLED === "true",
+              // The same baked value that turns encrypted messages on in the
+              // renderer.
+              allowWasm: publicEnv.NEXT_PUBLIC_E2EE_DM_ENABLED === "true",
               webSocketEndpoint: publicEnv.WS_ENDPOINT,
             },
           ),

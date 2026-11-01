@@ -10,9 +10,7 @@ import {
   getVisibleAboutNavGroups,
 } from "@/components/about/about.routes";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
-import { t } from "@/i18n/messages";
-import { publicEnv } from "@/config/env";
-import { isStreamReviewPubliclyAvailable } from "@/lib/public-review/streamReviewRoutes";
+import { t, type MessageKey } from "@/i18n/messages";
 import {
   BuildingLibraryIcon,
   DocumentTextIcon,
@@ -102,53 +100,28 @@ function getMuseumSection(): SidebarSection {
   };
 }
 
-function getNftsSection(publicReviewsEnabled: boolean): SidebarSection {
-  const streamReviewItem: SidebarNavItem[] = publicReviewsEnabled
-    ? [
-        {
-          name: t(DEFAULT_LOCALE, "navigation.nfts.streamReview"),
-          href: "/reviews/6529-stream",
-          activePathPrefixes: ["/reviews/6529-stream/"],
-        },
-      ]
-    : [];
+// NFTs rows that also stay active on their nested pages, in menu order.
+const NFT_SECTION_ROUTES: ReadonlyArray<readonly [MessageKey, string]> = [
+  ["collect.menuLabel", "/collect"],
+  ["navigation.nfts.theMemes", "/the-memes"],
+  ["navigation.nfts.gradient", "/6529-gradient"],
+  ["navigation.nfts.nextGen", "/nextgen"],
+  ["navigation.nfts.memeLab", "/meme-lab"],
+  ["navigation.nfts.rememes", "/rememes"],
+  ["navigation.nfts.stream", "/stream"],
+];
 
+function getNftsSection(): SidebarSection {
   return {
     key: "nfts",
     name: t(DEFAULT_LOCALE, "navigation.primary.nfts"),
     icon: CollectionsMenuIcon,
     items: [
-      {
-        name: t(DEFAULT_LOCALE, "collect.menuLabel"),
-        href: "/collect",
-        activePathPrefixes: ["/collect/"],
-      },
-      {
-        name: t(DEFAULT_LOCALE, "navigation.nfts.theMemes"),
-        href: "/the-memes",
-        activePathPrefixes: ["/the-memes/"],
-      },
-      {
-        name: t(DEFAULT_LOCALE, "navigation.nfts.gradient"),
-        href: "/6529-gradient",
-        activePathPrefixes: ["/6529-gradient/"],
-      },
-      {
-        name: t(DEFAULT_LOCALE, "navigation.nfts.nextGen"),
-        href: "/nextgen",
-        activePathPrefixes: ["/nextgen/"],
-      },
-      {
-        name: t(DEFAULT_LOCALE, "navigation.nfts.memeLab"),
-        href: "/meme-lab",
-        activePathPrefixes: ["/meme-lab/"],
-      },
-      {
-        name: t(DEFAULT_LOCALE, "navigation.nfts.rememes"),
-        href: "/rememes",
-        activePathPrefixes: ["/rememes/"],
-      },
-      ...streamReviewItem,
+      ...NFT_SECTION_ROUTES.map(([nameKey, href]) => ({
+        name: t(DEFAULT_LOCALE, nameKey),
+        href,
+        activePathPrefixes: [`${href}/`],
+      })),
       {
         name: t(DEFAULT_LOCALE, "navigation.nfts.activity"),
         href: "/nft-activity",
@@ -189,11 +162,10 @@ function getAboutSection(
 function buildSidebarSections(
   appWalletsSupported: boolean,
   hideSubscriptions: boolean,
-  publicReviewsEnabled: boolean,
   ipfsWebuiUrl: string
 ): SidebarSection[] {
   return [
-    getNftsSection(publicReviewsEnabled),
+    getNftsSection(),
     getMuseumSection(),
     getWavesSection(),
     getAboutSection(appWalletsSupported, hideSubscriptions),
@@ -205,9 +177,6 @@ export function useSidebarSections(
   appWalletsSupported: boolean,
   isIos: boolean,
   country: string | null,
-  publicReviewsEnabled = isStreamReviewPubliclyAvailable(
-    publicEnv.BASE_ENDPOINT
-  ),
   ipfsWebuiUrl = ""
 ): SidebarSection[] {
   const hideSubscriptions = shouldHideSubscriptions({
@@ -217,13 +186,8 @@ export function useSidebarSections(
 
   return useMemo(
     () =>
-      buildSidebarSections(
-        appWalletsSupported,
-        hideSubscriptions,
-        publicReviewsEnabled,
-        ipfsWebuiUrl
-      ),
-    [appWalletsSupported, hideSubscriptions, publicReviewsEnabled, ipfsWebuiUrl]
+      buildSidebarSections(appWalletsSupported, hideSubscriptions, ipfsWebuiUrl),
+    [appWalletsSupported, hideSubscriptions, ipfsWebuiUrl]
   );
 }
 

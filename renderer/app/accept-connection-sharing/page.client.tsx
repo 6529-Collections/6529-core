@@ -3,15 +3,16 @@
 import { Capacitor } from "@capacitor/core";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useAuth } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { Spinner } from "@/components/dotLoader/DotLoader";
 import { useSetTitle } from "@/contexts/TitleContext";
 import type { ApiRedeemRefreshTokenRequest } from "@/generated/models/ApiRedeemRefreshTokenRequest";
 import type { ApiRedeemRefreshTokenResponse } from "@/generated/models/ApiRedeemRefreshTokenResponse";
-import { isElectron } from "@/helpers";
 import { areEqualAddresses } from "@/helpers/Helpers";
+import { useElectron } from "@/hooks/useElectron";
+import { useHasHydrated } from "@/hooks/useHasHydrated";
 import { useIdentity } from "@/hooks/useIdentity";
 import { formatInteger } from "@/i18n/format";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
@@ -30,6 +31,11 @@ import TransferModalPfp from "@/components/nft-transfer/TransferModalPfp";
 import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
 
 const ACCEPT_CONNECTION_LOCALE = DEFAULT_LOCALE;
+// Query parameters that carry connection credentials.
+const CONNECTION_LINK_SECRET_PARAMS = [
+  "token",
+  "connection_share_code",
+] as const;
 
 interface AcceptConnectionSharingProps {
   connectionShareCode: string;
@@ -40,6 +46,88 @@ interface AcceptConnectionSharingProps {
 
 type SharedProfile = ReturnType<typeof useIdentity>["profile"];
 type SetToast = ReturnType<typeof useAuth>["setToast"];
+type ConnectionShell = "pending" | "native-app" | "desktop-app" | "browser";
+type ConnectionFlow =
+  | "pending"
+  | "native-share"
+  | "legacy-desktop"
+  | "unsupported-native-share"
+  | "unsupported-legacy-desktop"
+  | "missing-parameters";
+
+/**
+ * Removes connection credentials from the visible URL without navigating.
+ * Reusing the current Next.js history state keeps the router (and so
+ * useSearchParams) unchanged, so no request is made and the accept action
+ * still reads the link values.
+ */
+function removeConnectionSecretsFromAddressBar(): void {
+  const url = new URL(globalThis.location.href);
+  const hasSecret = CONNECTION_LINK_SECRET_PARAMS.some((name) =>
+    url.searchParams.has(name)
+  );
+  if (!hasSecret) {
+    return;
+  }
+
+  for (const name of CONNECTION_LINK_SECRET_PARAMS) {
+    url.searchParams.delete(name);
+  }
+  globalThis.history.replaceState(
+    globalThis.history.state,
+    "",
+    `${url.pathname}${url.search}${url.hash}`
+  );
+}
+
+/** Server HTML cannot know the app shell, so it stays pending until hydration. */
+function useConnectionShell(): ConnectionShell {
+  const hasHydrated = useHasHydrated();
+  const isElectron = useElectron();
+  if (!hasHydrated) {
+    return "pending";
+  }
+  if (Capacitor.isNativePlatform()) {
+    return "native-app";
+  }
+  return isElectron ? "desktop-app" : "browser";
+}
+
+function getConnectionFlow({
+  connectionShareCode,
+  token,
+  address,
+  shell,
+}: {
+  readonly connectionShareCode: string;
+  readonly token: string;
+  readonly address: string;
+  readonly shell: ConnectionShell;
+}): ConnectionFlow {
+  const hasConnectionShareCode = connectionShareCode.trim().length > 0;
+  const hasLegacyDesktopToken = token.trim().length > 0;
+  if (!hasConnectionShareCode && !hasLegacyDesktopToken) {
+    return "missing-parameters";
+  }
+  if (shell === "pending") {
+    return "pending";
+  }
+  // 6529 Desktop accepts connection share codes natively, like 6529 Mobile.
+  if (
+    hasConnectionShareCode &&
+    (shell === "native-app" || shell === "desktop-app")
+  ) {
+    return "native-share";
+  }
+  if (!hasLegacyDesktopToken) {
+    return "unsupported-native-share";
+  }
+  // Legacy refresh-token links are generated only for the 6529 Desktop app.
+  if (shell !== "desktop-app") {
+    return "unsupported-legacy-desktop";
+  }
+  return address.trim().length > 0 ? "legacy-desktop" : "missing-parameters";
+}
 
 function getSharedProfileName(profile: SharedProfile, address: string): string {
   if (profile?.handle) {
@@ -380,9 +468,7 @@ async function acceptLegacyDesktopConnection({
 }
 
 function ConnectionSharingContent({
-  hasUnsupportedWebConnectionShare,
-  isConnectionShareFlow,
-  isLegacyDesktopConnectionFlow,
+  flow,
   profile,
   profileLoading,
   address,
@@ -393,9 +479,7 @@ function ConnectionSharingContent({
   isStorageLimitReached,
   onAccept,
 }: Readonly<{
-  hasUnsupportedWebConnectionShare: boolean;
-  isConnectionShareFlow: boolean;
-  isLegacyDesktopConnectionFlow: boolean;
+  flow: ConnectionFlow;
   profile: SharedProfile;
   profileLoading: boolean;
   address: string;
@@ -406,7 +490,11 @@ function ConnectionSharingContent({
   isStorageLimitReached: boolean;
   onAccept: () => void;
 }>) {
-  if (hasUnsupportedWebConnectionShare) {
+  if (flow === "pending") {
+    return null;
+  }
+
+  if (flow === "unsupported-native-share") {
     return (
       <HomeLinkCard
         message={t(ACCEPT_CONNECTION_LOCALE, "acceptConnection.unsupportedWeb")}
@@ -414,7 +502,18 @@ function ConnectionSharingContent({
     );
   }
 
-  if (isConnectionShareFlow || isLegacyDesktopConnectionFlow) {
+  if (flow === "unsupported-legacy-desktop") {
+    return (
+      <HomeLinkCard
+        message={t(
+          ACCEPT_CONNECTION_LOCALE,
+          "acceptConnection.unsupportedLegacyDesktop"
+        )}
+      />
+    );
+  }
+
+  if (flow === "native-share" || flow === "legacy-desktop") {
     return (
       <div className="tw-space-y-6">
         <IncomingConnectionCard
@@ -458,18 +557,13 @@ function AcceptConnectionSharing(
 
   const { connectionShareCode, token, address, role } = props;
   const [acceptingConnection, setAcceptingConnection] = useState(false);
-  const hasConnectionShareCode = connectionShareCode.trim().length > 0;
-  const hasLegacyDesktopToken = token.trim().length > 0;
-  const supportsNativeConnectionShare =
-    Capacitor.isNativePlatform() || isElectron();
-  const hasUnsupportedWebConnectionShare =
-    hasConnectionShareCode &&
-    !hasLegacyDesktopToken &&
-    !supportsNativeConnectionShare;
-  const isConnectionShareFlow =
-    hasConnectionShareCode && supportsNativeConnectionShare;
-  const isLegacyDesktopConnectionFlow =
-    hasLegacyDesktopToken && address.trim().length > 0;
+  const shell = useConnectionShell();
+  const flow = getConnectionFlow({
+    connectionShareCode,
+    token,
+    address,
+    shell,
+  });
   const isIncomingConnectionAlreadyStored =
     isAddressInConnectedAccounts(address);
   const isStorageLimitReached =
@@ -486,7 +580,7 @@ function AcceptConnectionSharing(
 
   const acceptConnection = async () => {
     try {
-      if (isConnectionShareFlow) {
+      if (flow === "native-share") {
         const accepted = await acceptConnectionShare({
           address,
           connectionShareCode,
@@ -499,7 +593,7 @@ function AcceptConnectionSharing(
         }
         return;
       }
-      if (isLegacyDesktopConnectionFlow) {
+      if (flow === "legacy-desktop") {
         const accepted = await acceptLegacyDesktopConnection({
           address,
           token,
@@ -535,9 +629,7 @@ function AcceptConnectionSharing(
         </header>
 
         <ConnectionSharingContent
-          hasUnsupportedWebConnectionShare={hasUnsupportedWebConnectionShare}
-          isConnectionShareFlow={isConnectionShareFlow}
-          isLegacyDesktopConnectionFlow={isLegacyDesktopConnectionFlow}
+          flow={flow}
           profile={profile}
           profileLoading={profileLoading}
           address={address}
@@ -564,6 +656,18 @@ export default function AcceptConnectionSharingPage() {
   const token = searchParams?.get("token") || "";
   const address = searchParams?.get("address") || "";
   const role = searchParams?.get("role") || undefined;
+  // The whole query identifies a link visit, so reopening the same link (with
+  // a new `_t`) on the mounted page is cleaned again.
+  const linkQuery = searchParams.toString();
+
+  // A layout effect runs before paint and before passive effects, such as
+  // analytics and monitoring, that may read the page URL. It reads the visible
+  // URL itself, so whatever credential is shown is removed even if it differs
+  // from the router values the accept action uses.
+  useLayoutEffect(() => {
+    removeConnectionSecretsFromAddressBar();
+  }, [linkQuery]);
+
   return (
     <AcceptConnectionSharing
       connectionShareCode={connectionShareCode}
