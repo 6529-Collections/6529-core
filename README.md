@@ -17,6 +17,11 @@ Formatting happens before the operating system clips the preview. Empty previews
 show attachment filenames, a media attachment label, or the usual default message.
 Drop content and Markdown rendering inside the app are unchanged.
 
+Encrypted messages raise a content-free "New encrypted message" notification
+without a picture, sender or text, like the phone push. Clicking any
+notification brings the app window forward and opens its in-app target (for
+an encrypted message, the chat); a target outside the app opens Notifications.
+
 ## Structure
 
 ### electron-src
@@ -218,6 +223,20 @@ Production app builds must not target the Test backend. Commands such as
 `6529 run dist-mac-production test` fail immediately before build work starts.
 The same optional `live`/`test` argument applies to the Windows, macOS, and
 Linux `dist-*` scripts.
+
+Both backend targets build with encrypted messages
+(`NEXT_PUBLIC_E2EE_DM_ENABLED`) and signed messages
+(`NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES`) on, as on 6529.io. App device grants
+(`NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS`, the one wallet signature that turns
+both on for this device) are on only for the Test backend until their wording
+is approved. `scripts/helpers/desktop-feature-flags.cjs` sets these for `dev`
+and every `dist-*` script; values exported in the shell do not override them.
+
+The app serves the renderer from `http://localhost:<port>`. Browser storage
+belongs to that origin, including this device's encrypted-messages and
+signed-messages keys, so the app remembers the port in its store and reuses
+it. When it is busy, the app falls back to 6529, then the first free port from
+3000, for that launch only, and returns to the remembered port next time.
 
 Distribution targets prepare the Kubo binaries and matching IPFS WebUI before
 building. `config/kubo.json` pins the binary checksums, WebUI release/CID,
