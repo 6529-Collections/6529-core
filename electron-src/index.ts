@@ -116,6 +116,7 @@ import {
   pinnedWindowNavigation,
   shouldOpenInExternalBrowser,
 } from "./navigation-policy";
+import { RENDERER_PORT_STORE_KEY, resolveRendererPort } from "./renderer-port";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
 contextMenu({
@@ -1089,10 +1090,11 @@ const tails: TailInstances = {};
 
 async function resolvePorts() {
   if (!PORT) {
-    PORT = await getPort({
-      random: true,
-      port: 6529,
-      portRange: [3000, 8000],
+    // The renderer origin owns the device keys in browser storage; keep it.
+    PORT = await resolveRendererPort({
+      remembered: getValue(RENDERER_PORT_STORE_KEY),
+      findPort: (search) => getPort(search),
+      remember: (port) => setValue(RENDERER_PORT_STORE_KEY, port),
     });
     Logger.info("PORT:", PORT);
   }
@@ -1237,11 +1239,12 @@ if (!gotTheLock) {
       app.dock?.setIcon(path.join(__dirname, "assets", "icon.icns"));
     }
 
+    // The store holds the remembered renderer port, so load it first.
+    initStore();
     await resolvePorts();
 
     await prepareNext(PORT);
     await initLogs();
-    initStore();
 
     localIpfsPreferences = new LocalIpfsPreferences(
       getValue(LOCAL_IPFS_ENABLED_KEY),
