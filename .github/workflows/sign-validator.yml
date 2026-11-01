@@ -617,12 +617,14 @@ jobs:
           $dir = Join-Path $env:RUNNER_TEMP 'out\x86_64-pc-windows-msvc'
           $work = Join-Path $env:RUNNER_TEMP 'burn'
           New-Item -ItemType Directory -Force -Path $work | Out-Null
-          foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter *.exe | Sort-Object Name)) {
+          # The bundle's Setup.exe files, listed once, before any engine is written beside them.
+          $setups = @(Get-ChildItem -LiteralPath $dir -Filter *.exe | Where-Object { -not $_.Name.EndsWith('.engine.exe') } | Sort-Object Name)
+          foreach ($f in $setups) {
             $engine = Join-Path $dir ([IO.Path]::GetFileNameWithoutExtension($f.Name) + '.engine.exe')
             $joined = Join-Path $work $f.Name
             Write-Output "== $($f.Name): its engine"
             & wix burn detach $f.FullName -engine $engine
-            if ($LASTEXITCODE -ne 0) { throw "wix burn detach failed on $($f.Name) (exit $LASTEXITCODE)" }
+            if ($LASTEXITCODE -ne 0) { throw "$($f.Name) is not a WiX Burn bundle (wix burn detach: exit $LASTEXITCODE); a setup bundle holds Setup.exe files only" }
             & azuresigntool @common $engine
             if ($LASTEXITCODE -ne 0) { throw "AzureSignTool failed on the engine of $($f.Name) (exit $LASTEXITCODE)" }
             Write-Output "== $($f.Name): the signed engine put back"
@@ -679,20 +681,19 @@ jobs:
             $lines += "$($f.Name): Authenticode Valid, timestamped, signer $($s.SignerCertificate.Subject)"
           }
           if ($env:KIND -eq 'setup') {
-            # The engine Burn copies out of each signed Setup.exe and runs
-            # elevated: UAC names its signer as the publisher.
+            # Each Setup.exe and its engine are signed with the same certificate:
+            # Burn's elevated copy of the engine (what UAC names) carries the
+            # engine's signature. The validator's release checks that the file is
+            # the build with this engine reattached plus a signature, and the
+            # elevated copy itself when it installs the signed Setup.exe.
             $dir = Join-Path $env:RUNNER_TEMP 'out\x86_64-pc-windows-msvc'
             foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter *.exe | Where-Object { -not $_.Name.EndsWith('.engine.exe') } | Sort-Object Name)) {
-              $copy = Join-Path $env:RUNNER_TEMP ("check-" + [IO.Path]::GetFileNameWithoutExtension($f.Name) + '.engine.exe')
-              & wix burn detach $f.FullName -engine $copy
-              if ($LASTEXITCODE -ne 0) { throw "wix burn detach failed on the signed $($f.Name) (exit $LASTEXITCODE)" }
-              $s = Get-AuthenticodeSignature -LiteralPath $copy
+              $engine = Join-Path $dir ([IO.Path]::GetFileNameWithoutExtension($f.Name) + '.engine.exe')
+              if (-not (Test-Path -LiteralPath $engine)) { throw "$($f.Name): no signed engine beside it" }
               $outer = (Get-AuthenticodeSignature -LiteralPath $f.FullName).SignerCertificate.Thumbprint
-              Write-Output ('{0}, its engine as Burn copies it: {1}, signer {2}' -f $f.Name, $s.Status, $s.SignerCertificate.Subject)
-              if ($s.Status -ne 'Valid' -or $s.SignerCertificate.Thumbprint -ne $outer) { throw "$($f.Name): the engine inside it is not signed like the file" }
-              $same = (Get-FileHash -LiteralPath $copy).Hash -eq (Get-FileHash -LiteralPath (Join-Path $dir ([IO.Path]::GetFileNameWithoutExtension($f.Name) + '.engine.exe'))).Hash
-              Write-Output "  the same bytes as the signed engine: $same"
-              $lines += "$($f.Name): its engine as Burn copies it is Authenticode Valid, signer $($s.SignerCertificate.Subject)"
+              $inner = (Get-AuthenticodeSignature -LiteralPath $engine).SignerCertificate.Thumbprint
+              if ($outer -ne $inner) { throw "$($f.Name): the file and its engine are signed with different certificates" }
+              $lines += "$($f.Name): the file and its engine signed with the same certificate"
             }
           }
           "authenticode<<AUTH_EOF`n$($lines -join "`n")`nAUTH_EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
@@ -755,9 +756,9 @@ jobs:
           if [ "$KIND" = setup ]; then
             setups=$(cut -c67- "$s" | grep -E '^x86_64-pc-windows-msvc/[^/]+\.exe$' | grep -v '\.engine\.exe$' || true)
             [ -n "$setups" ] || { echo "::error::SHA256SUMS lists no Setup.exe"; exit 1; }
-            for f in $setups; do
+            while IFS= read -r f; do
               cut -c67- "$s" | grep -qxF "${f%.exe}.engine.exe" || { echo "::error::SHA256SUMS lists no engine for $f"; exit 1; }
-            done
+            done <<< "$setups"
           elif [ "$KIND" = installers ]; then
             cut -c67- "$s" | grep -qE '^[^/]+\.dmg$' || { echo "::error::SHA256SUMS lists no disk image"; exit 1; }
             cut -c67- "$s" | grep -qE '^x86_64-pc-windows-msvc/[^/]+\.msi$' || { echo "::error::SHA256SUMS lists no .msi"; exit 1; }
