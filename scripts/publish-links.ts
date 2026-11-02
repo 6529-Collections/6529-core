@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import * as yaml from "js-yaml";
 import { arweaveFileUploader } from "./arweave";
+const { findRetainedMirror } = require("./helpers/release-mirrors.cjs");
 
 const AWS_REGION = "eu-west-1";
 const BUCKET = "6529bucket";
@@ -146,12 +147,15 @@ async function processNewVersion(
   const data = await response.text();
   const yml: any = yaml.load(data);
 
-  const files: Set<string> = new Set();
+  const files: Map<string, string> = new Map();
   yml.files.forEach((file: any) => {
     if (file.url.endsWith("zip")) {
       return;
     }
-    files.add(`${BASE_PATH}/${BUCKET_PATH}/${platform}/${file.url}`);
+    files.set(
+      `${BASE_PATH}/${BUCKET_PATH}/${platform}/${file.url}`,
+      file.sha512,
+    );
   });
 
   console.log("Files processed", files.size);
@@ -160,8 +164,9 @@ async function processNewVersion(
   // Machine-readable mirrors let the Apps page offer direct downloads without
   // scraping the historical HTML landing page. Keep existing mirrors when
   // running the CloudFront-only publication step again.
-  const catalogFiles: { url: string; arweaveUrl?: string }[] = [];
-  const previousMirrors = new Map<string, string>();
+  const catalogFiles: { url: string; sha512: string; arweaveUrl?: string }[] =
+    [];
+  let previousCatalog: unknown;
   if (skipArweave) {
     try {
       const previous = await s3.send(
@@ -170,18 +175,9 @@ async function processNewVersion(
           Key: `${BUCKET_PATH}/${platform}/links/${yml.version}.json`,
         }),
       );
-      const catalog = JSON.parse(await previous.Body!.transformToString());
-      if (catalog.version === yml.version && Array.isArray(catalog.files)) {
-        for (const file of catalog.files) {
-          if (
-            typeof file.url === "string" &&
-            typeof file.arweaveUrl === "string" &&
-            /^https:\/\/arweave\.net\/[A-Za-z0-9_-]{43}$/.test(file.arweaveUrl)
-          ) {
-            previousMirrors.set(file.url, file.arweaveUrl);
-          }
-        }
-      }
+      if (!previous.Body)
+        throw new Error("Previous mirror catalog has no body");
+      previousCatalog = JSON.parse(await previous.Body.transformToString());
     } catch (error) {
       const missing =
         (error instanceof Error &&
@@ -198,10 +194,11 @@ async function processNewVersion(
       <h1>${title}</h1>
     </div>
   `;
-  for (const file of files) {
+  for (const [file, sha512] of files) {
     const artifactName = file.split("/").pop()!;
-    const catalogFile: { url: string; arweaveUrl?: string } = {
+    const catalogFile: { url: string; sha512: string; arweaveUrl?: string } = {
       url: artifactName,
+      sha512,
     };
     const fileName = getFileName(file);
     const cloudfrontUrl = `${CF_PATH}/${BUCKET_PATH}/${platform}/${file
@@ -211,7 +208,12 @@ async function processNewVersion(
     htmlContent += `<h3>${fileName}</h3>`;
     htmlContent += `<div class="link-row">CloudFront: <a href="${cloudfrontUrl}" target="_blank">${cloudfrontUrl}</a></div>`;
     if (skipArweave) {
-      catalogFile.arweaveUrl = previousMirrors.get(artifactName);
+      catalogFile.arweaveUrl = findRetainedMirror(
+        previousCatalog,
+        yml.version,
+        artifactName,
+        sha512,
+      );
       htmlContent += `<div class="link-row">Arweave: Coming Soon...</div>`;
     } else {
       const { url } = await arweaveUpload(file);

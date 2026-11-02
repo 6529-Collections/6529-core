@@ -249,7 +249,10 @@ publishing never regenerates or overwrites it; do not configure the app's
 auto-updater to use it. The Apps page reads current/legacy feeds independently,
 so new releases appear without a frontend deployment. `publish-links` also
 writes `links/<version>.json` with optional Arweave mirrors, alongside the
-existing HTML pages. Failed/missing mirror metadata does not block downloads.
+existing HTML pages. Catalog entries include the artifact SHA-512;
+CloudFront-only republishing retains a mirror only when that hash still matches.
+Older entries without hashes lose their optional mirror until Arweave publication
+recreates it. Failed/missing mirror metadata does not block downloads.
 
 Production app builds must not target the Test backend. Commands such as
 `6529 run dist-mac-production test` fail immediately before build work starts.

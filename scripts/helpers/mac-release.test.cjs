@@ -115,6 +115,17 @@ test("every Mac config advertises the same app and updater minimum", () => {
   assert.match(workflow, /node scripts\/mac-release.cjs generate/);
   assert.match(workflow, /node scripts\/mac-release.cjs publish/);
   assert.doesNotMatch(workflow, /aws s3 cp latest-mac.yml/);
+  const yaml = require("js-yaml");
+  for (const job of Object.values(yaml.load(workflow).jobs)) {
+    for (const step of job.steps ?? []) {
+      if (step.run)
+        assert.doesNotMatch(step.run, /\$\{\{\s*inputs\.version\s*\}\}/);
+      if (step.run?.includes("node scripts/mac-release.cjs")) {
+        assert.equal(step.env.RELEASE_VERSION, "${{ inputs.version }}");
+        assert.match(step.run, /"\$RELEASE_VERSION"/);
+      }
+    }
+  }
 });
 
 test("publisher backs up the feed, uploads artifacts first, and conditionally writes only the current manifest", async () => {
