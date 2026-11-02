@@ -154,6 +154,7 @@ test("publisher backs up the feed, uploads artifacts first, and conditionally wr
     );
     assert.equal(operations[1].Body.toString(), "old manifest");
     assert.match(operations[1].Key, /manifest-backups\//);
+    assert.match(operations[1].Key, /\d+-[0-9a-f-]{36}-latest-mac\.yml$/);
     assert.equal(operations.at(-1).Key, "6529-core-app/mac/latest-mac.yml");
     assert.equal(operations.at(-1).IfMatch, '"old-etag"');
     assert.deepEqual(
@@ -179,4 +180,101 @@ test("publisher backs up the feed, uploads artifacts first, and conditionally wr
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("publisher accepts missing-key 404s, validates region and rejects other read failures", async () => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "mac-first-publish-"),
+  );
+  const config = {
+    publish: [
+      {
+        provider: "s3",
+        bucket: "6529bucket",
+        region: "eu-west-1",
+        path: "6529-core-app/${os}",
+      },
+    ],
+  };
+  try {
+    const target = path.join(directory, "latest-mac.yml");
+    fs.writeFileSync(target, "manifest");
+    const writes = [];
+    const s3 = {
+      send: async (command) => {
+        if (command.constructor.name === "GetObjectCommand")
+          throw Object.assign(new Error("missing"), {
+            $metadata: { httpStatusCode: 404 },
+          });
+        writes.push(command.input);
+        return {};
+      },
+    };
+    await publish(config, target, new Map(), { s3 });
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].IfNoneMatch, "*");
+    assert.equal(writes[0].Key, "6529-core-app/mac/latest-mac.yml");
+    await assert.rejects(
+      publish(
+        { publish: [{ ...config.publish[0], region: undefined }] },
+        target,
+        new Map(),
+        { s3 },
+      ),
+      /region eu-west-1/,
+    );
+    await assert.rejects(
+      publish(config, target, new Map(), {
+        s3: {
+          send: async () => {
+            throw Object.assign(new Error("denied"), {
+              $metadata: { httpStatusCode: 403 },
+            });
+          },
+        },
+      }),
+      /denied/,
+    );
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("failed artifact upload never advances the manifest", async () => {
+  const writes = [];
+  await assert.rejects(
+    publish(
+      {
+        publish: [
+          {
+            provider: "s3",
+            bucket: "6529bucket",
+            region: "eu-west-1",
+            path: "6529-core-app/${os}",
+          },
+        ],
+      },
+      "unused/latest-mac.yml",
+      new Map([[zip.url, "fixture.zip"]]),
+      {
+        s3: {
+          send: async (command) => {
+            if (command.constructor.name === "GetObjectCommand")
+              return {
+                ETag: '"old"',
+                Body: {
+                  transformToByteArray: async () => Buffer.from("previous"),
+                },
+              };
+            writes.push(command.input);
+            return {};
+          },
+        },
+        spawnSync: () => ({ status: 1 }),
+      },
+    ),
+    /upload failed/,
+  );
+  assert.equal(writes.length, 1);
+  assert.match(writes[0].Key, /manifest-backups/);
 });

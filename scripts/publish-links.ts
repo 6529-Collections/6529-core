@@ -2,6 +2,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
+  S3ServiceException,
 } from "@aws-sdk/client-s3";
 import * as yaml from "js-yaml";
 import { arweaveFileUploader } from "./arweave";
@@ -182,7 +183,12 @@ async function processNewVersion(
         }
       }
     } catch (error) {
-      if (!(error instanceof Error) || error.name !== "NoSuchKey") throw error;
+      const missing =
+        (error instanceof Error &&
+          ["NoSuchKey", "NotFound"].includes(error.name)) ||
+        (error instanceof S3ServiceException &&
+          error.$metadata.httpStatusCode === 404);
+      if (!missing) throw error;
     }
   }
 

@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { randomUUID } = require("node:crypto");
 const yaml = require("js-yaml");
 const {
   S3Client,
@@ -67,6 +68,9 @@ async function publish(config, manifestPath, artifacts, dependencies = {}) {
   ) {
     throw new Error("Unrecognized Mac release destination");
   }
+  if (destination.region !== "eu-west-1") {
+    throw new Error("Mac release bucket requires region eu-west-1");
+  }
   const prefix = destination.path.replace("${os}", "mac");
   const s3 = dependencies.s3 ?? new S3Client({ region: destination.region });
   const key = `${prefix}/latest-mac.yml`;
@@ -76,14 +80,19 @@ async function publish(config, manifestPath, artifacts, dependencies = {}) {
       new GetObjectCommand({ Bucket: destination.bucket, Key: key }),
     );
   } catch (error) {
-    if (error.name !== "NoSuchKey") throw error;
+    if (
+      !["NoSuchKey", "NotFound"].includes(error.name) &&
+      error.$metadata?.httpStatusCode !== 404
+    )
+      throw error;
   }
   if (previous) {
+    if (!previous.Body) throw new Error("Mac manifest response has no body");
     const body = await previous.Body.transformToByteArray();
     await s3.send(
       new PutObjectCommand({
         Bucket: destination.bucket,
-        Key: `${prefix}/manifest-backups/${Date.now()}-latest-mac.yml`,
+        Key: `${prefix}/manifest-backups/${Date.now()}-${randomUUID()}-latest-mac.yml`,
         Body: body,
         ContentType: "text/yaml",
         IfNoneMatch: "*",

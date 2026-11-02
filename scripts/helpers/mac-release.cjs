@@ -35,6 +35,7 @@ function normalizeMacManifest(manifest, config) {
       !file.url.endsWith(
         `-${manifest.version}.${file.url.endsWith(".zip") ? "zip" : "dmg"}`,
       ) ||
+      // A 64-byte SHA-512 digest is 86 base64 characters followed by ==.
       !/^[A-Za-z0-9+/]{86}==$/.test(file.sha512 ?? "") ||
       !Number.isSafeInteger(file.size) ||
       file.size <= 0

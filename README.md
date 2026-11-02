@@ -221,6 +221,13 @@ uploads artifacts with the AWS CLI (multipart for large files), and conditionall
 writes `latest-mac.yml` last. The previous manifest is retained under
 `mac/manifest-backups/`; a concurrently changed feed is never overwritten.
 The AWS CLI and the normal S3 credentials are required for publishing.
+These staging/production commands always publish, as before; use the Local
+or architecture-specific production targets for packaging without publication.
+Run only one Mac publisher per environment at a time. The ETag protects the
+manifest, not the artifact keys: same-version rebuilds deliberately replace
+versioned files, so concurrent publishes of the same version can overwrite each
+other's ZIP/DMG before a conflicting manifest write is rejected. A manifest
+backup alone cannot restore overwritten artifacts.
 
 The app bundle requires macOS 13+, while the updater manifest uses Darwin
 `22.0.0` because electron-updater compares against `os.release()`. Keep these
