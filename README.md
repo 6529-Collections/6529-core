@@ -231,7 +231,11 @@ backup alone cannot restore overwritten artifacts.
 
 The app bundle requires macOS 13+, while the updater manifest uses Darwin
 `22.0.0` because electron-updater compares against `os.release()`. Keep these
-requirements aligned when raising the minimum. To retry publication of an
+requirements aligned when raising the minimum. The publisher emits a separate
+`minimumMacOSVersion` for download-page display; Darwin/macOS mappings are
+explicit because macOS 26 uses Darwin 25. Unknown mappings fail closed until
+verified. Existing feeds without this display field use known mappings in FE.
+To retry publication of an
 already completed local build without rebuilding:
 
 ```bash

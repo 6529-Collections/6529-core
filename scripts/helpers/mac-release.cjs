@@ -11,12 +11,13 @@ function minimumDarwinVersion(config) {
     throw new Error("Mac releases require an explicit minimumSystemVersion");
   }
   const [major, minor, patch = 0] = minimum.split(".").map(Number);
-  if (major < 13 || minor !== 0 || patch !== 0) {
+  const darwinMajors = { 13: 22, 14: 23, 15: 24, 26: 25 };
+  if (!(major in darwinMajors) || minor !== 0 || patch !== 0) {
     throw new Error(
-      "Expected a macOS 13+ major-version minimum for Electron 44",
+      "Unsupported macOS minimum; add its verified Darwin mapping before publishing",
     );
   }
-  return `${major + 9}.0.0`;
+  return `${darwinMajors[major]}.0.0`;
 }
 
 function normalizeMacManifest(manifest, config) {
@@ -75,6 +76,7 @@ function normalizeMacManifest(manifest, config) {
     ...manifest,
     files: unique,
     minimumSystemVersion: minimumDarwinVersion(config),
+    minimumMacOSVersion: config.mac.minimumSystemVersion,
   };
 }
 

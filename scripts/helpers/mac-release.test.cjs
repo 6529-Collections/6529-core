@@ -29,11 +29,16 @@ const manifest = {
 test("normalizes duplicate entries and uses Darwin, not macOS, in update feeds", () => {
   const normalized = normalizeMacManifest(manifest, config);
   assert.equal(normalized.minimumSystemVersion, "22.0.0");
+  assert.equal(normalized.minimumMacOSVersion, "13.0");
   assert.deepEqual(normalized.files, [zip, dmg]);
   assert.equal(manifest.files.length, 3);
   assert.equal(
     minimumDarwinVersion({ mac: { minimumSystemVersion: "14.0" } }),
     "23.0.0",
+  );
+  assert.equal(
+    minimumDarwinVersion({ mac: { minimumSystemVersion: "26.0" } }),
+    "25.0.0",
   );
 });
 test("rejects conflicting duplicates, invalid paths/hashes and incomplete architecture pairs", () => {
