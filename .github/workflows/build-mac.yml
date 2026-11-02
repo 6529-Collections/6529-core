@@ -309,42 +309,8 @@ jobs:
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "path_prefix=$PATH_PREFIX" >> $GITHUB_OUTPUT
 
-      - name: Compute hashes and sizes, generate latest-mac.yml
-        run: |
-          VERSION="${{ inputs.version }}"
-          DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
-          YAML_FILE=latest-mac.yml
-
-          echo "version: $VERSION" > $YAML_FILE
-          echo "files:" >> $YAML_FILE
-
-          generate_entry() {
-            local file="$1"
-            local filename=$(basename "$file")
-            local size=$(stat -f%z "$file")
-            local sha512=$(openssl dgst -sha512 -binary "$file" | openssl base64 -A)
-
-            echo "  - url: $filename" >> $YAML_FILE
-            echo "    sha512: $sha512" >> $YAML_FILE
-            echo "    size: $size" >> $YAML_FILE
-          }
-
-          # Add arm64 and x64 files
-          for file in dist/mac-arm64/*.{zip,dmg}; do generate_entry "$file"; done
-          for file in dist/mac-x64/*.{zip,dmg}; do generate_entry "$file"; done
-
-          # Set default zip (used by Electron updater)
-          DEFAULT_FILE=$(ls dist/mac-arm64/*.zip | head -n 1)
-          DEFAULT_NAME=$(basename "$DEFAULT_FILE")
-          DEFAULT_SHA=$(openssl dgst -sha512 -binary "$DEFAULT_FILE" | openssl base64 -A)
-
-          echo "path: $DEFAULT_NAME" >> $YAML_FILE
-          echo "sha512: $DEFAULT_SHA" >> $YAML_FILE
-          echo "releaseDate: '$DATE'" >> $YAML_FILE
-          # Electron 44 needs macOS 13. electron-updater compares this with
-          # os.release(), the Darwin version (macOS 13 is Darwin 22), so Macs on
-          # macOS 12 are not offered an update they could not open.
-          echo "minimumSystemVersion: 22.0.0" >> $YAML_FILE
+      - name: Generate and verify Mac update manifest
+        run: node scripts/mac-release.cjs generate electron-builder.production.json '${{ inputs.version }}' latest-mac.yml dist/mac-arm64 dist/mac-x64
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -353,19 +319,5 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ steps.s3_config.outputs.region }}
 
-      - name: Upload artifacts to S3
-        run: |
-          for file in dist/mac-arm64/*.{zip,dmg,blockmap}; do
-            echo "Uploading $file"
-            aws s3 cp "$file" "s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}$(basename "$file")"
-          done
-
-          for file in dist/mac-x64/*.{zip,dmg,blockmap}; do
-            echo "Uploading $file"
-            aws s3 cp "$file" "s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}$(basename "$file")"
-          done
-
-      - name: Upload latest-mac.yml to S3
-        run: |
-          # Upload latest-mac.yml
-          aws s3 cp latest-mac.yml s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}latest-mac.yml
+      - name: Publish verified artifacts and manifest
+        run: node scripts/mac-release.cjs publish electron-builder.production.json '${{ inputs.version }}' latest-mac.yml dist/mac-arm64 dist/mac-x64

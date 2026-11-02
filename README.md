@@ -214,6 +214,32 @@ Examples:
 6529 run dist-mac-production     # Production app, Live backend; no label suffix
 ```
 
+Mac staging/production commands package without electron-builder's automatic
+publication, then run `scripts/mac-release.cjs`. The shared local/GitHub publisher
+deduplicates the manifest, verifies every final ZIP/DMG hash and size, requires its blockmap,
+uploads artifacts with the AWS CLI (multipart for large files), and conditionally
+writes `latest-mac.yml` last. The previous manifest is retained under
+`mac/manifest-backups/`; a concurrently changed feed is never overwritten.
+The AWS CLI and the normal S3 credentials are required for publishing.
+
+The app bundle requires macOS 13+, while the updater manifest uses Darwin
+`22.0.0` because electron-updater compares against `os.release()`. Keep these
+requirements aligned when raising the minimum. To retry publication of an
+already completed local build without rebuilding:
+
+```bash
+6529 exec node scripts/mac-release.cjs publish electron-builder.production.json 0.3.16 dist/latest-mac.yml dist
+```
+
+Use the build's actual version and staging config when appropriate. The frozen
+production `mac/latest-macos-12.yml` is a separate **download-only** feed for
+the last Monterey-compatible release (0.3.15 Intel/Apple silicon DMGs). Normal
+publishing never regenerates or overwrites it; do not configure the app's
+auto-updater to use it. The Apps page reads current/legacy feeds independently,
+so new releases appear without a frontend deployment. `publish-links` also
+writes `links/<version>.json` with optional Arweave mirrors, alongside the
+existing HTML pages. Failed/missing mirror metadata does not block downloads.
+
 Production app builds must not target the Test backend. Commands such as
 `6529 run dist-mac-production test` fail immediately before build work starts.
 The same optional `live`/`test` argument applies to the Windows, macOS, and
