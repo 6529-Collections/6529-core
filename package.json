@@ -100,7 +100,7 @@
     "bottleneck": "^2.19.5",
     "builder-util-runtime": "9.7.0",
     "dotenv": "^16.4.5",
-    "electron": "^44.7.0",
+    "electron": "44.9.3",
     "electron-builder": "26.17.0",
     "electron-context-menu": "^3.6.1",
     "electron-localshortcut": "^3.2.1",
