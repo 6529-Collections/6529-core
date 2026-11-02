@@ -1,3 +1,5 @@
+const { createHash } = require("node:crypto");
+
 /** Retain an immutable mirror only for the exact same version, name and bytes. */
 function findRetainedMirror(catalog, version, artifactName, sha512) {
   if (
@@ -17,4 +19,14 @@ function findRetainedMirror(catalog, version, artifactName, sha512) {
   )?.arweaveUrl;
 }
 
-module.exports = { findRetainedMirror };
+/** Verify the actual download before recording its digest against a mirror. */
+function assertArtifactHash(bytes, expectedSha512) {
+  const actual = createHash("sha512").update(bytes).digest("base64");
+  if (actual !== expectedSha512) {
+    throw new Error(
+      "Downloaded artifact SHA-512 does not match the release manifest",
+    );
+  }
+}
+
+module.exports = { assertArtifactHash, findRetainedMirror };

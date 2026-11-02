@@ -1,7 +1,30 @@
 const assert = require("node:assert/strict");
 const { createHash } = require("node:crypto");
 const { test } = require("node:test");
-const { findRetainedMirror } = require("./release-mirrors.cjs");
+const {
+  assertArtifactHash,
+  findRetainedMirror,
+} = require("./release-mirrors.cjs");
+
+test("a mirror upload verifies downloaded bytes against the manifest", () => {
+  const bytes = Buffer.from("original installer");
+  const expected = createHash("sha512").update(bytes).digest("base64");
+  assert.doesNotThrow(() => assertArtifactHash(bytes, expected));
+  for (const altered of [
+    Buffer.from("same-version rebuild"),
+    bytes.subarray(0, 5),
+    Buffer.alloc(0),
+  ]) {
+    assert.throws(
+      () => assertArtifactHash(altered, expected),
+      /SHA-512 does not match/,
+    );
+  }
+  assert.throws(
+    () => assertArtifactHash(bytes, undefined),
+    /SHA-512 does not match/,
+  );
+});
 
 test("retained mirrors require matching artifact bytes, not just a filename", () => {
   const sha512 = createHash("sha512")

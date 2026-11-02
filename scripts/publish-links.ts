@@ -6,7 +6,10 @@ import {
 } from "@aws-sdk/client-s3";
 import * as yaml from "js-yaml";
 import { arweaveFileUploader } from "./arweave";
-const { findRetainedMirror } = require("./helpers/release-mirrors.cjs");
+const {
+  assertArtifactHash,
+  findRetainedMirror,
+} = require("./helpers/release-mirrors.cjs");
 
 const AWS_REGION = "eu-west-1";
 const BUCKET = "6529bucket";
@@ -74,9 +77,10 @@ async function fetchWithProgress(url: string) {
   return Buffer.from(arrayBuffer.buffer);
 }
 
-async function arweaveUpload(file: string) {
+async function arweaveUpload(file: string, expectedSha512: string) {
   console.log("Downloading...", file);
   const fileBuffer = await fetchWithProgress(file);
+  assertArtifactHash(fileBuffer, expectedSha512);
   const contentType = "application/octet-stream";
   const { url } = await arweaveFileUploader.uploadFile(
     file,
@@ -216,7 +220,7 @@ async function processNewVersion(
       );
       htmlContent += `<div class="link-row">Arweave: Coming Soon...</div>`;
     } else {
-      const { url } = await arweaveUpload(file);
+      const { url } = await arweaveUpload(file, sha512);
       catalogFile.arweaveUrl = url;
       htmlContent += `<div class="link-row">Arweave: <a href="${url}" target="_blank">${url}</a></div>`;
     }
