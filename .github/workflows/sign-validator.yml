@@ -13,6 +13,10 @@
 #                     aarch64-apple-darwin/validator
 #                     x86_64-apple-darwin/validator
 #                     x86_64-pc-windows-msvc/validator.exe
+#                     aarch64-apple-darwin/validator-app        (optional, all three or
+#                     x86_64-apple-darwin/validator-app          none: the validator's app,
+#                     x86_64-pc-windows-msvc/validator-app.exe   its window and tray icon,
+#                                                                signed like the program)
 #                     x86_64-pc-windows-msvc/<name>.msi    (optional, any number)
 #                   other entries (such as build-info.json) are listed and ignored.
 #                   The link is masked in the logs.
@@ -30,7 +34,8 @@
 #                   and other entries are listed and ignored.
 #                   setup (Windows only): Setup.exe, the WiX Burn bundle the
 #                   release builds around a .msi an installers run signed:
-#                     x86_64-pc-windows-msvc/<name>.exe    one or more (not validator.exe)
+#                     x86_64-pc-windows-msvc/<name>.exe    one or more (not validator.exe
+#                                                          or validator-app.exe)
 #                   Burn runs the installation from an elevated copy of its
 #                   engine, so the engine is signed on its own first: `wix
 #                   burn detach`, sign the engine, `wix burn reattach`, sign
@@ -179,10 +184,20 @@ jobs:
             unzip -p bundle.zip "$t/validator" > "out/$t/validator"
             chmod 0755 "out/$t/validator"
             echo "to sign: $t/validator"
+            # The app (optional): signed like the program.
+            if grep -qxF "$t/validator-app" entries.txt; then
+              unzip -p bundle.zip "$t/validator-app" > "out/$t/validator-app"
+              chmod 0755 "out/$t/validator-app"
+              echo "to sign: $t/validator-app"
+            fi
           done
-          grep -vxE '(aarch64|x86_64)-apple-darwin/validator' entries.txt | grep -v '/$' | sed 's/^/ignored here: /' || true
-          [ "$(lipo -archs out/aarch64-apple-darwin/validator)" = arm64 ] || { echo "::error::aarch64-apple-darwin/validator is not an arm64 program"; exit 1; }
-          [ "$(lipo -archs out/x86_64-apple-darwin/validator)" = x86_64 ] || { echo "::error::x86_64-apple-darwin/validator is not an x86_64 program"; exit 1; }
+          grep -vxE '(aarch64|x86_64)-apple-darwin/validator(-app)?' entries.txt | grep -v '/$' | sed 's/^/ignored here: /' || true
+          for b in validator validator-app; do
+            # The app, when present, for both architectures (lipo fails on a missing one).
+            [ -f "out/aarch64-apple-darwin/$b" ] || [ -f "out/x86_64-apple-darwin/$b" ] || continue
+            [ "$(lipo -archs "out/aarch64-apple-darwin/$b")" = arm64 ] || { echo "::error::aarch64-apple-darwin/$b is not an arm64 program"; exit 1; }
+            [ "$(lipo -archs "out/x86_64-apple-darwin/$b")" = x86_64 ] || { echo "::error::x86_64-apple-darwin/$b is not an x86_64 program"; exit 1; }
+          done
 
       - name: "Installers: take the disk image out of the bundle"
         if: inputs.kind == 'installers'
@@ -233,15 +248,19 @@ jobs:
           set -euo pipefail
           retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
           for t in aarch64-apple-darwin x86_64-apple-darwin; do
-            b="$RUNNER_TEMP/out/$t/validator"
-            echo "== $t/validator"
-            retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" \
-              --identifier io.6529.validator --sign "$SIGN_IDENTITY" "$b"
-            codesign --verify --strict --verbose=2 "$b"
-            info=$(codesign --display --verbose=2 "$b" 2>&1)
-            grep -E '^(Identifier=|Format=|CodeDirectory |Authority=|Timestamp=|TeamIdentifier=)' <<< "$info"
-            grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$t/validator: no hardened runtime"; exit 1; }
-            grep -q '^Timestamp=' <<< "$info" || { echo "::error::$t/validator: no secure timestamp"; exit 1; }
+            for name in validator validator-app; do
+              b="$RUNNER_TEMP/out/$t/$name"
+              [ -f "$b" ] || continue
+              id=io.6529.validator; [ "$name" = validator-app ] && id=io.6529.validator.app
+              echo "== $t/$name"
+              retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" \
+                --identifier "$id" --sign "$SIGN_IDENTITY" "$b"
+              codesign --verify --strict --verbose=2 "$b"
+              info=$(codesign --display --verbose=2 "$b" 2>&1)
+              grep -E '^(Identifier=|Format=|CodeDirectory |Authority=|Timestamp=|TeamIdentifier=)' <<< "$info"
+              grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$t/$name: no hardened runtime"; exit 1; }
+              grep -q '^Timestamp=' <<< "$info" || { echo "::error::$t/$name: no secure timestamp"; exit 1; }
+            done
           done
 
       - name: One disk image per architecture, with a README, codesigned
@@ -258,10 +277,16 @@ jobs:
             stage="$RUNNER_TEMP/dmg/$t"
             mkdir -p "$stage"
             cp -p "$RUNNER_TEMP/out/$t/validator" "$stage/validator"
+            app_line=""
+            if [ -f "$RUNNER_TEMP/out/$t/validator-app" ]; then
+              cp -p "$RUNNER_TEMP/out/$t/validator-app" "$stage/validator-app"
+              app_line="  validator-app  the app's program (the release's 6529 Validator.app holds it), $signed"
+            fi
             printf '%s\n' \
               "6529 validator $VERSION for macOS ($arch)" \
               "" \
               "  validator    the program, $signed" \
+              ${app_line:+"$app_line"} \
               "  README.txt   this file" \
               "" \
               "To install it, copy the program onto your PATH, for example:" \
@@ -407,6 +432,10 @@ jobs:
             ls -l "$m"
             cmp "$m/validator" "$b"
             codesign --verify --strict --verbose=2 "$m/validator"
+            if [ -f "$RUNNER_TEMP/out/$t/validator-app" ]; then
+              cmp "$m/validator-app" "$RUNNER_TEMP/out/$t/validator-app"
+              codesign --verify --strict --verbose=2 "$m/validator-app"
+            fi
             hdiutil detach "$m" > /dev/null || hdiutil detach -force "$m" > /dev/null
           done
 
@@ -531,10 +560,11 @@ jobs:
               $n = $e.FullName
               if ($env:KIND -eq 'setup') {
                 # kind setup: the Setup.exe bundles only (their .msi was signed by an installers run).
-                $take = $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.exe$' -and $n -cne 'x86_64-pc-windows-msvc/validator.exe' -and -not $n.EndsWith('.engine.exe')
+                $take = $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.exe$' -and $n -cne 'x86_64-pc-windows-msvc/validator.exe' -and $n -cne 'x86_64-pc-windows-msvc/validator-app.exe' -and -not $n.EndsWith('.engine.exe')
               } else {
                 # kind installers: the .msi files only (their validator.exe was signed by a binaries run).
-                $take = ($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -and $env:KIND -ne 'installers') -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$'
+                # kind binaries: validator.exe, and the app's validator-app.exe when present.
+                $take = (($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -or $n -ceq 'x86_64-pc-windows-msvc/validator-app.exe') -and $env:KIND -ne 'installers') -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$'
               }
               if ($take) {
                 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path $out $e.Name), $false)
@@ -559,15 +589,18 @@ jobs:
           } elseif ($env:KIND -eq 'installers') {
             if (@(Get-ChildItem -LiteralPath $out -Filter *.msi).Count -lt 1) { throw 'an installers bundle holds at least one x86_64-pc-windows-msvc/<name>.msi' }
           } else {
-            $exe = Join-Path $out 'validator.exe'
-            if (-not (Test-Path -LiteralPath $exe)) { throw 'the bundle has no x86_64-pc-windows-msvc/validator.exe' }
-            $h = New-Object byte[] 4096
-            $fs = [System.IO.File]::OpenRead($exe)
-            try { [void]$fs.Read($h, 0, $h.Length) } finally { $fs.Dispose() }
-            $pe = [BitConverter]::ToInt32($h, 0x3C)
-            $isPe = $h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090
-            if (-not $isPe -or [BitConverter]::ToUInt32($h, $pe) -ne 0x00004550 -or [BitConverter]::ToUInt16($h, $pe + 4) -ne 0x8664) {
-              throw 'validator.exe is not an x86-64 Windows program'
+            if (-not (Test-Path -LiteralPath (Join-Path $out 'validator.exe'))) { throw 'the bundle has no x86_64-pc-windows-msvc/validator.exe' }
+            foreach ($name in 'validator.exe', 'validator-app.exe') {
+              $exe = Join-Path $out $name
+              if (-not (Test-Path -LiteralPath $exe)) { continue }
+              $h = New-Object byte[] 4096
+              $fs = [System.IO.File]::OpenRead($exe)
+              try { [void]$fs.Read($h, 0, $h.Length) } finally { $fs.Dispose() }
+              $pe = [BitConverter]::ToInt32($h, 0x3C)
+              $isPe = $h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090
+              if (-not $isPe -or [BitConverter]::ToUInt32($h, $pe) -ne 0x00004550 -or [BitConverter]::ToUInt16($h, $pe + 4) -ne 0x8664) {
+                throw "$name is not an x86-64 Windows program"
+              }
             }
           }
           foreach ($m in Get-ChildItem -LiteralPath $out -Filter *.msi) {
@@ -768,6 +801,9 @@ jobs:
               x86_64-pc-windows-msvc/validator.exe; do
               cut -c67- "$s" | grep -qxF "$f" || { echo "::error::SHA256SUMS does not list $f"; exit 1; }
             done
+            # The app: for all three targets, or for none.
+            n=$(cut -c67- "$s" | grep -cxE '(aarch64|x86_64)-apple-darwin/validator-app|x86_64-pc-windows-msvc/validator-app\.exe' || true)
+            [ "$n" = 0 ] || [ "$n" = 3 ] || { echo "::error::SHA256SUMS lists the app for $n of the 3 targets"; exit 1; }
           fi
           cat "$s"
           {
