@@ -1,3 +1,4 @@
+import { isAuthSessionForProfile } from "@/components/auth/auth-session-scope";
 import {
   act,
   fireEvent,
@@ -8,6 +9,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
 import * as competitionVoteCache from "@/components/react-query-wrapper/utils/updateCompetitionVoteInCache";
+import { SingleWaveDropVoteSize } from "@/components/waves/drop/SingleWaveDropVote.types";
 import { SingleWaveDropVote } from "@/components/waves/drop/SingleWaveDropVote";
 import { commonApiPost } from "@/services/api/common-api";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
@@ -21,6 +23,9 @@ import {
   invalidateCompetition,
 } from "@/services/api/competitions-api";
 
+jest.mock("@/components/auth/auth-session-scope", () => ({
+  isAuthSessionForProfile: jest.fn(() => true),
+}));
 jest.mock(
   "next/dynamic",
   () => () =>
@@ -29,11 +34,12 @@ jest.mock(
     }
 );
 let mockSignedIn = true;
+const mockRequestAuth = jest.fn();
 jest.mock("@/components/auth/Auth", () => ({
   useAuth: () => ({
     connectedProfile: mockSignedIn ? { id: "viewer" } : null,
     setToast: jest.fn(),
-    requestAuth: async () => ({ success: true }),
+    requestAuth: mockRequestAuth,
   }),
 }));
 jest.mock("@/components/auth/SeizeConnectContext", () => ({
@@ -113,7 +119,8 @@ const initialBudget = {
 function mount(
   voteMode: "slider" | "numeric" | null = "numeric",
   voteDrop: ApiDrop = drop,
-  onClose?: () => void
+  onClose?: () => void,
+  size = SingleWaveDropVoteSize.NORMAL
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -122,6 +129,7 @@ function mount(
     <QueryClientProvider client={client}>
       <SingleWaveDropVote
         drop={voteDrop}
+        size={size}
         voteMode={voteMode ?? undefined}
         onVoteRequestStarted={onClose}
       />
@@ -130,8 +138,10 @@ function mount(
   return { ...rendered, client };
 }
 beforeEach(() => {
+  jest.mocked(isAuthSessionForProfile).mockReturnValue(true);
   jest.clearAllMocks();
   mockSignedIn = true;
+  mockRequestAuth.mockResolvedValue({ success: true });
   jest.mocked(useCompetitionViewer).mockReturnValue("viewer:self");
   jest.mocked(fetchDropCompetitionContext).mockResolvedValue(context as never);
   jest.mocked(fetchCompetitionCredits).mockResolvedValue(initialBudget);
@@ -165,6 +175,40 @@ it("uses the entry budget and competition vote endpoint despite the parent wave'
     expect.any(AbortSignal)
   );
   expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+});
+it("does not submit a stale vote after the viewer changes during authentication", async () => {
+  let finishAuth!: (result: { success: boolean }) => void;
+  mockRequestAuth.mockReturnValue(
+    new Promise((resolve) => {
+      finishAuth = resolve;
+    })
+  );
+  const { unmount } = mount();
+  const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+  fireEvent.change(input, { target: { value: "25" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  await waitFor(() => expect(mockRequestAuth).toHaveBeenCalled());
+  unmount();
+  jest.mocked(useCompetitionViewer).mockReturnValue("other:self");
+  mount();
+  await act(async () => finishAuth({ success: true }));
+  expect(setCompetitionVote).not.toHaveBeenCalled();
+});
+it("blocks an actor change before React updates the viewer", async () => {
+  let finishAuth!: (result: { success: boolean }) => void;
+  mockRequestAuth.mockReturnValue(
+    new Promise((resolve) => {
+      finishAuth = resolve;
+    })
+  );
+  mount();
+  const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+  fireEvent.change(input, { target: { value: "25" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  jest.mocked(isAuthSessionForProfile).mockReturnValue(false);
+  await act(async () => finishAuth({ success: true }));
+  expect(setCompetitionVote).not.toHaveBeenCalled();
+  expect(input).toHaveValue(25);
 });
 it("keeps slider mode with the competition range", async () => {
   mount("slider");
@@ -393,14 +437,20 @@ it("invalidates the old viewer during commit before passive effects can flush", 
     client.clear();
   }
 });
-it("keeps voting open when saving the vote fails", async () => {
+it("keeps voting open and refreshes fresh limits when saving the vote fails", async () => {
   jest.mocked(setCompetitionVote).mockRejectedValue(new Error("Save failed"));
+  jest
+    .mocked(fetchCompetitionCredits)
+    .mockResolvedValueOnce(initialBudget)
+    .mockResolvedValue({ ...initialBudget, max_vote: 10 });
   const onClose = jest.fn();
   mount("numeric", drop, onClose);
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "25" } });
   fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
   await screen.findByRole("alert");
+  await waitFor(() => expect(input).toHaveAttribute("max", "10"));
+  expect(fetchCompetitionCredits).toHaveBeenCalledTimes(2);
   expect(onClose).not.toHaveBeenCalled();
   expect(invalidateCompetition).not.toHaveBeenCalled();
   expect(screen.queryByText("Saved")).not.toBeInTheDocument();
@@ -419,7 +469,11 @@ it("restores Explain vote for proxy competition votes after the vote succeeds", 
   fireEvent.change(input, { target: { value: "25" } });
   fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
   const rationale = screen.getByLabelText("Optional rationale reply");
-  expect(rationale).toHaveValue("Vote rationale (+25 at time of posting):\n\n");
+  expect(rationale).toHaveValue("");
+  expect(rationale).toHaveAttribute(
+    "placeholder",
+    "Vote rationale (+25 at time of posting):"
+  );
   fireEvent.change(rationale, { target: { value: "Proxy vote rationale" } });
   fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
   await waitFor(() =>
@@ -436,6 +490,83 @@ it("restores Explain vote for proxy competition votes after the vote succeeds", 
   );
   expect(setCompetitionVote).toHaveBeenCalledTimes(1);
 });
+it.each([SingleWaveDropVoteSize.MINI, SingleWaveDropVoteSize.NORMAL])(
+  "displays the generated %s rationale as a placeholder without blocking an untouched reply",
+  async (size) => {
+    jest.mocked(commonApiPost).mockResolvedValue({ id: "reply" } as never);
+    mount("numeric", replyDrop, undefined, size);
+    await screen.findByRole("spinbutton", { name: "Your vote" });
+    fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
+    const rationale = screen.getByLabelText("Optional rationale reply");
+    const save = screen.getByRole("button", { name: "Save vote" });
+    expect(rationale).toHaveValue("");
+    expect(rationale).toHaveAttribute(
+      "placeholder",
+      "Vote rationale (0 at time of posting):"
+    );
+    expect(save).toBeEnabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(commonApiPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            parts: [
+              expect.objectContaining({
+                content: "Vote rationale (0 at time of posting):",
+              }),
+            ],
+          }),
+        })
+      )
+    );
+    expect(setCompetitionVote).toHaveBeenCalledTimes(1);
+  }
+);
+it.each([SingleWaveDropVoteSize.MINI, SingleWaveDropVoteSize.NORMAL])(
+  "keeps %s placeholder text out of typed drafts and preserves empty-field validation",
+  async (size) => {
+    jest.mocked(commonApiPost).mockResolvedValue({ id: "reply" } as never);
+    mount("numeric", replyDrop, undefined, size);
+    const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+    fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
+    const rationale = screen.getByLabelText("Optional rationale reply");
+    const save = screen.getByRole("button", { name: "Save vote" });
+    fireEvent.change(input, { target: { value: "25" } });
+    expect(rationale).toHaveValue("");
+    expect(rationale).toHaveAttribute(
+      "placeholder",
+      "Vote rationale (+25 at time of posting):"
+    );
+    expect(save).toBeEnabled();
+    expect(setCompetitionVote).not.toHaveBeenCalled();
+    expect(commonApiPost).not.toHaveBeenCalled();
+    fireEvent.change(rationale, { target: { value: "My explanation" } });
+    expect(rationale).toHaveValue("My explanation");
+    fireEvent.change(rationale, { target: { value: "" } });
+    expect(save).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Add rationale text or turn Explain vote off."
+    );
+    fireEvent.change(rationale, { target: { value: "My explanation" } });
+    fireEvent.change(input, { target: { value: "-25" } });
+    fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
+    expect(rationale).toHaveValue("My explanation");
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(commonApiPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            parts: [expect.objectContaining({ content: "My explanation" })],
+          }),
+        })
+      )
+    );
+    expect(setCompetitionVote).toHaveBeenCalledTimes(1);
+  }
+);
 it("blocks empty enabled replies before submitting a vote", async () => {
   mount("numeric", replyDrop);
   await screen.findByRole("spinbutton", { name: "Your vote" });
@@ -527,6 +658,16 @@ it("shows the sign-in prompt without vote modes for a signed-out viewer", async 
   await screen.findByText("Connect your wallet to participate.");
   expect(screen.queryByRole("group", { name: "Vote input mode" })).toBeNull();
   expect(screen.queryByRole("slider")).toBeNull();
+  expect(fetchCompetitionCredits).not.toHaveBeenCalled();
+});
+it("hides the MINI vote footer for a signed-out viewer", async () => {
+  mockSignedIn = false;
+  jest.mocked(useCompetitionViewer).mockReturnValue(null);
+  mount(null, drop, undefined, SingleWaveDropVoteSize.MINI);
+  const prompt = await screen.findByText("Connect your wallet to participate.");
+  expect(prompt).not.toBeVisible();
+  expect(screen.queryByRole("group", { name: "Vote input mode" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Save vote" })).toBeNull();
   expect(fetchCompetitionCredits).not.toHaveBeenCalled();
 });
 it("offers both modes without a reply option when the voter cannot chat", async () => {

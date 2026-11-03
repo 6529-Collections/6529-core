@@ -10,9 +10,11 @@ import { AppWalletsProvider } from "@/components/app-wallets/AppWalletsContext";
 import Auth from "@/components/auth/Auth";
 import AuthLaunchTimingReporter from "@/components/auth/AuthLaunchTimingReporter";
 import MarketActivityTracker from "@/components/collect/MarketActivityTracker";
+import SignedWriteDecisionHost from "@/components/device-signing/SignedWriteDecisionHost";
 import { SeizeConnectProvider } from "@/components/auth/SeizeConnectContext";
+import { NftPurchasingServerRenderProvider } from "@/components/common/NftPurchasingServerRender";
 import { CookieConsentProvider } from "@/components/cookies/CookieConsentContext";
-import { EULAConsentProvider } from "@/components/eula/EULAConsentContext";
+import E2eeProvider from "@/components/e2ee/E2eeProvider";
 import { IpfsProvider } from "@/components/ipfs/IPFSContext";
 import QuickDirectMessagesGate from "@/components/messages/quick-dms/QuickDirectMessagesGate";
 import { NotificationsProvider } from "@/components/notifications/NotificationsContext";
@@ -36,15 +38,18 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { MyStreamProvider } from "@/contexts/wave/MyStreamContext";
 import { WaveEligibilityProvider } from "@/contexts/wave/WaveEligibilityContext";
 import { AppWebSocketProvider } from "@/services/websocket/AppWebSocketProvider";
+import { isSignedMessagesEnabled } from "@/lib/device-signing/feature";
 import { LayoutProvider } from "../brain/my-stream/layout/LayoutContext";
 import { ViewProvider } from "../navigation/ViewContext";
 import AnchorInterceptorSetup from "./AnchorInterceptorSetup";
 import CapacitorSetup from "./CapacitorSetup";
+import EULAConsentStartup from "./EULAConsentStartup";
 import IpfsImageSetup from "./IpfsImageSetup";
 import LocaleMessagesGate from "./LocaleMessagesGate";
 import MixpanelSetup from "./MixpanelSetup";
 import QueryClientSetup from "./QueryClientSetup";
 import WagmiSetup from "./WagmiSetup";
+import DocumentLanguage from "./DocumentLanguage";
 
 export default function Providers({
   children,
@@ -52,12 +57,14 @@ export default function Providers({
   enableWalletAuthentication = true,
   enableCookieConsent = true,
   enableMyStream = true,
+  canServerRenderNftPurchasing = false,
 }: {
   readonly children: React.ReactNode;
   readonly enableVersionCheck?: boolean;
   readonly enableWalletAuthentication?: boolean;
   readonly enableCookieConsent?: boolean;
   readonly enableMyStream?: boolean;
+  readonly canServerRenderNftPurchasing?: boolean;
 }) {
   const sharedProviders = (
     <TitleProvider>
@@ -109,14 +116,18 @@ export default function Providers({
                                     {enableWalletAuthentication && (
                                       <MarketActivityTracker />
                                     )}
+                                    {enableWalletAuthentication &&
+                                      isSignedMessagesEnabled() && (
+                                        <SignedWriteDecisionHost />
+                                      )}
                                     <WaveEligibilityProvider>
                                       <NotificationsProvider>
                                         <CookieConsentProvider
                                           disabled={!enableCookieConsent}
                                         >
                                           <MixpanelSetup />
-                                          <EULAConsentProvider>
-                                            <AppWebSocketProvider>
+                                          <AppWebSocketProvider>
+                                            <E2eeProvider>
                                               <LayoutProvider>
                                                 {enableMyStream ? (
                                                   <MyStreamProvider>
@@ -127,11 +138,11 @@ export default function Providers({
                                                   sharedProviders
                                                 )}
                                               </LayoutProvider>
-                                              {enableVersionCheck && (
-                                                <NewVersionToast />
-                                              )}
-                                            </AppWebSocketProvider>
-                                          </EULAConsentProvider>
+                                            </E2eeProvider>
+                                            {enableVersionCheck && (
+                                              <NewVersionToast />
+                                            )}
+                                          </AppWebSocketProvider>
                                         </CookieConsentProvider>
                                       </NotificationsProvider>
                                     </WaveEligibilityProvider>
@@ -154,8 +165,17 @@ export default function Providers({
   );
 
   return (
-    <EditingDropProvider>
-      <ActiveGroupProvider>{appProviders}</ActiveGroupProvider>
-    </EditingDropProvider>
+    <>
+      <DocumentLanguage />
+      <EULAConsentStartup>
+        <EditingDropProvider>
+          <ActiveGroupProvider>
+            <NftPurchasingServerRenderProvider enabled={canServerRenderNftPurchasing}>
+              {appProviders}
+            </NftPurchasingServerRenderProvider>
+          </ActiveGroupProvider>
+        </EditingDropProvider>
+      </EULAConsentStartup>
+    </>
   );
 }

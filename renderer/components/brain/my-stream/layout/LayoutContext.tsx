@@ -39,8 +39,6 @@ interface LayoutSpaces {
 
   // Space used by mobile nav
   mobileNavSpace: number;
-  // Available space for content
-  contentSpace: number;
 
   // Whether the standard page header is currently mounted
   hasHeader: boolean;
@@ -56,7 +54,6 @@ const spacesAreEqual = (a: LayoutSpaces, b: LayoutSpaces) =>
   a.spacerSpace === b.spacerSpace &&
   a.mobileTabsSpace === b.mobileTabsSpace &&
   a.mobileNavSpace === b.mobileNavSpace &&
-  a.contentSpace === b.contentSpace &&
   a.hasHeader === b.hasHeader &&
   a.measurementsComplete === b.measurementsComplete;
 
@@ -113,7 +110,7 @@ type LayoutRefType =
 
 type MeasuredLayoutSpaceKey = Exclude<
   keyof LayoutSpaces,
-  "contentSpace" | "hasHeader" | "measurementsComplete"
+  "measurementsComplete" | "hasHeader"
 >;
 
 const layoutMeasurementConfigs: readonly {
@@ -226,7 +223,6 @@ const defaultSpaces: LayoutSpaces = {
   spacerSpace: 0,
   mobileTabsSpace: 0,
   mobileNavSpace: 0,
-  contentSpace: 0,
   hasHeader: false,
   measurementsComplete: false,
 };
@@ -320,24 +316,12 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   // Calculate spaces based on current measurements
+  // Only measured element heights feed the context. Window height changes
+  // (including mobile URL-bar collapse while scrolling) must not re-render
+  // every layout consumer; heights are applied through CSS viewport units.
   const calculateSpaces = useCallback(() => {
-    const measuredSpaces = measureLayoutSpaces(refMap.current);
-
-    // Calculate total occupied space
-    const totalOccupiedSpace = Object.values(measuredSpaces).reduce(
-      (totalSpace, measuredSpace) => totalSpace + measuredSpace,
-      0
-    );
-
-    // Ensure content space is at least 0 to prevent negative values
-    const calculatedContentSpace = Math.max(
-      0,
-      window.innerHeight - totalOccupiedSpace
-    );
-
     const nextSpaces: LayoutSpaces = {
-      ...measuredSpaces,
-      contentSpace: calculatedContentSpace,
+      ...measureLayoutSpaces(refMap.current),
       hasHeader: refMap.current.header !== null,
       measurementsComplete: true,
     };
@@ -363,8 +347,19 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
 
     // Nothing needed here - we'll observe elements as they're registered
 
-    // Also listen for window resize
-    window.addEventListener("resize", calculateSpaces);
+    // Window resizes can reflow the measured elements. Measure at most once
+    // per frame; resize can fire many times per frame while dragging.
+    let resizeFramePending = false;
+    let resizeFrame = 0;
+    const scheduleResizeCalculation = () => {
+      if (resizeFramePending) return;
+      resizeFramePending = true;
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFramePending = false;
+        calculateSpaces();
+      });
+    };
+    window.addEventListener("resize", scheduleResizeCalculation);
 
     // Initial calculation
     const initialCalculationFrame = requestAnimationFrame(calculateSpaces);
@@ -376,7 +371,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         resizeObserverRef.current = null;
       }
       cancelAnimationFrame(initialCalculationFrame);
-      window.removeEventListener("resize", calculateSpaces);
+      if (resizeFramePending) cancelAnimationFrame(resizeFrame);
+      window.removeEventListener("resize", scheduleResizeCalculation);
     };
   }, [calculateSpaces]);
 
