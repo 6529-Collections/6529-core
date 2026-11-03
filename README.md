@@ -394,3 +394,20 @@ The above will extract the latest download links per platform and create html pa
 `https://d3lqz0a4bldqgf.cloudfront.net/6529-core-app/<os>/links/<version>.html`
 You should get 3 html links (one per platform) which can be shared on Brain in the [6529 Desktop Releases Wave](https://6529.io/waves?wave=a871e152-5567-4407-80cc-382b475bee1a).
 Note: the above github workflow will create links both to s3 and arweave and add them to the htmls automatically.
+
+## Wallet-free receiving-device setup
+
+The companion frontend can issue a short-lived connection-share link carrying
+an AES-GCM encrypted fresh signing/MLS identity. The source browser's wallet
+approves the app grant; the receiving Core app does not connect that wallet.
+Core preserves the link fragment through native navigation and forwards the
+optional encrypted setup through its secure auth bridge. Native navigation
+logs omit query credentials and the unlock fragment.
+
+This native support is paired with frontend PR #4541. After that frontend
+merges, refresh the renderer through the normal `pull-web` workflow before
+building this Core release. Keep the existing native-auth bridge adaptations
+when resolving that import. The renderer must pass `encrypted_device_setup`
+when creating a share and retain it on redemption; the native refresh token
+continues to stay in the main process. Existing target keys/history must be
+preserved; past history on a new target is restored through encrypted backup.

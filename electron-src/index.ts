@@ -188,6 +188,7 @@ interface NativeSessionRefreshRequest {
 }
 
 interface NativeConnectionShareRequest {
+  readonly encrypted_device_setup?: string;
   readonly access_token?: string | null;
   readonly target_client_type?: RefreshTokenClientType;
   readonly client_type?: RefreshTokenClientType;
@@ -214,6 +215,7 @@ interface NativeSessionLogoutRequest extends NativeSessionRefreshRequest {
 interface NativeRemoveRefreshTokenRequest extends NativeSessionRefreshRequest {}
 
 interface NativeSessionLoginResponse {
+  readonly encrypted_device_setup?: string | null;
   readonly client_type: "native" | "desktop";
   readonly address: string;
   readonly role: string | null;
@@ -454,6 +456,10 @@ function isNativeConnectionShareRequest(
   }
   const record = request as Partial<NativeConnectionShareRequest>;
   return (
+    (record.encrypted_device_setup === undefined ||
+      (typeof record.encrypted_device_setup === "string" &&
+        record.encrypted_device_setup.length <= 32768 &&
+        /^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]+$/.test(record.encrypted_device_setup))) &&
     hasOptionalAccessToken(record) &&
     hasOptionalConnectionShareSourceProof(record) &&
     (record.target_client_type === undefined ||
@@ -634,6 +640,7 @@ async function nativeCreateConnectionShare(
     accessToken: request.access_token,
     body: {
       target_client_type: targetClientType,
+      encrypted_device_setup: request.encrypted_device_setup,
       ...sourceProof,
     },
   });
@@ -1152,23 +1159,20 @@ if (!gotTheLock) {
       const connectionInfo = JSON.parse(encodedData);
       mainWindow?.webContents.send("wallet-connection", connectionInfo);
     } else if (urlObj.host === "navigate") {
-      Logger.info(
-        `Handling navigate Deep Link: ${
-          urlObj.pathname
-        }?${urlObj.searchParams.toString()}`,
-      );
+      // Never log connection credentials or the device setup unlock fragment.
+      Logger.info("Handling navigate Deep Link", urlObj.pathname);
       mainWindow?.webContents.send(
         "navigate",
-        `${urlObj.pathname}?${urlObj.searchParams.toString()}`,
+        `${urlObj.pathname}?${urlObj.searchParams.toString()}${urlObj.hash}`,
       );
     } else if (urlObj.host === "share-connection") {
       Logger.info("Handling share connection Deep Link");
       mainWindow?.webContents.send(
         "navigate",
-        `/accept-connection-sharing?${urlObj.searchParams.toString()}`,
+        `/accept-connection-sharing?${urlObj.searchParams.toString()}${urlObj.hash}`,
       );
     } else {
-      Logger.info("Unknown Deep Link", urlObj);
+      Logger.info("Unknown Deep Link");
     }
   }
 
