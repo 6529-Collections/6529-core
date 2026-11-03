@@ -214,6 +214,46 @@ Examples:
 6529 run dist-mac-production     # Production app, Live backend; no label suffix
 ```
 
+Mac staging/production commands package without electron-builder's automatic
+publication, then run `scripts/mac-release.cjs`. The shared local/GitHub publisher
+deduplicates the manifest, verifies every final ZIP/DMG hash and size, requires its blockmap,
+uploads artifacts with the AWS CLI (multipart for large files), and conditionally
+writes `latest-mac.yml` last. The previous manifest is retained under
+`mac/manifest-backups/`; a concurrently changed feed is never overwritten.
+The AWS CLI and the normal S3 credentials are required for publishing.
+These staging/production commands always publish, as before; use the Local
+or architecture-specific production targets for packaging without publication.
+Run only one Mac publisher per environment at a time. The ETag protects the
+manifest, not the artifact keys: same-version rebuilds deliberately replace
+versioned files, so concurrent publishes of the same version can overwrite each
+other's ZIP/DMG before a conflicting manifest write is rejected. A manifest
+backup alone cannot restore overwritten artifacts.
+
+The app bundle requires macOS 13+, while the updater manifest uses Darwin
+`22.0.0` because electron-updater compares against `os.release()`. Keep these
+requirements aligned when raising the minimum. The publisher emits a separate
+`minimumMacOSVersion` for download-page display; Darwin/macOS mappings are
+explicit because macOS 26 uses Darwin 25. Unknown mappings fail closed until
+verified. Existing feeds without this display field use known mappings in FE.
+To retry publication of an
+already completed local build without rebuilding:
+
+```bash
+6529 exec node scripts/mac-release.cjs publish electron-builder.production.json 0.3.16 dist/latest-mac.yml dist
+```
+
+Use the build's actual version and staging config when appropriate. The frozen
+production `mac/latest-macos-12.yml` is a separate **download-only** feed for
+the last Monterey-compatible release (0.3.15 Intel/Apple silicon DMGs). Normal
+publishing never regenerates or overwrites it; do not configure the app's
+auto-updater to use it. The Apps page reads current/legacy feeds independently,
+so new releases appear without a frontend deployment. `publish-links` also
+writes `links/<version>.json` with optional Arweave mirrors, alongside the
+existing HTML pages. Catalog entries include the artifact SHA-512;
+CloudFront-only republishing retains a mirror only when that hash still matches.
+Older entries without hashes lose their optional mirror until Arweave publication
+recreates it. Failed/missing mirror metadata does not block downloads.
+
 Production app builds must not target the Test backend. Commands such as
 `6529 run dist-mac-production test` fail immediately before build work starts.
 The same optional `live`/`test` argument applies to the Windows, macOS, and
