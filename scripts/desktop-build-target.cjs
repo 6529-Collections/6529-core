@@ -80,8 +80,9 @@ const COMMANDS = {
       "--mac",
       "--arm64",
       "--publish",
-      "always",
+      "never",
     ],
+    publishMacConfig: "electron-builder.staging.json",
   },
   "dist-mac-production": {
     appEnvironment: "production",
@@ -94,8 +95,9 @@ const COMMANDS = {
       "--arm64",
       "--x64",
       "--publish",
-      "always",
+      "never",
     ],
+    publishMacConfig: "electron-builder.production.json",
   },
   "dist-mac-production-x64": {
     appEnvironment: "production",
@@ -197,12 +199,12 @@ function getBuildEnvironment(commandConfig, backendTarget) {
     backendTarget === "test"
   ) {
     throw new Error(
-      "Production app environment cannot be built against Test backend."
+      "Production app environment cannot be built against Test backend.",
     );
   }
   if (backendTarget === "test" && stagingApiKey.trim().length === 0) {
     throw new Error(
-      "Test backend target requires STAGING_API_KEY. Add it to .env.local or export it before building."
+      "Test backend target requires STAGING_API_KEY. Add it to .env.local or export it before building.",
     );
   }
 
@@ -256,7 +258,7 @@ function printSummary(commandName, commandConfig, backendTarget) {
   const wsEndpoint =
     backendTarget === "test" ? TEST_WS_ENDPOINT : LIVE_WS_ENDPOINT;
   console.log(
-    `[desktop-build-target] ${commandName}: app=${commandConfig.appEnvironment}, backend=${backendTarget}`
+    `[desktop-build-target] ${commandName}: app=${commandConfig.appEnvironment}, backend=${backendTarget}`,
   );
   console.log(`[desktop-build-target] BASE_ENDPOINT=${baseEndpoint}`);
   console.log(`[desktop-build-target] API_ENDPOINT=${apiEndpoint}`);
@@ -271,8 +273,8 @@ function main() {
   if (!commandConfig) {
     throw new Error(
       `Unknown desktop build command "${commandName}". Use one of: ${Object.keys(
-        COMMANDS
-      ).join(", ")}`
+        COMMANDS,
+      ).join(", ")}`,
     );
   }
   if (process.argv.length > 4) {
@@ -290,8 +292,22 @@ function main() {
   run(
     "pnpm",
     ["exec", "electron-builder", ...commandConfig.electronBuilder],
-    env
+    env,
   );
+  if (commandConfig.publishMacConfig) {
+    run(
+      "node",
+      [
+        "scripts/mac-release.cjs",
+        "publish",
+        commandConfig.publishMacConfig,
+        require("../package.json").version,
+        "dist/latest-mac.yml",
+        "dist",
+      ],
+      env,
+    );
+  }
   // Source maps are not packaged; keep them beside the build.
   run("node", ["scripts/archive-source-maps.cjs"], env);
 }

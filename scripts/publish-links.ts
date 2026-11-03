@@ -1,6 +1,15 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  S3ServiceException,
+} from "@aws-sdk/client-s3";
 import * as yaml from "js-yaml";
 import { arweaveFileUploader } from "./arweave";
+const {
+  assertArtifactHash,
+  findRetainedMirror,
+} = require("./helpers/release-mirrors.cjs");
 
 const AWS_REGION = "eu-west-1";
 const BUCKET = "6529bucket";
@@ -26,7 +35,7 @@ async function fetchWithProgress(url: string) {
 
   if (totalBytes === null) {
     console.log(
-      "Unable to determine file size; progress tracking not available."
+      "Unable to determine file size; progress tracking not available.",
     );
   }
 
@@ -68,14 +77,15 @@ async function fetchWithProgress(url: string) {
   return Buffer.from(arrayBuffer.buffer);
 }
 
-async function arweaveUpload(file: string) {
+async function arweaveUpload(file: string, expectedSha512: string) {
   console.log("Downloading...", file);
   const fileBuffer = await fetchWithProgress(file);
+  assertArtifactHash(fileBuffer, expectedSha512);
   const contentType = "application/octet-stream";
   const { url } = await arweaveFileUploader.uploadFile(
     file,
     fileBuffer,
-    contentType
+    contentType,
   );
   console.log(`Uploaded ${file} at ${url}`);
   return { url };
@@ -126,7 +136,7 @@ function getTitle(platform: string, version: string) {
 async function processNewVersion(
   platform: string,
   filePath: string,
-  skipArweave: boolean
+  skipArweave: boolean,
 ): Promise<void> {
   console.log("Fetching latest version", platform, filePath);
   console.time(`${platform} Processing`);
@@ -141,17 +151,46 @@ async function processNewVersion(
   const data = await response.text();
   const yml: any = yaml.load(data);
 
-  const files: Set<string> = new Set();
+  const files: Map<string, string> = new Map();
   yml.files.forEach((file: any) => {
     if (file.url.endsWith("zip")) {
       return;
     }
-    files.add(`${BASE_PATH}/${BUCKET_PATH}/${platform}/${file.url}`);
+    files.set(
+      `${BASE_PATH}/${BUCKET_PATH}/${platform}/${file.url}`,
+      file.sha512,
+    );
   });
 
   console.log("Files processed", files.size);
 
   const title = getTitle(platform, yml.version);
+  // Machine-readable mirrors let the Apps page offer direct downloads without
+  // scraping the historical HTML landing page. Keep existing mirrors when
+  // running the CloudFront-only publication step again.
+  const catalogFiles: { url: string; sha512: string; arweaveUrl?: string }[] =
+    [];
+  let previousCatalog: unknown;
+  if (skipArweave) {
+    try {
+      const previous = await s3.send(
+        new GetObjectCommand({
+          Bucket: BUCKET,
+          Key: `${BUCKET_PATH}/${platform}/links/${yml.version}.json`,
+        }),
+      );
+      if (!previous.Body)
+        throw new Error("Previous mirror catalog has no body");
+      previousCatalog = JSON.parse(await previous.Body.transformToString());
+    } catch (error) {
+      const missing =
+        (error instanceof Error &&
+          ["NoSuchKey", "NotFound"].includes(error.name)) ||
+        (error instanceof S3ServiceException &&
+          error.$metadata.httpStatusCode === 404);
+      if (!missing) throw error;
+    }
+  }
 
   let htmlContent = `
     <div style="display: flex; align-items: center; gap: 1rem;">
@@ -159,7 +198,12 @@ async function processNewVersion(
       <h1>${title}</h1>
     </div>
   `;
-  for (const file of files) {
+  for (const [file, sha512] of files) {
+    const artifactName = file.split("/").pop()!;
+    const catalogFile: { url: string; sha512: string; arweaveUrl?: string } = {
+      url: artifactName,
+      sha512,
+    };
     const fileName = getFileName(file);
     const cloudfrontUrl = `${CF_PATH}/${BUCKET_PATH}/${platform}/${file
       .split("/")
@@ -168,13 +212,21 @@ async function processNewVersion(
     htmlContent += `<h3>${fileName}</h3>`;
     htmlContent += `<div class="link-row">CloudFront: <a href="${cloudfrontUrl}" target="_blank">${cloudfrontUrl}</a></div>`;
     if (skipArweave) {
+      catalogFile.arweaveUrl = findRetainedMirror(
+        previousCatalog,
+        yml.version,
+        artifactName,
+        sha512,
+      );
       htmlContent += `<div class="link-row">Arweave: Coming Soon...</div>`;
     } else {
-      const { url } = await arweaveUpload(file);
+      const { url } = await arweaveUpload(file, sha512);
+      catalogFile.arweaveUrl = url;
       htmlContent += `<div class="link-row">Arweave: <a href="${url}" target="_blank">${url}</a></div>`;
     }
 
     htmlContent += `</div>`;
+    catalogFiles.push(catalogFile);
   }
 
   const htmlFile = `
@@ -216,10 +268,24 @@ async function processNewVersion(
   await s3.send(
     new PutObjectCommand({
       Bucket: BUCKET,
+      Key: `${BUCKET_PATH}/${platform}/links/${yml.version}.json`,
+      Body: JSON.stringify(
+        { version: yml.version, files: catalogFiles },
+        null,
+        2,
+      ),
+      ContentType: "application/json",
+      CacheControl: "no-cache",
+    }),
+  );
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
       Key: newVersionKey,
       Body: htmlFile,
       ContentType: `text/html`,
-    })
+    }),
   );
 
   console.log("Uploaded", `${BASE_PATH}/${newVersionKey}`);
