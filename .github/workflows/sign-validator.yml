@@ -209,9 +209,15 @@ jobs:
             : > "transports-$t.txt"
             if grep -qxF "$t/build-info.json" entries.txt; then
               unzip -p bundle.zip "$t/build-info.json" > "build-info-$t.json"
-              jq -e 'type == "object" and ((.transports // []) | type == "array")' "build-info-$t.json" > /dev/null \
-                || { echo "::error::$t/build-info.json is not a build's facts"; exit 1; }
-              for b in $(jq -r '(.transports // [])[].binary' "build-info-$t.json"); do
+              # Every entry an object naming its binary: a malformed one fails here,
+              # rather than being dropped from the list below.
+              jq -e 'type == "object" and ((.transports // []) | type == "array"
+                     and all(type == "object" and (.binary | type == "string")))' "build-info-$t.json" > /dev/null \
+                || { echo "::error::$t/build-info.json is not a build's facts (each transports entry names its binary)"; exit 1; }
+              names=$(jq -r '(.transports // [])[].binary' "build-info-$t.json") \
+                || { echo "::error::$t/build-info.json: its transports entries cannot be read"; exit 1; }
+              # shellcheck disable=SC2086 # the names, one per word
+              for b in $names; do
                 [[ "$b" =~ ^[a-z][a-z0-9-]*$ && "$b" != validator && "$b" != validator-app ]] \
                   || { echo "::error::$t/build-info.json lists a program named \"$b\""; exit 1; }
                 grep -qxF "$t/$b" entries.txt || { echo "::error::$t/build-info.json lists $b, and the bundle has no $t/$b"; exit 1; }
