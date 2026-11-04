@@ -17,8 +17,14 @@
 #                     x86_64-apple-darwin/validator-app          none: the validator's app,
 #                     x86_64-pc-windows-msvc/validator-app.exe   its window and tray icon,
 #                                                                signed like the program)
+#                     <target>/build-info.json             (optional) the build's facts; each
+#                                                          program its "transports" lists
+#                                                          ("binary": lyrebird, the validator's
+#                                                          Tor bridge program) must be in the
+#                                                          bundle at <target>/<binary>, and is
+#                                                          signed like the program
 #                     x86_64-pc-windows-msvc/<name>.msi    (optional, any number)
-#                   other entries (such as build-info.json) are listed and ignored.
+#                   other entries are listed and ignored.
 #                   The link is masked in the logs.
 #   bundle_sha256   the zip's SHA-256, checked before anything else
 #   recipient_cert  a PEM X.509 certificate with an RSA key. The signed files
@@ -44,8 +50,11 @@
 #
 # macOS (macos-latest): the certificate is imported as build-mac.yml imports
 # it, into a throwaway keychain that is deleted at the end.
-#   binaries: each binary is codesigned (hardened runtime, secure timestamp)
-#   and put with a README into one .dmg per architecture.
+#   binaries: each binary is codesigned (hardened runtime, secure timestamp;
+#   identifiers io.6529.validator, io.6529.validator.app and
+#   io.6529.validator.<name> for a program build-info.json lists under
+#   "transports", none with entitlements) and put with a README into one
+#   .dmg per architecture, so the notarization covers every one.
 #   installers: every program inside the .app must already carry this
 #   Developer ID's signature (hardened runtime, timestamp), and stays byte
 #   for byte as it is; the .app itself is codesigned (hardened runtime,
@@ -55,7 +64,8 @@
 #   with spctl and codesign --verify --strict.
 # Windows (windows-latest): AzureSignTool 6.0.1 signs each .exe and .msi with
 # the flags of scripts/windows-sign-hook.cjs (sha256, RFC 3161 timestamp), and
-# Get-AuthenticodeSignature checks each one.
+# Get-AuthenticodeSignature checks each one (kind binaries: every program with
+# validator.exe's certificate).
 #
 # Results, kept 14 days as this run's artifacts:
 #   validator-<version>-macos-signed     a .tar of the signed files, encrypted
@@ -178,21 +188,47 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP"
           unzip -Z1 bundle.zip > entries.txt
+          : > taken.txt
           for t in aarch64-apple-darwin x86_64-apple-darwin; do
             grep -qxF "$t/validator" entries.txt || { echo "::error::the bundle has no $t/validator"; exit 1; }
             mkdir -p "out/$t"
             unzip -p bundle.zip "$t/validator" > "out/$t/validator"
             chmod 0755 "out/$t/validator"
             echo "to sign: $t/validator"
+            echo "$t/validator" >> taken.txt
             # The app (optional): signed like the program.
             if grep -qxF "$t/validator-app" entries.txt; then
               unzip -p bundle.zip "$t/validator-app" > "out/$t/validator-app"
               chmod 0755 "out/$t/validator-app"
               echo "to sign: $t/validator-app"
+              echo "$t/validator-app" >> taken.txt
+            fi
+            # The programs the build's build-info.json lists under "transports"
+            # (the validator's Tor bridge program, lyrebird): each signed like
+            # the program, under its own identifier.
+            : > "transports-$t.txt"
+            if grep -qxF "$t/build-info.json" entries.txt; then
+              unzip -p bundle.zip "$t/build-info.json" > "build-info-$t.json"
+              jq -e 'type == "object" and ((.transports // []) | type == "array")' "build-info-$t.json" > /dev/null \
+                || { echo "::error::$t/build-info.json is not a build's facts"; exit 1; }
+              for b in $(jq -r '(.transports // [])[].binary' "build-info-$t.json"); do
+                [[ "$b" =~ ^[a-z][a-z0-9-]*$ && "$b" != validator && "$b" != validator-app ]] \
+                  || { echo "::error::$t/build-info.json lists a program named \"$b\""; exit 1; }
+                grep -qxF "$t/$b" entries.txt || { echo "::error::$t/build-info.json lists $b, and the bundle has no $t/$b"; exit 1; }
+                unzip -p bundle.zip "$t/$b" > "out/$t/$b"
+                chmod 0755 "out/$t/$b"
+                echo "$b" >> "transports-$t.txt"
+                echo "to sign: $t/$b"
+                echo "$t/$b" >> taken.txt
+              done
             fi
           done
-          grep -vxE '(aarch64|x86_64)-apple-darwin/validator(-app)?' entries.txt | grep -v '/$' | sed 's/^/ignored here: /' || true
-          for b in validator validator-app; do
+          cmp -s transports-aarch64-apple-darwin.txt transports-x86_64-apple-darwin.txt \
+            || { echo "::error::the two macOS builds list different programs under transports"; exit 1; }
+          cp transports-aarch64-apple-darwin.txt transports.txt
+          grep -vxF -f taken.txt entries.txt | grep -v '/$' | sed 's/^/ignored here: /' || true
+          # shellcheck disable=SC2046 # the names, one per word
+          for b in validator validator-app $(cat transports.txt); do
             # The app, when present, for both architectures (lipo fails on a missing one).
             [ -f "out/aarch64-apple-darwin/$b" ] || [ -f "out/x86_64-apple-darwin/$b" ] || continue
             [ "$(lipo -archs "out/aarch64-apple-darwin/$b")" = arm64 ] || { echo "::error::aarch64-apple-darwin/$b is not an arm64 program"; exit 1; }
@@ -248,10 +284,16 @@ jobs:
           set -euo pipefail
           retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
           for t in aarch64-apple-darwin x86_64-apple-darwin; do
-            for name in validator validator-app; do
+            # shellcheck disable=SC2046 # the names, one per word
+            for name in validator validator-app $(cat "$RUNNER_TEMP/transports.txt"); do
               b="$RUNNER_TEMP/out/$t/$name"
               [ -f "$b" ] || continue
-              id=io.6529.validator; [ "$name" = validator-app ] && id=io.6529.validator.app
+              # No entitlements for any of them.
+              case "$name" in
+                validator) id=io.6529.validator ;;
+                validator-app) id=io.6529.validator.app ;;
+                *) id="io.6529.validator.$name" ;;
+              esac
               echo "== $t/$name"
               retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" \
                 --identifier "$id" --sign "$SIGN_IDENTITY" "$b"
@@ -260,6 +302,10 @@ jobs:
               grep -E '^(Identifier=|Format=|CodeDirectory |Authority=|Timestamp=|TeamIdentifier=)' <<< "$info"
               grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$t/$name: no hardened runtime"; exit 1; }
               grep -q '^Timestamp=' <<< "$info" || { echo "::error::$t/$name: no secure timestamp"; exit 1; }
+              grep -qxF "Identifier=$id" <<< "$info" || { echo "::error::$t/$name: the identifier is not $id"; exit 1; }
+              if codesign --display --entitlements - --xml "$b" 2>/dev/null | grep -q '<key>'; then
+                echo "::error::$t/$name: signed with entitlements"; exit 1
+              fi
             done
           done
 
@@ -282,11 +328,22 @@ jobs:
               cp -p "$RUNNER_TEMP/out/$t/validator-app" "$stage/validator-app"
               app_line="  validator-app  the app's program (the release's 6529 Validator.app holds it), $signed"
             fi
+            # The bridge program (build-info.json's "transports") beside the
+            # program, in the same disk image, so the notarization covers it.
+            t_lines=""; t_note=""
+            while IFS= read -r b; do
+              [ -n "$b" ] || continue
+              cp -p "$RUNNER_TEMP/out/$t/$b" "$stage/$b"
+              t_lines+="  $b     Tor's bridge program, $signed"$'\n'
+              t_note+=$'\n'"Keep $b in the same folder as validator: the validator looks for it there."
+            done < "$RUNNER_TEMP/transports.txt"
+            t_lines=${t_lines%$'\n'}
             printf '%s\n' \
               "6529 validator $VERSION for macOS ($arch)" \
               "" \
               "  validator    the program, $signed" \
               ${app_line:+"$app_line"} \
+              ${t_lines:+"$t_lines"} \
               "  README.txt   this file" \
               "" \
               "To install it, copy the program onto your PATH, for example:" \
@@ -294,6 +351,7 @@ jobs:
               "  sudo mkdir -p /usr/local/bin" \
               "  sudo install -m 0755 \"/Volumes/6529 validator $VERSION/validator\" /usr/local/bin/validator" \
               "  validator --help" \
+              ${t_note:+"$t_note"} \
               "" \
               "The install guide and how to check a download are in docs/install/ of the" \
               "release (start with docs/install/README.md)." \
@@ -436,6 +494,15 @@ jobs:
               cmp "$m/validator-app" "$RUNNER_TEMP/out/$t/validator-app"
               codesign --verify --strict --verbose=2 "$m/validator-app"
             fi
+            while IFS= read -r b; do
+              [ -n "$b" ] || continue
+              echo "== $t/$b"
+              cmp "$m/$b" "$RUNNER_TEMP/out/$t/$b"
+              codesign --verify --strict --verbose=2 "$m/$b"
+              if [ "$NOTARIZE" = true ]; then
+                codesign --verify --verbose=2 -R='notarized' --check-notarization "$RUNNER_TEMP/out/$t/$b" 2>&1 || echo "(no online notarization record found for $t/$b)"
+              fi
+            done < "$RUNNER_TEMP/transports.txt"
             hdiutil detach "$m" > /dev/null || hdiutil detach -force "$m" > /dev/null
           done
 
@@ -556,6 +623,26 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           $zip = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $env:RUNNER_TEMP 'bundle.zip'))
           try {
+            # kind binaries: the programs the build's build-info.json lists under
+            # "transports" (the validator's Tor bridge program, lyrebird.exe),
+            # each signed like validator.exe.
+            $transports = @()
+            $info = $zip.GetEntry('x86_64-pc-windows-msvc/build-info.json')
+            if ($env:KIND -eq 'binaries' -and $null -ne $info) {
+              $r = New-Object System.IO.StreamReader($info.Open())
+              try { $facts = $r.ReadToEnd() | ConvertFrom-Json } finally { $r.Dispose() }
+              foreach ($t in @($facts.transports)) {
+                if ($null -eq $t) { continue }
+                $b = [string]$t.binary
+                if ($b -cnotmatch '^[a-z][a-z0-9-]*\.exe$' -or $b -ceq 'validator.exe' -or $b -ceq 'validator-app.exe') {
+                  throw "x86_64-pc-windows-msvc/build-info.json lists a program named `"$b`""
+                }
+                if ($null -eq $zip.GetEntry("x86_64-pc-windows-msvc/$b")) {
+                  throw "x86_64-pc-windows-msvc/build-info.json lists $b, and the bundle has no x86_64-pc-windows-msvc/$b"
+                }
+                $transports += "x86_64-pc-windows-msvc/$b"
+              }
+            }
             foreach ($e in $zip.Entries) {
               $n = $e.FullName
               if ($env:KIND -eq 'setup') {
@@ -563,8 +650,9 @@ jobs:
                 $take = $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.exe$' -and $n -cne 'x86_64-pc-windows-msvc/validator.exe' -and $n -cne 'x86_64-pc-windows-msvc/validator-app.exe' -and -not $n.EndsWith('.engine.exe')
               } else {
                 # kind installers: the .msi files only (their validator.exe was signed by a binaries run).
-                # kind binaries: validator.exe, and the app's validator-app.exe when present.
-                $take = (($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -or $n -ceq 'x86_64-pc-windows-msvc/validator-app.exe') -and $env:KIND -ne 'installers') -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$'
+                # kind binaries: validator.exe, the app's validator-app.exe when present, and each
+                # program build-info.json lists under "transports".
+                $take = (($n -ceq 'x86_64-pc-windows-msvc/validator.exe' -or $n -ceq 'x86_64-pc-windows-msvc/validator-app.exe' -or $transports -ccontains $n) -and $env:KIND -ne 'installers') -or $n -cmatch '^x86_64-pc-windows-msvc/[A-Za-z0-9][A-Za-z0-9._-]*\.msi$'
               }
               if ($take) {
                 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path $out $e.Name), $false)
@@ -590,7 +678,7 @@ jobs:
             if (@(Get-ChildItem -LiteralPath $out -Filter *.msi).Count -lt 1) { throw 'an installers bundle holds at least one x86_64-pc-windows-msvc/<name>.msi' }
           } else {
             if (-not (Test-Path -LiteralPath (Join-Path $out 'validator.exe'))) { throw 'the bundle has no x86_64-pc-windows-msvc/validator.exe' }
-            foreach ($name in 'validator.exe', 'validator-app.exe') {
+            foreach ($name in @('validator.exe', 'validator-app.exe') + @($transports | ForEach-Object { $_.Split('/')[1] })) {
               $exe = Join-Path $out $name
               if (-not (Test-Path -LiteralPath $exe)) { continue }
               $h = New-Object byte[] 4096
@@ -713,6 +801,15 @@ jobs:
             if ($null -eq $s.TimeStamperCertificate) { throw "$($f.Name): the signature has no timestamp" }
             $lines += "$($f.Name): Authenticode Valid, timestamped, signer $($s.SignerCertificate.Subject)"
           }
+          if ($env:KIND -eq 'binaries') {
+            # The app and the programs build-info.json lists carry validator.exe's certificate.
+            $dir = Join-Path $env:RUNNER_TEMP 'out\x86_64-pc-windows-msvc'
+            $main = (Get-AuthenticodeSignature -LiteralPath (Join-Path $dir 'validator.exe')).SignerCertificate.Thumbprint
+            foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter *.exe | Where-Object { $_.Name -ne 'validator.exe' })) {
+              if ((Get-AuthenticodeSignature -LiteralPath $f.FullName).SignerCertificate.Thumbprint -ne $main) { throw "$($f.Name): not signed with validator.exe's certificate" }
+              $lines += "$($f.Name): signed with validator.exe's certificate"
+            }
+          }
           if ($env:KIND -eq 'setup') {
             # Each Setup.exe and its engine are signed with the same certificate:
             # Burn's elevated copy of the engine (what UAC names) carries the
@@ -804,6 +901,13 @@ jobs:
             # The app: for all three targets, or for none.
             n=$(cut -c67- "$s" | grep -cxE '(aarch64|x86_64)-apple-darwin/validator-app|x86_64-pc-windows-msvc/validator-app\.exe' || true)
             [ "$n" = 0 ] || [ "$n" = 3 ] || { echo "::error::SHA256SUMS lists the app for $n of the 3 targets"; exit 1; }
+            # The programs build-info.json lists (lyrebird): the same for all three targets.
+            others() { cut -c67- "$s" | sed -n "s|^$1/||p" | grep -vxE '(validator|validator-app)(\.exe)?|[^/]+\.msi' | sed 's/\.exe$//' | LC_ALL=C sort || true; }
+            arm=$(others aarch64-apple-darwin); intel=$(others x86_64-apple-darwin); win=$(others x86_64-pc-windows-msvc)
+            if [ "$arm" != "$intel" ] || [ "$arm" != "$win" ]; then
+              echo "::error::SHA256SUMS lists different programs for the three targets: [$arm] [$intel] [$win]"; exit 1
+            fi
+            [ -z "$arm" ] || echo "signed with the program on each target: $(echo "$arm" | tr '\n' ' ')"
           fi
           cat "$s"
           {
