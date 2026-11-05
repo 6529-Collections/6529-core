@@ -2097,10 +2097,12 @@ ipcMain.handle("get-nav-state", () => {
 ipcMain.handle("get-info", () => {
   // Report IPFS ports only while the daemon is ready, so the renderer does
   // not point media at a gateway that is still starting or has stopped.
-  const ipfsAvailable = IPFS_SERVER?.getStatus() === "ready";
+  const ipfsStatus = IPFS_SERVER?.getStatus() ?? "unavailable";
+  const ipfsAvailable = ipfsStatus === "ready";
   return {
     ...getInfo(),
     port: PORT,
+    ipfsStatus,
     ipfsPort: ipfsAvailable ? IPFS_PORT : null,
     ipfsRpcPort: ipfsAvailable ? IPFS_RPC_PORT : null,
     ipfsSwarmPort: ipfsAvailable ? IPFS_SWARM_PORT : null,
