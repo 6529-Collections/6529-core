@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import type { DesktopProfileState } from "../shared/desktop-profile-state";
 import {
   LogLine,
   ScheduledWorkerStatus,
@@ -200,6 +201,11 @@ export const store = {
 contextBridge.exposeInMainWorld("store", store);
 
 export const nativeAuth = {
+  profilesReady: (): Promise<void> => ipcRenderer.invoke("native-auth:profiles-ready"),
+  restoreProfiles: (current: DesktopProfileState): Promise<DesktopProfileState> =>
+    ipcRenderer.invoke("native-auth:restore-profiles", current),
+  saveProfiles: (state: DesktopProfileState): Promise<void> =>
+    ipcRenderer.invoke("native-auth:save-profiles", state),
   isAvailable: () => ipcRenderer.invoke("native-auth:is-available"),
   removeRefreshToken: (request: {
     readonly client_type?: "native" | "desktop";
