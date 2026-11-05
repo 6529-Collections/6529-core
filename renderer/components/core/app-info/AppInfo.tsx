@@ -41,9 +41,25 @@ export default function AppInfo() {
   const [mainTask, setMainTask] = useState<Task>();
 
   useEffect(() => {
-    window.api.getInfo().then((newInfo) => {
-      setInfo(newInfo);
-    });
+    let disposed = false;
+    let revision = 0;
+    const refreshInfo = () => {
+      const currentRevision = ++revision;
+      void window.api
+        .getInfo()
+        .then((newInfo) => {
+          if (!disposed && currentRevision === revision) setInfo(newInfo);
+        })
+        .catch(() => {
+          console.error("Could not refresh Desktop app information");
+        });
+    };
+    const unsubscribe = window.api.onIpfsStatusChange(refreshInfo);
+    refreshInfo();
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
   }, []);
 
   const fetchMainWorker = () => {
