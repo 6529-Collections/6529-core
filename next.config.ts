@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { PRODUCTION_ASSET_PREFIX } from "./renderer/config/assetPrefix";
 import type { NextConfig } from "next";
 import {
   PHASE_DEVELOPMENT_SERVER,
@@ -39,7 +40,6 @@ const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_MEDIA_RESOLVER_ENDPOINT = "https://media.6529.io";
-const PRODUCTION_ASSET_HOSTNAME = "dnclu2fna0b2b.cloudfront.net";
 const ARWEAVE_GATEWAY_HOSTS = [
   "arweave.net",
   "ardrive.net",
@@ -148,11 +148,8 @@ function computeVersionFromPkg(): string {
   }
 }
 
-function getAssetPrefix(assetsFromS3: boolean, version: string): string {
-  if (!assetsFromS3) {
-    return "";
-  }
-  return `https://${PRODUCTION_ASSET_HOSTNAME}/web_build/${version}`;
+function getAssetPrefix(assetsFromS3: boolean): string {
+  return assetsFromS3 ? PRODUCTION_ASSET_PREFIX : "";
 }
 
 function resolveAssetsFlagFromEnv(): boolean {
@@ -673,12 +670,17 @@ const nextConfigFactory = (phase: string): NextConfig => {
 
     persistBakedArtifacts(publicEnv, ASSETS_FROM_S3);
 
-    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3);
 
     return {
       ...sharedConfig(publicEnv, assetPrefix),
       env: {
         PUBLIC_RUNTIME: JSON.stringify(publicEnv),
+        PUBLIC_RUNTIME_BROWSER: JSON.stringify({
+          ...publicEnv,
+          VERSION: undefined,
+          VERSION_BUILD_TIMESTAMP: undefined,
+        }),
         API_ENDPOINT: publicEnv.API_ENDPOINT,
         ALLOWLIST_API_ENDPOINT: publicEnv.ALLOWLIST_API_ENDPOINT,
         BACKEND_TARGET: publicEnv.BACKEND_TARGET,
@@ -744,7 +746,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
     const VERSION = computeVersionFromPkg();
     const publicEnv = loadBakedRuntimeConfig(VERSION) as PublicEnv;
     const ASSETS_FROM_S3 = loadAssetsFlagAtRuntime();
-    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3);
     return sharedConfig(publicEnv, assetPrefix);
   }
 
