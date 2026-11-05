@@ -91,6 +91,9 @@ function startApp(prepareNext: (port: number) => Promise<number>) {
     IPFS_SWARM_PORT: 9257,
     IPFS_SERVER: undefined,
     localIpfsPreferences: undefined,
+    desktopProfiles: undefined,
+    DesktopProfileStorage: class {},
+    readLegacyDesktopProfiles: noop,
     mainWindow: null,
     splash: null,
     app: {

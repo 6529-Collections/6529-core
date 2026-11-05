@@ -4,6 +4,8 @@ import { publicEnv } from "@/config/env";
 import { API_AUTH_COOKIE, MAX_CONNECTED_PROFILES } from "@/constants/constants";
 import { safeLocalStorage } from "@/helpers/safeLocalStorage";
 import { removeNativeRefreshToken } from "./native-refresh-token-storage";
+import { persistDesktopProfiles } from "./desktop-profile-storage";
+import type { DesktopProfileState } from "@/shared/desktop-profile-state";
 
 export const WALLET_AUTH_COOKIE = "wallet-auth";
 export const WALLET_ACCOUNTS_UPDATED_EVENT = "6529-wallet-accounts-updated";
@@ -421,6 +423,19 @@ const persistAccountsWithActive = (
 
   synchronizeLegacyStorage(activeAccount);
   setWalletAuthCookie(activeAccount?.jwt ?? null);
+  persistDesktopProfiles({
+    version: 1,
+    accounts: accounts.map((account) => ({
+      ...account,
+      refreshToken: null,
+      authSessionVersion: account.authSessionVersion ?? null,
+    })),
+    activeAddress,
+  });
+};
+
+export const restoreDesktopProfileState = (state: DesktopProfileState): void => {
+  persistAccountsWithActive(state.accounts, state.activeAddress);
 };
 
 export const getConnectedWalletAccounts = (): ConnectedWalletAccount[] => {

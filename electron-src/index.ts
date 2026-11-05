@@ -109,6 +109,8 @@ import {
   getScheme,
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
+import { DesktopProfileStorage } from "./desktop-profile-storage";
+import { readLegacyDesktopProfiles } from "./legacy-desktop-profiles";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
@@ -1065,6 +1067,7 @@ let IPFS_RPC_PORT: number;
 let IPFS_SWARM_PORT: number;
 let IPFS_SERVER: IPFSServer;
 let localIpfsPreferences: LocalIpfsPreferences;
+let desktopProfiles: DesktopProfileStorage;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -1244,6 +1247,22 @@ if (!gotTheLock) {
     await resolvePorts();
     await initLogs();
     initStore();
+    desktopProfiles = new DesktopProfileStorage({
+      get: getValue,
+      set: setValue,
+      encrypt: (value) => {
+        if (!safeStorage.isEncryptionAvailable()) {
+          throw new Error("Native auth secure storage is unavailable");
+        }
+        return safeStorage.encryptString(value).toString("base64");
+      },
+      decrypt: (value) => safeStorage.decryptString(Buffer.from(value, "base64")),
+      readLegacy: readLegacyDesktopProfiles,
+      hasSession: (address) =>
+        isStoredNativeRefreshToken(
+          getValue(getNativeAuthRefreshTokenKey({ address, clientType: "desktop" })),
+        ),
+    });
 
     localIpfsPreferences = new LocalIpfsPreferences(
       getValue(LOCAL_IPFS_ENABLED_KEY),
@@ -2156,6 +2175,25 @@ ipcMain.handle("store:remove", (_event, key) => {
 ipcMain.handle("native-auth:is-available", () => {
   return safeStorage.isEncryptionAvailable();
 });
+
+function desktopProfileBackend(event: IpcMainInvokeEvent): string {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    event.senderFrame !== mainWindow.webContents.mainFrame ||
+    new URL(event.senderFrame.url).origin !== `http://localhost:${PORT}`
+  ) {
+    throw new Error("Desktop profile storage is unavailable to this frame");
+  }
+  return getApiEndpoint(getPublicRuntimeConfig());
+}
+
+ipcMain.handle("native-auth:restore-profiles", (event, state: unknown) =>
+  desktopProfiles.restore(desktopProfileBackend(event), state),
+);
+ipcMain.handle("native-auth:save-profiles", (event, state: unknown) =>
+  desktopProfiles.save(desktopProfileBackend(event), state),
+);
 
 ipcMain.handle("native-auth:remove-refresh-token", (_event, request: unknown) => {
   if (!isNativeRemoveRefreshTokenRequest(request)) {

@@ -5,6 +5,7 @@ import type {
   SeedWalletRequest,
 } from "./types";
 import type { NativeAuthResult } from "./native-auth-result";
+import type { DesktopProfileState } from "./desktop-profile-state";
 import type {
   IpfsStatus,
   LocalIpfsPreferencesSnapshot,
@@ -128,6 +129,8 @@ export interface ElectronNativeLegacyDesktopConnectionShareResponse {
 }
 
 export interface ElectronNativeAuth {
+  restoreProfiles: (current: DesktopProfileState) => Promise<DesktopProfileState>;
+  saveProfiles: (state: DesktopProfileState) => Promise<void>;
   isAvailable: () => Promise<boolean>;
   removeRefreshToken: (request: {
     readonly client_type?: ElectronNativeAuthClientType;

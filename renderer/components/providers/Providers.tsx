@@ -7,6 +7,7 @@
 import { WaveInformationProvider } from "@/contexts/WaveInformationContext";
 import { VersionStatusProvider } from "@/contexts/VersionStatusContext";
 import { AppWalletsProvider } from "@/components/app-wallets/AppWalletsContext";
+import DesktopProfileStorageGate from "@/components/core/DesktopProfileStorageGate";
 import Auth from "@/components/auth/Auth";
 import AuthLaunchTimingReporter from "@/components/auth/AuthLaunchTimingReporter";
 import MarketActivityTracker from "@/components/collect/MarketActivityTracker";
@@ -155,7 +156,13 @@ export default function Providers({
 
   return (
     <EditingDropProvider>
-      <ActiveGroupProvider>{appProviders}</ActiveGroupProvider>
+      <ActiveGroupProvider>
+        {enableWalletAuthentication ? (
+          <DesktopProfileStorageGate>{appProviders}</DesktopProfileStorageGate>
+        ) : (
+          appProviders
+        )}
+      </ActiveGroupProvider>
     </EditingDropProvider>
   );
 }
