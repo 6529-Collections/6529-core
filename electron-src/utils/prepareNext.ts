@@ -8,6 +8,7 @@ import Module, { createRequire } from "node:module";
 import path from "node:path";
 import { parse } from "url";
 import { isDev } from "./env";
+import { listenRendererServer } from "./renderer-server";
 
 if (!isDev) {
   // @ts-ignore
@@ -161,10 +162,9 @@ export async function prepareNext(port: number) {
     handle(req, res, parsedUrl);
   });
 
-  // Loopback only: the renderer server is for this machine's app window,
-  // not for other machines on the network. The window keeps its
-  // http://localhost origin, which Chromium resolves to loopback.
-  nextServer.listen(port, "127.0.0.1", () => {
-    Logger.info("NEXT SERVER:", `Ready on http://localhost:${port}`);
-  });
+  // Wait for our own listener before the app navigates. The selected port can
+  // change if another application claims it between probing and binding.
+  const boundPort = await listenRendererServer(nextServer, port);
+  Logger.info("NEXT SERVER:", `Ready on http://localhost:${boundPort}`);
+  return boundPort;
 }

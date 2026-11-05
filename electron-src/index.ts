@@ -1088,14 +1088,6 @@ interface TailInstances {
 const tails: TailInstances = {};
 
 async function resolvePorts() {
-  if (!PORT) {
-    PORT = await getPort({
-      random: true,
-      port: 6529,
-      portRange: [3000, 8000],
-    });
-    Logger.info("PORT:", PORT);
-  }
   if (!IPFS_PORT) {
     IPFS_PORT = await getPort({
       random: true,
@@ -1237,9 +1229,19 @@ if (!gotTheLock) {
       app.dock?.setIcon(path.join(__dirname, "assets", "icon.icns"));
     }
 
+    try {
+      PORT = await prepareNext(6529);
+      Logger.info("PORT:", PORT);
+    } catch (error) {
+      Logger.error("Failed to start the Desktop renderer server", error);
+      dialog.showErrorBox(
+        "Unable to start 6529 Desktop",
+        "The local Desktop interface could not start. Fully quit and reopen the app. If the problem continues, check the application logs.",
+      );
+      app.exit(1);
+      return;
+    }
     await resolvePorts();
-
-    await prepareNext(PORT);
     await initLogs();
     initStore();
 
