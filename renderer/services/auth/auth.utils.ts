@@ -4,6 +4,8 @@ import { publicEnv } from "@/config/env";
 import { API_AUTH_COOKIE, MAX_CONNECTED_PROFILES } from "@/constants/constants";
 import { safeLocalStorage } from "@/helpers/safeLocalStorage";
 import { removeNativeRefreshToken } from "./native-refresh-token-storage";
+import { persistDesktopProfiles } from "./desktop-profile-storage";
+import type { DesktopProfileState } from "@/shared/desktop-profile-state";
 
 export const WALLET_AUTH_COOKIE = "wallet-auth";
 export const WALLET_ACCOUNTS_UPDATED_EVENT = "6529-wallet-accounts-updated";
@@ -421,6 +423,46 @@ const persistAccountsWithActive = (
 
   synchronizeLegacyStorage(activeAccount);
   setWalletAuthCookie(activeAccount?.jwt ?? null);
+  persistDesktopProfiles({
+    version: 1,
+    accounts: accounts.map((account) => ({
+      ...account,
+      refreshToken: null,
+      authSessionVersion: account.authSessionVersion ?? null,
+    })),
+    activeAddress,
+  });
+};
+
+export const restoreDesktopProfileState = (
+  state: DesktopProfileState
+): void => {
+  // Preserve only legacy credentials already present at this same origin.
+  // Native v2 refresh tokens stay exclusively in the main process, and no
+  // refresh credential is imported through the port-independent snapshot.
+  const localAccounts = readAccountsFromStorage();
+  const legacyAddress = safeLocalStorage.getItem(WALLET_ADDRESS_STORAGE_KEY);
+  const legacyToken = safeLocalStorage.getItem(
+    WALLET_REFRESH_TOKEN_STORAGE_KEY
+  );
+  persistAccountsWithActive(
+    state.accounts.map((account) => {
+      const local = localAccounts.find(
+        (saved) => normalizeAddress(saved.address) === account.address
+      );
+      const token =
+        account.authSessionVersion === null &&
+        local?.authSessionVersion !== "v2"
+          ? (local?.refreshToken ??
+            (legacyAddress &&
+            normalizeAddress(legacyAddress) === account.address
+              ? legacyToken
+              : null))
+          : null;
+      return { ...account, refreshToken: token };
+    }),
+    state.activeAddress
+  );
 };
 
 export const getConnectedWalletAccounts = (): ConnectedWalletAccount[] => {

@@ -7,6 +7,9 @@
 import { WaveInformationProvider } from "@/contexts/WaveInformationContext";
 import { VersionStatusProvider } from "@/contexts/VersionStatusContext";
 import { AppWalletsProvider } from "@/components/app-wallets/AppWalletsContext";
+import DesktopProfileStorageGate from "@/components/core/DesktopProfileStorageGate";
+import { notifyDesktopProfilesReady } from "@/services/auth/desktop-profile-storage";
+import { useEffect } from "react";
 import Auth from "@/components/auth/Auth";
 import AuthLaunchTimingReporter from "@/components/auth/AuthLaunchTimingReporter";
 import MarketActivityTracker from "@/components/collect/MarketActivityTracker";
@@ -59,6 +62,9 @@ export default function Providers({
   readonly enableCookieConsent?: boolean;
   readonly enableMyStream?: boolean;
 }) {
+  useEffect(() => {
+    if (!enableWalletAuthentication) notifyDesktopProfilesReady();
+  }, [enableWalletAuthentication]);
   const sharedProviders = (
     <TitleProvider>
       <HeaderProvider>
@@ -155,7 +161,13 @@ export default function Providers({
 
   return (
     <EditingDropProvider>
-      <ActiveGroupProvider>{appProviders}</ActiveGroupProvider>
+      <ActiveGroupProvider>
+        {enableWalletAuthentication ? (
+          <DesktopProfileStorageGate>{appProviders}</DesktopProfileStorageGate>
+        ) : (
+          appProviders
+        )}
+      </ActiveGroupProvider>
     </EditingDropProvider>
   );
 }

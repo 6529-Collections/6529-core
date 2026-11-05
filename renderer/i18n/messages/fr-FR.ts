@@ -1292,4 +1292,11 @@ export const FR_FR_MESSAGES = {
   ...FR_FR_TRANSFER_MESSAGES,
   ...FR_FR_THE_MEMES_MINT_SUCCESS_MESSAGES,
   ...FR_FR_THE_MEMES_MINT_PROGRESS_MESSAGES,
+  "desktop.about.portPending": "En attente…",
+  "desktop.about.portNotApplicable": "Sans objet",
+  "desktop.about.portUnavailable": "Indisponible",
+  "desktop.profiles.restoreError": "Impossible de restaurer vos profils enregistrés. Veuillez réessayer.",
+  "desktop.profiles.saveError": "Impossible d’enregistrer vos profils. Réessayez avant de quitter pour conserver vos modifications.",
+  "desktop.profiles.saveRetrying": "Nouvelle tentative d’enregistrement des profils…",
+  "desktop.profiles.retry": "Réessayer",
 } satisfies Partial<Record<MessageKey, string>>;

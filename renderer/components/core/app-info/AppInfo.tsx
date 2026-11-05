@@ -7,6 +7,21 @@ import { Task } from "../eth-scanner/Workers";
 import LogsViewer from "../logs-viewer/LogsViewer";
 import LocalIpfsSettings from "./LocalIpfsSettings";
 import { DesktopPageHeading } from "../DesktopHeadings";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
+import type { IpfsStatus } from "@/shared/ipfs-status";
+
+interface DesktopAppInfo {
+  app_version?: string;
+  os?: string;
+  arch?: string;
+  scheme?: string;
+  port?: number;
+  ipfsStatus?: IpfsStatus;
+  ipfsPort?: number | null;
+  ipfsRpcPort?: number | null;
+  ipfsSwarmPort?: number | null;
+}
 
 interface ProgressInfo {
   total: number;
@@ -29,7 +44,8 @@ function bytesToMB(bytes: number): string {
 }
 
 export default function AppInfo() {
-  const [info, setInfo] = useState<any>({});
+  const locale = useBrowserLocale();
+  const [info, setInfo] = useState<DesktopAppInfo>({});
 
   const [checkingForUpdates, setCheckingForUpdates] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState<UpdateInfo>();
@@ -41,9 +57,25 @@ export default function AppInfo() {
   const [mainTask, setMainTask] = useState<Task>();
 
   useEffect(() => {
-    window.api.getInfo().then((newInfo) => {
-      setInfo(newInfo);
-    });
+    let disposed = false;
+    let revision = 0;
+    const refreshInfo = () => {
+      const currentRevision = ++revision;
+      void window.api
+        .getInfo()
+        .then((newInfo) => {
+          if (!disposed && currentRevision === revision) setInfo(newInfo);
+        })
+        .catch(() => {
+          console.error("Could not refresh Desktop app information");
+        });
+    };
+    const unsubscribe = window.api.onIpfsStatusChange(refreshInfo);
+    refreshInfo();
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
   }, []);
 
   const fetchMainWorker = () => {
@@ -118,6 +150,16 @@ export default function AppInfo() {
     };
   }, []);
 
+  function formatIpfsPort(port: number | null | undefined): string | number {
+    if (info.ipfsStatus === "disabled")
+      return t(locale, "desktop.about.portNotApplicable");
+    if (!info.ipfsStatus || info.ipfsStatus === "starting")
+      return t(locale, "desktop.about.portPending");
+    if (info.ipfsStatus === "ready" && typeof port === "number" && port > 0)
+      return port;
+    return t(locale, "desktop.about.portUnavailable");
+  }
+
   function printAppVersion() {
     return (
       <div className="tw-rounded-xl tw-bg-iron-950 tw-px-5 tw-py-8 tw-ring-1 tw-ring-inset tw-ring-iron-800">
@@ -134,13 +176,13 @@ export default function AppInfo() {
                 App Port: <b>{info.port}</b>
               </span>
               <span className="tw-block tw-text-sm">
-                IPFS Port: <b>{info.ipfsPort}</b>
+                IPFS Port: <b>{formatIpfsPort(info.ipfsPort)}</b>
               </span>
               <span className="tw-block tw-text-sm">
-                IPFS RPC Port: <b>{info.ipfsRpcPort}</b>
+                IPFS RPC Port: <b>{formatIpfsPort(info.ipfsRpcPort)}</b>
               </span>
               <span className="tw-block tw-text-sm">
-                IPFS Swarm Port: <b>{info.ipfsSwarmPort}</b>
+                IPFS Swarm Port: <b>{formatIpfsPort(info.ipfsSwarmPort)}</b>
               </span>
             </div>
           </div>

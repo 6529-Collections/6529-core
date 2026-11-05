@@ -1103,6 +1103,9 @@ for (const functionName of [
 const preloadTypesPath = "shared/preload-types.ts";
 const preloadTypes = parseSource(preloadTypesPath);
 for (const memberName of [
+  "profilesReady",
+  "restoreProfiles",
+  "saveProfiles",
   "removeRefreshToken",
   "sessionLogin",
   "sessionRefresh",
@@ -2170,6 +2173,40 @@ assertContract(
 const providersPath = "renderer/components/providers/Providers.tsx";
 const providers = parseSource(providersPath);
 const providersFunction = findFunction(providers, "Providers");
+assertContract(
+  providersFunction &&
+    jsxElementIsGatedByIdentifier(
+      providersFunction,
+      "DesktopProfileStorageGate",
+      "enableWalletAuthentication",
+    ),
+  providersPath,
+  "Desktop profile restoration must finish before auth providers mount and stay off the isolated connector route",
+);
+const profileGatePath = "renderer/components/core/DesktopProfileStorageGate.tsx";
+const profileGate = parseSource(profileGatePath);
+assertContract(
+  callsIdentifier(profileGate, "initializeDesktopProfiles"),
+  profileGatePath,
+  "Desktop must restore port-independent profiles before auth initialization",
+);
+assertContract(
+  callsIdentifier(profileGate, "notifyDesktopProfilesReady"),
+  profileGatePath,
+  "Desktop must keep the splash until profile restoration commits a ready or retry screen",
+);
+const authStoragePath = "renderer/services/auth/auth.utils.ts";
+const authStorage = parseSource(authStoragePath);
+const persistAccountsWithActive = findVariable(
+  authStorage,
+  "persistAccountsWithActive",
+);
+assertContract(
+  persistAccountsWithActive &&
+    callsIdentifier(persistAccountsWithActive, "persistDesktopProfiles"),
+  authStoragePath,
+  "Profile additions, selection, refresh and logout must persist Desktop profile state",
+);
 assertContract(
   providersFunction &&
     jsxAttributeUsesIdentifier(
