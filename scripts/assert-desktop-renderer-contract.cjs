@@ -1103,6 +1103,7 @@ for (const functionName of [
 const preloadTypesPath = "shared/preload-types.ts";
 const preloadTypes = parseSource(preloadTypesPath);
 for (const memberName of [
+  "profilesReady",
   "restoreProfiles",
   "saveProfiles",
   "removeRefreshToken",
@@ -2188,6 +2189,11 @@ assertContract(
   callsIdentifier(profileGate, "initializeDesktopProfiles"),
   profileGatePath,
   "Desktop must restore port-independent profiles before auth initialization",
+);
+assertContract(
+  callsIdentifier(profileGate, "notifyDesktopProfilesReady"),
+  profileGatePath,
+  "Desktop must keep the splash until profile restoration commits a ready or retry screen",
 );
 const authStoragePath = "renderer/services/auth/auth.utils.ts";
 const authStorage = parseSource(authStoragePath);

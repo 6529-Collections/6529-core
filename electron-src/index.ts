@@ -1069,6 +1069,7 @@ let IPFS_SWARM_PORT: number;
 let IPFS_SERVER: IPFSServer;
 let localIpfsPreferences: LocalIpfsPreferences;
 let desktopProfiles: DesktopProfileStorage;
+const profileReadinessCallbacks = new WeakMap<BrowserWindow, () => void>();
 
 configureRendererHostResolution(app.commandLine);
 const gotTheLock = app.requestSingleInstanceLock();
@@ -1566,15 +1567,23 @@ async function openMainWindow() {
     mainWindow?.webContents.send("open-search");
   });
 
-  mainWindow.once("ready-to-show", async () => {
+  const openingWindow = mainWindow;
+  let painted = false;
+  let profilesReady = false;
+  let revealed = false;
+  const revealMainWindow = async () => {
+    if (!painted || !profilesReady || revealed || openingWindow.isDestroyed()) {
+      return;
+    }
+    revealed = true;
     Logger.info("Main window ready to show");
     // Scheduler setup must never hold back the ready main window.
     if (windowState) {
-      mainWindow?.setBounds(windowState);
+      openingWindow.setBounds(windowState);
     } else {
-      mainWindow?.maximize();
+      openingWindow.maximize();
     }
-    mainWindow?.show();
+    openingWindow.show();
     splash?.destroy();
     splash = null;
     // Reopened from background mode: the window is visible, so the tray
@@ -1591,6 +1600,14 @@ async function openMainWindow() {
       scheduledTasksStarted = false;
       Logger.error("Could not initialize scheduled tasks", error);
     }
+  };
+  openingWindow.once("ready-to-show", () => {
+    painted = true;
+    void revealMainWindow();
+  });
+  profileReadinessCallbacks.set(openingWindow, () => {
+    profilesReady = true;
+    void revealMainWindow();
   });
 
   mainWindow.on("close", (e) => {
@@ -1664,10 +1681,13 @@ function initListeners(mw: BrowserWindow) {
   mw.webContents.on("did-navigate-in-page", updateNavigationState);
   mw.webContents.on(
     "did-fail-load",
-    (_event, errorCode, errorDescription, validatedURL) => {
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       Logger.error(
         `Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`,
       );
+      // Make Chromium's navigation error visible rather than stranding the
+      // user behind a splash. Aborted/subframe loads are not startup failure.
+      if (isMainFrame && errorCode !== -3) profileReadinessCallbacks.get(mw)?.();
     },
   );
 }
@@ -2190,9 +2210,15 @@ function desktopProfileBackend(event: IpcMainInvokeEvent): string {
   return getApiEndpoint(getPublicRuntimeConfig());
 }
 
-ipcMain.handle("native-auth:restore-profiles", (event, state: unknown) =>
-  desktopProfiles.restore(desktopProfileBackend(event), state),
-);
+ipcMain.handle("native-auth:restore-profiles", (event, state: unknown) => {
+  const backend = desktopProfileBackend(event);
+  updateSplashMessage("Restoring saved profiles…");
+  return desktopProfiles.restore(backend, state);
+});
+ipcMain.handle("native-auth:profiles-ready", (event) => {
+  desktopProfileBackend(event);
+  if (mainWindow) profileReadinessCallbacks.get(mainWindow)?.();
+});
 ipcMain.handle("native-auth:save-profiles", (event, state: unknown) =>
   desktopProfiles.save(desktopProfileBackend(event), state),
 );

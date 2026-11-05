@@ -129,6 +129,7 @@ export interface ElectronNativeLegacyDesktopConnectionShareResponse {
 }
 
 export interface ElectronNativeAuth {
+  profilesReady: () => Promise<void>;
   restoreProfiles: (current: DesktopProfileState) => Promise<DesktopProfileState>;
   saveProfiles: (state: DesktopProfileState) => Promise<void>;
   isAvailable: () => Promise<boolean>;

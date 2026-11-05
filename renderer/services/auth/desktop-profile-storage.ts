@@ -2,7 +2,70 @@ import type { DesktopProfileState } from "@/shared/desktop-profile-state";
 
 let initialization: Promise<void> | null = null;
 let initialized = false;
-let pendingSave: Promise<unknown> = Promise.resolve();
+let unsavedState: DesktopProfileState | null = null;
+let saveAttempt: Promise<void> | null = null;
+type SaveStatus = "idle" | "failed" | "retrying";
+let saveStatus: SaveStatus = "idle";
+const listeners = new Set<() => void>();
+
+function setSaveStatus(status: SaveStatus): void {
+  if (saveStatus === status) return;
+  saveStatus = status;
+  listeners.forEach((listener) => listener());
+}
+
+export const getDesktopProfileSaveStatus = (): SaveStatus => saveStatus;
+export const getDesktopProfileServerSaveStatus = (): SaveStatus => "idle";
+export function subscribeDesktopProfileSaveStatus(
+  listener: () => void
+): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Retry the latest complete snapshot, never an older pre-logout state. */
+export function retryDesktopProfileSave(): Promise<void> {
+  const save = globalThis.window?.nativeAuth?.saveProfiles;
+  if (!initialized || !save || !unsavedState) return Promise.resolve();
+  if (saveAttempt) return saveAttempt;
+  if (saveStatus === "failed") setSaveStatus("retrying");
+  saveAttempt = Promise.resolve()
+    .then(async () => {
+      while (unsavedState) {
+        const state = unsavedState;
+        await save(state);
+        // Newer mutations supersede this full snapshot. Only clear the exact
+        // snapshot acknowledged by main, then drain the latest pending state.
+        if (unsavedState === state) unsavedState = null;
+      }
+      setSaveStatus("idle");
+      return undefined;
+    })
+    .catch((error: unknown) => {
+      setSaveStatus("failed");
+      throw error;
+    })
+    .finally(() => {
+      saveAttempt = null;
+      // A subscriber can enqueue a new mutation as the completed save reports
+      // success. Drain that state too, without looping on persistence failures.
+      if (unsavedState && saveStatus !== "failed") {
+        void retryDesktopProfileSave().catch(() =>
+          console.error("Could not persist Desktop profiles")
+        );
+      }
+    });
+  return saveAttempt;
+}
+
+/** Reveal the main window only after a committed ready or failure screen. */
+export function notifyDesktopProfilesReady(): void {
+  void globalThis.window?.nativeAuth?.profilesReady?.().catch(() => {
+    console.error("Could not announce Desktop profile readiness");
+  });
+}
 
 export function initializeDesktopProfiles(
   current: DesktopProfileState,
@@ -30,8 +93,8 @@ export function initializeDesktopProfiles(
 export function persistDesktopProfiles(state: DesktopProfileState): void {
   const save = globalThis.window?.nativeAuth?.saveProfiles;
   if (!initialized || !save) return;
-  pendingSave = pendingSave.catch(() => undefined).then(() => save(state));
-  void pendingSave.catch(() =>
+  unsavedState = state;
+  void retryDesktopProfileSave().catch(() =>
     console.error("Could not persist Desktop profiles")
   );
 }

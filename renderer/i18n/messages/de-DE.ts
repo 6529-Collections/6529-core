@@ -1282,7 +1282,8 @@ export const DE_DE_MESSAGES = {
   ...DE_DE_TRANSFER_MESSAGES,
   ...DE_DE_THE_MEMES_MINT_SUCCESS_MESSAGES,
   ...DE_DE_THE_MEMES_MINT_PROGRESS_MESSAGES,
-  "desktop.profiles.loading": "Gespeicherte Profile werden wiederhergestellt…",
   "desktop.profiles.restoreError": "Deine gespeicherten Profile konnten nicht wiederhergestellt werden. Bitte versuche es erneut.",
+  "desktop.profiles.saveError": "Deine Profile konnten nicht gespeichert werden. Versuche es vor dem Beenden erneut, um deine Änderungen zu behalten.",
+  "desktop.profiles.saveRetrying": "Profile werden erneut gespeichert…",
   "desktop.profiles.retry": "Erneut versuchen",
 } satisfies Partial<Record<MessageKey, string>>;

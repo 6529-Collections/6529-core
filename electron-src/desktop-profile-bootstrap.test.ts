@@ -5,7 +5,10 @@ import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 
-function fixture(restoreProfiles: () => Promise<unknown>) {
+function fixture(
+  restoreProfiles: () => Promise<unknown>,
+  save?: (state: unknown) => Promise<void>,
+) {
   const saved: unknown[] = [];
   const context = vm.createContext({
     exports: {},
@@ -14,6 +17,7 @@ function fixture(restoreProfiles: () => Promise<unknown>) {
         restoreProfiles,
         saveProfiles: async (state: unknown) => {
           saved.push(state);
+          await save?.(state);
         },
       },
     },
@@ -81,4 +85,84 @@ test("bootstrap failures do not write an empty account list and can be retried",
   assert.deepEqual(f.saved, []);
   await f.api.initializeDesktopProfiles(state, () => undefined);
   assert.equal(reads, 2);
+});
+
+test("failed profile saves retain their snapshot and expose an explicit retry", async () => {
+  const state = { version: 1, accounts: [], activeAddress: null };
+  let fail = true;
+  const f = fixture(
+    async () => state,
+    async () => {
+      if (fail) throw new Error("Locked");
+    },
+  );
+  await f.api.initializeDesktopProfiles(state, () => undefined);
+  const statuses: string[] = [];
+  const unsubscribe = f.api.subscribeDesktopProfileSaveStatus(() =>
+    statuses.push(f.api.getDesktopProfileSaveStatus()),
+  );
+  f.api.persistDesktopProfiles(state);
+  await new Promise<void>((done) => setImmediate(done));
+  assert.equal(f.api.getDesktopProfileSaveStatus(), "failed");
+  fail = false;
+  await f.api.retryDesktopProfileSave();
+  assert.deepEqual(f.saved, [state, state]);
+  assert.deepEqual(statuses, ["failed", "retrying", "idle"]);
+  unsubscribe();
+  await f.api.retryDesktopProfileSave();
+  assert.equal(f.saved.length, 2);
+});
+
+test("retry after an in-flight failure saves the latest logout rather than replaying older credentials", async () => {
+  const prior = {
+    version: 1,
+    accounts: [{ address: "fixture-profile" }],
+    activeAddress: "fixture-profile",
+  };
+  const logout = { version: 1, accounts: [], activeAddress: null };
+  let reject!: (error: Error) => void;
+  let attempts = 0;
+  const f = fixture(
+    async () => prior,
+    () =>
+      ++attempts === 1
+        ? new Promise((_resolve, failure) => {
+            reject = failure;
+          })
+        : Promise.resolve(),
+  );
+  await f.api.initializeDesktopProfiles(prior, () => undefined);
+  f.api.persistDesktopProfiles(prior);
+  await new Promise<void>((done) => setImmediate(done));
+  f.api.persistDesktopProfiles(logout);
+  reject(new Error("Storage failed"));
+  await new Promise<void>((done) => setImmediate(done));
+  assert.equal(f.api.getDesktopProfileSaveStatus(), "failed");
+  await f.api.retryDesktopProfileSave();
+  assert.deepEqual(f.saved, [prior, logout]);
+});
+
+test("successful saves drain newer profile mutations serially", async () => {
+  const first = { version: 1, accounts: [], activeAddress: null };
+  const latest = { ...first, activeAddress: "fixture-selection" };
+  let finish!: () => void;
+  let attempts = 0;
+  const f = fixture(
+    async () => first,
+    () =>
+      ++attempts === 1
+        ? new Promise((resolve) => {
+            finish = resolve;
+          })
+        : Promise.resolve(),
+  );
+  await f.api.initializeDesktopProfiles(first, () => undefined);
+  f.api.persistDesktopProfiles(first);
+  await new Promise<void>((done) => setImmediate(done));
+  f.api.persistDesktopProfiles(latest);
+  assert.deepEqual(f.saved, [first]);
+  finish();
+  await f.api.retryDesktopProfileSave();
+  assert.deepEqual(f.saved, [first, latest]);
+  assert.equal(f.api.getDesktopProfileSaveStatus(), "idle");
 });

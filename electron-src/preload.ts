@@ -201,6 +201,7 @@ export const store = {
 contextBridge.exposeInMainWorld("store", store);
 
 export const nativeAuth = {
+  profilesReady: (): Promise<void> => ipcRenderer.invoke("native-auth:profiles-ready"),
   restoreProfiles: (current: DesktopProfileState): Promise<DesktopProfileState> =>
     ipcRenderer.invoke("native-auth:restore-profiles", current),
   saveProfiles: (state: DesktopProfileState): Promise<void> =>
