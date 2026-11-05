@@ -174,7 +174,9 @@ export default function Providers({
         <EditingDropProvider>
           <ActiveGroupProvider>
             {enableWalletAuthentication ? (
-              <DesktopProfileStorageGate>{appProviders}</DesktopProfileStorageGate>
+              <DesktopProfileStorageGate>
+                {appProviders}
+              </DesktopProfileStorageGate>
             ) : (
               appProviders
             )}
