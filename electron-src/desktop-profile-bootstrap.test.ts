@@ -166,3 +166,106 @@ test("successful saves drain newer profile mutations serially", async () => {
   assert.deepEqual(f.saved, [first, latest]);
   assert.equal(f.api.getDesktopProfileSaveStatus(), "idle");
 });
+
+test("automatic persistence drains a newer snapshot without an explicit retry", async () => {
+  const first = { version: 1, accounts: [], activeAddress: null };
+  const latest = { ...first, activeAddress: "fixture-new-selection" };
+  let finishFirst!: () => void;
+  let finishLatest!: () => void;
+  let latestStarted!: () => void;
+  const latestStart = new Promise<void>((resolve) => {
+    latestStarted = resolve;
+  });
+  let active = 0;
+  let maxActive = 0;
+  const f = fixture(
+    async () => first,
+    async (state) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      try {
+        if (state === first)
+          await new Promise<void>((resolve) => {
+            finishFirst = resolve;
+          });
+        else {
+          latestStarted();
+          await new Promise<void>((resolve) => {
+            finishLatest = resolve;
+          });
+        }
+      } finally {
+        active--;
+      }
+    },
+  );
+  await f.api.initializeDesktopProfiles(first, () => undefined);
+  f.api.persistDesktopProfiles(first);
+  await new Promise<void>((done) => setImmediate(done));
+  f.api.persistDesktopProfiles(latest);
+  assert.deepEqual(f.saved, [first]);
+  finishFirst();
+  await latestStart;
+  assert.deepEqual(f.saved, [first, latest]);
+  assert.equal(maxActive, 1);
+  finishLatest();
+  await new Promise<void>((done) => setImmediate(done));
+  assert.deepEqual(f.saved, [first, latest]);
+  assert.equal(active, 0);
+  assert.equal(f.api.getDesktopProfileSaveStatus(), "idle");
+});
+
+test("finally automatically drains a snapshot queued by success notification exactly once", async () => {
+  const failed = {
+    version: 1,
+    accounts: [],
+    activeAddress: "failed-selection",
+  };
+  const retry = { ...failed, activeAddress: "retry-selection" };
+  const latest = { ...failed, activeAddress: "final-selection" };
+  let finalStarted!: () => void;
+  let finishFinal!: () => void;
+  const finalStart = new Promise<void>((resolve) => {
+    finalStarted = resolve;
+  });
+  let active = 0;
+  let maxActive = 0;
+  const f = fixture(
+    async () => failed,
+    async (state) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      try {
+        if (state === failed) throw new Error("Initial failure");
+        if (state === latest) {
+          finalStarted();
+          await new Promise<void>((resolve) => {
+            finishFinal = resolve;
+          });
+        }
+      } finally {
+        active--;
+      }
+    },
+  );
+  await f.api.initializeDesktopProfiles(failed, () => undefined);
+  f.api.persistDesktopProfiles(failed);
+  await new Promise<void>((done) => setImmediate(done));
+  assert.equal(f.api.getDesktopProfileSaveStatus(), "failed");
+  const unsubscribe = f.api.subscribeDesktopProfileSaveStatus(() => {
+    if (f.api.getDesktopProfileSaveStatus() === "idle") {
+      unsubscribe();
+      // The save loop has finished but its promise has not reached finally.
+      f.api.persistDesktopProfiles(latest);
+    }
+  });
+  f.api.persistDesktopProfiles(retry);
+  await finalStart;
+  assert.deepEqual(f.saved, [failed, retry, latest]);
+  assert.equal(maxActive, 1);
+  finishFinal();
+  await new Promise<void>((done) => setImmediate(done));
+  assert.deepEqual(f.saved, [failed, retry, latest]);
+  assert.equal(active, 0);
+  assert.equal(f.api.getDesktopProfileSaveStatus(), "idle");
+});
