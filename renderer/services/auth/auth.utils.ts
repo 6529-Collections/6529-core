@@ -434,8 +434,35 @@ const persistAccountsWithActive = (
   });
 };
 
-export const restoreDesktopProfileState = (state: DesktopProfileState): void => {
-  persistAccountsWithActive(state.accounts, state.activeAddress);
+export const restoreDesktopProfileState = (
+  state: DesktopProfileState
+): void => {
+  // Preserve only legacy credentials already present at this same origin.
+  // Native v2 refresh tokens stay exclusively in the main process, and no
+  // refresh credential is imported through the port-independent snapshot.
+  const localAccounts = readAccountsFromStorage();
+  const legacyAddress = safeLocalStorage.getItem(WALLET_ADDRESS_STORAGE_KEY);
+  const legacyToken = safeLocalStorage.getItem(
+    WALLET_REFRESH_TOKEN_STORAGE_KEY
+  );
+  persistAccountsWithActive(
+    state.accounts.map((account) => {
+      const local = localAccounts.find(
+        (saved) => normalizeAddress(saved.address) === account.address
+      );
+      const token =
+        account.authSessionVersion === null &&
+        local?.authSessionVersion !== "v2"
+          ? (local?.refreshToken ??
+            (legacyAddress &&
+            normalizeAddress(legacyAddress) === account.address
+              ? legacyToken
+              : null))
+          : null;
+      return { ...account, refreshToken: token };
+    }),
+    state.activeAddress
+  );
 };
 
 export const getConnectedWalletAccounts = (): ConnectedWalletAccount[] => {

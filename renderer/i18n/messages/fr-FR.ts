@@ -1292,4 +1292,7 @@ export const FR_FR_MESSAGES = {
   ...FR_FR_TRANSFER_MESSAGES,
   ...FR_FR_THE_MEMES_MINT_SUCCESS_MESSAGES,
   ...FR_FR_THE_MEMES_MINT_PROGRESS_MESSAGES,
+  "desktop.profiles.loading": "Restauration des profils enregistrés…",
+  "desktop.profiles.restoreError": "Impossible de restaurer vos profils enregistrés. Veuillez réessayer.",
+  "desktop.profiles.retry": "Réessayer",
 } satisfies Partial<Record<MessageKey, string>>;

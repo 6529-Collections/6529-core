@@ -109,6 +109,7 @@ import {
   getScheme,
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
+import { configureRendererHostResolution } from "./utils/renderer-server";
 import { DesktopProfileStorage } from "./desktop-profile-storage";
 import { readLegacyDesktopProfiles } from "./legacy-desktop-profiles";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
@@ -1069,6 +1070,7 @@ let IPFS_SERVER: IPFSServer;
 let localIpfsPreferences: LocalIpfsPreferences;
 let desktopProfiles: DesktopProfileStorage;
 
+configureRendererHostResolution(app.commandLine);
 const gotTheLock = app.requestSingleInstanceLock();
 
 const shownNotifications = new Set<string>();

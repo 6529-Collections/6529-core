@@ -4,7 +4,7 @@ import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
-import { parseDesktopProfileState } from "../shared/desktop-profile-state";
+import { getDesktopProfileMigrationState } from "../shared/desktop-profile-state";
 
 function fixture(failInterception = false) {
   const calls: string[] = [];
@@ -76,7 +76,7 @@ function fixture(failInterception = false) {
       if (name === "electron") return { BrowserWindow };
       if (name === "node:crypto") return { randomUUID: () => "fixture-nonce" };
       if (name === "../shared/desktop-profile-state")
-        return { parseDesktopProfileState };
+        return { getDesktopProfileMigrationState };
       throw new Error(`Unexpected dependency ${name}`);
     },
   });

@@ -23,6 +23,14 @@ function findStartup(node: ts.Node) {
 }
 findStartup(source);
 assert.notEqual(startupCode, "", "Expected the app's startup entry point");
+test("localhost resolution is pinned before Electron becomes ready", () => {
+  const text = source.getFullText();
+  const configuration = text.indexOf(
+    "configureRendererHostResolution(app.commandLine)",
+  );
+  assert.ok(configuration > 0);
+  assert.ok(configuration < text.indexOf("app.whenReady()"));
+});
 const compiled = ts.transpileModule(startupCode, {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 }).outputText;

@@ -13,6 +13,9 @@ export function initializeDesktopProfiles(
   initialization ??= bridge
     .restoreProfiles(current)
     .then((state) => {
+      // Main has durably saved this exact state before returning it. Auth and
+      // wallet providers mount only after this callback restores local storage.
+      // Avoid a redundant IPC save while bootstrap itself applies that state.
       restore(state);
       initialized = true;
       return undefined;

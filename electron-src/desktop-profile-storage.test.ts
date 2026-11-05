@@ -7,6 +7,7 @@ import ts from "typescript";
 import { DesktopProfileStorage } from "./desktop-profile-storage";
 import {
   parseDesktopProfileState,
+  getDesktopProfileMigrationState,
   type DesktopProfileState,
 } from "../shared/desktop-profile-state";
 
@@ -188,6 +189,35 @@ test("rejects corrupt account lists and strips unknown fields and refresh creden
   assert.doesNotMatch(
     JSON.stringify(state),
     /secret|must-not-migrate|unexpected/,
+  );
+});
+
+test("old storage migration skips malformed entries, deduplicates and caps while preserving the active profile", () => {
+  const addresses = [
+    A,
+    B,
+    ...["c", "d", "e", "f"].map((digit) => `0x${digit.repeat(40)}`),
+  ];
+  const active = addresses[5];
+  const state = getDesktopProfileMigrationState({
+    accounts: [
+      { address: "invalid" },
+      ...addresses.map(profile),
+      profile(A),
+      { ...profile(B), jwt: "x".repeat(40_000) },
+    ],
+    activeAddress: active,
+  });
+  assert.equal(state.accounts.length, 5);
+  assert.equal(state.activeAddress, active);
+  assert.ok(state.accounts.some((account) => account.address === active));
+  assert.equal(
+    state.accounts.every((account) => account.refreshToken === null),
+    true,
+  );
+  assert.deepEqual(
+    getDesktopProfileMigrationState({ accounts: [null], activeAddress: A }),
+    EMPTY,
   );
 });
 

@@ -1168,4 +1168,7 @@ export const EN_GB_MESSAGES = {
   ...TRANSFER_MESSAGES,
   ...THE_MEMES_MINT_SUCCESS_MESSAGES,
   ...THE_MEMES_MINT_PROGRESS_MESSAGES,
+  "desktop.profiles.loading": "Restoring saved profiles…",
+  "desktop.profiles.restoreError": "Could not restore your saved profiles. Please retry.",
+  "desktop.profiles.retry": "Retry",
 } satisfies Partial<Record<MessageKey, string>>;

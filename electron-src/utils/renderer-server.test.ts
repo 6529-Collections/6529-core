@@ -3,7 +3,22 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test, type TestContext } from "node:test";
 import { getPort } from "get-port-please";
-import { listenRendererServer } from "./renderer-server";
+import {
+  configureRendererHostResolution,
+  listenRendererServer,
+} from "./renderer-server";
+
+test("Chromium resolves the unchanged localhost origin to Desktop's bound address", () => {
+  const switches: [string, string][] = [];
+  configureRendererHostResolution({
+    appendSwitch: (name, value) => {
+      switches.push([name, value]);
+    },
+  });
+  assert.deepEqual(switches, [
+    ["host-resolver-rules", "MAP localhost 127.0.0.1"],
+  ]);
+});
 
 function createTestServer(t: TestContext, content: string) {
   const server = createServer((_request, response) => response.end(content));

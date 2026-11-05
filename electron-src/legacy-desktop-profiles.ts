@@ -1,7 +1,7 @@
 import { BrowserWindow } from "electron";
 import { randomUUID } from "node:crypto";
 import {
-  parseDesktopProfileState,
+  getDesktopProfileMigrationState,
   type DesktopProfileState,
 } from "../shared/desktop-profile-state";
 
@@ -74,7 +74,7 @@ export async function readLegacyDesktopProfiles(
     const stored = JSON.parse(raw);
     const accounts =
       stored.accounts === null ? [] : JSON.parse(stored.accounts);
-    return parseDesktopProfileState({
+    return getDesktopProfileMigrationState({
       version: 1,
       accounts,
       activeAddress: stored.activeAddress,

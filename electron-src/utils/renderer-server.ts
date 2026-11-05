@@ -4,6 +4,16 @@ import { getPort } from "get-port-please";
 const RENDERER_HOST = "127.0.0.1";
 const MAX_BIND_ATTEMPTS = 5;
 
+/** Keep the localhost origin while Chromium connects to our IPv4 listener. */
+export function configureRendererHostResolution(commandLine: {
+  appendSwitch(name: string, value: string): void;
+}): void {
+  commandLine.appendSwitch(
+    "host-resolver-rules",
+    `MAP localhost ${RENDERER_HOST}`,
+  );
+}
+
 export async function listenRendererServer(
   server: Server,
   preferredPort: number,

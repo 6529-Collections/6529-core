@@ -1280,4 +1280,7 @@ export const ES_ES_MESSAGES = {
   ...ES_ES_TRANSFER_MESSAGES,
   ...ES_ES_THE_MEMES_MINT_SUCCESS_MESSAGES,
   ...ES_ES_THE_MEMES_MINT_PROGRESS_MESSAGES,
+  "desktop.profiles.loading": "Restaurando los perfiles guardados…",
+  "desktop.profiles.restoreError": "No se han podido restaurar tus perfiles guardados. Vuelve a intentarlo.",
+  "desktop.profiles.retry": "Reintentar",
 } satisfies Partial<Record<MessageKey, string>>;
