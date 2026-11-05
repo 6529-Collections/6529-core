@@ -3176,6 +3176,13 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 
 export const EN_US_MESSAGES = {
+  "desktop.about.portPending": "Pending…",
+  "desktop.about.portNotApplicable": "N/A",
+  "desktop.about.portUnavailable": "Unavailable",
+  "desktop.profiles.restoreError": "Could not restore your saved profiles. Please retry.",
+  "desktop.profiles.saveError": "Could not save your profiles. Retry before quitting to keep your changes.",
+  "desktop.profiles.saveRetrying": "Retrying profile save…",
+  "desktop.profiles.retry": "Retry",
   "desktop.localIpfs.title": "Local IPFS",
   "desktop.localIpfs.enable": "Enable local IPFS node",
   "desktop.localIpfs.help":

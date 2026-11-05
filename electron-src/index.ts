@@ -109,6 +109,9 @@ import {
   getScheme,
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
+import { configureRendererHostResolution } from "./utils/renderer-server";
+import { DesktopProfileStorage } from "./desktop-profile-storage";
+import { readLegacyDesktopProfiles } from "./legacy-desktop-profiles";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
@@ -1065,7 +1068,10 @@ let IPFS_RPC_PORT: number;
 let IPFS_SWARM_PORT: number;
 let IPFS_SERVER: IPFSServer;
 let localIpfsPreferences: LocalIpfsPreferences;
+let desktopProfiles: DesktopProfileStorage;
+const profileReadinessCallbacks = new WeakMap<BrowserWindow, () => void>();
 
+configureRendererHostResolution(app.commandLine);
 const gotTheLock = app.requestSingleInstanceLock();
 
 const shownNotifications = new Set<string>();
@@ -1088,14 +1094,6 @@ interface TailInstances {
 const tails: TailInstances = {};
 
 async function resolvePorts() {
-  if (!PORT) {
-    PORT = await getPort({
-      random: true,
-      port: 6529,
-      portRange: [3000, 8000],
-    });
-    Logger.info("PORT:", PORT);
-  }
   if (!IPFS_PORT) {
     IPFS_PORT = await getPort({
       random: true,
@@ -1237,11 +1235,37 @@ if (!gotTheLock) {
       app.dock?.setIcon(path.join(__dirname, "assets", "icon.icns"));
     }
 
+    try {
+      PORT = await prepareNext(6529);
+      Logger.info("PORT:", PORT);
+    } catch (error) {
+      Logger.error("Failed to start the Desktop renderer server", error);
+      dialog.showErrorBox(
+        "Unable to start 6529 Desktop",
+        "The local Desktop interface could not start. Fully quit and reopen the app. If the problem continues, check the application logs.",
+      );
+      app.exit(1);
+      return;
+    }
     await resolvePorts();
-
-    await prepareNext(PORT);
     await initLogs();
     initStore();
+    desktopProfiles = new DesktopProfileStorage({
+      get: getValue,
+      set: setValue,
+      encrypt: (value) => {
+        if (!safeStorage.isEncryptionAvailable()) {
+          throw new Error("Native auth secure storage is unavailable");
+        }
+        return safeStorage.encryptString(value).toString("base64");
+      },
+      decrypt: (value) => safeStorage.decryptString(Buffer.from(value, "base64")),
+      readLegacy: readLegacyDesktopProfiles,
+      hasSession: (address) =>
+        isStoredNativeRefreshToken(
+          getValue(getNativeAuthRefreshTokenKey({ address, clientType: "desktop" })),
+        ),
+    });
 
     localIpfsPreferences = new LocalIpfsPreferences(
       getValue(LOCAL_IPFS_ENABLED_KEY),
@@ -1543,15 +1567,23 @@ async function openMainWindow() {
     mainWindow?.webContents.send("open-search");
   });
 
-  mainWindow.once("ready-to-show", async () => {
+  const openingWindow = mainWindow;
+  let painted = false;
+  let profilesReady = false;
+  let revealed = false;
+  const revealMainWindow = async () => {
+    if (!painted || !profilesReady || revealed || openingWindow.isDestroyed()) {
+      return;
+    }
+    revealed = true;
     Logger.info("Main window ready to show");
     // Scheduler setup must never hold back the ready main window.
     if (windowState) {
-      mainWindow?.setBounds(windowState);
+      openingWindow.setBounds(windowState);
     } else {
-      mainWindow?.maximize();
+      openingWindow.maximize();
     }
-    mainWindow?.show();
+    openingWindow.show();
     splash?.destroy();
     splash = null;
     // Reopened from background mode: the window is visible, so the tray
@@ -1568,6 +1600,14 @@ async function openMainWindow() {
       scheduledTasksStarted = false;
       Logger.error("Could not initialize scheduled tasks", error);
     }
+  };
+  openingWindow.once("ready-to-show", () => {
+    painted = true;
+    void revealMainWindow();
+  });
+  profileReadinessCallbacks.set(openingWindow, () => {
+    profilesReady = true;
+    void revealMainWindow();
   });
 
   mainWindow.on("close", (e) => {
@@ -1641,10 +1681,13 @@ function initListeners(mw: BrowserWindow) {
   mw.webContents.on("did-navigate-in-page", updateNavigationState);
   mw.webContents.on(
     "did-fail-load",
-    (_event, errorCode, errorDescription, validatedURL) => {
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       Logger.error(
         `Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`,
       );
+      // Make Chromium's navigation error visible rather than stranding the
+      // user behind a splash. Aborted/subframe loads are not startup failure.
+      if (isMainFrame && errorCode !== -3) profileReadinessCallbacks.get(mw)?.();
     },
   );
 }
@@ -2054,10 +2097,12 @@ ipcMain.handle("get-nav-state", () => {
 ipcMain.handle("get-info", () => {
   // Report IPFS ports only while the daemon is ready, so the renderer does
   // not point media at a gateway that is still starting or has stopped.
-  const ipfsAvailable = IPFS_SERVER?.getStatus() === "ready";
+  const ipfsStatus = IPFS_SERVER?.getStatus() ?? "unavailable";
+  const ipfsAvailable = ipfsStatus === "ready";
   return {
     ...getInfo(),
     port: PORT,
+    ipfsStatus,
     ipfsPort: ipfsAvailable ? IPFS_PORT : null,
     ipfsRpcPort: ipfsAvailable ? IPFS_RPC_PORT : null,
     ipfsSwarmPort: ipfsAvailable ? IPFS_SWARM_PORT : null,
@@ -2154,6 +2199,30 @@ ipcMain.handle("store:remove", (_event, key) => {
 ipcMain.handle("native-auth:is-available", () => {
   return safeStorage.isEncryptionAvailable();
 });
+
+function desktopProfileBackend(event: IpcMainInvokeEvent): string {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    event.senderFrame !== mainWindow.webContents.mainFrame ||
+    new URL(event.senderFrame.url).origin !== `http://localhost:${PORT}`
+  ) {
+    throw new Error("Desktop profile storage is unavailable to this frame");
+  }
+  return getApiEndpoint(getPublicRuntimeConfig());
+}
+
+ipcMain.handle("native-auth:restore-profiles", (event, state: unknown) => {
+  const backend = desktopProfileBackend(event);
+  return desktopProfiles.restore(backend, state);
+});
+ipcMain.handle("native-auth:profiles-ready", (event) => {
+  desktopProfileBackend(event);
+  if (mainWindow) profileReadinessCallbacks.get(mainWindow)?.();
+});
+ipcMain.handle("native-auth:save-profiles", (event, state: unknown) =>
+  desktopProfiles.save(desktopProfileBackend(event), state),
+);
 
 ipcMain.handle("native-auth:remove-refresh-token", (_event, request: unknown) => {
   if (!isNativeRemoveRefreshTokenRequest(request)) {

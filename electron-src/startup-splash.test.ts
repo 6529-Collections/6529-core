@@ -108,6 +108,7 @@ function createHarness(
     },
     coreReady: null,
     scheduledTasksStarted: false,
+    profileReadinessCallbacks: new WeakMap(),
     getDb: noop,
     IPFS_SERVER: { start: async () => "starting" },
     localShortcut: { register: noop },
@@ -155,6 +156,7 @@ function createHarness(
     launch: () => vm.runInContext("createWindow()", context) as Promise<void>,
     async ready() {
       this.main.emit("ready-to-show");
+      this.context.profileReadinessCallbacks.get(this.main)?.();
       await new Promise<void>((resolve) => setImmediate(resolve));
     },
   };
@@ -187,6 +189,33 @@ test("even fast startup shows a splash and switches to the ready main window wit
   assert.equal(h.splash.destroyed, true);
 });
 
+test("profile restoration stays behind the splash until the renderer commits its ready or failure screen", async () => {
+  const h = createHarness();
+  await h.launch();
+  h.main.emit("ready-to-show");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(h.splash.visible, true);
+  assert.equal(h.main.visible, false);
+  assert.equal(h.calls.scheduledTasks, 0);
+  h.context.profileReadinessCallbacks.get(h.main)?.();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(h.splash.destroyed, true);
+  assert.equal(h.main.visible, true);
+  assert.equal(h.calls.scheduledTasks, 1);
+  assert.deepEqual(h.timerDelays, []);
+});
+
+test("early profile readiness still waits for main-window paint", async () => {
+  const h = createHarness();
+  await h.launch();
+  h.context.profileReadinessCallbacks.get(h.main)?.();
+  assert.equal(h.main.visible, false);
+  assert.equal(h.splash.visible, true);
+  await h.ready();
+  assert.equal(h.main.visible, true);
+  assert.equal(h.splash.destroyed, true);
+});
+
 test("reopening the window from background mode keeps the database and jobs", async () => {
   const h = createHarness();
   await h.launch();
@@ -197,6 +226,7 @@ test("reopening the window from background mode keeps the database and jobs", as
   await h.launch();
   const reopened = h.windows.at(-1)!;
   reopened.emit("ready-to-show");
+  h.context.profileReadinessCallbacks.get(reopened)?.();
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(reopened.visible, true);
   assert.deepEqual(h.calls, { initDb: 1, migrations: 1, scheduledTasks: 1 });
@@ -214,6 +244,7 @@ test("a window reopened after failed scheduler setup tries the setup again", asy
   h.context.mainWindow = null;
   await h.launch();
   h.windows.at(-1)!.emit("ready-to-show");
+  h.context.profileReadinessCallbacks.get(h.windows.at(-1)!)?.();
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(attempts, 2);
   assert.deepEqual(h.calls, { initDb: 1, migrations: 1, scheduledTasks: 2 });
