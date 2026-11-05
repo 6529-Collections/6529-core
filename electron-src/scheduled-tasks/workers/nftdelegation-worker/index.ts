@@ -1,4 +1,7 @@
-import { setTdhRecalculationNeeded } from "../transactions-worker/transactions-worker.db";
+import {
+  completeTdhConsolidations,
+  getPendingTdhConsolidations,
+} from "../../../db/tdh-recalculation";
 import { loadConsolidationPolicy } from "../tdh-worker/consolidation-policy";
 import { ethers } from "ethers";
 import { parentPort, workerData } from "worker_threads";
@@ -42,6 +45,7 @@ import { calculateTDH } from "../tdh-worker/tdh";
 import {
   Transaction,
   TransactionBlock,
+  type PendingTdhConsolidations,
 } from "../../../db/entities/ITransaction";
 import { NFT } from "../../../db/entities/INFT";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
@@ -110,7 +114,6 @@ class NFTDelegationWorker extends CoreWorker {
       });
       return;
     }
-    const consolidations: ConsolidationEvent[] = [];
     const provider = this.getProvider();
     let reconciliationPercentage = 0;
     const reportReconciliation = (waiting: boolean) =>
@@ -144,11 +147,7 @@ class NFTDelegationWorker extends CoreWorker {
           "Scanning native delegation logs",
           `[${fromBlock}-${toBlock}]`,
         );
-        const scanned = await this.findAllDelegationTransactions(
-          fromBlock,
-          toBlock,
-        );
-        consolidations.push(...scanned.consolidations);
+        await this.findAllDelegationTransactions(fromBlock, toBlock);
       },
       (completed, total) => {
         reconciliationPercentage = total > 0 ? (completed / total) * 100 : 0;
@@ -166,7 +165,8 @@ class NFTDelegationWorker extends CoreWorker {
       });
       return;
     }
-    if (consolidations.length) await this.reconsolidateWallets(consolidations);
+    const pending = await getPendingTdhConsolidations(this.getDb().manager);
+    if (pending) await this.reconsolidateWallets(pending);
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
@@ -352,24 +352,18 @@ class NFTDelegationWorker extends CoreWorker {
     );
   }
 
-  private async reconsolidateWallets(events: ConsolidationEvent[]) {
+  private async reconsolidateWallets(pending: PendingTdhConsolidations) {
     logInfo(parentPort, "Reconsolidating wallets");
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.RUNNING,
-        message: `Reconsolidating wallets [${events.length}]`,
+        message: `Reconsolidating wallets [${pending.wallets.length}]`,
       },
-    });
-
-    const wallets = new Set<string>();
-    events.forEach((c) => {
-      wallets.add(c.wallet1.toLowerCase());
-      wallets.add(c.wallet2.toLowerCase());
     });
 
     const affectedWallets = await expandAffectedConsolidationWallets(
       this.getDb(),
-      Array.from(wallets),
+      pending.wallets,
     );
 
     if (affectedWallets.length > 0) {
@@ -384,7 +378,6 @@ class NFTDelegationWorker extends CoreWorker {
           data.consolidationSettingsRequest,
         );
       } catch {
-        await setTdhRecalculationNeeded(this.getDb().manager, true);
         logInfo(
           parentPort,
           "Reconsolidation deferred until backend consolidation settings are available; previous TDH is preserved",
@@ -415,6 +408,7 @@ class NFTDelegationWorker extends CoreWorker {
         policy,
         walletsArray,
       );
+      await completeTdhConsolidations(this.getDb().manager, pending);
     } else {
       logInfo(parentPort, `[NO WALLETS TO RECONSOLIDATE]`);
       sendStatusUpdate(parentPort, {

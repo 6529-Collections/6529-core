@@ -2924,8 +2924,8 @@ const CORE_TRANSACTION_MESSAGES = objectMessages("core.transactions", {
 
 const CORE_TDH_MESSAGES = objectMessages("core.tdh", {
   recalculationWarning:
-    "Transaction history was repaired or reset after this TDH result was calculated. Recalculate TDH before treating the values below as current.",
-  recalculationRequired: "Transaction history changed — recalculation required",
+    "TDH needs recalculation because its underlying data changed or a calculation did not finish. Recalculate TDH before treating the values below as current.",
+  recalculationRequired: "TDH recalculation required",
   lastCalculation: "Last Calculation: {date}",
 } as const);
 
