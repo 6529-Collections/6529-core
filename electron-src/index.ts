@@ -2212,7 +2212,6 @@ function desktopProfileBackend(event: IpcMainInvokeEvent): string {
 
 ipcMain.handle("native-auth:restore-profiles", (event, state: unknown) => {
   const backend = desktopProfileBackend(event);
-  updateSplashMessage("Restoring saved profiles…");
   return desktopProfiles.restore(backend, state);
 });
 ipcMain.handle("native-auth:profiles-ready", (event) => {
