@@ -70,6 +70,7 @@ const setActiveFocusElement = (
 export function ConfirmModalShell(props: {
   show: boolean;
   title: ReactNode;
+  descriptionId?: string | undefined;
   children?: ReactNode | undefined;
   footer: ReactNode;
   initialFocusRef?: RefObject<HTMLElement | null> | undefined;
@@ -85,6 +86,7 @@ export function ConfirmModalShell(props: {
   const {
     show,
     title,
+    descriptionId,
     children,
     footer,
     initialFocusRef,
@@ -192,6 +194,7 @@ export function ConfirmModalShell(props: {
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      aria-describedby={descriptionId}
     >
       <div
         ref={dialogRef}

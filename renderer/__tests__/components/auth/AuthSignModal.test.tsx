@@ -33,10 +33,9 @@ describe("AuthSignModal onboarding", () => {
     render(<AuthSignModal {...props} />);
     expect(
       screen.getByRole("dialog", { name: "Sign in to 6529" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Sign a message to confirm this address is yours.")
-    ).toBeInTheDocument();
+    ).toHaveAccessibleDescription(
+      "Sign a message to confirm this address is yours."
+    );
     expect(document.querySelector("dialog")).not.toBeInTheDocument();
     expect(screen.getByText(mockAddress)).toBeInTheDocument();
     expect(screen.getByText("No transaction or gas fees.")).toBeInTheDocument();

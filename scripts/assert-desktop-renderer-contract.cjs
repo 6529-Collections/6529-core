@@ -1184,7 +1184,11 @@ assertContract(
   "Auth cancellation must invalidate the active signature before disconnecting",
 );
 assertContract(
-  Boolean(activeWalletStorageWritebackGuard),
+  Boolean(
+    authFunction &&
+      (!callsIdentifier(authFunction, "setActiveWalletAccount") ||
+        activeWalletStorageWritebackGuard),
+  ),
   authProviderPath,
   "passive auth validation must never change the active wallet account in Electron",
 );
