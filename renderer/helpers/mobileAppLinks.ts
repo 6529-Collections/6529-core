@@ -117,9 +117,38 @@ function isUniversalLinkPath(pathname: string): boolean {
   );
 }
 
-function getNativeLinkPathname(url: URL, scheme: string): string | null {
+/**
+ * The host and path of a custom-scheme link. Android System WebView before
+ * Chromium 130 parses `mobile6529://navigate/x` with an empty host and the
+ * path `//navigate/x`; read the host from the path there, as current
+ * parsers do.
+ */
+function getCustomSchemeParts(url: URL): {
+  readonly host: string;
+  readonly pathname: string;
+} {
+  if (url.hostname || !url.pathname.startsWith("//")) {
+    return { host: url.hostname, pathname: url.pathname };
+  }
+  const rest = url.pathname.slice(2);
+  const slash = rest.indexOf("/");
+  return slash === -1
+    ? { host: rest.toLowerCase(), pathname: "" }
+    : { host: rest.slice(0, slash).toLowerCase(), pathname: rest.slice(slash) };
+}
+
+function getNativeLinkPathname(
+  url: URL,
+  scheme: string,
+  origin: string
+): string | null {
   if (url.protocol === "https:") {
-    return UNIVERSAL_LINK_HOSTS.has(url.hostname) &&
+    // Accept the shared staging host only while running on that same origin.
+    // Production keeps its existing host allowlist.
+    const isStagingLink =
+      url.hostname === "staging.6529.io" &&
+      url.origin === new URL(origin).origin;
+    return (UNIVERSAL_LINK_HOSTS.has(url.hostname) || isStagingLink) &&
       isUniversalLinkPath(url.pathname)
       ? url.pathname
       : null;
@@ -132,8 +161,9 @@ function getNativeLinkPathname(url: URL, scheme: string): string | null {
     )
   )
     return null;
-  if (url.hostname === DeepLinkScope.NAVIGATE) return url.pathname || "/";
-  if (url.hostname === DeepLinkScope.SHARE_CONNECTION)
+  const { host, pathname } = getCustomSchemeParts(url);
+  if (host === DeepLinkScope.NAVIGATE) return pathname || "/";
+  if (host === DeepLinkScope.SHARE_CONNECTION)
     return "/accept-connection-sharing";
   return null;
 }
@@ -142,7 +172,8 @@ function getNativeLinkPathname(url: URL, scheme: string): string | null {
  * Maps a link the app was opened with to a root-relative destination, or null
  * to ignore it. Accepts `<scheme>://navigate/<path>`,
  * `<scheme>://share-connection?...` and https universal links / App Links on
- * the 6529.io hosts, except paths the association file keeps in the browser.
+ * the production hosts or the app's own shared staging origin, except paths
+ * the association file keeps in the browser.
  */
 export function getNativeLinkDestination(
   value: string,
@@ -153,7 +184,7 @@ export function getNativeLinkDestination(
   try {
     const url = new URL(value);
     if (url.username || url.password || url.port) return null;
-    const pathname = getNativeLinkPathname(url, scheme);
+    const pathname = getNativeLinkPathname(url, scheme, origin);
     if (!pathname) return null;
 
     // URLSearchParams preserves repeated parameters; fragments stay outside the query.

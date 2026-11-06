@@ -1,3 +1,5 @@
+import NotificationEncryptedMessage from "./NotificationEncryptedMessage";
+import NotificationArtistArtwork from "./NotificationArtistArtwork";
 import NotificationVotingCreditsReturned from "./NotificationVotingCreditsReturned";
 import type { DropInteractionParams } from "@/components/waves/drops/Drop";
 import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
@@ -38,12 +40,16 @@ function NotificationItemComponent({
 }) {
   const getComponent = (): JSX.Element => {
     switch (notification.cause) {
+      case ApiNotificationCause.E2EeMessage:
+        return <NotificationEncryptedMessage notification={notification} />;
       case ApiNotificationCause.VotingCreditsReturned:
         return (
           <NotificationVotingCreditsReturned notification={notification} />
         );
       case ApiNotificationCause.MemeCollaboration:
         return <NotificationMemeCollaboration notification={notification} />;
+      case ApiNotificationCause.ArtistArtworkSubmitted:
+        return <NotificationArtistArtwork notification={notification} />;
       case ApiNotificationCause.CompetitionLifecycle:
         return <NotificationCompetitionLifecycle notification={notification} />;
       case ApiNotificationCause.DropQuoted:

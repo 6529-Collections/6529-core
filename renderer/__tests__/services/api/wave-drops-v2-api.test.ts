@@ -80,14 +80,14 @@ describe("fetchDropReactionDetailsV2", () => {
     jest.restoreAllMocks();
   });
 
-  it("records non-abort failures before returning the empty fallback", async () => {
+  it("rethrows non-abort failures so detail views can retry", async () => {
     const error = new Error("reaction request failed");
     const consoleErrorSpy = jest
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     commonApiFetchMock.mockRejectedValueOnce(error);
 
-    await expect(fetchDropReactionDetailsV2("drop-1")).resolves.toEqual([]);
+    await expect(fetchDropReactionDetailsV2("drop-1")).rejects.toBe(error);
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "Failed to fetch Wave drop reaction details.",
@@ -976,6 +976,22 @@ describe("fetchGlobalBoostedDropsV2", () => {
 describe("fetchDropV2ById", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it("keeps metadata failures visible to strict detail consumers but preserves the default fallback", async () => {
+    const error = new Error("Metadata unavailable");
+    commonApiFetchMock.mockRejectedValueOnce(error);
+    await expect(
+      fetchDropMetadataByIdV2({
+        dropId: "drop-1",
+        priorityMetadata,
+        throwOnError: true,
+      })
+    ).rejects.toBe(error);
+    commonApiFetchMock.mockRejectedValueOnce(error);
+    await expect(
+      fetchDropMetadataByIdV2({ dropId: "drop-1", priorityMetadata })
+    ).resolves.toEqual(priorityMetadata);
   });
 
   it("fetches drop metadata by id without fetching the drop detail", async () => {

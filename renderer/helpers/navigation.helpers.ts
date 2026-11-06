@@ -51,6 +51,67 @@ interface SearchParamsLike {
 export type RouteSearchParams = Record<string, string | string[] | undefined>;
 
 const CREATE_SEGMENT = "create";
+// `/messages/encrypted/...` belongs to end-to-end encrypted chats (D109); it
+// must never be read as a plaintext direct-message wave id.
+const ENCRYPTED_SEGMENT = "encrypted";
+const RESERVED_MESSAGES_SEGMENTS: ReadonlySet<string> = new Set([
+  CREATE_SEGMENT,
+  ENCRYPTED_SEGMENT,
+]);
+const ENCRYPTED_STATIC_SEGMENTS: ReadonlySet<string> = new Set([
+  "new",
+  "devices",
+]);
+const ENCRYPTED_MESSAGES_ROUTE = `/messages/${ENCRYPTED_SEGMENT}`;
+
+export const getEncryptedMessagesRoute = (): string => ENCRYPTED_MESSAGES_ROUTE;
+
+/** The query a content-free encrypted-message push opens the list with. */
+export const ENCRYPTED_MESSAGES_WAKE_PARAM = "wake";
+
+/** Where an encrypted-message push opens (the list, marked as a wake). */
+export const getEncryptedMessagesWakeRoute = (): string =>
+  `${ENCRYPTED_MESSAGES_ROUTE}?${ENCRYPTED_MESSAGES_WAKE_PARAM}=1`;
+
+export const getNewEncryptedChatRoute = (): string =>
+  `${ENCRYPTED_MESSAGES_ROUTE}/new`;
+
+export const getEncryptedDevicesRoute = (): string =>
+  `${ENCRYPTED_MESSAGES_ROUTE}/devices`;
+
+export const getEncryptedConversationRoute = (group: string): string =>
+  `${ENCRYPTED_MESSAGES_ROUTE}/${encodeURIComponent(group)}`;
+
+export const isEncryptedMessagesPathname = (
+  pathname: string | null | undefined
+): boolean =>
+  pathname === ENCRYPTED_MESSAGES_ROUTE ||
+  pathname?.startsWith(`${ENCRYPTED_MESSAGES_ROUTE}/`) === true;
+
+export const getEncryptedConversationIdFromPathname = (
+  pathname: string | null | undefined
+): string | null => {
+  if (!pathname?.startsWith(`${ENCRYPTED_MESSAGES_ROUTE}/`)) {
+    return null;
+  }
+
+  const [, messagesSegment, encryptedSegment, groupSegment] =
+    pathname.split("/");
+  if (
+    messagesSegment !== "messages" ||
+    encryptedSegment !== ENCRYPTED_SEGMENT ||
+    !groupSegment ||
+    ENCRYPTED_STATIC_SEGMENTS.has(groupSegment)
+  ) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(groupSegment);
+  } catch {
+    return groupSegment;
+  }
+};
 
 export const getWavePathRoute = (waveId: string): string =>
   `/waves/${encodeURIComponent(waveId)}`;
@@ -92,7 +153,7 @@ export const getMessageIdFromPathname = (
   if (
     messagesSegment !== "messages" ||
     !waveSegment ||
-    waveSegment === CREATE_SEGMENT
+    RESERVED_MESSAGES_SEGMENTS.has(waveSegment)
   ) {
     return null;
   }
@@ -122,7 +183,29 @@ export const hidesMobileBottomNavigation = ({
   isWaveCreatePathname(pathname) ||
   pathname === "/messages/create" ||
   getWaveIdFromPathname(pathname) !== null ||
-  getMessageIdFromPathname(pathname) !== null;
+  getMessageIdFromPathname(pathname) !== null ||
+  // An encrypted conversation is a full-height thread with its own composer.
+  getEncryptedConversationIdFromPathname(pathname) !== null;
+
+const WAVE_CHAT_ROUTE_ROOTS = [
+  "/waves",
+  "/messages",
+  "/notifications",
+  "/my-stream",
+] as const;
+
+/**
+ * Wave and chat routes render per request: the shell's wave providers read
+ * their query (`?wave=`, `?drop=`, `?serialNo=`) during the server render and
+ * hydration there. Every other route may prerender without a request.
+ */
+export const isWaveChatPathname = (
+  pathname: string | null | undefined
+): boolean =>
+  !!pathname &&
+  WAVE_CHAT_ROUTE_ROOTS.some(
+    (root) => pathname === root || pathname.startsWith(`${root}/`)
+  );
 
 export const getActiveWaveIdFromUrl = ({
   pathname,

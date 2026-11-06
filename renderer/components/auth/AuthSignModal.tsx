@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import type { MouseEvent } from "react";
 import { ConfirmModalShell } from "@/components/shared/ConfirmModalShell";
 import { AUTHENTICATION_MODAL_OVERLAY_CLASS } from "@/components/shared/modal-layers";
@@ -59,6 +59,7 @@ export function AuthSignModal({
   readonly shouldShowSignModal: boolean;
 }) {
   const locale = useBrowserLocale();
+  const signModalDescriptionId = useId();
   const modalStyles = isSessionUpgradePrompt ? styles : SIGN_IN_CLASSES;
   const { address } = useSeizeConnectContext();
   const sessionUpgradeTimeLeftText = useMemo(
@@ -126,6 +127,7 @@ export function AuthSignModal({
     <ConfirmModalShell
       show
       title={signModalTitle}
+      descriptionId={signModalDescriptionId}
       overlayClassName={AUTHENTICATION_MODAL_OVERLAY_CLASS}
       dialogClassName={`${styles["signModalDialog"]} ${modalStyles["signModalSurface"]}`}
       headerClassName={modalStyles["signModalHeader"]}
@@ -133,6 +135,7 @@ export function AuthSignModal({
       bodyClassName={modalStyles["signModalBody"]}
       footerClassName={modalStyles["signModalFooter"]}
       onBackdropClick={canDismissSignModal ? onCancelSignRequest : undefined}
+      dismissOnBackdropClick={false}
       footer={
         <>
           {canDismissSignModal && (
@@ -140,7 +143,7 @@ export function AuthSignModal({
               type="button"
               onClick={onCancelSignRequest}
               variant="secondary"
-              size="md"
+              size="lg"
               className="tw-min-w-32 max-[576px]:tw-min-w-0 max-[576px]:tw-flex-1"
             >
               {isSessionUpgradePrompt && sessionUpgradeHasDeadline
@@ -181,7 +184,9 @@ export function AuthSignModal({
         </>
       }
     >
-      <p className={styles["signModalLead"]}>{signModalLead}</p>
+      <p id={signModalDescriptionId} className={modalStyles["signModalLead"]}>
+        {signModalLead}
+      </p>
 
       {isSessionUpgradePrompt ? (
         <ul className={styles["signModalList"]}>

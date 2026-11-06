@@ -2,6 +2,7 @@ import { queueNativePushLogout } from "@/services/notifications/push-installatio
 import { unwrapNativeAuthResult } from "@/shared/native-auth-result";
 import { Capacitor } from "@capacitor/core";
 import { isElectron } from "@/helpers";
+import type { ApiRedeemConnectionShareResponse } from "@/generated/models/ApiRedeemConnectionShareResponse";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import { getAuthJwt, getWalletAddress, setAuthJwt } from "./auth.utils";
@@ -42,38 +43,18 @@ import {
   type AuthSessionClientType,
   type SessionRefreshEntry,
 } from "./session-refresh-coordination.utils";
-
+import type {
+  RefreshTokenSessionClientType,
+  SessionLoginRequest,
+  SessionNativeResponse,
+  SessionNonceDeviceGrantParams,
+  SessionWebResponse,
+} from "./session-v2.types";
 export type { AuthSessionClientType } from "./session-refresh-coordination.utils";
-export type RefreshTokenSessionClientType = Exclude<
-  AuthSessionClientType,
-  "web"
->;
-
-interface SessionLoginRequest {
-  readonly client_type: AuthSessionClientType;
-  readonly server_signature: string;
-  readonly client_signature: string;
-  readonly client_address: string;
-  readonly role?: string | null;
-}
-
-interface SessionWebResponse {
-  readonly address: string;
-  readonly role: string | null;
-  readonly access_token: string;
-  readonly access_token_expires_at: string;
-  readonly client_type: "web";
-}
-
-export interface SessionNativeResponse {
-  readonly address: string;
-  readonly role: string | null;
-  readonly access_token: string;
-  readonly access_token_expires_at: string;
-  readonly client_type: RefreshTokenSessionClientType;
-  readonly native_refresh_token: string;
-  readonly refresh_token_expires_at: string;
-}
+export type {
+  RefreshTokenSessionClientType,
+  SessionNativeResponse,
+} from "./session-v2.types";
 
 type SessionLoginResponse = SessionWebResponse | SessionNativeResponse;
 type SessionRefreshResponse = SessionWebResponse | SessionNativeResponse;
@@ -100,15 +81,10 @@ interface CreateLegacyDesktopConnectionShareResponse {
   readonly deep_link_path: string;
 }
 
-interface RedeemConnectionShareResponse {
-  readonly address: string;
-  readonly role: string | null;
-  readonly access_token: string;
-  readonly access_token_expires_at: string;
-  readonly client_type?: RefreshTokenSessionClientType | undefined;
-  readonly native_refresh_token: string;
-  readonly refresh_token_expires_at: string;
-}
+type RedeemConnectionShareResponse = Omit<
+  ApiRedeemConnectionShareResponse,
+  "client_type"
+> & { readonly client_type?: RefreshTokenSessionClientType | undefined };
 
 interface NativeConnectionShareSourceProof {
   readonly client_type: RefreshTokenSessionClientType;
@@ -347,24 +323,30 @@ export async function getSessionNonce({
   signerAddress,
   clientType = getSessionClientType(),
   includeWalletAuthHeaders = true,
+  deviceGrant,
 }: {
   readonly signerAddress: string;
   readonly clientType?: AuthSessionClientType | undefined;
   readonly includeWalletAuthHeaders?: boolean | undefined;
+  readonly deviceGrant?: SessionNonceDeviceGrantParams | undefined;
 }): Promise<ApiSessionNonceResponse> {
+  // Only web (SIWE) challenges can carry a device grant.
+  const deviceGrantParams =
+    deviceGrant && clientType === "web" ? deviceGrant : {};
   return await commonApiFetch<
     ApiSessionNonceResponse,
     {
       readonly signer_address: string;
       readonly client_type: AuthSessionClientType;
       readonly chain_id: string;
-    }
+    } & Partial<SessionNonceDeviceGrantParams>
   >({
     endpoint: "auth/session-nonce",
     params: {
       signer_address: signerAddress,
       client_type: clientType,
       chain_id: "1",
+      ...deviceGrantParams,
     },
     includeWalletAuth: includeWalletAuthHeaders,
   });
@@ -376,12 +358,14 @@ export async function loginWithSessionV2({
   signerAddress,
   role,
   clientType = getSessionClientType(),
+  deviceLabel,
 }: {
   readonly serverSignature: string;
   readonly clientSignature: string;
   readonly signerAddress: string;
   readonly role: string | null;
   readonly clientType?: AuthSessionClientType | undefined;
+  readonly deviceLabel?: string | undefined;
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
   if (clientType !== "web" && isElectron()) {
@@ -411,6 +395,7 @@ export async function loginWithSessionV2({
       client_signature: clientSignature,
       client_address: signerAddress,
       ...roleBody,
+      ...(deviceLabel ? { device_label: deviceLabel } : {}),
     },
     credentials: getSessionCredentialsMode(),
   });
@@ -834,9 +819,11 @@ async function getNativeConnectionShareSourceProof(): Promise<NativeConnectionSh
 export async function createConnectionShare({
   signal,
   targetClientType = "native",
+  encryptedDeviceSetup,
 }: {
   readonly signal?: AbortSignal | undefined;
   readonly targetClientType?: RefreshTokenSessionClientType | undefined;
+  readonly encryptedDeviceSetup?: string | undefined;
 }): Promise<CreateConnectionShareResponse> {
   const sourceProof = await getNativeConnectionShareSourceProof();
   if (isElectron()) {
@@ -861,10 +848,12 @@ export async function createConnectionShare({
   const body = sourceProof
     ? {
         target_client_type: targetClientType,
+        encrypted_device_setup: encryptedDeviceSetup,
         ...sourceProof,
       }
     : {
         target_client_type: targetClientType,
+        encrypted_device_setup: encryptedDeviceSetup,
       };
 
   return await commonApiPost<
@@ -1011,7 +1000,10 @@ export async function redeemConnectionShare(
   targetClientType: RefreshTokenSessionClientType = isElectron()
     ? "desktop"
     : "native"
-): Promise<SessionNativeResponse> {
+): Promise<
+  SessionNativeResponse &
+    Pick<RedeemConnectionShareResponse, "encrypted_device_setup">
+> {
   if (isElectron()) {
     const redeemDesktopConnectionShare = requireDesktopAuthBridgeMethod(
       "redeemConnectionShare",
@@ -1041,6 +1033,13 @@ export async function redeemConnectionShare(
 
   return {
     ...response,
+    role: response.role ?? null,
+    access_token_expires_at: new Date(
+      response.access_token_expires_at
+    ).toISOString(),
+    refresh_token_expires_at: new Date(
+      response.refresh_token_expires_at
+    ).toISOString(),
     client_type: response.client_type ?? targetClientType,
   };
 }

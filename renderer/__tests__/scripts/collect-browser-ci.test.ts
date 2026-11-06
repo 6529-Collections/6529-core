@@ -146,6 +146,11 @@ it("selects every core browser lane when their shared workflow changes", () => {
         runner: "ubuntu-latest",
       },
       {
+        lane: "playwright-bookmarks",
+        label: "Private bookmarks desktop and mobile",
+        runner: "ubuntu-latest",
+      },
+      {
         lane: "playwright-wave-creation",
         label: "Wave creation desktop and mobile",
         runner: "ubuntu-latest",
@@ -215,4 +220,21 @@ it("partitions the full native competition pack across two uniquely identified j
     "with.name",
     "app-pr-ci-results-${{ matrix.lane }}${{ matrix.shard && format('-{0}', matrix.shard) || '' }}-${{ github.event.pull_request.number || github.run_id }}"
   );
+});
+
+it.each([
+  "components/waves/CreateDrop.tsx",
+  "components/drops/create/lexical/plugins/mentions/MentionsPlugin.tsx",
+  "components/waves/create-drop-content/AllMentionConfirmationDialog.tsx",
+  "components/waves/create-drop-content/CreateDropSubmissionDialogs.tsx",
+  "components/waves/create-drop-content/useAllMentionConfirmation.ts",
+  "tests/social/waves-composer-sandbox.spec.ts",
+])("selects the all mention browser checks for %s", (file) => {
+  const outputs = select([file]);
+  expect(outputs["all_mention_confirmation_required"]).toBe("true");
+  expect(JSON.parse(outputs["core_playwright_matrix"]!)).toMatchObject({
+    include: expect.arrayContaining([
+      expect.objectContaining({ lane: "playwright-smoke" }),
+    ]),
+  });
 });

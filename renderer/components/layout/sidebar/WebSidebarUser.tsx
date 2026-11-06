@@ -1,5 +1,7 @@
 "use client";
 
+import { useBookmarkStatus } from "@/hooks/drops/useDropBookmarks";
+
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { memo, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
@@ -8,7 +10,10 @@ import { getConnectionProfileIndicator } from "@/components/auth/connection-stat
 import CircleLoader, {
   CircleLoaderSize,
 } from "@/components/distribution-plan-tool/common/CircleLoader";
-import { HeaderConnectModal } from "@/components/header/share/HeaderShare";
+import {
+  HeaderConnectModal,
+  preloadHeaderQRModal,
+} from "@/components/header/share/HeaderShare";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import HeaderUserMenuDropdown from "@/components/header/user/HeaderUserMenuDropdown";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
@@ -23,6 +28,9 @@ import useCapacitor from "@/hooks/useCapacitor";
 import { useAuth } from "@/components/auth/Auth";
 import { useArtworkDocumentationAccess } from "@/hooks/artwork-documentation/useArtworkDocumentationAccess";
 import { useHasHydrated } from "@/hooks/useHasHydrated";
+import DeviceSecurityStatus, {
+  isDeviceSecurityStatusEnabled,
+} from "@/components/device-signing/DeviceSecurityStatus";
 import WebSidebarAccountAvatar from "./WebSidebarAccountAvatar";
 import { useSidebarIdentity } from "./useSidebarIdentity";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
@@ -41,8 +49,11 @@ function WebSidebarUser({
 }: WebSidebarUserProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [hasRequestedConnectModal, setHasRequestedConnectModal] =
+    useState(false);
   const hasHydrated = useHasHydrated();
   const accountDescriptionId = useId();
+  const deviceStatusId = useId();
   const capacitor = useCapacitor();
   const { isMobileDevice, isDeviceDetectionResolved } =
     useIsMobileDeviceStatus();
@@ -90,6 +101,7 @@ function WebSidebarUser({
   // Stay subscribed while the account UI is mounted, including while its menu
   // is closed. No persistent cache or menu-triggered request is needed.
   const artworkAccess = useArtworkDocumentationAccess();
+  useBookmarkStatus();
   const accountScope = JSON.stringify([
     address,
     connectedProfile?.id,
@@ -244,6 +256,11 @@ function WebSidebarUser({
   const hasMultipleConnectedAccounts = connectedAccounts.length > 1;
 
   const toggleUserMenu = () => {
+    if (!showUserMenu && canUseDesktopConnect) {
+      // The account menu holds "Connect Device"; fetch the modal as it opens
+      // so the dialog appears without a network wait.
+      preloadHeaderQRModal();
+    }
     setShowUserMenu((current) => !current);
   };
 
@@ -302,6 +319,7 @@ function WebSidebarUser({
 
   const onOpenConnect = () => {
     setShowUserMenu(false);
+    setHasRequestedConnectModal(true);
     setShowConnectModal(true);
   };
 
@@ -322,7 +340,14 @@ function WebSidebarUser({
             : "webSidebar.accountMenu.openAriaLabel"
         )}
         aria-expanded={showUserMenu}
-        aria-describedby={accountDescriptionId}
+        aria-describedby={
+          isDeviceSecurityStatusEnabled()
+            ? `${accountDescriptionId} ${deviceStatusId}`
+            : accountDescriptionId
+        }
+        {...(isDeviceSecurityStatusEnabled() && {
+          "data-tooltip-id": `${deviceStatusId}-tooltip`,
+        })}
         aria-controls="user-menu"
       >
         <span id={accountDescriptionId} className="tw-sr-only">
@@ -340,7 +365,11 @@ function WebSidebarUser({
                   ? "desktop-hover:group-hover/user:tw-shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_0_14px_rgba(255,255,255,0.06)] desktop-hover:group-hover/user:tw-brightness-[1.05]"
                   : ""
               }`}
-              title={connectionIndicator.title}
+              title={
+                isDeviceSecurityStatusEnabled()
+                  ? undefined
+                  : connectionIndicator.title
+              }
             >
               <WebSidebarAccountAvatar
                 key={`${address}:${resolvedPfp ?? "default"}`}
@@ -352,6 +381,11 @@ function WebSidebarUser({
                 />
               )}
             </div>
+            <DeviceSecurityStatus
+              descriptionId={deviceStatusId}
+              menuOpen={showUserMenu}
+              connection={connectionIndicator}
+            />
             {hasUnreadOnOtherConnectedProfiles && (
               <div
                 className="tw-absolute tw-right-[-6px] tw-top-[-6px] tw-size-3 tw-rounded-full tw-bg-indigo-500 tw-shadow-sm"
@@ -393,10 +427,12 @@ function WebSidebarUser({
           />
         </div>
       )}
-      <HeaderConnectModal
-        show={canUseDesktopConnect && showConnectModal}
-        onClose={() => setShowConnectModal(false)}
-      />
+      {hasRequestedConnectModal && (
+        <HeaderConnectModal
+          show={canUseDesktopConnect && showConnectModal}
+          onClose={() => setShowConnectModal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -231,6 +231,7 @@ const UnifiedWavesListWaves = forwardRef<
       scrollContainerRef,
       enabled: !isDirectMessage,
       activeContainerId: effectiveActiveParentWaveId ?? activeWaveId,
+      activeWaveId,
     });
     const collectionLoading =
       isLoading ||
@@ -379,9 +380,17 @@ const UnifiedWavesListWaves = forwardRef<
       [animatedAnnouncementRows]
     );
     useRevealActiveSidebarWave({
+      preserveScrollOnInteraction: !isDirectMessage,
+      // Animated rows settle one render after their source list.
+      isLoading:
+        isLoading ||
+        streamWaves.isPinnedWavesLoading === true ||
+        allRows.length !== virtualizedRows.length ||
+        allRows.some((row, index) => row.key !== virtualizedRows[index]?.key),
       activeParentWaveId: effectiveActiveParentWaveId,
       activeWaveId: navigation.searching ? null : activeWaveId,
-      filterKey: navigation.scrollKey,
+      // Restoring the account is not a user filter change.
+      filterKey: isDirectMessage ? navigation.scrollKey : navigation.viewKey,
       scrollContainerRef,
       scrollToVirtualIndex: virtual.scrollToIndex,
       staticRows: revealStaticRows,

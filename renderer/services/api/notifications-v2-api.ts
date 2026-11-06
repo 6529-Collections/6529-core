@@ -23,6 +23,7 @@ import {
   type INotificationVotingCreditsReturned,
   type INotificationDropPollVoted,
   type INotificationDropReacted,
+  type INotificationEncryptedMessage,
   type INotificationSubscriptionCoverage,
   type NotificationCause,
   type NotificationPollVoteOption,
@@ -334,6 +335,9 @@ const mapVotingCreditsReturnedNotification = (
       cause: ApiNotificationCause.VotingCreditsReturned,
       created_at: notification.created_at,
       read_at: notification.read_at,
+      ...(notification.related_wave
+        ? { related_wave: notification.related_wave }
+        : {}),
       additional_context: {
         event_id: context.event_id,
         reason: context.reason,
@@ -427,9 +431,67 @@ const mapMemeCollaborationNotification = (
   ];
 };
 
+const mapEncryptedMessageNotification = (
+  notification: ApiNotificationV2
+): INotificationEncryptedMessage => {
+  const { encrypted_group, encrypted_message_seq } =
+    notification.additional_context;
+  return {
+    id: notification.id,
+    cause: ApiNotificationCause.E2EeMessage,
+    created_at: notification.created_at,
+    read_at: notification.read_at,
+    related_identity: notification.related_identity
+      ? mapIdentityOverviewToProfileMin(notification.related_identity)
+      : null,
+    additional_context: {
+      ...(encrypted_group === undefined ? {} : { encrypted_group }),
+      ...(encrypted_message_seq === undefined ? {} : { encrypted_message_seq }),
+    },
+  };
+};
+
+const mapArtistArtworkNotification = (
+  base: ReturnType<typeof mapBaseNotification>,
+  relatedDrops: ApiDrop[],
+  context: ApiNotificationAdditionalContextV2
+): TypedNotification[] => {
+  if (
+    !relatedDrops[0] ||
+    !context.artist_id ||
+    !context.wave_id ||
+    !context.drop_id ||
+    !context.competition_id ||
+    !context.entry_id ||
+    !context.competition_title ||
+    typeof context.submitted_at !== "number"
+  )
+    return [];
+  return [
+    {
+      ...base,
+      cause: ApiNotificationCause.ArtistArtworkSubmitted,
+      related_drops: relatedDrops,
+      additional_context: {
+        artist_id: context.artist_id,
+        wave_id: context.wave_id,
+        drop_id: context.drop_id,
+        competition_id: context.competition_id,
+        entry_id: context.entry_id,
+        competition_title: context.competition_title,
+        artwork_title: context.artwork_title ?? null,
+        submitted_at: context.submitted_at,
+      },
+    },
+  ];
+};
+
 const mapNotificationV2 = (
   notification: ApiNotificationV2
 ): TypedNotification[] => {
+  if (notification.cause === ApiNotificationCause.E2EeMessage) {
+    return [mapEncryptedMessageNotification(notification)];
+  }
   if (notification.cause === ApiNotificationCause.VotingCreditsReturned) {
     return mapVotingCreditsReturnedNotification(notification);
   }
@@ -456,6 +518,8 @@ const mapNotificationV2 = (
   const cause = notification.cause as NotificationCause;
 
   switch (cause) {
+    case ApiNotificationCause.ArtistArtworkSubmitted:
+      return mapArtistArtworkNotification(base, relatedDrops, context);
     case ApiNotificationCause.IdentitySubscribed:
       return [
         {

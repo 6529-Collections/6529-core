@@ -4,11 +4,14 @@ import {
   ProcessIncomingDropType,
 } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
+import { QueryKey } from "@/components/react-query-wrapper/query-keys";
+import { getReactionDetailsVersion } from "@/components/waves/drops/reaction-utils";
 import { DropSize } from "@/helpers/waves/drop.helpers";
 import { WsMessageType } from "@/helpers/Types";
 
 const mockSetQueriesData = jest.fn();
 const mockSetQueryData = jest.fn();
+const mockInvalidateQueries = jest.fn().mockResolvedValue(undefined);
 const mockCancelQueries = jest.fn().mockResolvedValue(undefined);
 const mockFindAll = jest.fn(() => []);
 const mockRefreshEligibility = jest.fn().mockResolvedValue(undefined);
@@ -79,6 +82,7 @@ jest.mock("@/contexts/wave/drop-visibility", () => ({
 jest.mock("@tanstack/react-query", () => ({
   useQueryClient: jest.fn(() => ({
     cancelQueries: mockCancelQueries,
+    invalidateQueries: mockInvalidateQueries,
     getQueryCache: () => ({
       findAll: mockFindAll,
     }),
@@ -233,6 +237,76 @@ describe("useWaveRealtimeUpdater", () => {
     );
   });
 
+  describe("author signature of a stored drop", () => {
+    const storeWithSignedDrop = () => ({
+      wave1: {
+        drops: [
+          {
+            id: "signed",
+            serial_no: 5,
+            type: "FULL",
+            wave: { id: "wave1" },
+            author: {},
+            stableKey: "signed",
+            stableHash: "signed",
+            updated_at: null,
+            is_author_signed: true,
+          },
+        ],
+        latestFetchedSerialNo: 10,
+      },
+    });
+
+    const emitUpdate = (overrides: Record<string, unknown>) =>
+      emitWebSocketMessage(WsMessageType.DROP_UPDATE, {
+        id: "signed",
+        serial_no: 5,
+        wave: { id: "wave1" },
+        author: {},
+        updated_at: null,
+        is_author_signed: false,
+        ...overrides,
+      });
+
+    const lastUpdatedDrop = (props: ReturnType<typeof baseProps>) =>
+      props.updateData.mock.calls.at(-1)?.[0].drops[0];
+
+    it("keeps it when an update of the same version arrives before the signature was stored", async () => {
+      const props = baseProps(storeWithSignedDrop());
+      renderHook(() => useWaveRealtimeUpdater(props));
+
+      emitUpdate({});
+      await flushPromises();
+
+      expect(lastUpdatedDrop(props)).toMatchObject({
+        id: "signed",
+        is_author_signed: true,
+      });
+    });
+
+    it("drops it when the content was edited without a signature", async () => {
+      const props = baseProps(storeWithSignedDrop());
+      renderHook(() => useWaveRealtimeUpdater(props));
+
+      emitUpdate({ updated_at: 2000 });
+      await flushPromises();
+
+      expect(lastUpdatedDrop(props).is_author_signed).toBe(false);
+    });
+
+    it("drops it when the viewer can no longer see the content", async () => {
+      const props = baseProps(storeWithSignedDrop());
+      renderHook(() => useWaveRealtimeUpdater(props));
+
+      emitUpdate({
+        moderation: { status: "MODERATOR_REMOVED", can_view: false },
+      });
+      await flushPromises();
+
+      expect(lastUpdatedDrop(props).is_author_signed).toBe(false);
+    });
+  });
+
   it("fetches the exact canonical drop for a valid compact reference", async () => {
     const store = { wave1: { drops: [], latestFetchedSerialNo: 10 } };
     const props = baseProps(store);
@@ -304,6 +378,86 @@ describe("useWaveRealtimeUpdater", () => {
 
     expect(fetchDropByIdBatched).toHaveBeenNthCalledWith(1, "existing-drop");
     expect(fetchDropByIdBatched).toHaveBeenNthCalledWith(2, "existing-drop");
+  });
+
+  it.each([
+    [WsMessageType.DROP_REACTION_UPDATE, 2, true],
+    [WsMessageType.DROP_REACTION_UPDATE, 3, false],
+    [WsMessageType.DROP_RATING_UPDATE, 2, false],
+  ])(
+    "refreshes unchanged-count details only for reaction events (%s, count %i)",
+    async (updateType, count, shouldRefetch) => {
+      const existingDrop = {
+        ...makeRealtimeDrop("existing-drop", "wave1", 10),
+        type: DropSize.FULL,
+        stableKey: "existing-drop",
+        stableHash: "existing-drop",
+        reactions: [{ reaction: ":gm:", count: 2, profiles: [] }],
+        context_profile_context: null,
+      };
+      const store = {
+        wave1: { drops: [existingDrop], latestFetchedSerialNo: 10 },
+      };
+      const props = baseProps(store);
+      fetchDropByIdBatched.mockResolvedValue({
+        ...existingDrop,
+        reactions: [{ reaction: ":gm:", count, profiles: [] }],
+      });
+      renderHook(() => useWaveRealtimeUpdater(props));
+
+      emitWebSocketMessage(WsMessageType.DROP_UPDATE_REF, {
+        drop_id: "existing-drop",
+        wave_id: "wave1",
+        serial_no: 10,
+        update_type: updateType,
+      });
+      await flushPromises();
+
+      if (updateType === WsMessageType.DROP_REACTION_UPDATE) {
+        expect(mockInvalidateQueries).toHaveBeenCalledTimes(1);
+        const invalidation = mockInvalidateQueries.mock.calls[0]![0];
+        expect(invalidation.queryKey).toEqual([
+          QueryKey.DROP_REACTIONS,
+          "existing-drop",
+        ]);
+        expect(
+          invalidation.predicate({
+            queryKey: [
+              QueryKey.DROP_REACTIONS,
+              "existing-drop",
+              "viewer",
+              getReactionDetailsVersion(existingDrop.reactions, null),
+            ],
+          })
+        ).toBe(shouldRefetch);
+      } else {
+        expect(mockInvalidateQueries).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  it("refreshes reaction details outside the cached chat stream", async () => {
+    const props = baseProps({});
+    fetchDropByIdBatched.mockResolvedValue({
+      ...makeRealtimeDrop("other-surface-drop", "wave1", 10),
+      reactions: [],
+    });
+    renderHook(() => useWaveRealtimeUpdater(props));
+
+    emitWebSocketMessage(WsMessageType.DROP_UPDATE_REF, {
+      drop_id: "other-surface-drop",
+      wave_id: "wave1",
+      serial_no: 10,
+      update_type: WsMessageType.DROP_REACTION_UPDATE,
+    });
+    await flushPromises();
+
+    expect(props.updateData).not.toHaveBeenCalled();
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(1);
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: [QueryKey.DROP_REACTIONS, "other-surface-drop"],
+      predicate: expect.any(Function),
+    });
   });
 
   it("coalesces duplicate compact references into one follow-up sync", async () => {
@@ -1621,5 +1775,79 @@ describe("useWaveRealtimeUpdater", () => {
     );
     act(() => jest.advanceTimersByTime(100));
     expect(props.removeDrops).toHaveBeenCalledTimes(1);
+  });
+
+  describe("ATTACHMENT_STATUS_UPDATE", () => {
+    const processingAttachment = {
+      attachment_id: "att-1",
+      file_name: "report.pdf",
+      mime_type: "application/pdf",
+      kind: "pdf",
+      status: "processing",
+    };
+    const readyAttachment = { ...processingAttachment, status: "ready" };
+    const buildStore = () => ({
+      wave1: {
+        drops: [
+          {
+            id: "d1",
+            type: DropSize.FULL,
+            stableKey: "d1",
+            stableHash: "d1",
+            parts: [{ part_id: 1, attachments: [processingAttachment] }],
+          },
+        ],
+        latestFetchedSerialNo: 1,
+      },
+    });
+
+    it("updates every cached drop query once and the active wave store", () => {
+      const store = buildStore();
+      const props = { ...baseProps(store), activeWaveId: "wave1" };
+      renderHook(() => useWaveRealtimeUpdater(props));
+      mockSetQueriesData.mockClear();
+
+      emitWebSocketMessage(
+        WsMessageType.ATTACHMENT_STATUS_UPDATE,
+        readyAttachment
+      );
+
+      expect(mockSetQueriesData).toHaveBeenCalledTimes(6);
+      expect(props.updateData).toHaveBeenCalledTimes(1);
+      expect(props.updateData).toHaveBeenCalledWith({
+        key: "wave1",
+        drops: [
+          expect.objectContaining({
+            parts: [{ part_id: 1, attachments: [readyAttachment] }],
+          }),
+        ],
+      });
+    });
+
+    it("still refreshes cached queries when no wave is active", () => {
+      const props = baseProps(buildStore());
+      renderHook(() => useWaveRealtimeUpdater(props));
+      mockSetQueriesData.mockClear();
+
+      emitWebSocketMessage(
+        WsMessageType.ATTACHMENT_STATUS_UPDATE,
+        readyAttachment
+      );
+
+      expect(mockSetQueriesData).toHaveBeenCalledTimes(6);
+      expect(props.updateData).not.toHaveBeenCalled();
+    });
+
+    it("does not touch the wave store when the attachment is not in it", () => {
+      const props = { ...baseProps(buildStore()), activeWaveId: "wave1" };
+      renderHook(() => useWaveRealtimeUpdater(props));
+
+      emitWebSocketMessage(WsMessageType.ATTACHMENT_STATUS_UPDATE, {
+        ...readyAttachment,
+        attachment_id: "other",
+      });
+
+      expect(props.updateData).not.toHaveBeenCalled();
+    });
   });
 });

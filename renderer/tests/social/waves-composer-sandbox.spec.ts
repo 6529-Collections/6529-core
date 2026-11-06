@@ -26,6 +26,10 @@ const PREVIEW_URL = "https://example.com/6529-composer-preview";
 const PREVIEW_TITLE = "Sandbox Preview Title";
 const PREVIEW_DESCRIPTION = "Deterministic local preview served by Playwright.";
 const SANDBOX_CHAT_DROP_CONTENT = "Local-only chat drop from Playwright.";
+const LONG_DROP_END_MARKER = "END-OF-LONG-SANDBOX-POST";
+const LONG_DROP_CONTENT = `${"Long timeline detail for browser coverage. ".repeat(
+  30
+)}${LONG_DROP_END_MARKER}`;
 const SANDBOX_POLL_QUESTION = "Which sandbox option do you prefer?";
 const SANDBOX_GUIDELINES_FIRST_LINE =
   "1. Keep discussions constructive and stay on topic in this local sandbox wave.";
@@ -52,6 +56,62 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
   defineWaveVideoLayoutTests();
   defineWaveImageLayoutTests();
   defineWaveImagePreviewTests();
+
+  test("shows mention levels and keeps keyboard selection usable", async ({
+    baseURL,
+    page,
+  }, testInfo) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.route(
+      `**/v2/waves/${SANDBOX_WAVE_ID}/mention-search?**`,
+      async (route) => {
+        await route.fulfill({
+          json: [
+            {
+              id: "profile-alice",
+              handle: "alicelonghandle",
+              display: "A long display name for the mention suggestion",
+              pfp: null,
+              level: 42,
+            },
+            {
+              id: "profile-new",
+              handle: "alicenew",
+              display: null,
+              pfp: null,
+              level: 0,
+            },
+          ],
+        });
+      }
+    );
+    await gotoSandboxWave(page);
+    const composer = page
+      .getByRole("textbox", { name: "Write a chat message" })
+      .last();
+    await composer.fill("@ali");
+    const experienced = page.getByRole("button", {
+      name: /alicelonghandle Level 42/,
+    });
+    const newcomer = page.getByRole("button", { name: /alicenew Level 0/ });
+    await expect(experienced).toBeVisible();
+    await expect(newcomer).toBeVisible();
+    await expect(experienced.getByText("42", { exact: true })).toBeVisible();
+    await expect(newcomer.getByText("0", { exact: true })).toBeVisible();
+    await expect(
+      experienced.getByRole("button", { includeHidden: true })
+    ).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: testInfo.outputPath("mention-levels.png") });
+    await composer.press("ArrowDown");
+    await composer.press("ArrowUp");
+    await composer.press("Enter");
+    await expect(composer).toContainText("@alicelonghandle");
+    await expect(experienced).toBeHidden();
+    expect(pageErrors).toEqual([]);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
 
   test("authenticates the wave listener before receiving and sending typing", async ({
     baseURL,
@@ -120,7 +180,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       })
     ).toBeVisible();
     await page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last()
       .fill("Typing without posting");
     await expect.poll(() => deliveredTyping).toBeGreaterThan(0);
@@ -177,7 +237,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await gotoSandboxWave(page);
 
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     await composer.evaluate((element) => {
       const bytes = new Uint8Array([
@@ -279,12 +339,291 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await expect(page.getByText(PREVIEW_DESCRIPTION).first()).toBeVisible();
 
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     await composer.fill("Checking the local composer without sending.");
     await expect(
       page.getByRole("button", { name: "Post" }).last()
     ).toBeEnabled();
+    await expectNoHorizontalOverflow(page);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("expands and collapses a long chat drop without leaving the latest position", async ({
+    baseURL,
+    page,
+  }) => {
+    // Load the fixture before navigation; a route may still be in flight
+    // when Playwright disposes the page's request context at test teardown.
+    const { payload, sourceDrop } = await loadSandboxDropFixture(page, baseURL);
+    await page.route(
+      `**/api/v2/waves/${SANDBOX_WAVE_ID}/drops**`,
+      async (route) => {
+        await route.fulfill({
+          json: {
+            ...payload,
+            drops: [
+              sourceDrop,
+              {
+                ...sourceDrop,
+                id: "00000000-0000-4000-8000-000000000546",
+                serial_no: 2,
+                created_at: Number(sourceDrop["created_at"] ?? 0) + 1,
+                content: LONG_DROP_CONTENT,
+              },
+            ],
+          },
+        });
+      }
+    );
+    await gotoSandboxWave(page);
+
+    const longDrop = page
+      .getByText("Long timeline detail", { exact: false })
+      .locator('xpath=ancestor::*[@data-serial-no="2"][1]');
+    await expect(longDrop).toBeVisible({
+      timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
+    });
+    await expect(longDrop).not.toContainText(LONG_DROP_END_MARKER);
+
+    const showMore = longDrop.getByRole("button", { name: "Show more" });
+    await expect(showMore).toHaveAttribute("aria-expanded", "false");
+    const controlledContentId = await showMore.getAttribute("aria-controls");
+    expect(controlledContentId).toBeTruthy();
+
+    const scrollContainer = page
+      .getByRole("main")
+      .locator("[data-wave-drops-scroll-container]")
+      .first();
+    await expect
+      .poll(() => scrollContainer.evaluate((node) => node.scrollTop))
+      .toBe(0);
+
+    await showMore.focus();
+    await expect(showMore).toBeFocused();
+    await showMore.press("Enter");
+
+    await expect(longDrop).toContainText(LONG_DROP_END_MARKER);
+    const showLess = longDrop.getByRole("button", { name: "Show less" });
+    await expect(showLess).toHaveAttribute("aria-expanded", "true");
+    await expect(showLess).toBeFocused();
+    await expect(showLess).toBeInViewport({ ratio: 1 });
+    await expect
+      .poll(() => scrollContainer.evaluate((node) => node.scrollTop))
+      .toBe(0);
+
+    await showLess.press("Enter");
+    await expect(longDrop).not.toContainText(LONG_DROP_END_MARKER);
+    const collapsedToggle = longDrop.getByRole("button", {
+      name: "Show more",
+    });
+    await expect(collapsedToggle).toBeFocused();
+    await expect(collapsedToggle).toBeInViewport({ ratio: 1 });
+    await expectNoHorizontalOverflow(page);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("keeps an older long drop toggle in place when expanding and collapsing", async ({
+    baseURL,
+    page,
+  }) => {
+    const { payload, sourceDrop } = await loadSandboxDropFixture(page, baseURL);
+    const drops = Array.from({ length: 40 }, (_, index) => ({
+      ...sourceDrop,
+      id: `00000000-0000-4000-8000-${String(600 + index).padStart(12, "0")}`,
+      serial_no: index + 1,
+      created_at: Number(sourceDrop["created_at"] ?? 0) + index * 60_000,
+      content:
+        index === 19
+          ? `${LONG_DROP_CONTENT}\n\nhttps://example.com/delayed-long-drop`
+          : `Surrounding history message ${index + 1}.`,
+    }));
+    await page.route(
+      `**/api/v2/waves/${SANDBOX_WAVE_ID}/drops**`,
+      async (route) => route.fulfill({ json: { ...payload, drops } })
+    );
+    await gotoSandboxWave(page);
+
+    const longDrop = page
+      .getByText("Long timeline detail", { exact: false })
+      .locator('xpath=ancestor::*[@data-serial-no="20"][1]');
+    const scrollContainer = page
+      .getByRole("main")
+      .locator("[data-wave-drops-scroll-container]")
+      .first();
+    const showMore = longDrop.getByRole("button", { name: "Show more" });
+    await showMore.scrollIntoViewIfNeeded();
+    await showMore.focus();
+    await showMore.evaluate((button) => {
+      const container = button.closest<HTMLElement>(
+        "[data-wave-drops-scroll-container]"
+      );
+      if (!container) throw new Error("Expected a wave scroll container.");
+      const desiredTop =
+        container.getBoundingClientRect().top + container.clientHeight / 2;
+      container.scrollTop += button.getBoundingClientRect().top - desiredTop;
+    });
+    await expect
+      .poll(() => scrollContainer.evaluate((node) => node.scrollTop))
+      .toBeLessThan(-100);
+    const buttonTop = await showMore.evaluate(
+      (button) => button.getBoundingClientRect().top
+    );
+
+    let releasePreview = () => {};
+    const previewReady = new Promise<void>((resolve) => {
+      releasePreview = resolve;
+    });
+    await page.route("**/api/open-graph**", async (route) => {
+      await previewReady;
+      if (route.request().method() === "POST")
+        await fulfillOpenGraphBatch(route);
+      else
+        await route.fulfill({
+          json: previewFor("https://example.com/delayed-long-drop"),
+        });
+    });
+    try {
+      await showMore.press("Enter");
+      const showLess = longDrop.getByRole("button", { name: "Show less" });
+      await expect(longDrop).toContainText(LONG_DROP_END_MARKER);
+      await expect(showLess).toBeFocused();
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await showLess.evaluate(
+              (button) => button.getBoundingClientRect().top
+            )) - buttonTop
+          )
+        )
+        .toBeLessThanOrEqual(2);
+
+      releasePreview();
+      await expect(longDrop.getByText(PREVIEW_TITLE)).toBeVisible();
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await showLess.evaluate(
+              (button) => button.getBoundingClientRect().top
+            )) - buttonTop
+          )
+        )
+        .toBeLessThanOrEqual(2);
+
+      await showLess.press("Space");
+      await expect(longDrop).not.toContainText(LONG_DROP_END_MARKER);
+      await expect(showMore).toBeFocused();
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await showMore.evaluate(
+              (button) => button.getBoundingClientRect().top
+            )) - buttonTop
+          )
+        )
+        .toBeLessThanOrEqual(2);
+      await expectNoHorizontalOverflow(page);
+      await expectNoUnsafeSandboxMutations(baseURL);
+    } finally {
+      releasePreview();
+    }
+  });
+
+  test("preserves lists links and paragraphs in long chat posts", async ({
+    baseURL,
+    page,
+  }) => {
+    const response = await page.request.get(
+      `${getSandboxApiOrigin(baseURL)}/api/v2/waves/${SANDBOX_WAVE_ID}/drops`
+    );
+    expect(response.ok()).toBe(true);
+    const payload = (await response.json()) as {
+      drops: Array<Record<string, unknown>>;
+    };
+    const sourceDrop = payload.drops[0];
+    if (!sourceDrop) throw new Error("Expected a source drop in the sandbox.");
+
+    const items = Array.from(
+      { length: 16 },
+      (_, index) =>
+        `- [Task ${index + 1}](https://example.com/task-${index + 1}): Preserve the authored list structure and readable formatting in this detailed status update.`
+    );
+    const content = [
+      "## Long formatted update",
+      "",
+      "Completed work remains a separate paragraph.",
+      "",
+      ...items.slice(0, 8),
+      "",
+      "Ongoing work remains a separate paragraph.",
+      "",
+      ...items.slice(8),
+      "",
+      "End of the complete formatted update.",
+    ].join("\n");
+    await page.route(
+      `**/api/v2/waves/${SANDBOX_WAVE_ID}/drops**`,
+      async (route) =>
+        route.fulfill({
+          json: {
+            ...payload,
+            drops: [{ ...sourceDrop, content, hide_link_preview: true }],
+          },
+        })
+    );
+    await gotoSandboxWave(page);
+
+    const post = page
+      .getByRole("heading", { name: "Long formatted update", exact: true })
+      .locator("xpath=ancestor::*[@data-serial-no][1]");
+    await expect(post).toBeVisible({
+      timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
+    });
+    const toggle = post.getByRole("button", { name: "Show more", exact: true });
+    await expect(post.getByRole("list")).toHaveCount(1);
+    await expect(post.getByRole("listitem").first()).toContainText("Task 1");
+    await expect(
+      post.getByRole("link", { name: "Task 1", exact: true })
+    ).toHaveAttribute("href", "https://example.com/task-1");
+    await expect(
+      post
+        .getByRole("paragraph")
+        .filter({ hasText: "Completed work remains a separate paragraph." })
+    ).toHaveText("Completed work remains a separate paragraph.");
+    await expect(
+      post.getByRole("link", { name: "Task 16", exact: true })
+    ).toHaveCount(0);
+    await page.screenshot({
+      path: test.info().outputPath("formatted-collapsed.png"),
+    });
+    await toggle.click();
+    await expect(post.getByRole("list")).toHaveCount(2);
+    await expect(post.getByRole("listitem")).toHaveCount(16);
+    await expect(
+      post.getByRole("link", { name: "Task 1", exact: true })
+    ).toHaveAttribute("href", "https://example.com/task-1");
+    for (const paragraph of [
+      "Completed work remains a separate paragraph.",
+      "Ongoing work remains a separate paragraph.",
+      "End of the complete formatted update.",
+    ]) {
+      const matchingParagraph = post
+        .getByRole("paragraph")
+        .filter({ hasText: paragraph });
+      await expect(matchingParagraph).toHaveCount(1);
+      await expect(matchingParagraph).toHaveText(paragraph);
+    }
+    await page.screenshot({
+      path: test.info().outputPath("formatted-expanded.png"),
+    });
+    await post.getByRole("button", { name: "Show less", exact: true }).click();
+    await expect(post.getByRole("list")).toHaveCount(1);
+    await expect(
+      post.getByRole("link", { name: "Task 1", exact: true })
+    ).toHaveAttribute("href", "https://example.com/task-1");
+    await expect(
+      post.getByRole("link", { name: "Task 16", exact: true })
+    ).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
     await expectNoUnsafeSandboxMutations(baseURL);
   });
@@ -297,7 +636,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
 
     const draftText = "Draft that must survive the new-version reload.";
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     await composer.fill(draftText);
     // The draft autosave is debounced (400ms); wait for it to persist.
@@ -322,7 +661,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await dismissNextDevTools(page);
 
     const restoredComposer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     await expect(restoredComposer).toBeVisible({
       timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
@@ -345,9 +684,16 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
   }, testInfo) => {
     await gotoSandboxWave(page);
 
+    const sendButton = page
+      .getByRole("button", { name: "Post", exact: true })
+      .last();
+    await expect(sendButton).toBeDisabled();
+    await expect(sendButton).toHaveCSS("background-color", "rgb(38, 39, 43)");
+    await expect(sendButton).toHaveCSS("color", "rgb(132, 132, 144)");
+
     const isIosSurface = testInfo.project.name === "capacitor-ios-sim";
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     const wrapper = composer.locator(
       "xpath=ancestor::div[contains(@class, 'tw-sticky') and contains(@class, 'tw-overflow-y-auto')][1]"
@@ -394,10 +740,89 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     expect(composerBounds.bottom).toBeLessThanOrEqual(
       composerBounds.viewportHeight
     );
-    await expect(
-      page.getByRole("button", { name: "Post" }).last()
-    ).toBeEnabled();
+    await expect(sendButton).toBeEnabled();
+    await expect(sendButton).toHaveCSS("background-color", "rgb(63, 105, 252)");
+    await expect(sendButton).toHaveCSS("color", "rgb(255, 255, 255)");
+    await expect(sendButton).toHaveText("");
+    const sendIcon = page
+      .getByRole("button", { name: "Post", exact: true })
+      .last()
+      .locator("svg");
+    await expect(sendIcon).toBeVisible();
+    await expect(sendIcon).toHaveAttribute("fill", "none");
+    const sendBounds = await sendButton.boundingBox();
+    expect(sendBounds?.width).toBe(40);
+    expect(sendBounds?.height).toBe(40);
     await expectNoHorizontalOverflow(page);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("uses flat browser action buttons with rounded-square hover backgrounds and tooltips", async ({
+    baseURL,
+    page,
+  }, testInfo) => {
+    // Mobile keeps the collapsed plus-button tray; hover assertions apply only to desktop.
+    test.skip(
+      Boolean(testInfo.project.use.isMobile),
+      "Expanded browser actions only"
+    );
+    await gotoSandboxWave(page);
+    await showDropActionsIfCollapsed(page);
+    const actions = [
+      {
+        button: page.getByRole("button", { name: "Attach files" }),
+        label: "Attach files",
+      },
+      {
+        button: page.getByRole("button", { name: "Add GIF" }),
+        label: "Add GIF",
+      },
+      {
+        button: page.getByRole("button", { name: "Add poll", exact: true }),
+        label: "Add poll",
+      },
+      {
+        button: page.getByRole("button", { name: "Break into storm" }),
+        label: "Break into storm",
+      },
+    ];
+    for (const { button, label } of actions) {
+      await page.mouse.move(0, 0);
+      await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      const shape = await button.evaluate((element) => {
+        const iconBounds = element
+          .querySelector("svg")
+          ?.getBoundingClientRect();
+        return {
+          radius: Number.parseFloat(getComputedStyle(element).borderRadius),
+          width: element.getBoundingClientRect().width,
+          height: element.getBoundingClientRect().height,
+          iconWidth: iconBounds?.width,
+          iconHeight: iconBounds?.height,
+        };
+      });
+      expect(shape.width).toBe(36);
+      expect(shape.height).toBe(36);
+      expect(shape.iconWidth).toBe(18);
+      expect(shape.iconHeight).toBe(18);
+      expect(shape.radius).toBeGreaterThan(0);
+      expect(shape.radius).toBeLessThan(shape.width / 2);
+      await button.hover();
+      await expect(button).not.toHaveCSS(
+        "background-color",
+        "rgba(0, 0, 0, 0)"
+      );
+      await expect(
+        page.getByRole("tooltip", { name: label, exact: true })
+      ).toBeVisible();
+    }
+    for (let index = 1; index < actions.length; index++) {
+      const previous = await actions[index - 1]!.button.boundingBox();
+      const current = await actions[index]!.button.boundingBox();
+      expect(previous).not.toBeNull();
+      expect(current).not.toBeNull();
+      expect(current!.x - (previous!.x + previous!.width)).toBeCloseTo(0, 1);
+    }
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
@@ -413,7 +838,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await gotoSandboxWave(page);
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     const positions = await composer.evaluate(async (element) => {
       const root = document.documentElement;
@@ -463,7 +888,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await gotoSandboxWave(page);
 
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     await composer.fill(SANDBOX_CHAT_DROP_CONTENT);
     await expect(
@@ -485,30 +910,11 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       });
     }
     const postButton = page.getByRole("button", { name: "Post" }).last();
-    await postButton.evaluate((button) => {
-      button.addEventListener(
-        "click",
-        () => {
-          button.setAttribute(
-            "data-composer-focused-at-submit",
-            String(
-              document.activeElement?.getAttribute("contenteditable") === "true"
-            )
-          );
-        },
-        { capture: true, once: true }
-      );
-    });
     if (testInfo.project.use.isMobile) {
       await postButton.tap();
     } else {
       await postButton.click();
     }
-    // A tap must not dismiss the native input before submission starts.
-    await expect(postButton).toHaveAttribute(
-      "data-composer-focused-at-submit",
-      "true"
-    );
 
     await expect
       .poll(
@@ -558,8 +964,12 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
     });
     await expect(submittedDrop).toContainText(SANDBOX_CHAT_DROP_CONTENT);
-    await expect(composer).toBeFocused();
     await expect(composer).toHaveText("");
+    if (testInfo.project.use.isMobile) {
+      await expect(composer).not.toBeFocused();
+    }
+    // Explicitly focus to test undo; sending must not reopen the keyboard.
+    await composer.focus();
     // Sending ends this draft's undo history; Undo must not revive a sent post.
     await composer.press("ControlOrMeta+z");
     await expect(composer).toHaveText("");
@@ -575,6 +985,95 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
+  test("confirms the all mention audience before posting and preserves cancelled drafts", async ({
+    baseURL,
+    page,
+  }, testInfo) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.route(
+      `**/v2/waves/${SANDBOX_WAVE_ID}/mention-search?**`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: "[]",
+        });
+      }
+    );
+    let countRequests = 0;
+    await page.route(
+      `**/v2/waves/${SANDBOX_WAVE_ID}/all-mention-count`,
+      async (route) => {
+        countRequests += 1;
+        if (countRequests === 1) {
+          await route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "Temporarily unavailable" }),
+          });
+        } else {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ count: 1234 }),
+          });
+        }
+      }
+    );
+    await gotoSandboxWave(page);
+    await resetSandboxRequests(baseURL);
+    const composer = page
+      .getByRole("textbox", { name: /^Write a(?: chat)? message$/ })
+      .last();
+    const post = page.getByRole("button", { name: "Post", exact: true }).last();
+    await composer.fill("A wave announcement @all");
+    await post.click();
+    const dialog = page.getByRole("dialog", {
+      name: "Notify people with @all?",
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Couldn't count the people");
+    await page.screenshot({
+      path: testInfo.outputPath("all-mention-error.png"),
+    });
+    await dialog.getByRole("button", { name: "Try again" }).click();
+    await expect(dialog).toContainText("will notify 1,234 people");
+    await expect(
+      dialog.getByRole("button", { name: "Send with @all" })
+    ).toBeEnabled();
+    expect(
+      (await fetchSandboxRequests(baseURL)).filter(
+        (r) => r.method === "POST" && r.path === "/api/drops"
+      )
+    ).toEqual([]);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath("all-mention-confirmation.png"),
+    });
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(composer).toContainText("A wave announcement @all");
+    await post.click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Keep editing" }).click();
+    await expect(composer).toContainText("A wave announcement @all");
+    await post.click();
+    await expect(dialog).toContainText("will notify 1,234 people");
+    await dialog.getByRole("button", { name: "Send with @all" }).click();
+    await expect(dialog).toBeHidden();
+    await expect
+      .poll(
+        async () =>
+          (await fetchSandboxRequests(baseURL)).filter(
+            (r) => r.method === "POST" && r.path === "/api/drops"
+          ).length
+      )
+      .toBe(1);
+    expect(pageErrors).toEqual([]);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
   test("gates a first chat message with scroll-contained guidelines", async ({
     baseURL,
     page,
@@ -583,7 +1082,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await gotoSandboxWave(page);
 
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     const postButton = page.getByRole("button", { name: "Post" }).last();
     await composer.fill(SANDBOX_CHAT_DROP_CONTENT);
@@ -789,7 +1288,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await gotoSandboxWave(page);
 
     const composer = page
-      .getByRole("textbox", { name: "Write a chat message" })
+      .getByRole("textbox", { name: "Write a message" })
       .last();
     await composer.fill(SANDBOX_STORM_INITIAL_PART);
     await showDropActionsIfCollapsed(page);
@@ -910,6 +1409,146 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
+  for (const key of ["Enter", "Space"]) {
+    test(`operates nested quote toggles with ${key} without opening the quoted post`, async ({
+      baseURL,
+      page,
+      hasTouch,
+    }) => {
+      const parentDropId = "00000000-0000-4000-8000-000000000547";
+      const quotedDropId = "00000000-0000-4000-8000-000000000548";
+      // Use a wave served by the sandbox so quote navigation can finish.
+      const quotedWaveId = "00000000-0000-4000-8000-000000000533";
+
+      const { payload, sourceDrop } = await loadSandboxDropFixture(
+        page,
+        baseURL
+      );
+      const quotedDrop = {
+        ...sourceDrop,
+        id: quotedDropId,
+        serial_no: 42,
+        content: LONG_DROP_CONTENT,
+        parts_count: 1,
+        wave: { ...payload.wave, id: quotedWaveId },
+      };
+
+      await page.route(
+        `**/api/v2/waves/${SANDBOX_WAVE_ID}/drops**`,
+        async (route) => {
+          await route.fulfill({
+            json: {
+              ...payload,
+              drops: [
+                {
+                  ...sourceDrop,
+                  id: parentDropId,
+                  serial_no: 2,
+                  content: "Parent quote keyboard fixture",
+                  parts_count: 2,
+                },
+              ],
+            },
+          });
+        }
+      );
+      await page.route(
+        `**/api/v2/drops/${parentDropId}/parts/2`,
+        async (route) => {
+          await route.fulfill({
+            json: {
+              part_no: 2,
+              content: "Reply containing a long quote",
+              media: [],
+              attachments: [],
+              quoted_drop: { drop_id: quotedDropId, drop_part_id: 1 },
+            },
+          });
+        }
+      );
+      await page.route("**/api/v2/drops?**", async (route) => {
+        const ids = new URL(route.request().url()).searchParams.get("ids");
+        if (ids !== quotedDropId) {
+          await route.fallback();
+          return;
+        }
+        await route.fulfill({
+          json: { data: [quotedDrop], page: 1, next: false },
+        });
+      });
+      await gotoSandboxWave(page);
+      await page.getByRole("button", { name: "Next part" }).click();
+
+      const quoteCard = page.getByRole("button", {
+        name: /Long timeline detail/,
+      });
+      const showMore = quoteCard.getByRole("button", {
+        name: "Show more",
+        exact: true,
+      });
+      await expect(showMore).toBeVisible();
+      await showMore.focus();
+      await showMore.press(key);
+
+      const showLess = quoteCard.getByRole("button", {
+        name: "Show less",
+        exact: true,
+      });
+      await expect(showLess).toHaveAttribute("aria-expanded", "true");
+      await expect(showLess).toBeFocused();
+      await expect(quoteCard).toContainText(LONG_DROP_END_MARKER);
+      await expect(page).toHaveURL(new RegExp(`/waves/${SANDBOX_WAVE_ID}$`));
+      await showLess.press(key);
+
+      await expect(showMore).toHaveAttribute("aria-expanded", "false");
+      await expect(showMore).toBeFocused();
+      await expect(quoteCard).not.toContainText(LONG_DROP_END_MARKER);
+      await expect(page).toHaveURL(new RegExp(`/waves/${SANDBOX_WAVE_ID}$`));
+      await expectNoHorizontalOverflow(page);
+      await expectNoUnsafeSandboxMutations(baseURL);
+
+      if (hasTouch) {
+        await showMore.evaluate((button) => button.blur());
+        const toggleTop = await showMore.evaluate(
+          (button) => button.getBoundingClientRect().top
+        );
+        await showMore.tap();
+        await expect(showLess).toHaveAttribute("aria-expanded", "true");
+        await expect(showLess).not.toBeFocused();
+        await expect
+          .poll(async () =>
+            Math.abs(
+              (await showLess.evaluate(
+                (button) => button.getBoundingClientRect().top
+              )) - toggleTop
+            )
+          )
+          .toBeLessThanOrEqual(2);
+        await showLess.tap();
+        await expect(showMore).toHaveAttribute("aria-expanded", "false");
+        await expect(showMore).not.toBeFocused();
+        await expect(page).toHaveURL(new RegExp(`/waves/${SANDBOX_WAVE_ID}$`));
+      }
+
+      await quoteCard.focus();
+      // Chat consumes serialNo into its scroll target and removes it from
+      // the URL. Assert the exact outgoing destination before that cleanup.
+      const quoteNavigation = page.waitForRequest((request) => {
+        const url = new URL(request.url());
+        return (
+          url.pathname === `/waves/${quotedWaveId}` &&
+          url.searchParams.get("serialNo") === "42"
+        );
+      });
+      await quoteCard.press(key);
+      await quoteNavigation;
+      await expect(page).toHaveURL(
+        new RegExp(`/waves/${quotedWaveId}(?:\\?serialNo=42)?$`),
+        { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
+      );
+    });
+  }
+
   test("rejects non-exact chat drop mutation bodies", async ({ baseURL }) => {
     await resetSandboxRequests(baseURL);
 
@@ -991,7 +1630,7 @@ async function gotoSandboxWave(page: Page) {
       .first()
   ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
   await expect(
-    page.getByRole("textbox", { name: "Write a chat message" }).last()
+    page.getByRole("textbox", { name: "Write a message" }).last()
   ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
   await dismissNextDevTools(page);
   await expectNoHorizontalOverflow(page);
@@ -1088,7 +1727,7 @@ async function showDropActionsIfCollapsed(page: Page) {
     .poll(
       async () =>
         (await page
-          .getByRole("button", { name: "Upload a file" })
+          .getByRole("button", { name: "Attach files" })
           .isVisible()
           .catch(() => false)) ||
         (await page
@@ -1098,6 +1737,23 @@ async function showDropActionsIfCollapsed(page: Page) {
       { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
     )
     .toBe(true);
+}
+
+async function loadSandboxDropFixture(page: Page, baseURL: string | undefined) {
+  // Parse before navigation so routes never read a disposed request context.
+  const response = await page.request.get(
+    `${getSandboxApiOrigin(baseURL)}/api/v2/waves/${SANDBOX_WAVE_ID}/drops`
+  );
+  expect(response.ok()).toBe(true);
+  const payload = (await response.json()) as {
+    drops: Array<Record<string, unknown>>;
+    wave: Record<string, unknown>;
+  };
+  const sourceDrop = payload.drops[0];
+  if (!sourceDrop) {
+    throw new Error("Expected the sandbox wave to return one source drop.");
+  }
+  return { payload, sourceDrop };
 }
 
 async function installOpenGraphFixture(page: Page) {

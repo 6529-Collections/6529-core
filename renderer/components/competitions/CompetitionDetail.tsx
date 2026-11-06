@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { isCompetitionSubmissionHistory } from "@/helpers/competition-lifecycle.helpers";
 import { ApiCompetitionCapability } from "@/generated/models/ApiCompetitionCapability";
 import { competitionPresentationWave } from "@/helpers/competition-presentation.helpers";
-import MemesArtSubmissionModal from "@/components/waves/memes/MemesArtSubmissionModal";
+import MemesArtSubmissionModal from "@/components/waves/memes/LazyMemesArtSubmissionModal";
 import { WaveDropCreate } from "@/components/waves/leaderboard/create/WaveDropCreate";
 import { WaveLeaderboardCurationDropModal } from "@/components/waves/leaderboard/create/WaveLeaderboardCurationDropModal";
 import { ApiCompetitionLifecycle } from "@/generated/models/ApiCompetitionLifecycle";
@@ -176,20 +176,25 @@ export function NativeCompetitionContent({
         competition.permissions.edit_rules_after_activity === true))
   )
     return (
-      <CompetitionDraftEditor
-        wave={wave}
-        competition={competition}
-        onClose={() => {
-          const params = new URLSearchParams(search.toString());
-          params.delete("edit");
-          params.set("tab", "rules");
-          router.replace(
-            competition.lifecycle === ApiCompetitionLifecycle.Draft
-              ? getCompetitionsRoute(wave.id)
-              : `${pathname}?${params.toString()}`
-          );
-        }}
-      />
+      <div className="tw-flex tw-min-h-full tw-flex-1 tw-flex-col tw-gap-5">
+        {competition.lifecycle === ApiCompetitionLifecycle.Draft && (
+          <CompetitionAdmin archiveOnly />
+        )}
+        <CompetitionDraftEditor
+          wave={wave}
+          competition={competition}
+          onClose={() => {
+            const params = new URLSearchParams(search.toString());
+            params.delete("edit");
+            params.set("tab", "rules");
+            router.replace(
+              competition.lifecycle === ApiCompetitionLifecycle.Draft
+                ? getCompetitionsRoute(wave.id)
+                : `${pathname}?${params.toString()}`
+            );
+          }}
+        />
+      </div>
     );
   return (
     <div

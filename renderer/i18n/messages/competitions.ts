@@ -1,4 +1,14 @@
 export const COMPETITION_MESSAGES = {
+  "competitions.anonymousAuthor": "Anonymous",
+  "competitions.anonymousMediaReupload":
+    "Upload your media again, then retry this anonymous submission.",
+  "competitions.anonymousSubmissions": "Anonymous submissions",
+  "competitions.anonymityDescription":
+    "Hide each submission’s author until that submission wins. Other submissions stay anonymous. This setting cannot change after publication.",
+  "competitions.anonymousSubmissionNotice":
+    "Your identity will be revealed automatically if this submission wins. Information you include in the submission or its metadata remains visible.",
+  "competitions.anonymousUntilWin": "Until the submission wins",
+  "competitions.publicAuthors": "Off",
   "competitions.metaTitle": "Competition | Waves",
   "competitions.collectionMetaTitle": "Competitions | Waves",
   "competitions.waveCreationFailure": "Couldn't create this wave.",
@@ -101,6 +111,9 @@ export const COMPETITION_MESSAGES = {
   "competitions.available": "Available credits",
   "competitions.spent": "Spent credits",
   "competitions.remaining": "Remaining credits",
+  "competitions.creditLineRemaining": "remaining",
+  "competitions.creditLineOf": "of",
+  "competitions.creditLineSpent": "credits spent",
   "competitions.entryBudget":
     "Credits are calculated separately for each entry.",
   "competitions.saved": "Saved",
@@ -138,6 +151,13 @@ export const COMPETITION_MESSAGES = {
   "competitions.pause": "Pause decisions",
   "competitions.resume": "Resume decisions",
   "competitions.archive": "Archive",
+  "competitions.archiveAndStop": "Archive and stop competition",
+  "competitions.archiveStopConsequences":
+    "This permanently stops new submissions, voting and future winner selection. Entries, votes, existing winners and awarded outcomes remain in history. This competition cannot be reopened.",
+  "competitions.archiveConsequences":
+    "This competition will move into history and cannot be reopened. Existing entries, votes, winners and awarded outcomes are preserved.",
+  "competitions.archiveReasonHelp":
+    "A reason is required because this competition has entries or votes. It will be recorded in the competition's audit history.",
   "competitions.clone": "Clone as a draft",
   "competitions.edit": "Edit competition",
   "competitions.editRules": "Edit competition rules",

@@ -1,6 +1,8 @@
 "use client";
 
 import type { ApiDrop } from "@/generated/models/ApiDrop";
+import { QueryKey } from "@/components/react-query-wrapper/query-keys";
+import { getReactionDetailsVersion } from "@/components/waves/drops/reaction-utils";
 import type { ApiAttachment } from "@/generated/models/ApiAttachment";
 import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 
@@ -122,6 +124,22 @@ const isCanonicalDropUpdate = (type: ProcessIncomingDropType): boolean =>
 const shouldUpdateCachedDrop = (type: ProcessIncomingDropType): boolean =>
   type !== ProcessIncomingDropType.DROP_REACTION_UPDATE;
 
+// A changed snapshot refreshes through its query key. An explicit reaction event
+// must also refresh viewed lists when a removal and addition leave it unchanged.
+const invalidateUnchangedReactionDetails = (
+  queryClient: QueryClient,
+  drop: ApiDrop
+): void => {
+  const version = getReactionDetailsVersion(
+    drop.reactions,
+    drop.context_profile_context?.reaction
+  );
+  void queryClient.invalidateQueries({
+    queryKey: [QueryKey.DROP_REACTIONS, drop.id],
+    predicate: (query) => query.queryKey[3] === version,
+  });
+};
+
 const updateCachedDrop = ({
   drop,
   options,
@@ -134,6 +152,9 @@ const updateCachedDrop = ({
   readonly type: ProcessIncomingDropType;
 }): void => {
   if (!shouldUpdateCachedDrop(type)) {
+    if (options.canonicalDrop) {
+      invalidateUnchangedReactionDetails(queryClient, options.canonicalDrop);
+    }
     return;
   }
 
@@ -252,6 +273,9 @@ const applyCanonicalDropUpdate = async ({
 
   if (type === ProcessIncomingDropType.DROP_REACTION_UPDATE) {
     updateDropInCachedDrops(queryClient, reconciledApiDrop);
+    if (!options.canonicalDrop) {
+      invalidateUnchangedReactionDetails(queryClient, reconciledApiDrop);
+    }
   }
 
   updateData({
@@ -304,6 +328,24 @@ const getPreservedReplyPermissions = (
         }),
   };
 };
+
+/**
+ * A signed create or edit is broadcast before its author signature is stored,
+ * so that update reads as unsigned and can arrive after the signed response.
+ * For one content version the state only moves from unsigned to signed, so a
+ * known signature stays while the version and its visibility are unchanged.
+ */
+const getPreservedAuthorSignature = (
+  drop: ApiDrop,
+  existingDrop: ExtendedDrop | null
+): { readonly is_author_signed?: boolean } =>
+  existingDrop?.is_author_signed === true &&
+  drop.is_author_signed !== true &&
+  existingDrop.id === drop.id &&
+  existingDrop.updated_at === drop.updated_at &&
+  drop.moderation?.can_view !== false
+    ? { is_author_signed: true }
+    : {};
 
 const buildOptimisticDrop = ({
   drop,
@@ -372,6 +414,7 @@ const buildOptimisticDrop = ({
         ? (reconciledDrop.context_profile_context ?? null)
         : existingDrop.context_profile_context,
     ...getPreservedRepliesCount(reconciledDrop, existingDrop),
+    ...getPreservedAuthorSignature(reconciledDrop, existingDrop),
   };
 };
 

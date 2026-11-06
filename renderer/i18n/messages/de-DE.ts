@@ -12,6 +12,7 @@ import studioWalletImportMessages from "@/i18n/messages/studioWalletImport.de-DE
 import { DE_DE_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { DE_DE_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { DE_DE_GLOBAL_ERROR_MESSAGES } from "@/i18n/messages/global-error";
+import { DE_DE_MAPPING_TOOL_MESSAGES } from "@/i18n/messages/mapping-tools";
 import { DE_DE_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
 import { DE_DE_CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { DE_DE_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
@@ -21,12 +22,25 @@ import { DE_DE_TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
 import { DE_DE_THE_MEMES_MINT_SUCCESS_MESSAGES } from "@/i18n/messages/the-memes-mint-success";
 import { DE_DE_THE_MEMES_MINT_PROGRESS_MESSAGES } from "@/i18n/messages/the-memes-mint-progress";
 import stormComposerDeMessages from "@/i18n/messages/stormComposer.de-DE.json";
-import type { MessageKey } from "@/i18n/messages/en-US";
+import type { MessageKey } from "@/i18n/messages/en-US.complete";
 import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.de-DE.json";
 
 const RETRY_LABEL = "Erneut versuchen";
 
 export const DE_DE_MESSAGES = {
+  "waves.historyGap.load": "Verpasste Nachrichten laden",
+  "waves.historyGap.loaded": "Verpasste Nachrichten geladen",
+  "waves.historyGap.loading": "Verpasste Nachrichten werden geladen…",
+  "waves.historyGap.retry":
+    "Nachrichten konnten nicht geladen werden. Erneut versuchen",
+
+  "waves.myVotes.sort": "Sortieren nach",
+  "waves.myVotes.sort.voteAmount": "Deine Stimmenzahl",
+  "waves.myVotes.sort.leaderboard": "Ranglistenposition",
+  "waves.myVotes.sort.lastVoted": "Zuletzt abgestimmt",
+  "e2ee.profile.view": "Profil von {name} ansehen",
+  "e2ee.profile.viewUnknown": "Profil ansehen",
+  "e2ee.profile.level": "Stufe {level}",
   ...safeCollectingMessages,
   ...delegationTapGuideMessages,
   ...networkTdhConsolidationMessages,
@@ -241,6 +255,8 @@ export const DE_DE_MESSAGES = {
   "waves.drop.actions.copyFailed": "Kopieren fehlgeschlagen",
   "waves.drop.actions.menuLabel": "Drop-Aktionen",
   "waves.drop.actions.reactionPickerLabel": "Reaktion zum Drop hinzufügen",
+  "waves.drop.actions.showMore": "Mehr anzeigen",
+  "waves.drop.actions.showLess": "Weniger anzeigen",
   "media.video.captions": "Untertitel",
   "media.video.download": "Medien herunterladen",
   "media.video.downloading": "Medien werden heruntergeladen",
@@ -611,6 +627,8 @@ export const DE_DE_MESSAGES = {
   "drop.media.saveDialogTitle": "Bild speichern",
   "drop.media.processingFailed": "Bildverarbeitung fehlgeschlagen.",
   "drop.media.processingTimedOut": "Zeitlimit fuer Bildverarbeitung erreicht.",
+  "media.interactive.frameTitle": "Interaktives HTML-Medium",
+  "media.interactive.loading": "Interaktives Medium wird geladen",
   "quickDm.regionAriaLabel": "Schnelle Direktnachrichten",
   "quickDm.openButtonAriaLabel": "Schnelle Direktnachrichten öffnen",
   "quickDm.openButtonUnreadAriaLabel":
@@ -635,6 +653,7 @@ export const DE_DE_MESSAGES = {
   ...DE_DE_CAPACITOR_CONNECT_MESSAGES,
   ...DE_DE_NEW_VERSION_TOAST_MESSAGES,
   ...DE_DE_GLOBAL_ERROR_MESSAGES,
+  ...DE_DE_MAPPING_TOOL_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Datei-Upload-Bereich für den Wave-Chat",
   "waves.chat.guidelinesDialog.title": "Wave-Richtlinien",
@@ -1163,7 +1182,7 @@ export const DE_DE_MESSAGES = {
   "waves.poll.status.voted": "Abgestimmt",
   "waves.poll.status.updated": "Aktualisiert",
   "waves.composer.placeholder.createDrop": "Drop erstellen",
-  "waves.composer.placeholder.writeChatMessage": "Chatnachricht schreiben",
+  "waves.composer.placeholder.writeChatMessage": "Nachricht schreiben",
   "waves.composer.placeholder.dropReply": "Antwort als Drop verfassen",
   "waves.composer.placeholder.postReply": "Antwort posten",
   "waves.composer.placeholder.quoteDrop": "Drop zitieren",

@@ -1,8 +1,10 @@
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
+import { isDevAuthEnabled } from "@/config/devAuth";
 import { publicEnv } from "@/config/env";
 import { API_AUTH_COOKIE, MAX_CONNECTED_PROFILES } from "@/constants/constants";
 import { safeLocalStorage } from "@/helpers/safeLocalStorage";
+import { getDevAuthTestOverride } from "./devAuthTestOverride";
 import { removeNativeRefreshToken } from "./native-refresh-token-storage";
 import { persistDesktopProfiles } from "./desktop-profile-storage";
 import type { DesktopProfileState } from "@/shared/desktop-profile-state";
@@ -149,7 +151,7 @@ export const isAuthAddressAuthorized = ({
     return true;
   }
 
-  if (publicEnv.USE_DEV_AUTH !== "true") {
+  if (!isDevAuthEnabled()) {
     return false;
   }
 
@@ -577,13 +579,15 @@ export const setAuthJwt = (
   return true;
 };
 
+// Browser staging access comes only from the visitor's access cookie.
+// Server-side requests get their fallback from lib/fetch/ssrFetch.
 export const getStagingAuth = (): string | null => {
-  return Cookies.get(API_AUTH_COOKIE) ?? publicEnv.STAGING_API_KEY ?? null;
+  return Cookies.get(API_AUTH_COOKIE) ?? null;
 };
 
 export const getAuthJwt = () => {
-  if (publicEnv.USE_DEV_AUTH === "true") {
-    return publicEnv.DEV_MODE_AUTH_JWT ?? null;
+  if (isDevAuthEnabled()) {
+    return getDevAuthTestOverride()?.jwt ?? publicEnv.DEV_MODE_AUTH_JWT ?? null;
   }
   return (
     Cookies.get(WALLET_AUTH_COOKIE) ??
@@ -645,8 +649,12 @@ export const getRefreshToken = () => {
 };
 
 export const getWalletAddress = () => {
-  if (publicEnv.USE_DEV_AUTH === "true") {
-    return publicEnv.DEV_MODE_WALLET_ADDRESS ?? null;
+  if (isDevAuthEnabled()) {
+    return (
+      getDevAuthTestOverride()?.wallet ??
+      publicEnv.DEV_MODE_WALLET_ADDRESS ??
+      null
+    );
   }
   const activeAccount = getActiveAccountFromAccounts(getStoredAccounts());
   if (activeAccount?.address) return activeAccount.address;

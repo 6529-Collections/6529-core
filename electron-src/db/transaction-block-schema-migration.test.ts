@@ -33,7 +33,7 @@ describe("transaction block recovery schema migration", () => {
       )
     `);
     database.exec(
-      'INSERT INTO "transactions_blocks" ("id", "block", "timestamp") VALUES (1, 123, 456)',
+      'INSERT INTO "transactions_blocks" ("id", "block", "timestamp", "tdh_needs_recalculation") VALUES (1, 123, 456, 1)',
     );
     const queryExecutor = {
       query: async (sql: string) => {
@@ -53,6 +53,8 @@ describe("transaction block recovery schema migration", () => {
       .get() as Record<string, number | null>;
     assert.equal(row.block, 123);
     assert.equal(row.timestamp, 456);
+    assert.equal(row.tdh_needs_recalculation, 1);
+    assert.equal(row.tdh_pending_consolidations, null);
     assert.equal(row.tdh_run_incomplete, 0);
     assert.equal(row.reconciliation_from_block, null);
     assert.equal(row.reconciliation_next_block, null);

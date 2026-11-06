@@ -18,11 +18,13 @@ It combines `Rep` and `NIC` on one route.
 - Unsupported legacy route: /{user}/rep (not found)
 
 Desktop (`>= lg`):
+
 - Left: Rep direction toggle, summary, categories, received-only grant/edit
   actions, activity log
 - Right: NIC summary, ID statements, and `Rate NIC` entry point
 
 Mobile (`< lg`):
+
 - Top segmented control: direction-aware `Total Rep`, `NIC`, and
   `ID Statements`
 - `Total Rep` subview: contributor summary, rep direction toggle, categories,
@@ -112,14 +114,31 @@ Mobile (`< lg`):
 - `Grant Rep` stays disabled until category is selected, amount changed, amount
   is valid, and submit is idle.
 
+### Edit an existing Rep category
+
+- In `Received`, eligible signed-in viewers can select a category's pencil to
+  edit their total contribution. The pencil is hidden on their own profile and
+  when signed out; authorized proxies act for the grantor.
+- The editor uses a centered dialog on desktop and a draggable bottom sheet on
+  mobile, with the same dismissal behavior as `Grant Rep` and `Rate NIC`.
+- Allowance loading keeps the panel size stable. The amount becomes editable
+  when the current contribution and allowance load. If loading fails, use
+  `Try again`; `Save` stays disabled until the allowance is available.
+- `Save` updates the total contribution and refreshes the profile. `Cancel`,
+  the close button, and Escape dismiss the editor and return focus to the pencil.
+
 ### Localization fallback debt
 
 - Surfaces: the Grant REP and Rate NIC dialogs under the profile Identity tab,
-  including their desktop/mobile entry points and Current / Adjustment summaries.
+  including their desktop/mobile entry points, the category editor, and Current /
+  Adjustment summaries. The category editor's title, allowance labels, input
+  label, actions, feedback, and loading/retry states use `en-US` fallback
+  messages in untranslated locales.
 - Current fallback: `rep.categories.grant.*` messages use the canonical `en-US`
   source copy in locales without translated entries, including the REP amount
-  label. Dialog titles, NIC labels and actions, unavailable-state Cancel buttons,
-  proxy labels, rating feedback, and adjustment summaries retain existing English
+  label. Outside the category editor, dialog titles, NIC labels and actions,
+  unavailable-state Cancel buttons, proxy labels, and rating feedback retain
+  existing English strings. Shared adjustment summaries also retain English
   strings. Rating summaries retain the existing comma-separated number formatting.
 - User impact: supported non-English locales can see English copy and number
   formatting while both rating flows remain functional.
@@ -142,6 +161,8 @@ Statement ownership in this tab:
 
 ## Activity Log Behavior
 
+- The NIC log shows NIC rating edits and identity changes. REP and wave REP
+  rating edits are excluded. The log-type and direction filters still apply.
 - Desktop combined log includes:
   - matter tabs: `All`, `REP`, `NIC`
   - direction tabs: `All`, `Incoming`, `Outgoing`
@@ -150,7 +171,13 @@ Statement ownership in this tab:
   - `Total Rep` subview uses REP log with direction tabs
   - `NIC` subview uses NIC log with direction tabs and NIC log-type filter
 - Loading uses three compact row placeholders before the activity entries appear.
+- Changing the window between mobile and desktop layouts may briefly show the
+  activity loading placeholders. While you stay on the same profile, each
+  layout keeps its selected filters and current page when you return to it.
 - Empty results show `No Activity Log`.
+- If the first NIC activity page cannot load, `Unable to load activity log.`
+  replaces the placeholders. Use `Retry` to try again. A failed later page
+  keeps the current entries and paging controls available.
 
 ## Permissions and Visibility Rules
 
@@ -199,6 +226,9 @@ Statement ownership in this tab:
 
 ## Limitations / Notes
 
+- The NIC activity loading-error message and `Retry` use `en-US` fallback copy
+  where translations are unavailable; frontend localization maintainers can
+  translate those message keys without changing this flow.
 - This page documents the combined default profile tab only; other profile tabs
   have separate route and behavior rules.
 - Action availability still depends on wallet, profile-handle, and proxy

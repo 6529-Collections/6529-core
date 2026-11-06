@@ -103,6 +103,39 @@ function applyEffectiveAppPrCiPlan(plan) {
   // Museum lane itself. The selection tool then runs only the affected packs.
   const playwrightMuseum = files.some(requiresMuseumLane);
 
+  const playwrightProfileDialogs = files.some(
+    (file) =>
+      file.startsWith("components/user/rep/") ||
+      file.startsWith("components/user/user-page-header/about/") ||
+      file === "components/user/user-page-header/UserPageHeaderClient.tsx" ||
+      file.startsWith(
+        "components/user/user-page-header/UserPageHeaderEditProfile"
+      ) ||
+      file ===
+        "components/user/user-page-header/UserPageHeaderProfileEditor.tsx" ||
+      file === "components/user/user-page-header/useProfileEditor.ts" ||
+      file.startsWith("components/user/settings/") ||
+      file.startsWith("components/user/utils/rate/") ||
+      file === "components/react-query-wrapper/ReactQueryWrapper.tsx" ||
+      file === "hooks/useRepAllocation.ts" ||
+      file === "tests/social/profile-rep-edit-sandbox.spec.ts" ||
+      file === "tests/social/profile-about-sandbox.spec.ts"
+  );
+
+  const playwrightDropReactions = files.some(
+    (file) =>
+      /^(?:components\/waves\/drops\/(?:WaveDropReaction|reaction-utils)|hooks\/drops\/(?:useDropReaction|useOptimisticNotificationDropReaction)|services\/api\/wave-drop|tests\/social\/wave-reaction-sandbox\.spec\.ts|__tests__\/components\/waves\/drops\/WaveDropReaction)/u.test(
+        file
+      ) ||
+      [
+        "contexts/wave/hooks/useWaveRealtimeUpdater.helpers.ts",
+        "__tests__/useWaveRealtimeUpdater.test.ts",
+        "tests/support/composerSandboxServer.cjs",
+        "tests/packs.manifest.cjs",
+        ".github/workflows/app-pr-ci.yml",
+      ].includes(file)
+  );
+
   const playwrightArtworkDocumentation = files.some((file) =>
     ARTWORK_DOCUMENTATION_BROWSER_PATTERNS.some((pattern) => pattern.test(file))
   );
@@ -112,7 +145,11 @@ function applyEffectiveAppPrCiPlan(plan) {
       /^(?:components\/competitions\/|hooks\/competitions\/|__tests__\/competitions\/|app\/waves\/\[wave\]\/competitions\/|components\/waves\/create-wave\/|components\/waves\/leaderboard\/|__tests__\/components\/waves\/leaderboard\/|generated\/models\/ApiCompetition)/u.test(
         file
       ) ||
+      /^(?:hooks\/(?:useMemesQuickVote|useMemesWaveFooterStats|memesQuickVote\.)|components\/brain\/left-sidebar\/waves\/memes-quick-vote\/)/u.test(
+        file
+      ) ||
       [
+        "components/brain/left-sidebar/waves/MemesWaveFooter.tsx",
         "contexts/CompetitionContext.tsx",
         "helpers/competition.helpers.ts",
         "helpers/competition-labels.helpers.ts",
@@ -138,6 +175,13 @@ function applyEffectiveAppPrCiPlan(plan) {
         "tests/social/wave-notification-settings-sandbox.spec.ts",
         "tests/social/wave-switch-loading.spec.ts",
         "tests/social/wave-loading-sandbox.spec.ts",
+        "components/brain/my-stream/MyStreamWaveChat.tsx",
+        "components/waves/drops/wave-drops-all/hooks/useWaveDropsSerialScroll.ts",
+        "hooks/useNativeKeyboard.ts",
+        "tests/support/surfaceSimulation.ts",
+        "components/waves/drops/wave-drops-all/utils/observeSerialScrollTarget.ts",
+        // The chat render window; this pack runs wave-loading-sandbox.spec.ts.
+        "hooks/useVirtualizedWaveMessages.ts",
         "components/brain/left-sidebar/waves/SidebarDiscovery.tsx",
         "components/brain/left-sidebar/waves/SidebarDiscoverySkeletons.tsx",
         "components/brain/left-sidebar/waves/SidebarActiveVotes.tsx",
@@ -170,6 +214,10 @@ function applyEffectiveAppPrCiPlan(plan) {
         "__tests__/components/waves/drops/WaveDropActionsOpen.test.tsx",
         "components/waves/drops/WaveDropMobileMenuOpen.tsx",
         "__tests__/components/waves/drops/WaveDropMobileMenuOpen.test.tsx",
+        "components/waves/drops/AdditionalActionPromiseBadge.tsx",
+        "components/waves/drops/ArtistActiveSubmissionContent.tsx",
+        "__tests__/components/waves/drops/ArtistActiveSubmissionContent.test.tsx",
+        "components/utils/tooltip/BodyPortalTooltip.tsx",
         "components/waves/header/WaveJoinCta.tsx",
         "components/brain/left-sidebar/waves/BrainLeftSidebarWavePin.tsx",
         "tests/packs.manifest.cjs",
@@ -184,6 +232,11 @@ function applyEffectiveAppPrCiPlan(plan) {
     [
       "tests/media/submission-artwork-sandbox.spec.ts",
       "tests/media/waveImagePreviewCases.ts",
+      "tests/support/videoArtworkSandbox.ts",
+      "components/waves/drop/WaveDropAdditionalInfo.tsx",
+      "components/waves/drop/WaveDropAdditionalInfoVideo.tsx",
+      "hooks/useChatVideoPoster.ts",
+      "public/video-preview-placeholder.svg",
       "components/waves/drop/MemesDropArtworkHero.tsx",
       "components/drops/view/item/content/media/DropImagePreview.tsx",
       "components/drops/view/item/content/media/GifPreviewLoadingIndicator.tsx",
@@ -249,6 +302,27 @@ function applyEffectiveAppPrCiPlan(plan) {
 
   const checks = {
     ...plan.checks,
+    playwright_critical_shell: playwrightProfileDialogs
+      ? check(
+          true,
+          "Profile editing changes require the profile dialog browser pack."
+        )
+      : baseChecks.playwright_critical_shell,
+    playwright_profile_nic: check(
+      files.some(
+        (file) =>
+          /^(?:components\/profile-activity\/|__tests__\/components\/profile-activity\/|helpers\/profile-logs\.helpers\.ts$|components\/user\/rep\/|tests\/social\/profile-nic-activity-sandbox\.spec\.ts$)/u.test(
+            file
+          ) ||
+          [
+            "tests/packs.manifest.cjs",
+            "tests/support/composerSandboxServer.cjs",
+            "scripts/app-pr-ci-effective-plan.cjs",
+            ".github/workflows/app-pr-ci.yml",
+          ].includes(file)
+      ),
+      "Profile activity changes need the NIC cursor and unchanged-view browser contracts."
+    ),
     install: check(
       true,
       playwrightMuseum
@@ -268,6 +342,10 @@ function applyEffectiveAppPrCiPlan(plan) {
       testTypecheck
         ? "Changed test code, test configuration, or dependency policy needs test-helper typechecking."
         : "No test code, test configuration, or dependency policy changed."
+    ),
+    playwright_drop_reactions: check(
+      playwrightDropReactions,
+      "Drop reaction state or its browser contract requires live tooltip and touch-dialog coverage."
     ),
     playwright_artwork_documentation: check(
       playwrightArtworkDocumentation,

@@ -18,6 +18,11 @@ import {
   NFTDelegationRecoveryPoint,
 } from "../../../db/entities/IDelegation";
 import { TransactionBlock } from "../../../db/entities/ITransaction";
+import {
+  completeTdhConsolidations,
+  getPendingTdhConsolidations,
+  needsTdhRecalculation,
+} from "../../../db/tdh-recalculation";
 import { ConsolidatedTDH } from "../../../db/entities/ITDH";
 import {
   completeNativeDelegationReplay,
@@ -1954,6 +1959,112 @@ describe("native delegation persistence and resumable atomic replay", () => {
         .tdh_needs_recalculation,
       false,
     );
+    assert.equal(await getPendingTdhConsolidations(db.manager), null);
+  });
+
+  it("clears a successful consolidation recalculation without requiring a full TDH run", async () => {
+    await persistNftDelegations(db, 100, 2000, scan());
+    const pending = await getPendingTdhConsolidations(db.manager);
+    assert.deepEqual(pending?.wallets, ["a", "b"]);
+    const state = await db
+      .getRepository(TransactionBlock)
+      .findOneByOrFail({ id: 1 });
+    assert.equal(state.tdh_needs_recalculation, false);
+    assert.equal(needsTdhRecalculation(state), true);
+
+    await completeTdhConsolidations(db.manager, pending);
+    assert.equal(
+      needsTdhRecalculation(
+        await db.getRepository(TransactionBlock).findOneByOrFail({ id: 1 }),
+      ),
+      false,
+    );
+  });
+
+  it("preserves transaction repairs and interrupted full TDH runs after reconsolidation", async () => {
+    await persistNftDelegations(db, 100, 2000, scan());
+    const pending = await getPendingTdhConsolidations(db.manager);
+    await db.getRepository(TransactionBlock).update(
+      { id: 1 },
+      {
+        tdh_needs_recalculation: true,
+        tdh_run_incomplete: true,
+      },
+    );
+    await completeTdhConsolidations(db.manager, pending);
+    const state = await db
+      .getRepository(TransactionBlock)
+      .findOneByOrFail({ id: 1 });
+    assert.equal(state.tdh_needs_recalculation, true);
+    assert.equal(state.tdh_run_incomplete, true);
+    assert.equal(state.tdh_pending_consolidations, null);
+    assert.equal(needsTdhRecalculation(state), true);
+
+    state.tdh_needs_recalculation = false;
+    assert.equal(needsTdhRecalculation(state), true);
+    state.tdh_run_incomplete = false;
+    assert.equal(needsTdhRecalculation(state), false);
+  });
+
+  it("retains pending wallets across a restart and a scan with no new changes", async () => {
+    const competitor = await openCompetingConnection();
+    competitor.close();
+    await persistNftDelegations(db, 100, 2000, scan());
+    const pending = await getPendingTdhConsolidations(db.manager);
+    const options = db.options;
+    if (options.type !== "better-sqlite3")
+      throw new Error("Expected SQLite fixture");
+    await db.destroy();
+    db = await new DataSource({
+      ...options,
+      prepareDatabase: undefined,
+    }).initialize();
+    // A later scan can contain no new consolidation events. Its persisted
+    // pending batch still supplies all wallets needed to retry the calculation.
+    const noChanges = scan();
+    noChanges.consolidations = [];
+    await persistNftDelegations(db, 101, 2100, noChanges);
+    assert.deepEqual(await getPendingTdhConsolidations(db.manager), pending);
+    assert.equal(
+      needsTdhRecalculation(
+        await db.getRepository(TransactionBlock).findOneByOrFail({ id: 1 }),
+      ),
+      true,
+    );
+    await completeTdhConsolidations(db.manager, pending);
+    assert.equal(await getPendingTdhConsolidations(db.manager), null);
+  });
+
+  it("does not clear a newer consolidation publication, even for the same wallets", async () => {
+    await persistNftDelegations(db, 100, 2000, scan());
+    const previous = await getPendingTdhConsolidations(db.manager);
+    await persistNftDelegations(db, 101, 2100, scan());
+    const latest = await getPendingTdhConsolidations(db.manager);
+    assert.notEqual(latest?.revision, previous?.revision);
+    await completeTdhConsolidations(db.manager, previous);
+    assert.deepEqual(await getPendingTdhConsolidations(db.manager), latest);
+  });
+
+  it("queues removed consolidation links when a resumed incremental replay publishes", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+    await completeFixtureReplay(db, 100);
+    await db
+      .getRepository(TransactionBlock)
+      .update({ id: 1 }, { tdh_needs_recalculation: false });
+    await prepareNativeDelegationReplay(db);
+    const removal = scan();
+    removal.consolidations[0].type = EventType.REVOKE;
+    await persistNftDelegations(db, 101, 2100, removal, 1, 0, true);
+    assert.equal(await getPendingTdhConsolidations(db.manager), null);
+    // Completion reads the durable shadow tables rather than this run's
+    // in-memory events, which are unavailable after restarting the worker.
+    await completeFixtureReplay(db, 101);
+    const state = await db
+      .getRepository(TransactionBlock)
+      .findOneByOrFail({ id: 1 });
+    assert.equal(state.tdh_needs_recalculation, false);
+    assert.deepEqual(state.tdh_pending_consolidations?.wallets, ["a", "b"]);
+    assert.equal(needsTdhRecalculation(state), true);
   });
 
   it("SQL preserves registration times and partial recalculation closes over old/current groups", async () => {

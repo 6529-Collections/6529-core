@@ -1,0 +1,274 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { useEncryptedNotificationPreview } from "@/hooks/e2ee/useEncryptedNotificationPreview";
+import type { INotificationEncryptedMessage } from "@/types/feed.types";
+import NotificationInboxRow from "@/components/notifications/inbox/NotificationInboxRow";
+import { groupReactionNotifications } from "@/components/brain/notifications/utils/groupReactionNotifications";
+import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { ApiWaveOverview } from "@/generated/models/ApiWaveOverview";
+import type {
+  INotificationDropReacted,
+  INotificationVotingCreditsReturned,
+} from "@/types/feed.types";
+import { isGroupedReactionsItem } from "@/types/feed.types";
+
+jest.mock("next/navigation", () => ({
+  ...jest.requireActual("next/navigation"),
+  useRouter: () => ({ push: jest.fn() }),
+}));
+
+jest.mock("@/hooks/e2ee/useEncryptedNotificationPreview", () => ({
+  useEncryptedNotificationPreview: jest.fn(),
+}));
+beforeEach(() => {
+  jest
+    .mocked(useEncryptedNotificationPreview)
+    .mockReturnValue({ preview: null, needsSetup: false });
+});
+
+jest.mock("@/hooks/useBrowserLocale", () => ({
+  useBrowserLocale: () => "en-US",
+}));
+jest.mock("@/components/common/OverlappingAvatars", () => ({
+  __esModule: true,
+  default: ({ items }: { items: { key: string; ariaLabel: string }[] }) => (
+    <span>{items.map((item) => item.ariaLabel).join(", ")}</span>
+  ),
+}));
+
+const drop = {
+  id: "drop",
+  serial_no: 42,
+  title: null,
+  parts: [{ content: "@[GelatoGenesis] in #[QUORUM]" }],
+  wave: { id: "wave", is_direct_message: false, picture: "wave.png" },
+} as ApiDrop;
+
+function reaction(
+  id: number,
+  handle: string,
+  readAt: number | null
+): INotificationDropReacted {
+  return {
+    id,
+    created_at: id,
+    read_at: readAt,
+    cause: ApiNotificationCause.DropReacted,
+    related_identity: {
+      id: handle,
+      handle,
+      pfp: `${handle}.png`,
+    } as ApiProfileMin,
+    related_drops: [drop],
+    additional_context: { reaction: ":fire:" },
+  };
+}
+
+it("groups reactors, keeps mixed read state, and opens every distinct unread ID", () => {
+  const onOpen = jest.fn();
+  const group = groupReactionNotifications([
+    reaction(3, "alice", 10),
+    reaction(2, "bob", null),
+    reaction(2, "carol", null),
+    reaction(1, "bob", null),
+  ])[0]!;
+  render(
+    <NotificationInboxRow
+      notification={group}
+      handle="viewer"
+      onOpen={onOpen}
+    />
+  );
+  expect(screen.getByText("New reactions to your drop")).toBeInTheDocument();
+  expect(screen.getByText("alice, bob, carol")).toBeInTheDocument();
+  expect(screen.getByAltText("")).toHaveAttribute("src", "wave.png");
+  expect(screen.getByText("@GelatoGenesis in #QUORUM")).toBeInTheDocument();
+  expect(screen.getByText("Unread")).toBeInTheDocument();
+  const link = screen.getByRole("link");
+  expect(link).toHaveAttribute("href", "/waves/wave?serialNo=42");
+  fireEvent.click(link);
+  expect(onOpen).toHaveBeenCalledWith([2, 1]);
+});
+
+it("keeps single reactions readable and does not mark a read row again", () => {
+  const onOpen = jest.fn();
+  render(
+    <NotificationInboxRow
+      notification={reaction(1, "alice", 10)}
+      handle="viewer"
+      onOpen={onOpen}
+    />
+  );
+  expect(screen.getByText("alice reacted to your drop")).toBeInTheDocument();
+  expect(screen.getByAltText("")).toHaveAttribute("src", "alice.png");
+  expect(screen.queryByText("Unread")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("link"));
+  expect(onOpen).toHaveBeenCalledWith([]);
+});
+
+it("keeps the bell fallback for grouped reactions without a wave picture", () => {
+  const group = groupReactionNotifications([
+    reaction(1, "alice", null),
+    reaction(2, "bob", null),
+  ])[0]!;
+  if (!isGroupedReactionsItem(group)) throw new Error("Expected a group");
+  render(
+    <NotificationInboxRow
+      notification={{
+        ...group,
+        drop: { ...drop, wave: { ...drop.wave, picture: null } },
+      }}
+      handle="viewer"
+      onOpen={jest.fn()}
+    />
+  );
+  expect(screen.queryByAltText("")).not.toBeInTheDocument();
+  expect(screen.getByRole("link").querySelector("svg")).toBeInTheDocument();
+});
+
+it.each(["wave.png", undefined])(
+  "uses the returned-credit wave picture with a bell fallback (%s)",
+  (pfp) => {
+    const notification: INotificationVotingCreditsReturned = {
+      id: 4,
+      created_at: 4,
+      read_at: null,
+      cause: ApiNotificationCause.VotingCreditsReturned,
+      ...(pfp ? { related_wave: { pfp } as ApiWaveOverview } : {}),
+      additional_context: {
+        event_id: "release",
+        reason: "AUTHOR_DELETED",
+        wave_id: "wave",
+        competition_id: "competition",
+        competition_title: "Main Stage",
+        entry_id: "entry",
+        drop_id: "deleted",
+        submission_title: "Artwork",
+        credit_type: "TDH",
+        amount: 10,
+        released_at: 3,
+      },
+    };
+    render(
+      <NotificationInboxRow
+        notification={notification}
+        handle="viewer"
+        onOpen={jest.fn()}
+      />
+    );
+    if (pfp) {
+      expect(screen.getByAltText("")).toHaveAttribute("src", pfp);
+    } else {
+      expect(screen.queryByAltText("")).not.toBeInTheDocument();
+      expect(screen.getByRole("link").querySelector("svg")).toBeInTheDocument();
+    }
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/waves/wave/competitions/competition"
+    );
+  }
+);
+
+it("uses the group's latest drop even when the first reaction is older", () => {
+  const older = {
+    ...reaction(1, "alice", 10),
+    related_drops: [{ ...drop, title: "Old title", serial_no: 1 }],
+  };
+  const group = groupReactionNotifications([older, reaction(2, "bob", 10)])[0]!;
+  render(
+    <NotificationInboxRow
+      notification={group}
+      handle="viewer"
+      onOpen={jest.fn()}
+    />
+  );
+  expect(screen.getByText("@GelatoGenesis in #QUORUM")).toBeInTheDocument();
+  expect(screen.queryByText("Old title")).not.toBeInTheDocument();
+  expect(screen.getByRole("link")).toHaveAttribute(
+    "href",
+    "/waves/wave?serialNo=42"
+  );
+});
+
+it.each([null, "A locally decrypted message"])(
+  "preserves encrypted notification fallback or local preview (%s)",
+  (preview) => {
+    jest
+      .mocked(useEncryptedNotificationPreview)
+      .mockReturnValue({ preview, needsSetup: !preview });
+    const notification: INotificationEncryptedMessage = {
+      id: 12,
+      created_at: 12,
+      read_at: null,
+      cause: ApiNotificationCause.E2EeMessage,
+      additional_context: { encrypted_group: "0xgroup" },
+    };
+    const onOpen = jest.fn();
+    render(
+      <NotificationInboxRow
+        notification={notification}
+        handle="viewer"
+        onOpen={onOpen}
+      />
+    );
+    expect(useEncryptedNotificationPreview).toHaveBeenCalledWith(
+      "0xgroup",
+      undefined
+    );
+    expect(screen.getByText("New encrypted message")).toBeInTheDocument();
+    expect(
+      screen.getByText(preview ?? "Set up Encrypted DMs")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/messages/encrypted/0xgroup"
+    );
+    fireEvent.click(screen.getByRole("link"));
+    expect(onOpen).toHaveBeenCalledWith([12]);
+  }
+);
+
+it("links the sender avatar and handle separately from encrypted chat setup", () => {
+  jest.mocked(useEncryptedNotificationPreview).mockReturnValue({
+    preview: null,
+    needsSetup: true,
+  });
+  const onOpen = jest.fn();
+  render(
+    <NotificationInboxRow
+      notification={{
+        id: 13,
+        created_at: 13,
+        read_at: null,
+        cause: ApiNotificationCause.E2EeMessage,
+        related_identity: {
+          id: "alice",
+          handle: "alice",
+          pfp: "https://example.com/avatar.png",
+          level: 80,
+          artist_of_prevote_cards: [1],
+        } as ApiProfileMin,
+        additional_context: {
+          encrypted_group: "0xgroup",
+          encrypted_message_seq: 8,
+        },
+      }}
+      handle="viewer"
+      onOpen={onOpen}
+    />
+  );
+  const sender = screen.getByRole("link", { name: "alice" });
+  expect(sender).toHaveAttribute("href", "/alice");
+  expect(sender.querySelector("img")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Level 80" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "View 1 minted meme" })
+  ).toBeInTheDocument();
+  const setup = screen.getByRole("link", { name: "Set up Encrypted DMs" });
+  expect(setup).toHaveAttribute("href", "/messages/encrypted/0xgroup");
+  fireEvent.click(sender);
+  expect(onOpen).not.toHaveBeenCalled();
+  fireEvent.click(setup);
+  expect(onOpen).toHaveBeenCalledWith([13]);
+});

@@ -6,12 +6,7 @@ import {
   to6529ResolverUrl,
 } from "@/lib/media/decentralized-media";
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { isElectron } from "../../helpers";
 import IpfsService from "./IPFSService";
 import type { IpfsStatus } from "@/shared/ipfs-status";
@@ -247,6 +242,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
     let revision = 0;
     const clearService = (status: IpfsStatus) => {
       cachedGatewayBase = null;
+      ipfsServicePromise = null;
       setValue({ ipfsService: null, ipfsUrls: undefined, ipfsStatus: status });
     };
     const refresh = async () => {
@@ -313,6 +309,53 @@ export const useIpfsContext = (): IpfsContextType => {
 export const useIpfsService = (): IpfsService | null => {
   const { ipfsService } = useIpfsContext();
   return ipfsService;
+};
+
+let ipfsServicePromise: Promise<IpfsService> | null = null;
+
+const createIpfsService = async (): Promise<IpfsService> => {
+  // Core uses the current native node, including its disabled/starting state.
+  // Retain FE's configured endpoint path when running without the bridge.
+  const config =
+    isElectron() || typeof window.api?.getInfo === "function"
+      ? await readIpfsConfig()
+      : {
+          apiEndpoint: publicEnv.IPFS_API_ENDPOINT,
+          mfsPath: publicEnv.IPFS_MFS_PATH,
+        };
+  if (!config?.apiEndpoint) {
+    throw new Error("Missing IPFS_API_ENDPOINT or local IPFS is unavailable");
+  }
+  const { default: IpfsServiceClass } = await import("./IPFSService");
+  const service = new IpfsServiceClass({
+    apiEndpoint: config.apiEndpoint,
+    mfsPath: config.mfsPath,
+  });
+  try {
+    await service.init();
+  } catch (error: unknown) {
+    console.error("Error initializing IPFS service", error);
+  }
+  return service;
+};
+
+// Preserve FE's lazy upload API while Core keeps its native status provider.
+const getIpfsService = async (): Promise<IpfsService> => {
+  ipfsServicePromise ??= createIpfsService();
+  const pending = ipfsServicePromise;
+  try {
+    return await pending;
+  } catch (error: unknown) {
+    if (ipfsServicePromise === pending) {
+      ipfsServicePromise = null;
+    }
+    throw error;
+  }
+};
+
+export const addFileToIpfs = async (file: File): Promise<string> => {
+  const service = await getIpfsService();
+  return service.addFile(file);
 };
 
 export const resolveIpfsUrlSync = (url: string) => {
