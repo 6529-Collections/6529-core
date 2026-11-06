@@ -104,7 +104,7 @@ describe("/validator/hardware", () => {
       ["AppImage, x86-64", "6529-Validator-0.1.0-x86_64.AppImage"],
     ]) {
       expect(html).toContain(
-        `href="/validator/download/0.1.0-test.2/${file}" class="${SECONDARY_BUTTON}" aria-label="${label}, ${file}"`
+        `href="https://6529.io/validator/download/0.1.0-test.2/${file}" class="${SECONDARY_BUTTON}" aria-label="${label}, ${file}"`
       );
     }
     mockSnapshot = NO_RELEASE;

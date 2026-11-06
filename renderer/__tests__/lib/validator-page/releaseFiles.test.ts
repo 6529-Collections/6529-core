@@ -155,7 +155,9 @@ describe("groupReleaseFiles", () => {
   it("builds download paths and labels", () => {
     expect(
       getReleaseDownloadPath(release!, { name: "6529-Validator-0.1.0.dmg" })
-    ).toBe("/validator/download/0.1.0-test.2/6529-Validator-0.1.0.dmg");
+    ).toBe(
+      "https://6529.io/validator/download/0.1.0-test.2/6529-Validator-0.1.0.dmg"
+    );
     expect(formatFileSize(55_073_145)).toBe("55.1 MB");
     expect(formatFileSize(1_119)).toBe("1 kB");
     expect(formatFileSize(null)).toBeNull();

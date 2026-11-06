@@ -343,12 +343,12 @@ export function getDebNames(
   return x64 && arm64 ? { x64, arm64 } : null;
 }
 
-/** The site path that hands out one file of one release. */
+/** Core: external navigation opens the hosted, access-controlled download in the browser. */
 export function getReleaseDownloadPath(
   release: Pick<ValidatorRelease, "version">,
   file: Pick<ValidatorReleaseFile, "name">
 ): string {
-  return `/validator/download/${encodeURIComponent(release.version)}/${encodeURIComponent(file.name)}`;
+  return `https://6529.io/validator/download/${encodeURIComponent(release.version)}/${encodeURIComponent(file.name)}`;
 }
 
 /** "55.1 MB" style sizes, in decimal megabytes like most download pages. */

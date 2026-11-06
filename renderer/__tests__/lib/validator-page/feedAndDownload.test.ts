@@ -3,21 +3,10 @@ import type { BucketObject } from "@/lib/validator-page/releasesBucket";
 import { TEST_FEED } from "./fixtures";
 
 const mockRead = jest.fn<Promise<BucketObject>, [string]>();
-const mockPresign = jest.fn(
-  async (key: string, options: { responseParams?: Record<string, string> }) =>
-    `https://bucket.example/${key}?${new URLSearchParams(options.responseParams).toString()}`
-);
-
 jest.mock("@/lib/validator-page/releasesBucket", () => ({
   FEED_OBJECT_KEY: "feed/releases.json",
   FEED_SIGNATURE_OBJECT_KEY: "feed/releases.json.sig",
-  getReleaseObjectKey: (version: string, name: string) =>
-    `releases/${version}/${name}`,
   readReleaseObject: (key: string) => mockRead(key),
-  presignReleaseObject: (
-    key: string,
-    options: { responseParams?: Record<string, string> }
-  ) => mockPresign(key, options),
 }));
 
 import { serveFeedObject } from "@/lib/validator-page/feedResponse";
@@ -46,7 +35,6 @@ describe("release feed endpoints and downloads", () => {
   beforeEach(() => {
     resetReleaseFeedCacheForTests();
     mockRead.mockReset();
-    mockPresign.mockClear();
   });
 
   it("serves the feed and signature byte for byte, public, for five minutes", async () => {
@@ -80,11 +68,11 @@ describe("release feed endpoints and downloads", () => {
       "feed"
     );
     expect(cached.status).toBe(304);
-    // Both answers came from one read of the bucket.
+    // Both answers came from one read of the hosted feed.
     expect(mockRead).toHaveBeenCalledTimes(2);
   });
 
-  it("answers 404 before the first feed and 503 when S3 fails", async () => {
+  it("answers 404 before the first feed and 503 when the hosted feed fails", async () => {
     storeHas({});
     const missing = await serveFeedObject(
       new Request("https://6529.io/x"),
@@ -93,7 +81,10 @@ describe("release feed endpoints and downloads", () => {
     expect(missing.status).toBe(404);
 
     resetReleaseFeedCacheForTests();
-    mockRead.mockResolvedValue({ state: "error", reason: "S3 answered 500" });
+    mockRead.mockResolvedValue({
+      state: "error",
+      reason: "hosted feed answered 500",
+    });
     const failed = await serveFeedObject(
       new Request("https://6529.io/x"),
       "feed"
@@ -102,7 +93,7 @@ describe("release feed endpoints and downloads", () => {
     expect(failed.headers.get("cache-control")).toBe("no-store");
   });
 
-  it("keeps serving the last good feed when S3 fails later", async () => {
+  it("keeps serving the last good feed when the hosted feed fails later", async () => {
     storeHas({ "feed/releases.json": found(FEED_BYTES, '"e"') });
     const nowSpy = jest.spyOn(Date, "now");
     nowSpy.mockReturnValue(1_000_000);
@@ -117,13 +108,13 @@ describe("release feed endpoints and downloads", () => {
     nowSpy.mockRestore();
   });
 
-  it("presigns only files the feed lists", async () => {
+  it("forwards only listed files to the hosted download gate", async () => {
     storeHas({ "feed/releases.json": found(FEED_BYTES, '"e"') });
     const latest = await resolveReleaseDownload(["6529-Validator-0.1.0.dmg"]);
     expect(latest).toEqual({
       state: "found",
       url: expect.stringContaining(
-        "releases/0.1.0-test.2/6529-Validator-0.1.0.dmg"
+        "https://6529.io/validator/download/0.1.0-test.2/6529-Validator-0.1.0.dmg"
       ),
     });
     const pinned = await resolveReleaseDownload([
@@ -132,30 +123,16 @@ describe("release feed endpoints and downloads", () => {
     ]);
     expect(pinned).toEqual({
       state: "found",
-      url: expect.stringContaining("releases/0.1.0-test.2/"),
+      url: expect.stringContaining(
+        "https://6529.io/validator/download/0.1.0-test.2/"
+      ),
     });
-    expect(mockPresign).toHaveBeenLastCalledWith(
-      "releases/0.1.0-test.2/6529-Validator-0.1.0.dmg",
-      expect.objectContaining({
-        expiresInSeconds: 300,
-        responseParams: {
-          "response-content-disposition":
-            'attachment; filename="6529-Validator-0.1.0.dmg"',
-        },
-      })
-    );
     const sums = await resolveReleaseDownload(["0.1.0-test.2", "SHA256SUMS"]);
-    expect(sums.state).toBe("found");
-    expect(mockPresign).toHaveBeenLastCalledWith(
-      "releases/0.1.0-test.2/SHA256SUMS",
-      expect.objectContaining({
-        responseParams: expect.objectContaining({
-          "response-content-disposition": "inline",
-        }),
-      })
-    );
+    expect(sums).toEqual({
+      state: "found",
+      url: "https://6529.io/validator/download/0.1.0-test.2/SHA256SUMS",
+    });
 
-    mockPresign.mockClear();
     for (const path of [
       ["feed", "releases.json"],
       ["0.1.0-test.1", "SHA256SUMS"],
@@ -169,6 +146,5 @@ describe("release feed endpoints and downloads", () => {
         state: "not-found",
       });
     }
-    expect(mockPresign).not.toHaveBeenCalled();
   });
 });

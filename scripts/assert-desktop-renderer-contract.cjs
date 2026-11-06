@@ -2488,6 +2488,38 @@ assertContract(
   "desktop IPFS menu must keep a stable row identity while availability changes",
 );
 
+const validatorFeedPath = "renderer/lib/validator-page/releasesBucket.ts";
+const validatorFeed = parseSource(validatorFeedPath).text;
+assertContract(
+  validatorFeed.includes('"https://6529.io/validator/releases.json"') &&
+    validatorFeed.includes('"https://6529.io/validator/releases.json.sig"') &&
+    validatorFeed.includes('credentials: "omit"') &&
+    !validatorFeed.includes('from "./awsCredentials"') &&
+    !validatorFeed.includes("presignS3GetUrl"),
+  validatorFeedPath,
+  "Desktop Validator releases must use the public hosted feed without AWS credentials",
+);
+const validatorFilesPath = "renderer/lib/validator-page/releaseFiles.ts";
+const validatorDownloadPath = findFunction(
+  parseSource(validatorFilesPath),
+  "getReleaseDownloadPath",
+);
+assertContract(
+  validatorDownloadPath?.getText().includes("https://6529.io/validator/download/") &&
+    validatorDownloadPath.getText().includes("encodeURIComponent(release.version)") &&
+    validatorDownloadPath.getText().includes("encodeURIComponent(file.name)"),
+  validatorFilesPath,
+  "Desktop Validator download links must open the hosted access-controlled download in the browser",
+);
+const validatorDownloadSourcePath = "renderer/lib/validator-page/releaseDownload.ts";
+const validatorDownloadSource = parseSource(validatorDownloadSourcePath).text;
+assertContract(
+  validatorDownloadSource.includes("getReleaseDownloadPath(match.release,") &&
+    !validatorDownloadSource.includes("presignReleaseObject"),
+  validatorDownloadSourcePath,
+  "Desktop local Validator download routes must forward to the website instead of signing S3 URLs",
+);
+
 if (failures.length > 0) {
   console.error("Desktop renderer contract failed:");
   for (const failure of failures) {

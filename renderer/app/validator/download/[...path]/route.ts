@@ -19,8 +19,8 @@ function plain(status: number, body: string): Response {
 
 /**
  * /validator/download/<version>/<file>, or /validator/download/<file> for the
- * newest release. Answers with a 302 to a presigned S3 URL that works for
- * five minutes. Only files listed in the release feed can be fetched.
+ * newest release. Core redirects to the hosted website, which enforces its
+ * own access check and signs the download. Only listed files are forwarded.
  */
 export async function GET(
   _request: Request,

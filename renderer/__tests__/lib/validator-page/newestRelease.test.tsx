@@ -5,17 +5,10 @@ import type { BucketObject } from "@/lib/validator-page/releasesBucket";
 import { SAME_DAY_FEED } from "./fixtures";
 
 const mockRead = jest.fn<Promise<BucketObject>, [string]>();
-const mockPresign = jest.fn(
-  async (key: string) => `https://bucket.example/${key}`
-);
-
 jest.mock("@/lib/validator-page/releasesBucket", () => ({
   FEED_OBJECT_KEY: "feed/releases.json",
   FEED_SIGNATURE_OBJECT_KEY: "feed/releases.json.sig",
-  getReleaseObjectKey: (version: string, name: string) =>
-    `releases/${version}/${name}`,
   readReleaseObject: (key: string) => mockRead(key),
-  presignReleaseObject: (key: string) => mockPresign(key),
 }));
 
 jest.mock("next/headers", () => ({
@@ -43,9 +36,11 @@ const SETUP = "6529-Validator-Setup-0.1.0-x64.exe";
 function linkedVersions(html: string): string[] {
   return [
     ...new Set(
-      [...html.matchAll(/href="\/validator\/download\/([^"/]+)\//g)].map(
-        (match) => match[1] ?? ""
-      )
+      [
+        ...html.matchAll(
+          /href="https:\/\/6529\.io\/validator\/download\/([^"/]+)\//g
+        ),
+      ].map((match) => match[1] ?? "")
     ),
   ];
 }
@@ -61,7 +56,6 @@ describe("a release and its candidate from the same day", () => {
 
   beforeEach(() => {
     resetReleaseFeedCacheForTests();
-    mockPresign.mockClear();
     const body = new TextEncoder().encode(JSON.stringify(SAME_DAY_FEED));
     mockRead.mockImplementation(async (key) =>
       key === "feed/releases.json"
@@ -72,7 +66,9 @@ describe("a release and its candidate from the same day", () => {
 
   it("the download page offers only the release", async () => {
     const html = renderToStaticMarkup(await ValidatorRoute());
-    expect(html).toContain(`href="/validator/download/0.1.0/${SETUP}"`);
+    expect(html).toContain(
+      `href="https://6529.io/validator/download/0.1.0/${SETUP}"`
+    );
     expect(linkedVersions(html)).toEqual(["0.1.0"]);
     expect(html).not.toContain("0.1.0-rc.7");
   });
@@ -94,7 +90,7 @@ describe("a release and its candidate from the same day", () => {
     for (const path of [[SETUP], ["0.1.0", SETUP]]) {
       expect(await resolveReleaseDownload(path)).toEqual({
         state: "found",
-        url: `https://bucket.example/releases/0.1.0/${SETUP}`,
+        url: `https://6529.io/validator/download/0.1.0/${SETUP}`,
       });
     }
     expect(await resolveReleaseDownload(["0.1.0-rc.7", SETUP])).toEqual({
