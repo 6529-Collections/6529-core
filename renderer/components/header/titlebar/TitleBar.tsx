@@ -138,6 +138,9 @@ export default function TitleBar() {
       }
     };
     window.api.onNavigate(handleNavigate);
+    void window.api.navigationReady().catch(() => {
+      console.error("Desktop navigation readiness could not be reported");
+    });
 
     return () => {
       window.api.offNavigationStateChange(updateNavState);

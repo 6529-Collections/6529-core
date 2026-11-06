@@ -10,9 +10,10 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getDesktopFeatureFlags } from "./scripts/helpers/desktop-feature-flags.cjs";
 
-// Mirror renderer/config/meebits445Headers.ts: the generated root config is
-// unbundled and must not import renderer TypeScript at runtime.
+// Mirror renderer/config/meebits445Headers.ts without a runtime dependency
+// on the renderer source tree.
 const meebits445Headers = {
   source: "/artwork/the-memes/445.html",
   headers: [
@@ -657,6 +658,10 @@ const nextConfigFactory = (phase: string): NextConfig => {
     const shape = publicEnvSchema._def.shape();
     const publicRuntime: Record<string, string | undefined> = {};
     for (const key of Object.keys(shape)) publicRuntime[key] = process.env[key];
+    Object.assign(
+      publicRuntime,
+      getDesktopFeatureFlags(publicRuntime.BACKEND_TARGET ?? "live"),
+    );
     publicRuntime.VERSION = VERSION;
     publicRuntime.ASSETS_FROM_S3 = String(ASSETS_FROM_S3);
     publicRuntime.CORE_SCHEME = getCoreScheme({

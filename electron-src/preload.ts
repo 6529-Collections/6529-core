@@ -123,6 +123,7 @@ export const api = {
   onNavigate: (url: any) => {
     ipcRenderer.on("navigate", url);
   },
+  navigationReady: () => ipcRenderer.invoke("navigation-ready"),
   offNavigate: (callback: any) =>
     ipcRenderer.removeListener("navigate", callback),
   onNotificationNavigate: (

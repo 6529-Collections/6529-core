@@ -142,6 +142,48 @@ describe("desktop wallet typed-data requests", () => {
     );
   });
 
+  it("reports recoverable errors for cyclic and multiple-root schemas", () => {
+    const parsed = parseTypedDataRequest(request(new Wallet(TEST_KEY)).params);
+    for (const invalidTypes of [
+      { A: [{ name: "b", type: "B" }], B: [{ name: "a", type: "A" }] },
+      {
+        A: [{ name: "x", type: "string" }],
+        B: [{ name: "y", type: "string" }],
+      },
+    ]) {
+      assert.throws(
+        () => assertTypedDataRoot({ ...parsed, types: invalidTypes }),
+        /^Error: Invalid typed data request\. Ask the requester to send a valid request\.$/,
+      );
+    }
+  });
+
+  it("rejects invalid or imprecise domain chain IDs", () => {
+    const base = JSON.parse(request(new Wallet(TEST_KEY)).params[1] as string);
+    for (const chainId of [
+      null,
+      true,
+      {},
+      "",
+      "1.1",
+      "-1",
+      "0xno",
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+      (2n ** 256n).toString(),
+    ]) {
+      assert.throws(
+        () =>
+          parseTypedDataRequest([
+            new Wallet(TEST_KEY).address,
+            { ...base, domain: { ...domain, chainId } },
+          ]),
+        /Invalid typed data chain ID/,
+      );
+    }
+  });
+
   it("refuses typed data for another wallet or another primary type", async () => {
     const wallet = new Wallet(TEST_KEY);
     const other = Wallet.createRandom();

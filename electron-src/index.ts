@@ -1,5 +1,6 @@
 // Must stay the first import: sets the working folder before other modules load.
 import "./startup-cwd-apply";
+import { DeepLinkQueue } from "./deep-link-queue";
 import {
   crashReporter,
   ipcMain,
@@ -1090,6 +1091,47 @@ let IPFS_SERVER: IPFSServer;
 let localIpfsPreferences: LocalIpfsPreferences;
 let desktopProfiles: DesktopProfileStorage;
 const profileReadinessCallbacks = new WeakMap<BrowserWindow, () => void>();
+const navigationReadyWindows = new WeakSet<BrowserWindow>();
+let mainWindowStartupComplete = false;
+const pendingDeepLinks = new DeepLinkQueue(
+  () =>
+    !!mainWindow &&
+    !mainWindow.isDestroyed() &&
+    navigationReadyWindows.has(mainWindow) &&
+    !mainWindow.webContents.isLoading(),
+  (url) => {
+    try {
+      handleUrl(url);
+    } catch {
+      // Never log private link contents or JSON parser errors containing them.
+      Logger.error("Invalid desktop deep link");
+    }
+  },
+);
+
+/** Deliver a queued link without recording connection credentials in logs. */
+function handleUrl(url: string) {
+  const urlObj = new URL(url);
+
+  if (urlObj.host === "connector") {
+    Logger.info("Handling connector Deep Link");
+    const encodedData = urlObj.searchParams.get("data");
+    if (encodedData === null) {
+      Logger.error("No data parameter found in the URL");
+      return;
+    }
+    const connectionInfo = JSON.parse(encodedData);
+    mainWindow?.webContents.send("wallet-connection", connectionInfo);
+  } else {
+    const navigation = getConnectionDeepLinkNavigation(urlObj);
+    if (navigation) {
+      Logger.info("Handling navigation Deep Link", getNavigationLogUrl(url));
+      mainWindow?.webContents.send("navigate", navigation);
+    } else {
+      Logger.info("Unknown Deep Link");
+    }
+  }
+}
 
 configureRendererHostResolution(app.commandLine);
 const gotTheLock = app.requestSingleInstanceLock();
@@ -1151,68 +1193,29 @@ function isMac(): boolean {
 if (!gotTheLock) {
   app.quit();
 } else {
-  function handleUrl(url: string) {
-    const urlObj = new URL(url);
-
-    if (urlObj.host === "connector") {
-      Logger.info("Handling connector Deep Link");
-      const encodedData = urlObj.searchParams.get("data");
-      if (encodedData === null) {
-        Logger.error("No data parameter found in the URL");
-        return;
-      }
-      const connectionInfo = JSON.parse(encodedData);
-      mainWindow?.webContents.send("wallet-connection", connectionInfo);
-    } else {
-      const navigation = getConnectionDeepLinkNavigation(urlObj);
-      if (navigation) {
-        Logger.info("Handling navigation Deep Link", getNavigationLogUrl(url));
-        mainWindow?.webContents.send("navigate", navigation);
-      } else {
-        Logger.info("Unknown Deep Link");
-      }
-    }
-  }
-
-  /**
-   * Hands a deep link to the renderer, waiting for the page when the main
-   * window is still loading (just reopened from background mode). Links that
-   * arrive during one load are handled in order once it finishes.
-   */
-  function deliverDeepLink(url: string) {
-    const window = mainWindow;
-    if (!window || window.isDestroyed()) {
-      return;
-    }
-    if (window.webContents.isLoading()) {
-      window.webContents.once("did-finish-load", () => handleUrl(url));
-      return;
-    }
-    handleUrl(url);
+  /** Queue links during startup and reopen an initialized background window. */
+  function receiveDeepLink(url?: string) {
+    if (url) pendingDeepLinks.enqueue(url);
+    if (!mainWindowStartupComplete) return;
+    void restoreFromBackground()
+      .then(() => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+        pendingDeepLinks.flush();
+      })
+      .catch(() => {
+        Logger.error("Could not reopen the main window for a deep link");
+      });
   }
 
   app.on("second-instance", (_event, commandLine, _workingDirectory) => {
-    const url = commandLine.find((arg) => arg.startsWith(getScheme()));
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-
-      if (url) {
-        deliverDeepLink(url);
-      }
-      return;
-    }
-    // Launching the app again while it runs in the background reopens it.
-    void restoreFromBackground().then(() => {
-      if (url) {
-        deliverDeepLink(url);
-      }
-    });
+    receiveDeepLink(commandLine.find((arg) => arg.startsWith(`${getScheme()}://`)));
   });
 
   app.on("open-url", (event, url) => {
     event.preventDefault();
-    handleUrl(url);
+    receiveDeepLink(url);
   });
 
   app.on("window-all-closed", () => {
@@ -1303,6 +1306,8 @@ if (!gotTheLock) {
     );
 
     await createWindow();
+    mainWindowStartupComplete = true;
+    pendingDeepLinks.flush();
 
     app.on("activate", async () => {
       if (!mainWindow || mainWindow.isDestroyed()) {
@@ -1647,6 +1652,11 @@ async function openMainWindow() {
 }
 
 function initListeners(mw: BrowserWindow) {
+  mw.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) navigationReadyWindows.delete(mw);
+  });
+  mw.webContents.on("did-finish-load", () => pendingDeepLinks.flush());
+
   mw.webContents.setWindowOpenHandler(({ url }) => {
     if (isLocalIpfsApiUrl(url)) {
       Logger.info(
@@ -2230,6 +2240,13 @@ function desktopProfileBackend(event: IpcMainInvokeEvent): string {
   }
   return getApiEndpoint(getPublicRuntimeConfig());
 }
+
+// Only the owned renderer's main frame may release queued setup links.
+ipcMain.handle("navigation-ready", (event) => {
+  desktopProfileBackend(event);
+  if (mainWindow) navigationReadyWindows.add(mainWindow);
+  pendingDeepLinks.flush();
+});
 
 ipcMain.handle("native-auth:restore-profiles", (event, state: unknown) => {
   const backend = desktopProfileBackend(event);

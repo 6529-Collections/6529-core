@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { createRequire } from "node:module";
 import { test } from "node:test";
 import ts from "typescript";
 
@@ -101,5 +102,81 @@ test("production MLS WASM permission follows the baked flag without enabling Jav
     assert.ok(scripts);
     assert.equal(scripts.includes("'wasm-unsafe-eval'"), enabled);
     assert.equal(scripts.includes("'unsafe-eval'"), false);
+  }
+});
+
+test("standalone renderer build and dev apply desktop flags despite stale shell values", () => {
+  const factoryStatement = source.statements.find(
+    (node) =>
+      ts.isVariableStatement(node) &&
+      node.declarationList.declarations.some(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "nextConfigFactory",
+      ),
+  );
+  assert.ok(factoryStatement);
+  const factoryCode = ts.transpileModule(
+    `${factoryStatement.getText(source)}; globalThis.factory = nextConfigFactory;`,
+    { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
+  const { getDesktopFeatureFlags } = createRequire(
+    path.resolve("package.json"),
+  )("./scripts/helpers/desktop-feature-flags.cjs");
+  for (const phase of ["build", "dev"]) {
+    for (const backend of ["live", "test"]) {
+      let baked: Record<string, string> | undefined;
+      const env = {
+        BACKEND_TARGET: backend,
+        STAGING_API_KEY: "fixture",
+        ...Object.fromEntries(
+          Object.keys(getDesktopFeatureFlags(backend)).map((key) => [
+            key,
+            "false",
+          ]),
+        ),
+      };
+      const context = vm.createContext({
+        process: { env },
+        __dirname: "/fixture",
+        path,
+        MAIN_PUBLIC_RUNTIME_PATH: "/fixture/native.json",
+        fs: { existsSync: () => false },
+        dotenv: { config: () => {} },
+        PHASE_PRODUCTION_BUILD: "build",
+        PHASE_DEVELOPMENT_SERVER: "dev",
+        PHASE_PRODUCTION_SERVER: "server",
+        logOnce: () => {},
+        computeVersionFromPkg: () => "0.3.16",
+        resolveAssetsFlagFromEnv: () => false,
+        getCoreScheme: () => "localcore6529",
+        getDesktopFeatureFlags,
+        persistPrivateRuntimeConfig: () => {},
+        publicEnvSchema: {
+          _def: { shape: () => env },
+          safeParse: (data: Record<string, string>) => ({
+            success: true,
+            data,
+          }),
+        },
+        persistBakedArtifacts: (data: Record<string, string>) => {
+          baked = data;
+        },
+        sharedConfig: () => ({}),
+        getAssetPrefix: () => "",
+      });
+      vm.runInContext(factoryCode, context);
+      const config = context.factory(phase);
+      for (const output of [
+        baked,
+        JSON.parse(config.env.PUBLIC_RUNTIME),
+        JSON.parse(config.env.PUBLIC_RUNTIME_BROWSER),
+      ]) {
+        for (const [key, expected] of Object.entries(
+          getDesktopFeatureFlags(backend),
+        ))
+          assert.equal(output[key], expected);
+      }
+    }
   }
 });

@@ -25,13 +25,13 @@ The reviewed source tip of #278 is `be969d6caf008b2d9cf82fbfdbf26af361969875`.
 
 Signed-author indicators work independently of enrolling the viewer's own wallet.
 Sending signed posts and encrypted DMs requires explicit device setup and an approved
-wallet grant. Both Live and Test builds include signed-message, encrypted-DM and
+wallet grant. Both Live and Test builds, including standalone renderer build/dev commands, include signed-message, encrypted-DM and
 app-device-grant flags. Existing signed grant wording and cryptographic formats remain
 frontend-owned and unchanged.
 
 Refresh tokens remain encrypted in the main process. The optional setup envelope is
 ciphertext; its unlock secret remains in the private link fragment. A repeated setup link uses its incoming query and unlock fragment rather than stale
-page parameters. Native profile
+page parameters. Cold-start links wait in memory for the owned renderer to install its navigation listener; page load alone does not release private credentials. Browser signing allows only one pending wallet request, and cancellation discards late results. JSON chain IDs retain their exact value through Core and browser signing. Native profile
 recovery does not copy browser encryption databases between origins. A temporary
 fallback port can therefore have no existing device/history; returning to the saved
 origin restores access to that origin's storage. The FE website still marks its
@@ -48,4 +48,4 @@ re-enroll or clear origin storage. Verify only Desktop's own UI is loaded and re
 to the saved origin before judging history persistence. Exercise plain connection
 sharing too; secure link reception can be tested with a valid source-approved link
 when the upstream gate permits it. Check receiving a second setup link while the
-acceptance page is already open, and ensure the new code/fragment are retained.
+acceptance page is already open, and ensure the new code/fragment are retained. Also open a valid setup link with Desktop fully quit, then with its window closed in background mode.

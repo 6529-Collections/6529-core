@@ -53,6 +53,7 @@ export interface ElectronAPI {
   onWalletConnection: (connectionData: any) => void;
   handleWalletResponse: (response: any) => void;
   onNavigate: (url: any) => void;
+  navigationReady: () => Promise<void>;
   offNavigate: (callback: any) => void;
   onNotificationNavigate: (
     callback: (event: any, payload: NotificationNavigatePayload) => void

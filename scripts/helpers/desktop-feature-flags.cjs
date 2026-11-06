@@ -6,6 +6,7 @@ const DESKTOP_FEATURE_FLAGS = Object.freeze({
   NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: "true",
 });
 
+/** Return an isolated rollout policy for a supported desktop backend. */
 function getDesktopFeatureFlags(backendTarget) {
   if (backendTarget !== "live" && backendTarget !== "test") {
     throw new Error(`Unknown backend target "${backendTarget}".`);

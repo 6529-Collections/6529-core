@@ -24,13 +24,37 @@ export interface TypedDataRequest {
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 
+/** Limit the request envelope to JSON objects rather than arrays or null. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Validate the structural EIP-712 field definition before copying it. */
 const isField = (value: unknown): value is TypedDataField =>
   isRecord(value) &&
   typeof value["name"] === "string" &&
   typeof value["type"] === "string";
+
+/** Preserve JSON chain IDs when viem re-infers the EIP-712 domain types. */
+function normalizeDomain(
+  domain: Record<string, unknown>
+): Record<string, unknown> {
+  const chainId = domain["chainId"];
+  if (chainId === undefined) return { ...domain };
+  const invalid = () =>
+    new Error(
+      "Invalid typed data chain ID. Ask the requester to send a valid request."
+    );
+  if (
+    (typeof chainId === "number" && !Number.isSafeInteger(chainId)) ||
+    (typeof chainId === "string" &&
+      !/^(?:[0-9]+|0x[0-9a-fA-F]+)$/.test(chainId)) ||
+    !["string", "number", "bigint"].includes(typeof chainId)
+  )
+    throw invalid();
+  const normalized = BigInt(chainId as string | number | bigint);
+  if (normalized < 0n || normalized >= 2n ** 256n) throw invalid();
+  return { ...domain, chainId: normalized };
+}
 
 /** The address an eth_signTypedData_v4 request names, or null. */
 export function getTypedDataRequestAddress(params: unknown): string | null {
@@ -60,7 +84,8 @@ export function parseTypedDataRequest(params: unknown): TypedDataRequest {
   if (
     !isRecord(domain) ||
     !isRecord(types) ||
-    typeof primaryType !== "string" || primaryType.length === 0 ||
+    typeof primaryType !== "string" ||
+    primaryType.length === 0 ||
     !isRecord(message)
   ) {
     throw new Error("Typed data request is incomplete");
@@ -81,5 +106,11 @@ export function parseTypedDataRequest(params: unknown): TypedDataRequest {
   if (!Object.prototype.hasOwnProperty.call(messageTypes, primaryType)) {
     throw new Error(`Typed data has no ${primaryType} type`);
   }
-  return { address, domain, types: messageTypes, primaryType, message };
+  return {
+    address,
+    domain: normalizeDomain(domain),
+    types: messageTypes,
+    primaryType,
+    message,
+  };
 }
