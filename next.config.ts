@@ -519,6 +519,13 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     transpilePackages: ["react-tweet"],
     poweredByHeader: false,
+    // Match FE's per-icon imports in Core's separately owned Next config.
+    modularizeImports: {
+      "@fortawesome/free-solid-svg-icons": {
+        transform: "@fortawesome/free-solid-svg-icons/{{member}}",
+        skipDefaultConversion: true,
+      },
+    },
     redirects() {
       return Promise.resolve([
         {

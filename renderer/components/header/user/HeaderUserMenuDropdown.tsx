@@ -540,7 +540,7 @@ export default function HeaderUserMenuDropdown({
                           aria-label="Lock wallet"
                           className="tw-relative tw-grid tw-h-full tw-w-full tw-cursor-pointer tw-select-none tw-grid-cols-[1.5rem_minmax(0,1fr)] tw-items-center tw-gap-x-3 tw-rounded-lg tw-border-none tw-bg-transparent tw-px-3 tw-py-2.5 tw-text-left tw-text-md tw-font-medium tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-iron-700 hover:tw-text-iron-50 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
                         >
-                          <FontAwesomeIcon
+                          <FontAwesomeSvgIcon
                             icon={faLock}
                             height={20}
                             width={20}
@@ -558,7 +558,7 @@ export default function HeaderUserMenuDropdown({
                           aria-label="Unlock wallet"
                           className="tw-relative tw-grid tw-h-full tw-w-full tw-cursor-pointer tw-select-none tw-grid-cols-[1.5rem_minmax(0,1fr)] tw-items-center tw-gap-x-3 tw-rounded-lg tw-border-none tw-bg-transparent tw-px-3 tw-py-2.5 tw-text-left tw-text-md tw-font-medium tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-iron-700 hover:tw-text-iron-50 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
                         >
-                          <FontAwesomeIcon
+                          <FontAwesomeSvgIcon
                             icon={faLockOpen}
                             height={20}
                             width={20}
