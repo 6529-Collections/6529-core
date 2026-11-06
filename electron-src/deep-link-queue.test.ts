@@ -5,6 +5,55 @@ import { test } from "node:test";
 import ts from "typescript";
 import { DeepLinkQueue } from "./deep-link-queue";
 
+test("only a main-frame document navigation resets deep-link readiness", () => {
+  const source = ts.createSourceFile(
+    "index.ts",
+    fs.readFileSync("electron-src/index.ts", "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  let registration: ts.CallExpression | undefined;
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(source) === "mw.webContents.on" &&
+      node.arguments[0]?.getText(source) === '"did-start-navigation"'
+    )
+      registration = node;
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  assert.ok(registration, "main-window navigation readiness reset must exist");
+  let navigate!: (
+    event: object,
+    url: string,
+    isInPlace: boolean,
+    isMainFrame: boolean,
+  ) => void;
+  const navigationReadyWindows = new WeakSet<object>();
+  const mw = {
+    webContents: {
+      on: (_name: string, callback: typeof navigate) => {
+        navigate = callback;
+      },
+    },
+  };
+  const context = vm.createContext({ mw, navigationReadyWindows });
+  vm.runInContext(
+    ts.transpileModule(registration.getText(source), {
+      compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText,
+    context,
+  );
+  navigationReadyWindows.add(mw);
+  navigate({}, "http://localhost:6529/#section", true, true);
+  assert.equal(navigationReadyWindows.has(mw), true);
+  navigate({}, "http://localhost:6529/iframe", false, false);
+  assert.equal(navigationReadyWindows.has(mw), true);
+  navigate({}, "http://localhost:6529/connection/accept", false, true);
+  assert.equal(navigationReadyWindows.has(mw), false);
+});
+
 test("cold-start links retain private fragments until the current renderer is ready", () => {
   let ready = false;
   const delivered: string[] = [];
