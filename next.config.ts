@@ -600,6 +600,9 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         "@/i18n/localeDictionaries": {
           browser: "./i18n/localeDictionaries.browser.ts",
         },
+        "@/i18n/sourceMessages": {
+          browser: "./i18n/sourceMessages.browser.ts",
+        },
       },
     },
     assetPrefix,
