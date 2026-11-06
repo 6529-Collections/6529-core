@@ -105,6 +105,14 @@ function startApp(prepareNext: (port: number) => Promise<number>, remembered?: n
     DesktopProfileStorage: class {},
     readLegacyDesktopProfiles: noop,
     mainWindow: null,
+    mainWindowStartupComplete: false,
+    pendingDeepLinks: {
+      flush: () => {
+        assert.equal(context.mainWindowStartupComplete, true);
+        assert.equal(calls.at(-1), "window");
+        calls.push("deep links");
+      },
+    },
     splash: null,
     app: {
       whenReady: () => Promise.resolve(),
@@ -153,7 +161,8 @@ test("startup opens a window only after binding, using the confirmed fallback po
 
   assert.equal(harness.context.PORT, 3001);
   assert.equal(harness.store.get(RENDERER_PORT_STORE_KEY), 3001);
-  assert.deepEqual(harness.calls, ["IPFS ports", "logs", "window"]);
+  assert.deepEqual(harness.calls, ["IPFS ports", "logs", "window", "deep links"]);
+  assert.equal(harness.context.mainWindowStartupComplete, true);
 });
 
 test("a failed renderer startup shows an error and exits before any app window opens", async () => {
@@ -163,6 +172,7 @@ test("a failed renderer startup shows an error and exits before any app window o
   await harness.done;
   assert.deepEqual(harness.calls, ["error logged", "startup error", "exit 1"]);
   assert.equal(harness.context.PORT, undefined);
+  assert.equal(harness.context.mainWindowStartupComplete, false);
   assert.equal(harness.store.get(RENDERER_PORT_STORE_KEY), undefined);
 });
 
