@@ -29,7 +29,11 @@ const visit = (node: ts.Node) => {
   ts.forEachChild(node, visit);
 };
 visit(source);
-assert.equal(declarations.length, 1);
+assert.equal(
+  declarations.length,
+  1,
+  "startRedirectCountdown moved or was removed; update this harness",
+);
 const code = ts.transpileModule(declarations[0], {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 }).outputText;

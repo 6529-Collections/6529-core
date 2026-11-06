@@ -1,5 +1,6 @@
-import { TypedDataEncoder, type TypedDataDomain, type Wallet } from "ethers";
+import type { TypedDataDomain, Wallet } from "ethers";
 import { parseTypedDataRequest } from "./typedDataRequest";
+import { assertTypedDataRoot } from "./typedDataRoot";
 
 /**
  * Signs an eth_signTypedData_v4 request with a Core seed wallet's key, only
@@ -13,12 +14,7 @@ export async function signSeedWalletTypedData(
   if (request.address !== wallet.address.toLowerCase()) {
     throw new Error("Typed data request is for another wallet");
   }
-  // ethers derives the primary type from the types; it must be the one asked.
-  if (TypedDataEncoder.getPrimaryType(request.types) !== request.primaryType) {
-    throw new Error(
-      `Typed data primary type ${request.primaryType} is not the root type`
-    );
-  }
+  assertTypedDataRoot(request);
   return await wallet.signTypedData(
     request.domain as TypedDataDomain,
     request.types,

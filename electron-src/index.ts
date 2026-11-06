@@ -649,7 +649,9 @@ async function nativeCreateConnectionShare(
     accessToken: request.access_token,
     body: {
       target_client_type: targetClientType,
-      encrypted_device_setup: request.encrypted_device_setup,
+      ...(request.encrypted_device_setup === undefined
+        ? {}
+        : { encrypted_device_setup: request.encrypted_device_setup }),
       ...sourceProof,
     },
   });

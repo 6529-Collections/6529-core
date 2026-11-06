@@ -27,6 +27,7 @@ import {
   SIGN_TYPED_DATA_V4,
 } from "@/wagmiConfig/typedDataRequest";
 import { normalizeBrowserConnectorAddress } from "./browserConnector.helpers";
+import { assertTypedDataRoot } from "@/wagmiConfig/typedDataRoot";
 
 const bootstrapUtilityClasses: Record<string, string> = {
   "pt-2": "tw-pt-2",
@@ -276,6 +277,7 @@ export default function BrowserConnectorProvider(
         let typedData: ReturnType<typeof parseTypedDataRequest>;
         try {
           typedData = parseTypedDataRequest(params);
+          assertTypedDataRoot(typedData);
         } catch (parseError: unknown) {
           setError(
             parseError instanceof Error

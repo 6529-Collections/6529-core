@@ -25,20 +25,27 @@ function withEnv(overrides, run) {
   }
 }
 
-test("live builds enable signed messages, encrypted DMs and approved app grants", () => {
-  assert.deepEqual(getDesktopFeatureFlags("live"), {
-    NEXT_PUBLIC_E2EE_DM_ENABLED: "true",
-    NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES: "true",
-    NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: "true",
-  });
+test("both backend targets enable the same approved desktop features", () => {
+  for (const backendTarget of ["live", "test"]) {
+    assert.deepEqual(getDesktopFeatureFlags(backendTarget), {
+      NEXT_PUBLIC_E2EE_DM_ENABLED: "true",
+      NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES: "true",
+      NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: "true",
+    });
+  }
 });
 
-test("test-backend builds also enable app device grants", () => {
-  assert.deepEqual(getDesktopFeatureFlags("test"), {
-    NEXT_PUBLIC_E2EE_DM_ENABLED: "true",
-    NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES: "true",
-    NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: "true",
-  });
+test("callers cannot mutate the shared feature policy", () => {
+  const flags = getDesktopFeatureFlags("live");
+  flags.NEXT_PUBLIC_E2EE_DM_ENABLED = "";
+  assert.equal(
+    getDesktopFeatureFlags("live").NEXT_PUBLIC_E2EE_DM_ENABLED,
+    "true",
+  );
+  assert.equal(
+    getDesktopFeatureFlags("test").NEXT_PUBLIC_E2EE_DM_ENABLED,
+    "true",
+  );
 });
 
 test("an unknown backend target is rejected", () => {

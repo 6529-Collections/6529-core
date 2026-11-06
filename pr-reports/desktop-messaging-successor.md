@@ -17,7 +17,7 @@ The reviewed source tip of #278 is `be969d6caf008b2d9cf82fbfdbf26af361969875`.
 | Stable renderer origin `4e1645c9bd` | Reimplemented around main's owned listener and collision retries. Save only an actually bound first port; never overwrite a temporarily busy saved origin. Keep native profile recovery and startup gating. |
 | Notification navigation `bca2204c0f` | Carry the content-free notification helper, safe internal target and restore/show/focus behavior. |
 | EIP-712 connectors `d5540a1053` | Carry Core/browser signing and request display; preserve address/chain binding, cancellation and existing modal layers. Check requested root type; reject inherited type names. |
-| Private connection setup `50f9988e97` | Carry envelope validation and native request/response types. Also forward the field at the current renderer-to-native call site. Preserve link fragments; redact query/fragment/credentials from relevant native logs. |
+| Private connection setup `50f9988e97` | Carry envelope validation and native request/response types. Also forward the field at the current renderer-to-native call site. Preserve link fragments through main-process and renderer navigation, including a new setup link arriving on the same page; omit private URL details from logs. Reject decoded traversal, foreign paths and nested path encoding. |
 | README/report `bb8e5a8521`, `50f9988e97` | Replace outdated rollout instructions with the current behavior and limitations. |
 | Main merges `c8f3298501`, `be969d6caf` | Already inherited from current main. Do not revert newer port/profile/IPFS/Mac publishing changes or repeat version/dependency changes. |
 
@@ -30,7 +30,8 @@ app-device-grant flags. Existing signed grant wording and cryptographic formats 
 frontend-owned and unchanged.
 
 Refresh tokens remain encrypted in the main process. The optional setup envelope is
-ciphertext; its unlock secret remains in the private link fragment. Native profile
+ciphertext; its unlock secret remains in the private link fragment. A repeated setup link uses its incoming query and unlock fragment rather than stale
+page parameters. Native profile
 recovery does not copy browser encryption databases between origins. A temporary
 fallback port can therefore have no existing device/history; returning to the saved
 origin restores access to that origin's storage. The FE website still marks its
@@ -46,4 +47,5 @@ navigation, and Cancel/Escape during signing. If testing port contention, do not
 re-enroll or clear origin storage. Verify only Desktop's own UI is loaded and return
 to the saved origin before judging history persistence. Exercise plain connection
 sharing too; secure link reception can be tested with a valid source-approved link
-when the upstream gate permits it.
+when the upstream gate permits it. Check receiving a second setup link while the
+acceptance page is already open, and ensure the new code/fragment are retained.

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Wallet, verifyTypedData } from "ethers";
 import { signSeedWalletTypedData } from "../renderer/wagmiConfig/seedWalletTypedData";
+import { assertTypedDataRoot } from "../renderer/wagmiConfig/typedDataRoot";
 import {
   getTypedDataRequestAddress,
   parseTypedDataRequest,
@@ -115,6 +116,29 @@ describe("desktop wallet typed-data requests", () => {
     assert.equal(
       verifyTypedData(domain, types, message, signature),
       wallet.address,
+    );
+  });
+
+  it("the shared wallet guard rejects unrelated roots and a non-root primary type", () => {
+    const wallet = new Wallet(TEST_KEY);
+    const parsed = parseTypedDataRequest(request(wallet).params);
+    assert.doesNotThrow(() => assertTypedDataRoot(parsed));
+    assert.throws(() =>
+      assertTypedDataRoot({
+        ...parsed,
+        types: { ...parsed.types, Other: [{ name: "x", type: "string" }] },
+      }),
+    );
+    assert.throws(
+      () =>
+        assertTypedDataRoot({
+          ...parsed,
+          types: {
+            ...parsed.types,
+            Outer: [{ name: "grant", type: "DeviceGrant" }],
+          },
+        }),
+      /not the root type/,
     );
   });
 

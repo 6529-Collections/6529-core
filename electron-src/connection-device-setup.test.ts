@@ -19,15 +19,23 @@ const functions = [
   "nativeCreateConnectionShare",
   "nativeRedeemConnectionShare",
 ];
+const declarations = source.statements.filter(
+  (node): node is ts.FunctionDeclaration =>
+    ts.isFunctionDeclaration(node) && functions.includes(node.name?.text ?? ""),
+);
+assert.equal(
+  declarations.length,
+  functions.length,
+  "Native sharing functions moved or were removed; update this harness",
+);
+for (const declaration of declarations) {
+  assert.ok(
+    declaration.body?.statements.length,
+    `${declaration.name?.text} must have an implementation`,
+  );
+}
 const compiled = ts.transpileModule(
-  source.statements
-    .filter(
-      (node) =>
-        ts.isFunctionDeclaration(node) &&
-        functions.includes(node.name?.text ?? ""),
-    )
-    .map((node) => node.getText(source))
-    .join("\n"),
+  declarations.map((node) => node.getText(source)).join("\n"),
   {
     compilerOptions: { target: ts.ScriptTarget.ES2022 },
   },
@@ -98,6 +106,18 @@ test("native sharing carries ciphertext and native redeem hides refresh credenti
   await context.nativeCreateConnectionShare(shared);
   assert.equal(requests[0].body.encrypted_device_setup, envelope);
   assert.equal(requests[0].body.native_refresh_token, "main-only-source-token");
+  await context.nativeCreateConnectionShare({
+    target_client_type: "desktop",
+    client_type: "desktop",
+    client_address: "0xabc",
+  });
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      requests[1].body,
+      "encrypted_device_setup",
+    ),
+    false,
+  );
   const response = await context.nativeRedeemConnectionShare({
     connection_share_code: "one-time-code",
     target_client_type: "desktop",
