@@ -1852,7 +1852,7 @@ describe("session-v2.utils", () => {
     };
     const createConnectionShareNative = jest
       .fn()
-      .mockResolvedValueOnce(shareResponse);
+      .mockResolvedValue(shareResponse);
     Object.defineProperty(window, "nativeAuth", {
       configurable: true,
       value: { createConnectionShare: createConnectionShareNative },
@@ -1872,6 +1872,18 @@ describe("session-v2.utils", () => {
     });
     expect(getNativeRefreshToken).not.toHaveBeenCalled();
     expect(commonApiPost).not.toHaveBeenCalled();
+
+    await createConnectionShare({
+      targetClientType: "desktop",
+      encryptedDeviceSetup: "v1.fixture_cipher_iv.fixture_ciphertext",
+    });
+    expect(createConnectionShareNative).toHaveBeenLastCalledWith({
+      access_token: "wallet-access-token",
+      target_client_type: "desktop",
+      encrypted_device_setup: "v1.fixture_cipher_iv.fixture_ciphertext",
+      client_type: "desktop",
+      client_address: "0xabc",
+    });
   });
 
   it("fails closed when the Electron connection-share bridge is unavailable", async () => {

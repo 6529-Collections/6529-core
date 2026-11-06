@@ -27,6 +27,7 @@ import {
 import styles from "./TitleBar.module.css";
 import TooltipButton from "./TooltipButton";
 import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
+import { getDesktopNavigationTarget } from "./titlebar-navigation";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -125,21 +126,21 @@ export default function TitleBar() {
     updateNavState();
 
     const handleNavigate = (_event: any, url: string) => {
-      console.log("Navigating to:", url);
+      const target = getDesktopNavigationTarget(
+        url, window.location.origin, pathname
+      );
+      if (!target) return;
       setNavigationLoading(true);
-      const normalizedUrl = url.split("?")[0];
-      const normalizedPathname = pathname.split("?")[0];
-
-      if (normalizedPathname !== normalizedUrl) {
-        router.push(url);
+      if (!target.replace) {
+        router.push(target.url);
       } else {
-        const currentParams = new URLSearchParams(window.location.search);
-        currentParams.set("reload", "true");
-        const reloadUrl = `${normalizedUrl}?${currentParams.toString()}`;
-        router.replace(reloadUrl, { scroll: false });
+        router.replace(target.url, { scroll: false });
       }
     };
     window.api.onNavigate(handleNavigate);
+    void window.api.navigationReady().catch(() => {
+      console.error("Desktop navigation readiness could not be reported");
+    });
 
     return () => {
       window.api.offNavigationStateChange(updateNavState);

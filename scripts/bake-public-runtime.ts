@@ -3,6 +3,7 @@ import { execSync } from "node:child_process";
 import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
+import { getDesktopFeatureFlags } from "./helpers/desktop-feature-flags.cjs";
 
 const ROOT = process.cwd();
 const SRC_JSON = path.join(ROOT, "config", "public-runtime.json");
@@ -71,6 +72,7 @@ function computeVersion() {
     ...raw,
     ...getPublicRuntimeEnvOverrides(),
     ...runtimeEndpointOverrides.publicRuntime,
+    ...getDesktopFeatureFlags(backendTarget),
     VERSION,
     ASSETS_FROM_S3,
     CORE_SCHEME: coreScheme,

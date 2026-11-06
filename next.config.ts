@@ -10,9 +10,10 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getDesktopFeatureFlags } from "./scripts/helpers/desktop-feature-flags.cjs";
 
-// Mirror renderer/config/meebits445Headers.ts: the generated root config is
-// unbundled and must not import renderer TypeScript at runtime.
+// Mirror renderer/config/meebits445Headers.ts without a runtime dependency
+// on the renderer source tree.
 const meebits445Headers = {
   source: "/artwork/the-memes/445.html",
   headers: [
@@ -413,6 +414,7 @@ interface PublicEnv {
   FARCASTER_WARPCAST_API_BASE?: string;
   FARCASTER_WARPCAST_API_KEY?: string;
   DROP_FORGE_TESTNET?: boolean;
+  NEXT_PUBLIC_E2EE_DM_ENABLED?: string;
 }
 
 const CORE_SCHEMES = {
@@ -576,7 +578,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
               allowUnsafeEval:
                 process.env.NODE_ENV === "development" ||
                 process.env.NODE_ENV === "local",
-              allowWasm: process.env.NEXT_PUBLIC_E2EE_DM_ENABLED === "true",
+              allowWasm: publicEnv.NEXT_PUBLIC_E2EE_DM_ENABLED === "true",
               webSocketEndpoint: publicEnv.WS_ENDPOINT,
             },
           ),
@@ -656,6 +658,10 @@ const nextConfigFactory = (phase: string): NextConfig => {
     const shape = publicEnvSchema._def.shape();
     const publicRuntime: Record<string, string | undefined> = {};
     for (const key of Object.keys(shape)) publicRuntime[key] = process.env[key];
+    Object.assign(
+      publicRuntime,
+      getDesktopFeatureFlags(publicRuntime.BACKEND_TARGET ?? "live"),
+    );
     publicRuntime.VERSION = VERSION;
     publicRuntime.ASSETS_FROM_S3 = String(ASSETS_FROM_S3);
     publicRuntime.CORE_SCHEME = getCoreScheme({

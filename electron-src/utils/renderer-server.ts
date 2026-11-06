@@ -23,6 +23,7 @@ export async function listenRendererServer(
     const port = await selectPort({
       host: RENDERER_HOST,
       port: preferredPort,
+      ports: preferredPort === 6529 ? [] : [6529],
       portRange: [3000, 8000],
       random: true,
     });
