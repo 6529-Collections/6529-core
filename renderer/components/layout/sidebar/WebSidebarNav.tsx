@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  SIDEBAR_HOVER_CLOSE_DELAY_MS,
+  SIDEBAR_HOVER_OPEN_DELAY_MS,
+} from "@/constants/sidebar";
 import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
 import { useAuth } from "@/components/auth/Auth";
 import ChatBubbleIcon from "@/components/common/icons/ChatBubbleIcon";
@@ -46,9 +50,6 @@ const getBrowserWindow = (): Window | undefined =>
   (globalThis as BrowserGlobal).window;
 
 const getSafePathname = (pathname: string | null): string => pathname ?? "";
-
-const HOVER_OPEN_DELAY_MS = 100;
-const HOVER_CLOSE_DELAY_MS = 200;
 
 const WebSidebarNav = React.forwardRef<
   { closeSubmenu: () => void },
@@ -149,7 +150,7 @@ const WebSidebarNav = React.forwardRef<
     hoverCloseTimerRef.current = setTimeout(() => {
       hoverCloseTimerRef.current = undefined;
       closeSubmenu();
-    }, HOVER_CLOSE_DELAY_MS);
+    }, SIDEBAR_HOVER_CLOSE_DELAY_MS);
   }, [clearHoverCloseTimer, closeSubmenu]);
 
   useImperativeHandle(ref, () => ({ closeSubmenu }), [closeSubmenu]);
@@ -236,7 +237,7 @@ const WebSidebarNav = React.forwardRef<
       hoverOpenTimerRef.current = setTimeout(() => {
         hoverOpenTimerRef.current = undefined;
         openCollapsedSubmenu(sectionKey, trigger);
-      }, HOVER_OPEN_DELAY_MS);
+      }, SIDEBAR_HOVER_OPEN_DELAY_MS);
     },
     [
       clearHoverCloseTimer,

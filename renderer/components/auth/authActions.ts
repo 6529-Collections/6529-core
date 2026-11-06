@@ -81,6 +81,8 @@ export function createAuthRequestActions({
   showSessionUpgradePrompt,
   signMessage,
   signModalReason,
+  ownProfileId,
+  signAppGrant,
 }: CreateAuthRequestActionsParams): AuthRequestActions {
   const signWithWallet = async (
     {
@@ -660,6 +662,8 @@ export function createAuthRequestActions({
 
   const requestSignedMessagesGrant = createSignedMessagesGrantRequest({
     address,
+    ownProfileId,
+    signAppGrant,
     canAuthenticate:
       !activeProfileProxy && enableWalletAuthentication && !isDevAuthEnabled(),
     canSignActiveWallet,

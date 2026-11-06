@@ -2,6 +2,7 @@ import { queueNativePushLogout } from "@/services/notifications/push-installatio
 import { unwrapNativeAuthResult } from "@/shared/native-auth-result";
 import { Capacitor } from "@capacitor/core";
 import { isElectron } from "@/helpers";
+import type { ApiRedeemConnectionShareResponse } from "@/generated/models/ApiRedeemConnectionShareResponse";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import { getAuthJwt, getWalletAddress, setAuthJwt } from "./auth.utils";
@@ -50,7 +51,10 @@ import type {
   SessionWebResponse,
 } from "./session-v2.types";
 export type { AuthSessionClientType } from "./session-refresh-coordination.utils";
-export type { RefreshTokenSessionClientType, SessionNativeResponse } from "./session-v2.types";
+export type {
+  RefreshTokenSessionClientType,
+  SessionNativeResponse,
+} from "./session-v2.types";
 
 type SessionLoginResponse = SessionWebResponse | SessionNativeResponse;
 type SessionRefreshResponse = SessionWebResponse | SessionNativeResponse;
@@ -77,15 +81,10 @@ interface CreateLegacyDesktopConnectionShareResponse {
   readonly deep_link_path: string;
 }
 
-interface RedeemConnectionShareResponse {
-  readonly address: string;
-  readonly role: string | null;
-  readonly access_token: string;
-  readonly access_token_expires_at: string;
-  readonly client_type?: RefreshTokenSessionClientType | undefined;
-  readonly native_refresh_token: string;
-  readonly refresh_token_expires_at: string;
-}
+type RedeemConnectionShareResponse = Omit<
+  ApiRedeemConnectionShareResponse,
+  "client_type"
+> & { readonly client_type?: RefreshTokenSessionClientType | undefined };
 
 interface NativeConnectionShareSourceProof {
   readonly client_type: RefreshTokenSessionClientType;
@@ -820,9 +819,11 @@ async function getNativeConnectionShareSourceProof(): Promise<NativeConnectionSh
 export async function createConnectionShare({
   signal,
   targetClientType = "native",
+  encryptedDeviceSetup,
 }: {
   readonly signal?: AbortSignal | undefined;
   readonly targetClientType?: RefreshTokenSessionClientType | undefined;
+  readonly encryptedDeviceSetup?: string | undefined;
 }): Promise<CreateConnectionShareResponse> {
   const sourceProof = await getNativeConnectionShareSourceProof();
   if (isElectron()) {
@@ -847,10 +848,12 @@ export async function createConnectionShare({
   const body = sourceProof
     ? {
         target_client_type: targetClientType,
+        encrypted_device_setup: encryptedDeviceSetup,
         ...sourceProof,
       }
     : {
         target_client_type: targetClientType,
+        encrypted_device_setup: encryptedDeviceSetup,
       };
 
   return await commonApiPost<
@@ -997,7 +1000,10 @@ export async function redeemConnectionShare(
   targetClientType: RefreshTokenSessionClientType = isElectron()
     ? "desktop"
     : "native"
-): Promise<SessionNativeResponse> {
+): Promise<
+  SessionNativeResponse &
+    Pick<RedeemConnectionShareResponse, "encrypted_device_setup">
+> {
   if (isElectron()) {
     const redeemDesktopConnectionShare = requireDesktopAuthBridgeMethod(
       "redeemConnectionShare",
@@ -1027,6 +1033,13 @@ export async function redeemConnectionShare(
 
   return {
     ...response,
+    role: response.role ?? null,
+    access_token_expires_at: new Date(
+      response.access_token_expires_at
+    ).toISOString(),
+    refresh_token_expires_at: new Date(
+      response.refresh_token_expires_at
+    ).toISOString(),
     client_type: response.client_type ?? targetClientType,
   };
 }

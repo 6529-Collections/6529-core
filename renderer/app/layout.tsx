@@ -12,6 +12,13 @@ import "@/styles/wave-navigation-transition.css";
 import "@/styles/animations.css";
 import "@/styles/globals.css";
 
+import LegacyBrowserNotice from "@/components/legacy-browser/LegacyBrowserNotice";
+import {
+  LEGACY_BROWSER_FLAG_SCRIPT,
+  LEGACY_BROWSER_NOTICE_SCRIPT,
+  LEGACY_BROWSER_STYLES,
+  LEGACY_BROWSER_SYNTAX_SCRIPT,
+} from "@/components/legacy-browser/legacyBrowserGate";
 import DynamicHeadTitle from "@/components/dynamic-head/DynamicHeadTitle";
 import AwsRumProvider from "@/components/monitoring/AwsRumProvider";
 import MobileLaunchTimingReporter from "@/components/monitoring/MobileLaunchTimingReporter";
@@ -74,6 +81,18 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* First, before any bundle: browsers that cannot run the site (iOS
+            before 16.4) get a notice instead of a dead page. */}
+        <style dangerouslySetInnerHTML={{ __html: LEGACY_BROWSER_STYLES }} />
+        <script
+          dangerouslySetInnerHTML={{ __html: LEGACY_BROWSER_FLAG_SCRIPT }}
+        />
+        <script
+          dangerouslySetInnerHTML={{ __html: LEGACY_BROWSER_SYNTAX_SCRIPT }}
+        />
+        <script
+          dangerouslySetInnerHTML={{ __html: LEGACY_BROWSER_NOTICE_SCRIPT }}
+        />
         <style dangerouslySetInnerHTML={{ __html: SMALL_WEB_STARTUP_STYLES }} />
         <script
           id="small-web-startup-bootstrap"
@@ -107,6 +126,7 @@ export default function RootLayout({
       </head>
       {/* The touch-first helper may restore data-fine-pointer before hydration. */}
       <body suppressHydrationWarning>
+        <LegacyBrowserNotice baseEndpoint={publicEnv.BASE_ENDPOINT} />
         <MobileLaunchTimingReporter />
         <AwsRumProvider>
           {/* Core's client shell reads the live URL in analytics, title, wave,

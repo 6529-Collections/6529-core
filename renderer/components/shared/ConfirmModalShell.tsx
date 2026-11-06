@@ -74,6 +74,7 @@ export function ConfirmModalShell(props: {
   footer: ReactNode;
   initialFocusRef?: RefObject<HTMLElement | null> | undefined;
   onBackdropClick?: (() => void) | undefined;
+  dismissOnBackdropClick?: boolean | undefined;
   overlayClassName?: string | undefined;
   dialogClassName?: string | undefined;
   bodyClassName?: string | undefined;
@@ -88,6 +89,7 @@ export function ConfirmModalShell(props: {
     footer,
     initialFocusRef,
     onBackdropClick,
+    dismissOnBackdropClick = true,
     overlayClassName = "",
     dialogClassName = "",
     bodyClassName = "",
@@ -186,7 +188,7 @@ export function ConfirmModalShell(props: {
   const overlay = (
     <div
       className={`tw-fixed tw-inset-0 ${overlayZClass} tw-flex tw-items-center tw-justify-center tw-bg-black/50 ${overlayClassName}`.trim()}
-      onClick={onBackdropClick}
+      onClick={dismissOnBackdropClick ? onBackdropClick : undefined}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}

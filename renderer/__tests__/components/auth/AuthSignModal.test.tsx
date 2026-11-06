@@ -24,29 +24,33 @@ const makeProps = (): ComponentProps<typeof AuthSignModal> => ({
   shouldShowSignModal: true,
 });
 const escapeDialog = () =>
-  fireEvent(
-    screen.getByRole("dialog"),
-    new Event("cancel", { bubbles: true, cancelable: true })
-  );
+  fireEvent.keyDown(screen.getByRole("button", { name: "Cancel" }), {
+    key: "Escape",
+  });
 describe("AuthSignModal onboarding", () => {
   it("explains the address signature and waits for an explicit signing action", async () => {
     const props = makeProps();
     render(<AuthSignModal {...props} />);
     expect(
       screen.getByRole("dialog", { name: "Sign in to 6529" })
-    ).toHaveAccessibleDescription(
-      "Sign a message to confirm this address is yours."
-    );
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Sign a message to confirm this address is yours.")
+    ).toBeInTheDocument();
+    expect(document.querySelector("dialog")).not.toBeInTheDocument();
     expect(screen.getByText(mockAddress)).toBeInTheDocument();
     expect(screen.getByText("No transaction or gas fees.")).toBeInTheDocument();
-    expect(screen.queryByText(/JWT/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/JWT|SIWE|Version 1/u)).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent)
+    ).toEqual(["Cancel", "Sign message"]);
     expect(props.onConfirmSignRequest).not.toHaveBeenCalled();
     const button = screen.getByRole("button", { name: "Sign message" });
     expect(button).toHaveFocus();
     await userEvent.click(button);
     expect(props.onConfirmSignRequest).toHaveBeenCalledTimes(1);
   });
-  it("announces wallet confirmation and prevents duplicate signing or cancellation", () => {
+  it("announces wallet confirmation, prevents duplicate signing and keeps cancellation available", () => {
     const props = makeProps();
     render(
       <AuthSignModal {...props} isSigningPending isSignRequestInProgress />
@@ -55,24 +59,28 @@ describe("AuthSignModal onboarding", () => {
     const button = screen.getByRole("button", { name: /Check your wallet/ });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-busy", "true");
-    expect(
-      screen.queryByRole("button", { name: "Cancel" })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
     fireEvent.click(button);
     escapeDialog();
     expect(
       screen.queryByRole("button", { name: "Cancel sign-in" })
     ).not.toBeInTheDocument();
-    expect(props.onCancelSignRequest).not.toHaveBeenCalled();
+    expect(props.onCancelSignRequest).toHaveBeenCalledTimes(1);
     expect(props.onConfirmSignRequest).not.toHaveBeenCalled();
   });
-  it("uses the existing cancellation callback for the close control", async () => {
+  it("cancels sign-in with the explicit Cancel button", async () => {
     const props = makeProps();
     render(<AuthSignModal {...props} />);
-    await userEvent.click(
-      screen.getByRole("button", { name: "Cancel sign-in" })
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(props.onCancelSignRequest).toHaveBeenCalledTimes(1);
+  });
+  it("ignores clicks outside the dialog surface", () => {
+    const props = makeProps();
+    render(<AuthSignModal {...props} />);
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+    expect(props.onCancelSignRequest).not.toHaveBeenCalled();
+    expect(dialog).toBeInTheDocument();
   });
   it("uses the existing cancellation callback for Escape before signing", () => {
     const props = makeProps();
@@ -89,7 +97,9 @@ describe("AuthSignModal onboarding", () => {
         sessionUpgradeCanDismiss={false}
       />
     );
-    escapeDialog();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Sign message" }), {
+      key: "Escape",
+    });
     expect(props.onCancelSignRequest).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("button", { name: "Cancel" })

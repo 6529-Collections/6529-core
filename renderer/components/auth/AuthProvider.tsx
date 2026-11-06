@@ -17,7 +17,6 @@ import {
 } from "@/components/utils/toast/AppToast";
 import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
-import { isElectron } from "@/helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { useContentModerationStateScope } from "@/hooks/content-moderation/useContentModerationStateScope";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -28,7 +27,6 @@ import {
   getWalletAddress,
   hasActiveSessionV2Auth,
   PROFILE_SWITCHED_EVENT,
-  setActiveWalletAccount,
   syncConnectedWalletProfile,
   WALLET_ACCOUNTS_UPDATED_EVENT,
 } from "@/services/auth/auth.utils";
@@ -150,9 +148,9 @@ export default function Auth({
     !isSigningOutAll && isConnectedProfileForAddress ? loadedProfile : null;
   const isConnectedProfileSettling = Boolean(
     !isSigningOutAll &&
-      address &&
-      loadedProfile &&
-      !isConnectedProfileForAddress
+    address &&
+    loadedProfile &&
+    !isConnectedProfileForAddress
   );
   const isFetchingConnectedProfile =
     !isSigningOutAll && (fetchingProfile || isConnectedProfileSettling);
@@ -208,6 +206,12 @@ export default function Auth({
     }
 
     const recheckStoredAuth = () => {
+      if (
+        getWalletAddress()?.toLowerCase() !==
+        latestAddressRef.current?.toLowerCase()
+      ) {
+        abortCurrentAuthOperation();
+      }
       setAuthStorageRevision((revision) => revision + 1);
     };
 
@@ -232,7 +236,7 @@ export default function Auth({
         recheckStoredAuth
       );
     };
-  }, []);
+  }, [abortCurrentAuthOperation]);
 
   const { data: profileProxies } = useQuery<ApiProfileProxy[]>({
     queryKey: [
@@ -439,15 +443,16 @@ export default function Auth({
       setShowSignModal(false);
     }
 
-    // In Electron the active profile is explicit state owned by connector
-    // selection/authentication. A stale live connector must never overwrite it.
+    // The selected profile is explicit state owned by profile selection/auth.
+    // A stale live connector must never overwrite it or validate another profile.
     const activeStoredAddress = getWalletAddress();
     if (
-      !isElectron() &&
       activeStoredAddress &&
       activeStoredAddress.toLowerCase() !== address.toLowerCase()
     ) {
-      setActiveWalletAccount(address);
+      // Another tab selected a different profile. Let the connection provider
+      // adopt it before validating; stale context must never rewrite selection.
+      return undefined;
     }
 
     const currentAddress = address;
@@ -606,6 +611,7 @@ export default function Auth({
     showSessionUpgradePrompt,
     signMessage,
     signModalReason,
+    ownProfileId: connectedProfile?.id ?? null,
   });
 
   const navigateAfterProfileSwitchForRoute = useCallback(() => {

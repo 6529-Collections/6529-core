@@ -133,6 +133,7 @@ export function AuthSignModal({
       bodyClassName={modalStyles["signModalBody"]}
       footerClassName={modalStyles["signModalFooter"]}
       onBackdropClick={canDismissSignModal ? onCancelSignRequest : undefined}
+      dismissOnBackdropClick={false}
       footer={
         <>
           {canDismissSignModal && (
@@ -140,7 +141,7 @@ export function AuthSignModal({
               type="button"
               onClick={onCancelSignRequest}
               variant="secondary"
-              size="md"
+              size="lg"
               className="tw-min-w-32 max-[576px]:tw-min-w-0 max-[576px]:tw-flex-1"
             >
               {isSessionUpgradePrompt && sessionUpgradeHasDeadline
@@ -181,7 +182,7 @@ export function AuthSignModal({
         </>
       }
     >
-      <p className={styles["signModalLead"]}>{signModalLead}</p>
+      <p className={modalStyles["signModalLead"]}>{signModalLead}</p>
 
       {isSessionUpgradePrompt ? (
         <ul className={styles["signModalList"]}>
