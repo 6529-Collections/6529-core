@@ -12,6 +12,7 @@ describe("native auth session response", () => {
       access_token_expires_at: "2026-06-10T00:00:00.000Z",
       native_refresh_token: "secret-main-process-refresh-token",
       refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+      encrypted_device_setup: "v1.fixture_cipher_iv.fixture_ciphertext",
     };
 
     const sanitized = sanitizeNativeSessionResponse(response);
@@ -23,5 +24,6 @@ describe("native auth session response", () => {
     );
     assert.equal(sanitized.access_token, response.access_token);
     assert.equal(sanitized.address, response.address);
+    assert.equal(sanitized.encrypted_device_setup, response.encrypted_device_setup);
   });
 });

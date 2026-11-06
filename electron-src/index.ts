@@ -116,9 +116,19 @@ import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import {
+  getDesktopNotificationOptions,
+  getNotificationNavigatePayload,
+} from "./desktop-notification";
+import {
   pinnedWindowNavigation,
   shouldOpenInExternalBrowser,
 } from "./navigation-policy";
+import { isEncryptedConnectionDeviceSetup } from "../shared/connection-device-setup";
+import {
+  getConnectionDeepLinkNavigation,
+  getNavigationLogUrl,
+} from "./connection-deep-link";
+import { RENDERER_PORT_STORE_KEY, resolveRendererPort } from "./renderer-port";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
 contextMenu({
@@ -186,6 +196,7 @@ interface NativeSessionRefreshRequest {
 }
 
 interface NativeConnectionShareRequest {
+  readonly encrypted_device_setup?: string;
   readonly access_token?: string | null;
   readonly target_client_type?: RefreshTokenClientType;
   readonly client_type?: RefreshTokenClientType;
@@ -212,6 +223,7 @@ interface NativeSessionLogoutRequest extends NativeSessionRefreshRequest {
 interface NativeRemoveRefreshTokenRequest extends NativeSessionRefreshRequest {}
 
 interface NativeSessionLoginResponse {
+  readonly encrypted_device_setup?: string | null;
   readonly client_type: "native" | "desktop";
   readonly address: string;
   readonly role: string | null;
@@ -452,6 +464,8 @@ function isNativeConnectionShareRequest(
   }
   const record = request as Partial<NativeConnectionShareRequest>;
   return (
+    (record.encrypted_device_setup === undefined ||
+      isEncryptedConnectionDeviceSetup(record.encrypted_device_setup)) &&
     hasOptionalAccessToken(record) &&
     hasOptionalConnectionShareSourceProof(record) &&
     (record.target_client_type === undefined ||
@@ -520,7 +534,10 @@ function isNativeSessionLoginResponse(
     typeof record.access_token === "string" &&
     typeof record.access_token_expires_at === "string" &&
     typeof record.native_refresh_token === "string" &&
-    typeof record.refresh_token_expires_at === "string"
+    typeof record.refresh_token_expires_at === "string" &&
+    (record.encrypted_device_setup === undefined ||
+      record.encrypted_device_setup === null ||
+      isEncryptedConnectionDeviceSetup(record.encrypted_device_setup))
   );
 }
 
@@ -632,6 +649,7 @@ async function nativeCreateConnectionShare(
     accessToken: request.access_token,
     body: {
       target_client_type: targetClientType,
+      encrypted_device_setup: request.encrypted_device_setup,
       ...sourceProof,
     },
   });
@@ -1143,24 +1161,14 @@ if (!gotTheLock) {
       }
       const connectionInfo = JSON.parse(encodedData);
       mainWindow?.webContents.send("wallet-connection", connectionInfo);
-    } else if (urlObj.host === "navigate") {
-      Logger.info(
-        `Handling navigate Deep Link: ${
-          urlObj.pathname
-        }?${urlObj.searchParams.toString()}`,
-      );
-      mainWindow?.webContents.send(
-        "navigate",
-        `${urlObj.pathname}?${urlObj.searchParams.toString()}`,
-      );
-    } else if (urlObj.host === "share-connection") {
-      Logger.info("Handling share connection Deep Link");
-      mainWindow?.webContents.send(
-        "navigate",
-        `/accept-connection-sharing?${urlObj.searchParams.toString()}`,
-      );
     } else {
-      Logger.info("Unknown Deep Link", urlObj);
+      const navigation = getConnectionDeepLinkNavigation(urlObj);
+      if (navigation) {
+        Logger.info("Handling navigation Deep Link", getNavigationLogUrl(url));
+        mainWindow?.webContents.send("navigate", navigation);
+      } else {
+        Logger.info("Unknown Deep Link");
+      }
     }
   }
 
@@ -1235,8 +1243,13 @@ if (!gotTheLock) {
       app.dock?.setIcon(path.join(__dirname, "assets", "icon.icns"));
     }
 
+    initStore();
     try {
-      PORT = await prepareNext(6529);
+      PORT = await resolveRendererPort({
+        remembered: getValue(RENDERER_PORT_STORE_KEY),
+        listen: prepareNext,
+        remember: (port) => setValue(RENDERER_PORT_STORE_KEY, port),
+      });
       Logger.info("PORT:", PORT);
     } catch (error) {
       Logger.error("Failed to start the Desktop renderer server", error);
@@ -1249,7 +1262,6 @@ if (!gotTheLock) {
     }
     await resolvePorts();
     await initLogs();
-    initStore();
     desktopProfiles = new DesktopProfileStorage({
       get: getValue,
       set: setValue,
@@ -1644,9 +1656,12 @@ function initListeners(mw: BrowserWindow) {
     }
 
     if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
-      Logger.info("Opening external web URL in the default browser:", url);
-      shell.openExternal(url).catch((error) => {
-        Logger.error("Failed to open external web URL:", url, error);
+      Logger.info(
+        "Opening external web URL in the default browser:",
+        getNavigationLogUrl(url),
+      );
+      shell.openExternal(url).catch(() => {
+        Logger.error("Failed to open external web URL:", getNavigationLogUrl(url));
       });
       return { action: "deny" };
     }
@@ -1668,11 +1683,11 @@ function initListeners(mw: BrowserWindow) {
     if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
       Logger.info(
         "Preventing external main-window navigation and opening the default browser:",
-        url
+        getNavigationLogUrl(url)
       );
       event.preventDefault();
-      shell.openExternal(url).catch((error) => {
-        Logger.error("Failed to open external web URL:", url, error);
+      shell.openExternal(url).catch(() => {
+        Logger.error("Failed to open external web URL:", getNavigationLogUrl(url));
       });
     }
   });
@@ -1683,7 +1698,7 @@ function initListeners(mw: BrowserWindow) {
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       Logger.error(
-        `Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`,
+        `Failed to load URL: ${getNavigationLogUrl(validatedURL)}, Error Code: ${errorCode}, Description: ${errorDescription}`,
       );
       // Make Chromium's navigation error visible rather than stranding the
       // user behind a splash. Aborted/subframe loads are not startup failure.
@@ -1831,7 +1846,7 @@ ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
 
 ipcMain.on("open-external", (event, url) => {
   event.preventDefault();
-  Logger.info("Opening external URL:", url);
+  Logger.info("Opening external URL:", getNavigationLogUrl(url));
   if (isLocalIpfsApiUrl(url)) {
     openIpfsWindow(url);
   } else {
@@ -1842,25 +1857,27 @@ ipcMain.on("open-external", (event, url) => {
 const browserLaunchDeps: BrowserLaunchDeps = {
   openWithApp: (url, name) => open(url, { app: { name: name as string | string[] } }),
   openDefault: (url) => shell.openExternal(url),
-  log: (message, detail) => Logger.error(message, detail),
+  // Launcher errors may embed the full command, including private setup URLs.
+  log: (message, detail) =>
+    Logger.error(message, detail instanceof Error ? detail.name : undefined),
   platform: process.platform,
 };
 
 ipcMain.on("open-external-chrome", (event, url) => {
   event.preventDefault();
-  Logger.info("Opening external URL in Chrome:", url);
+  Logger.info("Opening external URL in Chrome:", getNavigationLogUrl(url));
   openInBrowser(url, apps.chrome, "Chrome", browserLaunchDeps);
 });
 
 ipcMain.on("open-external-firefox", (event, url) => {
   event.preventDefault();
-  Logger.info("Opening external URL in Firefox:", url);
+  Logger.info("Opening external URL in Firefox:", getNavigationLogUrl(url));
   openInBrowser(url, apps.firefox, "Firefox", browserLaunchDeps);
 });
 
 ipcMain.on("open-external-brave", (event, url) => {
   event.preventDefault();
-  Logger.info("Opening external URL in Brave:", url);
+  Logger.info("Opening external URL in Brave:", getNavigationLogUrl(url));
   // apps.brave names Brave per platform; "Brave Browser" is its macOS name only.
   openInBrowser(url, apps.brave, "Brave", browserLaunchDeps);
 });
@@ -2301,20 +2318,21 @@ ipcMain.on(
 
     shownNotifications.add(notificationKey);
 
-    const notification = new Notification({
-      title,
-      body,
-      icon: pfp,
-    });
+    const notification = new Notification(
+      getDesktopNotificationOptions({ title, body, icon: pfp }),
+    );
     notification.on("click", () => {
-      mainWindow?.webContents.send(
+      const window = mainWindow;
+      if (!window || window.isDestroyed()) {
+        return;
+      }
+      // Bring the app forward so the click visibly opens its target.
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+      window.webContents.send(
         "notification-navigate",
-        {
-          path: redirectPath || "/notifications",
-          targetAddress: navigationContext?.targetAddress ?? null,
-          targetProfileId: navigationContext?.targetProfileId ?? null,
-          targetProfileHandle: navigationContext?.targetProfileHandle ?? null,
-        },
+        getNotificationNavigatePayload(redirectPath, navigationContext),
       );
     });
     notification.show();

@@ -160,6 +160,34 @@ nesting, a provider-independent route error fallback, compact Core wallet
 active/switch states, fixed request actions, and public-origin page sharing in
 Electron.
 
+## Signed posts and encrypted messages
+
+Desktop dev and distribution commands enable signed posts, encrypted DMs and
+approved app device grants for both Live and Test backends, matching frontend
+production. The shared feature flags are baked into the renderer and native
+public runtime; production CSP permits the verified MLS WebAssembly module.
+A rebuild is required for an installed app to receive these settings.
+
+Core seed wallets and the browser wallet connector support EIP-712 app grants.
+Setup remains explicit: enabling the feature does not enroll wallets or devices
+without consent. Connection sharing carries ciphertext through native auth;
+the unlock secret stays in the private link fragment and refresh tokens stay
+in the main process. The website's separately controlled Desktop secure-share
+choice remains unchanged.
+
+The renderer remembers its first successfully bound port (`renderer_port` in
+its existing store). Later launches prefer that origin for device keys and
+local encrypted history, retaining the saved port if it is temporarily busy.
+Desktop always binds its own loopback server; it never adopts another app's
+listener. Existing native profile recovery remains active on fallback ports.
+That recovery restores accounts, not origin-bound encryption keys: keys and
+history remain at their original origin and become available on returning to
+it. Do not re-enroll on a temporary fallback just to recover existing history.
+
+Encrypted desktop notifications contain no sender, message text or image.
+Clicking one restores/focuses the existing main window and opens the chat;
+foreign navigation targets fall back to Notifications.
+
 ## Building and Publishing
 
 > ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.

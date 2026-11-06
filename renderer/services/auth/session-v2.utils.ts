@@ -840,6 +840,9 @@ export async function createConnectionShare({
         createDesktopConnectionShare({
           access_token: getAuthJwt(),
           target_client_type: targetClientType,
+          ...(encryptedDeviceSetup === undefined
+            ? {}
+            : { encrypted_device_setup: encryptedDeviceSetup }),
           ...sourceProof,
         }),
     });

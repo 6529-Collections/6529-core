@@ -223,6 +223,7 @@ export const nativeAuth = {
     readonly client_address: string;
   }) => ipcRenderer.invoke("native-auth:session-refresh", request),
   createConnectionShare: (request: {
+    readonly encrypted_device_setup?: string;
     readonly access_token?: string | null;
     readonly target_client_type?: "native" | "desktop";
     readonly client_type?: "native" | "desktop";

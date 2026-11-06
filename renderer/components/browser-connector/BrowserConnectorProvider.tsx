@@ -4,17 +4,28 @@ import { useSearchParams } from "next/navigation";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import { hexToString } from "viem";
-import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
+import {
+  useChainId,
+  useSendTransaction,
+  useSignMessage,
+  useSignTypedData,
+} from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import styles from "./BrowserConnector.module.css";
 import BrowserConnectorWalletIntentNotice, {
   type BrowserConnectorWalletIntentNoticeType,
 } from "./BrowserConnectorWalletIntentNotice";
+import {
+  getTypedDataRequestAddress,
+  parseTypedDataRequest,
+  SIGN_TYPED_DATA_V4,
+} from "@/wagmiConfig/typedDataRequest";
 import { normalizeBrowserConnectorAddress } from "./browserConnector.helpers";
 
 const bootstrapUtilityClasses: Record<string, string> = {
@@ -110,10 +121,16 @@ export default function BrowserConnectorProvider(
     data: sendTransactionData,
     error: sendTransactionError,
   } = useSendTransaction();
+  const {
+    signTypedData,
+    data: signTypedDataData,
+    error: signTypedDataError,
+  } = useSignTypedData();
 
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  const responseStartedRef = useRef(false);
   const intendedWalletAddress = useMemo(
     () =>
       normalizeBrowserConnectorAddress(
@@ -192,11 +209,18 @@ export default function BrowserConnectorProvider(
           typeof params?.[0]?.from === "string" ? params[0].from : null;
         break;
       }
+      case SIGN_TYPED_DATA_V4: {
+        requester = getTypedDataRequestAddress(params);
+        break;
+      }
     }
     setRequesterAddress(requester);
   }, [requestParams]);
 
   function startRedirectCountdown(d: any) {
+    // Cancellation wins over a signature that resolves later in the wallet.
+    if (responseStartedRef.current) return false;
+    responseStartedRef.current = true;
     const interval = setInterval(() => {
       setRedirectCountdown((prev) => prev - 1);
     }, 1000);
@@ -204,17 +228,17 @@ export default function BrowserConnectorProvider(
       clearInterval(interval);
       openApp(d);
     }, 3000);
+    return true;
   }
 
   useEffect(() => {
-    const d = signMessageData ?? sendTransactionData;
-    if (!d) return;
+    const d = signMessageData ?? sendTransactionData ?? signTypedDataData;
+    if (!d || !startRedirectCountdown(d)) return;
     setIsSuccess(true);
-    startRedirectCountdown(d);
-  }, [signMessageData, sendTransactionData]);
+  }, [signMessageData, sendTransactionData, signTypedDataData]);
 
   useEffect(() => {
-    const e = signMessageError ?? sendTransactionError;
+    const e = signMessageError ?? sendTransactionError ?? signTypedDataError;
     if (!e) return;
 
     const eMsg =
@@ -223,9 +247,10 @@ export default function BrowserConnectorProvider(
         ?.split(".")[0]
         ?.split("Contract Call")[0] ?? "Unknown error";
     setError(eMsg ?? "");
-  }, [signMessageError, sendTransactionError]);
+  }, [signMessageError, sendTransactionError, signTypedDataError]);
 
   async function onSign() {
+    if (responseStartedRef.current) return;
     setError(null);
     const { method, params } = methodParams;
     switch (method) {
@@ -245,17 +270,39 @@ export default function BrowserConnectorProvider(
         sendTransaction({ ...sendParams, chainId: chainId });
         break;
       }
+      case SIGN_TYPED_DATA_V4: {
+        // EIP-712 (encrypted-messages and app device grants): the browser
+        // wallet shows the typed data and signs it unchanged.
+        let typedData: ReturnType<typeof parseTypedDataRequest>;
+        try {
+          typedData = parseTypedDataRequest(params);
+        } catch (parseError: unknown) {
+          setError(
+            parseError instanceof Error
+              ? parseError.message
+              : "Invalid typed data request"
+          );
+          break;
+        }
+        signTypedData({
+          account: typedData.address as `0x${string}`,
+          domain: typedData.domain,
+          types: typedData.types,
+          primaryType: typedData.primaryType,
+          message: typedData.message,
+        });
+        break;
+      }
       default:
         setError(`Unsupported method: ${method}`);
     }
   }
 
   async function onCancel() {
-    setIsCancelled(true);
     const d = {
       error: "Cancelled",
     };
-    startRedirectCountdown(d);
+    if (startRedirectCountdown(d)) setIsCancelled(true);
   }
 
   async function openApp(d: any) {

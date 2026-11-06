@@ -1051,6 +1051,22 @@ assertContract(
 );
 const browserConnectorPath = "renderer/wagmiConfig/browserConnector.ts";
 const browserConnector = parseSource(browserConnectorPath);
+const desktopConnectionShare = findFunction(sessionUtils, "createConnectionShare");
+assertContract(
+  desktopConnectionShare && objectPropertyReferencesIdentifier(
+    desktopConnectionShare, "encrypted_device_setup", "encryptedDeviceSetup",
+  ),
+  sessionUtilsPath,
+  "desktop connection sharing must carry encrypted device setup through the native bridge",
+);
+assertContract(
+  callsIdentifier(
+    findFunction(mainSource, "isNativeConnectionShareRequest"),
+    "isEncryptedConnectionDeviceSetup",
+  ),
+  mainPath,
+  "main-process connection sharing must validate the opaque setup envelope",
+);
 const persistedSessionRefresh = findVariable(
   browserConnector,
   "refreshPersistedNativeSession",
@@ -1102,6 +1118,12 @@ for (const functionName of [
 
 const preloadTypesPath = "shared/preload-types.ts";
 const preloadTypes = parseSource(preloadTypesPath);
+assertContract(
+  Boolean(getInterfaceMember(preloadTypes, "ElectronNativeAuthSessionResponse", "encrypted_device_setup")),
+  preloadTypesPath,
+  "native auth responses must preserve encrypted setup ciphertext",
+);
+
 for (const memberName of [
   "profilesReady",
   "restoreProfiles",
@@ -2079,6 +2101,16 @@ const seedConnector = parseSource(seedConnectorPath);
 const seedConnectorFunction = findFunction(
   seedConnector,
   "seedWalletConnector",
+);
+assertContract(
+  seedConnectorFunction && callsIdentifier(seedConnectorFunction, "signSeedWalletTypedData"),
+  seedConnectorPath,
+  "Core seed wallets must support EIP-712 signing for app device grants",
+);
+assertContract(
+  callsIdentifier(findFunction(parseSource("renderer/components/browser-connector/BrowserConnectorProvider.tsx"), "BrowserConnectorProvider"), "useSignTypedData"),
+  "renderer/components/browser-connector/BrowserConnectorProvider.tsx",
+  "browser wallet handoffs must support EIP-712 app device grants",
 );
 assertContract(
   seedConnectorFunction &&
