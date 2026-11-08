@@ -18,7 +18,7 @@ import {
   commonApiPost,
   commonApiPostForm,
 } from "@/services/api/common-api";
-import { uploadProfilePicture } from "@/services/api/profile-picture-upload-api";
+import { uploadProfilePictureFile } from "@/components/ipfs/profilePictureUpload";
 import { getUploadErrorMessage } from "@/services/api/upload-error";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FormEvent } from "react";
@@ -101,7 +101,7 @@ export default function UserPageHeaderEditPfp({
         if (!profile.classification) {
           return;
         }
-        const ipfs = await uploadProfilePicture(pfp as File);
+        const ipfs = await uploadProfilePictureFile(pfp as File);
         const ipfsBody: ApiCreateOrUpdateProfileRequest = {
           handle: profile.handle,
           classification: profile.classification,

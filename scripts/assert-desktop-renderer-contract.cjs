@@ -2472,6 +2472,43 @@ assertContract(
   ipfsContextPath,
   "disabled local IPFS must not fall back to local ports or initialize a file service",
 );
+// Owner decision: Desktop pins profile pictures on the user's own IPFS node,
+// with no API fallback, while the website uploads them through the API.
+const pfpUploadPath = "renderer/components/ipfs/profilePictureUpload.ts";
+const pfpUploadFunction = findFunction(
+  parseSource(pfpUploadPath),
+  "uploadProfilePictureFile",
+);
+assertContract(
+  pfpUploadFunction &&
+    callsIdentifier(pfpUploadFunction, "hasDesktopIpfsBridge") &&
+    callsIdentifier(pfpUploadFunction, "addFileToIpfs"),
+  pfpUploadPath,
+  "Desktop must upload profile pictures to the user's local IPFS node",
+);
+const ipfsUploadClient = findVariable(
+  parseSource(ipfsContextPath),
+  "createIpfsService",
+);
+assertContract(
+  ipfsUploadClient &&
+    callsIdentifier(ipfsUploadClient, "readIpfsConfig") &&
+    !ipfsUploadClient.getText().includes("publicEnv"),
+  ipfsContextPath,
+  "Desktop profile picture uploads must use the native node, never a configured remote endpoint",
+);
+for (const pfpEditorPath of [
+  "renderer/components/user/user-page-header/useProfileEditor.ts",
+  "renderer/components/user/user-page-header/pfp/UserPageHeaderEditPfp.tsx",
+]) {
+  const pfpEditor = parseSource(pfpEditorPath);
+  assertContract(
+    callsIdentifier(pfpEditor, "uploadProfilePictureFile") &&
+      !callsIdentifier(pfpEditor, "uploadProfilePicture"),
+    pfpEditorPath,
+    "profile picture editors must keep Desktop's local IPFS upload",
+  );
+}
 const ipfsSettingsPath = "renderer/components/core/app-info/LocalIpfsSettings.tsx";
 const ipfsSettings = parseSource(ipfsSettingsPath).text;
 assertContract(
