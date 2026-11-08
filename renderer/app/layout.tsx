@@ -20,7 +20,6 @@ import {
   LEGACY_BROWSER_SYNTAX_SCRIPT,
 } from "@/components/legacy-browser/legacyBrowserGate";
 import DynamicHeadTitle from "@/components/dynamic-head/DynamicHeadTitle";
-import AwsRumProvider from "@/components/monitoring/AwsRumProvider";
 import MobileLaunchTimingReporter from "@/components/monitoring/MobileLaunchTimingReporter";
 import AppRouteProviders from "@/components/providers/AppRouteProviders";
 import LayoutWrapper from "@/components/providers/LayoutWrapper";
@@ -128,17 +127,16 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <LegacyBrowserNotice baseEndpoint={publicEnv.BASE_ENDPOINT} />
         <MobileLaunchTimingReporter />
-        <AwsRumProvider>
-          {/* Core's client shell reads the live URL in analytics, title, wave,
-              and navigation providers. Keep those reads below a boundary when
-              Next prerenders static routes, unlike the request-time web shell. */}
-          <Suspense fallback={null}>
-            <AppRouteProviders>
-              <DynamicHeadTitle />
-              <LayoutWrapper>{children}</LayoutWrapper>
-            </AppRouteProviders>
-          </Suspense>
-        </AwsRumProvider>
+        {/* Core's client shell reads the live URL in analytics, title, wave,
+            and navigation providers. Keep those reads below a boundary when
+            Next prerenders static routes, unlike the request-time web shell.
+            AWS RUM now mounts inside Providers, under cookie consent. */}
+        <Suspense fallback={null}>
+          <AppRouteProviders>
+            <DynamicHeadTitle />
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </AppRouteProviders>
+        </Suspense>
       </body>
     </html>
   );

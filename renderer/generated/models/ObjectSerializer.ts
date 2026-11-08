@@ -646,6 +646,7 @@ export * from '../models/ApiNotificationPollVoteOption';
 export * from '../models/ApiNotificationV2';
 export * from '../models/ApiNotificationsResponse';
 export * from '../models/ApiNotificationsResponseV2';
+export * from '../models/ApiNotificationsUnreadCountV2';
 export * from '../models/ApiOgMediaAsset';
 export * from '../models/ApiOgMetadata';
 export * from '../models/ApiOgMetadataDrop';
@@ -1299,7 +1300,7 @@ import { ApiCreateConnectionShareResponse    , ApiCreateConnectionShareResponseT
 import { ApiCreateDropMedia } from '../models/ApiCreateDropMedia';
 import { ApiCreateDropPart } from '../models/ApiCreateDropPart';
 import { ApiCreateDropPollRequest } from '../models/ApiCreateDropPollRequest';
-import { ApiCreateDropRequest                    } from '../models/ApiCreateDropRequest';
+import { ApiCreateDropRequest                     } from '../models/ApiCreateDropRequest';
 import { ApiCreateGroup } from '../models/ApiCreateGroup';
 import { ApiCreateGroupDescription          } from '../models/ApiCreateGroupDescription';
 import { ApiCreateLegacyDesktopConnectionShareRequest , ApiCreateLegacyDesktopConnectionShareRequestClientTypeEnum     } from '../models/ApiCreateLegacyDesktopConnectionShareRequest';
@@ -1355,7 +1356,7 @@ import { ApiDistributionAirdropsUploadResponse } from '../models/ApiDistribution
 import { ApiDmDropsUnreadCount } from '../models/ApiDmDropsUnreadCount';
 import { ApiDmUnreadConversationState } from '../models/ApiDmUnreadConversationState';
 import { ApiDmUnreadSnapshot } from '../models/ApiDmUnreadSnapshot';
-import { ApiDrop                                       } from '../models/ApiDrop';
+import { ApiDrop                                        } from '../models/ApiDrop';
 import { ApiDropAndDropVote } from '../models/ApiDropAndDropVote';
 import { ApiDropAndWave } from '../models/ApiDropAndWave';
 import { ApiDropAttachmentReference } from '../models/ApiDropAttachmentReference';
@@ -1633,6 +1634,7 @@ import { ApiNotificationPollVoteOption } from '../models/ApiNotificationPollVote
 import { ApiNotificationV2         } from '../models/ApiNotificationV2';
 import { ApiNotificationsResponse } from '../models/ApiNotificationsResponse';
 import { ApiNotificationsResponseV2 } from '../models/ApiNotificationsResponseV2';
+import { ApiNotificationsUnreadCountV2 } from '../models/ApiNotificationsUnreadCountV2';
 import { ApiOgMediaAsset } from '../models/ApiOgMediaAsset';
 import { ApiOgMetadata       } from '../models/ApiOgMetadata';
 import { ApiOgMetadataDrop               } from '../models/ApiOgMetadataDrop';
@@ -1744,7 +1746,7 @@ import { ApiSessionLoginRequest, ApiSessionLoginRequestClientTypeEnum      , Api
 import { ApiSessionLogoutNativeRequest, ApiSessionLogoutNativeRequestClientTypeEnum      } from '../models/ApiSessionLogoutNativeRequest';
 import { ApiSessionLogoutWebRequest, ApiSessionLogoutWebRequestClientTypeEnum     } from '../models/ApiSessionLogoutWebRequest';
 import { ApiSessionNativeResponse    , ApiSessionNativeResponseClientTypeEnum     } from '../models/ApiSessionNativeResponse';
-import { ApiSessionNonceQuery , ApiSessionNonceQueryClientTypeEnum    , ApiSessionNonceQueryDeviceKeyTypeEnum      } from '../models/ApiSessionNonceQuery';
+import { ApiSessionNonceQuery , ApiSessionNonceQueryClientTypeEnum    , ApiSessionNonceQueryDeviceKeyTypeEnum       } from '../models/ApiSessionNonceQuery';
 import { ApiSessionNonceResponse } from '../models/ApiSessionNonceResponse';
 import { ApiSessionRefreshNativeRequest, ApiSessionRefreshNativeRequestClientTypeEnum      } from '../models/ApiSessionRefreshNativeRequest';
 import { ApiSessionRefreshWebRequest, ApiSessionRefreshWebRequestClientTypeEnum    } from '../models/ApiSessionRefreshWebRequest';
@@ -2874,6 +2876,7 @@ let typeMap: {[index: string]: any} = {
     "ApiNotificationV2": ApiNotificationV2,
     "ApiNotificationsResponse": ApiNotificationsResponse,
     "ApiNotificationsResponseV2": ApiNotificationsResponseV2,
+    "ApiNotificationsUnreadCountV2": ApiNotificationsUnreadCountV2,
     "ApiOgMediaAsset": ApiOgMediaAsset,
     "ApiOgMetadata": ApiOgMetadata,
     "ApiOgMetadataDrop": ApiOgMetadataDrop,

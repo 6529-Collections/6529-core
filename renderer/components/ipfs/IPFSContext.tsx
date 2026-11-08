@@ -8,7 +8,6 @@ import {
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { isElectron } from "../../helpers";
-import IpfsService from "./IPFSService";
 import type { IpfsStatus } from "@/shared/ipfs-status";
 
 interface IpfsUrls {
@@ -18,7 +17,6 @@ interface IpfsUrls {
 }
 
 interface IpfsContextType {
-  ipfsService: IpfsService | null;
   ipfsUrls: IpfsUrls | undefined;
   ipfsStatus: IpfsStatus;
 }
@@ -225,7 +223,6 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [value, setValue] = useState<IpfsContextType>({
-    ipfsService: null,
     ipfsUrls: undefined,
     ipfsStatus: "starting",
   });
@@ -242,8 +239,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
     let revision = 0;
     const clearService = (status: IpfsStatus) => {
       cachedGatewayBase = null;
-      ipfsServicePromise = null;
-      setValue({ ipfsService: null, ipfsUrls: undefined, ipfsStatus: status });
+      setValue({ ipfsUrls: undefined, ipfsStatus: status });
     };
     const refresh = async () => {
       const currentRevision = ++revision;
@@ -255,15 +251,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         }
         cachedGatewayBase = info.gatewayBase;
-        const service = new IpfsService({
-          apiEndpoint: info.apiEndpoint,
-          mfsPath: info.mfsPath,
-        });
-        void Promise.resolve(service.init()).catch((error: unknown) => {
-          console.error("Error initializing IPFS file service", error);
-        });
         setValue({
-          ipfsService: service,
           ipfsUrls: {
             webui: `${info.apiEndpoint}/webui`,
             api: info.apiEndpoint,
@@ -304,58 +292,6 @@ export const useIpfsContext = (): IpfsContextType => {
     throw new Error("useIpfsContext must be used within an IpfsProvider");
   }
   return context;
-};
-
-export const useIpfsService = (): IpfsService | null => {
-  const { ipfsService } = useIpfsContext();
-  return ipfsService;
-};
-
-let ipfsServicePromise: Promise<IpfsService> | null = null;
-
-const createIpfsService = async (): Promise<IpfsService> => {
-  // Core uses the current native node, including its disabled/starting state.
-  // Retain FE's configured endpoint path when running without the bridge.
-  const config =
-    isElectron() || typeof window.api?.getInfo === "function"
-      ? await readIpfsConfig()
-      : {
-          apiEndpoint: publicEnv.IPFS_API_ENDPOINT,
-          mfsPath: publicEnv.IPFS_MFS_PATH,
-        };
-  if (!config?.apiEndpoint) {
-    throw new Error("Missing IPFS_API_ENDPOINT or local IPFS is unavailable");
-  }
-  const { default: IpfsServiceClass } = await import("./IPFSService");
-  const service = new IpfsServiceClass({
-    apiEndpoint: config.apiEndpoint,
-    mfsPath: config.mfsPath,
-  });
-  try {
-    await service.init();
-  } catch (error: unknown) {
-    console.error("Error initializing IPFS service", error);
-  }
-  return service;
-};
-
-// Preserve FE's lazy upload API while Core keeps its native status provider.
-const getIpfsService = async (): Promise<IpfsService> => {
-  ipfsServicePromise ??= createIpfsService();
-  const pending = ipfsServicePromise;
-  try {
-    return await pending;
-  } catch (error: unknown) {
-    if (ipfsServicePromise === pending) {
-      ipfsServicePromise = null;
-    }
-    throw error;
-  }
-};
-
-export const addFileToIpfs = async (file: File): Promise<string> => {
-  const service = await getIpfsService();
-  return service.addFile(file);
 };
 
 export const resolveIpfsUrlSync = (url: string) => {
