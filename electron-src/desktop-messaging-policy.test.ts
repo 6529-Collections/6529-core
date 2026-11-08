@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -84,6 +85,7 @@ test("production MLS WASM permission follows the baked flag without enabling Jav
         },
       },
       meebits445Headers: { source: "/fixture", headers: [] },
+      profileCmsAssetProxyHeaders: { source: "/fixture-cms", headers: [] },
     });
     vm.runInContext(compiled, context);
     const routes: Array<{
@@ -102,6 +104,38 @@ test("production MLS WASM permission follows the baked flag without enabling Jav
     assert.ok(scripts);
     assert.equal(scripts.includes("'wasm-unsafe-eval'"), enabled);
     assert.equal(scripts.includes("'unsafe-eval'"), false);
+    // The MLS module is fetched from the app's own origin.
+    assert.match(csp, /connect-src [^;]*'self'/);
+  }
+});
+
+test("the renderer's MLS WASM module is packaged and matches its manifest", () => {
+  // A renderer sync can rename the module (0x004E brought a new one); the
+  // loader refuses any file whose size or SHA-256 differs from the manifest.
+  const manifest = fs.readFileSync(
+    path.join(process.cwd(), "renderer/lib/e2ee/wasm/manifest.ts"),
+    "utf8",
+  );
+  const file = /file:\s*"([^"]+)"/.exec(manifest)?.[1];
+  const sha256 = /sha256:\s*"([0-9a-f]{64})"/.exec(manifest)?.[1];
+  const bytes = Number(/bytes:\s*(\d+)/.exec(manifest)?.[1]);
+  assert.ok(file && sha256 && bytes, "WASM manifest moved; update this test");
+  assert.match(file, /^\/e2ee\/mls-wasm-[0-9a-f]{16}\.wasm$/);
+  const wasm = fs.readFileSync(path.join(process.cwd(), "renderer/public", file));
+  assert.equal(wasm.byteLength, bytes);
+  assert.equal(createHash("sha256").update(wasm).digest("hex"), sha256);
+  const builderConfigs = fs
+    .readdirSync(process.cwd())
+    .filter((name) => /^electron-builder\..+\.json$/.test(name));
+  assert.ok(builderConfigs.length > 0);
+  for (const config of builderConfigs) {
+    const { files } = JSON.parse(fs.readFileSync(config, "utf8")) as {
+      files?: string[];
+    };
+    assert.ok(
+      files?.includes("renderer/public/**/*"),
+      `${config} must package the renderer's public assets`,
+    );
   }
 });
 
