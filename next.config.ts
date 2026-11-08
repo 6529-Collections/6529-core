@@ -36,6 +36,18 @@ const meebits445Headers = {
   ],
 };
 
+// Mirror renderer/config/profileCmsAssetProxyHeaders.ts for the same reason:
+// a CMS asset opened directly is an inert, sandboxed document.
+const profileCmsAssetProxyHeaders = {
+  source: "/api/profile-cms/assets",
+  headers: [
+    {
+      key: "Content-Security-Policy",
+      value: "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    },
+  ],
+};
+
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -388,9 +400,7 @@ interface PublicEnv {
   MOBILE_APP_SCHEME?: string;
   CORE_SCHEME?: string;
   GIPHY_API_KEY?: string;
-  IPFS_API_ENDPOINT?: string;
   IPFS_GATEWAY_ENDPOINT?: string;
-  IPFS_MFS_PATH?: string;
   MEDIA_RESOLVER_ENDPOINT?: string;
   WS_ENDPOINT?: string;
   DEV_MODE_MEMES_WAVE_ID?: string;
@@ -553,6 +563,13 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
           destination: "/safe-collecting",
           permanent: true,
         },
+        // Competitions are now called decisions. `:path*` also matches the
+        // bare collection route, and query strings carry over.
+        {
+          source: "/waves/:wave/competitions/:path*",
+          destination: "/waves/:wave/decisions/:path*",
+          permanent: true,
+        },
       ]);
     },
     logging: {
@@ -582,6 +599,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
           ),
         },
         meebits445Headers,
+        profileCmsAssetProxyHeaders,
       ];
     },
     turbopack: {
@@ -706,9 +724,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         MOBILE_APP_SCHEME: publicEnv.MOBILE_APP_SCHEME,
         CORE_SCHEME: publicEnv.CORE_SCHEME,
         GIPHY_API_KEY: publicEnv.GIPHY_API_KEY,
-        IPFS_API_ENDPOINT: publicEnv.IPFS_API_ENDPOINT,
         IPFS_GATEWAY_ENDPOINT: publicEnv.IPFS_GATEWAY_ENDPOINT,
-        IPFS_MFS_PATH: publicEnv.IPFS_MFS_PATH,
         MEDIA_RESOLVER_ENDPOINT: publicEnv.MEDIA_RESOLVER_ENDPOINT,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,
