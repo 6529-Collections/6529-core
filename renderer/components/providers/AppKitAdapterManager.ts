@@ -404,13 +404,12 @@ export class AppKitAdapterManager {
         chains = isCapacitorOrChains;
       }
     } else {
+      // The web signature: (wallets, isCapacitor, chains). Its omitted chains
+      // arrive as the boolean default and must not overwrite isCapacitor.
       isCapacitor = seedWalletsOrIsCapacitor;
-      if (Array.isArray(isCapacitorOrChains)) {
-        chains = isCapacitorOrChains;
-      } else {
-        isCapacitor = isCapacitorOrChains;
-        chains = maybeChains;
-      }
+      chains = Array.isArray(isCapacitorOrChains)
+        ? isCapacitorOrChains
+        : maybeChains;
     }
 
     if (!Array.isArray(chains) || chains.length === 0) {
