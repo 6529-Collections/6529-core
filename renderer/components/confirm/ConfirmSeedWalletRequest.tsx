@@ -29,6 +29,10 @@ import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import {
+  describeTypedDataField,
+  formatTypedDataValue,
+} from "@/wagmiConfig/typedDataDisplay";
+import {
   parseTypedDataRequest,
   SIGN_TYPED_DATA_V4,
 } from "@/wagmiConfig/typedDataRequest";
@@ -193,10 +197,6 @@ export default function ConfirmSeedWalletRequest({
     return hexToString(param).replace(/^\n+/, "").split("\n");
   }
 
-  function formatTypedDataValue(value: unknown): string {
-    return typeof value === "string" ? value : JSON.stringify(value);
-  }
-
   function printTypedData(request: SeedWalletRequest) {
     let typedData: ReturnType<typeof parseTypedDataRequest>;
     try {
@@ -208,23 +208,37 @@ export default function ConfirmSeedWalletRequest({
         </code>
       );
     }
+    // Format before keying: a domain chain ID is a bigint, which JSON.stringify
+    // cannot serialize.
+    const domainEntries = Object.entries(typedData.domain).map(
+      ([name, value]) => [name, formatTypedDataValue(value)] as const
+    );
+    const messageEntries = Object.entries(typedData.message).map(
+      ([name, value]) =>
+        [
+          name,
+          formatTypedDataValue(value),
+          describeTypedDataField(typedData.primaryType, name, value),
+        ] as const
+    );
     return (
       <>
         <span className="tw-block tw-pt-3">Typed data (EIP-712)</span>
         <code className="tw-block tw-break-all tw-pb-3">
           {typedData.primaryType}
         </code>
-        {withStableKeys(Object.entries(typedData.domain)).map(
-          ({ item: [name, value], key }) => (
-            <code key={`domain:${key}`} className="tw-block tw-break-all tw-pb-1">
-              domain.{name}: {formatTypedDataValue(value)}
-            </code>
-          )
-        )}
-        {withStableKeys(Object.entries(typedData.message)).map(
-          ({ item: [name, value], key }) => (
+        {withStableKeys(domainEntries).map(({ item: [name, value], key }) => (
+          <code key={`domain:${key}`} className="tw-block tw-break-all tw-pb-1">
+            domain.{name}: {value}
+          </code>
+        ))}
+        {withStableKeys(messageEntries).map(
+          ({ item: [name, value, note], key }) => (
             <code key={key} className="tw-block tw-break-all tw-pb-1">
-              {name}: {formatTypedDataValue(value)}
+              {name}: {value}
+              {note ? (
+                <span className="tw-text-iron-400"> ({note})</span>
+              ) : null}
             </code>
           )
         )}

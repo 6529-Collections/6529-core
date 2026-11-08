@@ -168,7 +168,9 @@ production. The shared feature flags are baked into the renderer and native
 public runtime; production CSP permits the verified MLS WebAssembly module.
 A rebuild is required for an installed app to receive these settings.
 
-Core seed wallets and the browser wallet connector support EIP-712 app grants.
+Core seed wallets and the browser wallet connector support EIP-712 app grants,
+including v2 grants that name MLS ciphersuites as a `uint16[]` set. Encrypted DMs
+use MLS 0x004E (AES-256), and the Core wallet prompt labels the suites it signs.
 Setup remains explicit: enabling the feature does not enroll wallets or devices
 without consent. Connection sharing carries ciphertext through native auth;
 the unlock secret stays in the private link fragment and refresh tokens stay
