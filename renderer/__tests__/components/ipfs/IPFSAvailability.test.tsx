@@ -14,6 +14,9 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("@/helpers", () => ({ isElectron: () => true }));
+jest.mock("@/components/ipfs/IPFSService", () =>
+  jest.fn().mockImplementation(() => ({ init: () => Promise.resolve() }))
+);
 
 const readyInfo = {
   status: "ready",

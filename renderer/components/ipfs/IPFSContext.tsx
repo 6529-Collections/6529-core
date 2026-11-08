@@ -8,6 +8,7 @@ import {
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { isElectron } from "../../helpers";
+import IpfsService from "./IPFSService";
 import type { IpfsStatus } from "@/shared/ipfs-status";
 
 interface IpfsUrls {
@@ -17,6 +18,7 @@ interface IpfsUrls {
 }
 
 interface IpfsContextType {
+  ipfsService: IpfsService | null;
   ipfsUrls: IpfsUrls | undefined;
   ipfsStatus: IpfsStatus;
 }
@@ -223,6 +225,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [value, setValue] = useState<IpfsContextType>({
+    ipfsService: null,
     ipfsUrls: undefined,
     ipfsStatus: "starting",
   });
@@ -239,7 +242,8 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
     let revision = 0;
     const clearService = (status: IpfsStatus) => {
       cachedGatewayBase = null;
-      setValue({ ipfsUrls: undefined, ipfsStatus: status });
+      ipfsServicePromise = null;
+      setValue({ ipfsService: null, ipfsUrls: undefined, ipfsStatus: status });
     };
     const refresh = async () => {
       const currentRevision = ++revision;
@@ -251,7 +255,15 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         }
         cachedGatewayBase = info.gatewayBase;
+        const service = new IpfsService({
+          apiEndpoint: info.apiEndpoint,
+          mfsPath: info.mfsPath,
+        });
+        void Promise.resolve(service.init()).catch((error: unknown) => {
+          console.error("Error initializing IPFS file service", error);
+        });
         setValue({
+          ipfsService: service,
           ipfsUrls: {
             webui: `${info.apiEndpoint}/webui`,
             api: info.apiEndpoint,
@@ -292,6 +304,59 @@ export const useIpfsContext = (): IpfsContextType => {
     throw new Error("useIpfsContext must be used within an IpfsProvider");
   }
   return context;
+};
+
+export const useIpfsService = (): IpfsService | null => {
+  const { ipfsService } = useIpfsContext();
+  return ipfsService;
+};
+
+let ipfsServicePromise: Promise<IpfsService> | null = null;
+
+/** True where the Desktop bridge can report the user's own IPFS node. */
+export const hasDesktopIpfsBridge = (): boolean =>
+  typeof window !== "undefined" &&
+  (isElectron() || typeof window.api?.getInfo === "function");
+
+const createIpfsService = async (): Promise<IpfsService> => {
+  // Desktop uploads to its current native node, including its disabled or
+  // starting state. There is no remote upload endpoint to fall back to.
+  const config = await readIpfsConfig();
+  if (!config?.apiEndpoint) {
+    throw new Error(
+      "Local IPFS is off or unavailable. Turn it on in Local IPFS settings to upload."
+    );
+  }
+  const { default: IpfsServiceClass } = await import("./IPFSService");
+  const service = new IpfsServiceClass({
+    apiEndpoint: config.apiEndpoint,
+    mfsPath: config.mfsPath,
+  });
+  try {
+    await service.init();
+  } catch (error: unknown) {
+    console.error("Error initializing IPFS service", error);
+  }
+  return service;
+};
+
+// Desktop pins uploads (profile pictures) on the user's own node, lazily.
+const getIpfsService = async (): Promise<IpfsService> => {
+  ipfsServicePromise ??= createIpfsService();
+  const pending = ipfsServicePromise;
+  try {
+    return await pending;
+  } catch (error: unknown) {
+    if (ipfsServicePromise === pending) {
+      ipfsServicePromise = null;
+    }
+    throw error;
+  }
+};
+
+export const addFileToIpfs = async (file: File): Promise<string> => {
+  const service = await getIpfsService();
+  return service.addFile(file);
 };
 
 export const resolveIpfsUrlSync = (url: string) => {

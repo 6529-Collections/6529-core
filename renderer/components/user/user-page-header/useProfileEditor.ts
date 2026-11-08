@@ -22,7 +22,7 @@ import {
   commonApiPost,
   commonApiPostForm,
 } from "@/services/api/common-api";
-import { uploadProfilePicture } from "@/services/api/profile-picture-upload-api";
+import { uploadProfilePictureFile } from "@/components/ipfs/profilePictureUpload";
 import { usePathname, useRouter } from "next/navigation";
 import { useContext, useRef, useState } from "react";
 import { AboutStatementSaveError } from "./about/about-statement-errors";
@@ -103,7 +103,7 @@ async function prepareProfileUpdate(
     body.banner_2 = undefined;
   }
   if (draft.pictureFile)
-    body.pfp_url = await uploadProfilePicture(draft.pictureFile);
+    body.pfp_url = await uploadProfilePictureFile(draft.pictureFile);
   return body;
 }
 
