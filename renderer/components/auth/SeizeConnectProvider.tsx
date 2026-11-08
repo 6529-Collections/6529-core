@@ -132,6 +132,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isCapacitorHandoffPending, setIsCapacitorHandoffPending] =
     useState(false);
 
+  const [isBrowserConnectorHandoffPending, setIsBrowserConnectorHandoffPending] =
+    useState(false);
+
   // Use consolidated wallet state management
   const {
     walletState,
@@ -209,6 +212,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     isAddingConnectedAccountRef.current = false;
     isBrowserConnectorHandoffRef.current = false;
+    setIsBrowserConnectorHandoffPending(false);
     addFlowOriginAddressRef.current = null;
     setIsAddingConnectedAccount(false);
     clearBrowserConnectorConnectIntent();
@@ -643,6 +647,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const seizeBeginBrowserConnectorHandoff = useCallback((): void => {
     isBrowserConnectorHandoffRef.current = true;
+    setIsBrowserConnectorHandoffPending(true);
     isAddingConnectedAccountRef.current = false;
     addFlowOriginAddressRef.current = null;
     if (retryConnectTimeoutRef.current) {
@@ -654,6 +659,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const seizeEndBrowserConnectorHandoff = useCallback((): void => {
     isBrowserConnectorHandoffRef.current = false;
+    setIsBrowserConnectorHandoffPending(false);
     if (isSigningOutAllRef.current) {
       return;
     }
@@ -1226,7 +1232,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         (isConnectModalOpen ||
           isConnectIntentWaitingForAppKit ||
           capacitorConnectView !== "closed" ||
-          isCapacitorHandoffPending),
+          isCapacitorHandoffPending ||
+          isBrowserConnectorHandoffPending),
       isConnected: !isSigningOutAll && isActiveWalletConnected,
       isDisconnecting,
       canSignActiveWallet: !isSigningOutAll && isActiveWalletConnected,
@@ -1270,6 +1277,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isConnectModalOpen,
       capacitorConnectView,
       isCapacitorHandoffPending,
+      isBrowserConnectorHandoffPending,
       liveAccount.isConnected,
       walletState,
       hasInitializationError,
