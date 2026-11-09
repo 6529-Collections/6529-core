@@ -8,6 +8,7 @@ import {
 import type {
   NotificationNavigationContext,
   NotificationNavigatePayload,
+  SanitizedProfilePicture,
 } from "../shared/preload-types";
 
 import type {
@@ -97,6 +98,8 @@ export const api = {
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
   getIpfsInfo: () => ipcRenderer.invoke("get-ipfs-info"),
+  sanitizeProfilePicture: (bytes: ArrayBuffer): Promise<SanitizedProfilePicture> =>
+    ipcRenderer.invoke("sanitize-profile-picture", bytes),
   getLocalIpfsPreferences: (): Promise<LocalIpfsPreferencesSnapshot> =>
     ipcRenderer.invoke("get-local-ipfs-preferences"),
   setLocalIpfsEnabled: (enabled: boolean): Promise<LocalIpfsPreferencesSnapshot> =>

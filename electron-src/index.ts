@@ -72,6 +72,7 @@ import {
   getTransactionReconciliationState,
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
 import IPFSServer from "./ipfs/ipfs.server";
+import { sanitizeProfilePicture } from "./ipfs/sanitize-profile-picture";
 import {
   LOCAL_IPFS_ENABLED_KEY,
   LocalIpfsPreferences,
@@ -2151,6 +2152,20 @@ ipcMain.handle("get-ipfs-info", () => {
     gatewayEndpoint: IPFS_SERVER.getGatewayEndpoint(),
     mfsPath: IPFS_SERVER.getMfsPath(),
   };
+});
+
+ipcMain.handle("sanitize-profile-picture", (event, bytes: unknown) => {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    event.senderFrame !== mainWindow.webContents.mainFrame ||
+    new URL(event.senderFrame.url).origin !== `http://localhost:${PORT}`
+  ) {
+    throw new Error(
+      "Profile picture upload is only available from the main app window",
+    );
+  }
+  return sanitizeProfilePicture(bytes);
 });
 
 // Persist only the next-launch preference. Never restart or stop a live node.

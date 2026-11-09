@@ -2475,8 +2475,9 @@ assertContract(
 // Owner decision: Desktop pins profile pictures on the user's own IPFS node,
 // with no API fallback, while the website uploads them through the API.
 const pfpUploadPath = "renderer/components/ipfs/profilePictureUpload.ts";
+const pfpUploadSource = parseSource(pfpUploadPath);
 const pfpUploadFunction = findFunction(
-  parseSource(pfpUploadPath),
+  pfpUploadSource,
   "uploadProfilePictureFile",
 );
 assertContract(
@@ -2485,6 +2486,29 @@ assertContract(
     callsIdentifier(pfpUploadFunction, "addFileToIpfs"),
   pfpUploadPath,
   "Desktop must upload profile pictures to the user's local IPFS node",
+);
+assertContract(
+  pfpUploadFunction &&
+    findDescendant(pfpUploadFunction, (node) => {
+      if (
+        !ts.isCallExpression(node) ||
+        node.expression.getText() !== "addFileToIpfs"
+      ) {
+        return false;
+      }
+      const [file] = node.arguments;
+      return (
+        file &&
+        ts.isAwaitExpression(file) &&
+        ts.isCallExpression(file.expression) &&
+        file.expression.expression.getText() === "sanitizeDesktopProfilePicture"
+      );
+    }) &&
+    findFunction(pfpUploadSource, "sanitizeDesktopProfilePicture")
+      ?.getText()
+      .includes("window.api.sanitizeProfilePicture("),
+  pfpUploadPath,
+  "Desktop must sanitize profile pictures before pinning them to local IPFS",
 );
 const ipfsUploadClient = findVariable(
   parseSource(ipfsContextPath),
