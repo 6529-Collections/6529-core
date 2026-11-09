@@ -62,9 +62,11 @@ resource as plain text; no Desktop code or contract pins the v1 strings.
   public assets and matches its manifest; the production CSP allows WebAssembly only
   when the baked encrypted-DM flag is on.
 
-Release Desktop only after the backend C+ change is live in production. After
-2026-12-02T00:00:00Z the server accepts only 0x004E, which a Desktop build on the C+
-renderer already uses.
+Release Desktop only after the C+ backend and web releases are live in
+production, and within one day of the web release, per the
+[C+ release checklist](../renderer/ops/workstreams/e2ee-suite-0x004e/release-checklist.md#23-desktop-and-phone-within-1-day-of-web-live).
+After 2026-12-02T00:00:00Z the server accepts only 0x004E, which a Desktop build
+on the C+ renderer already uses.
 
 ## Packaged acceptance still needed
 

@@ -174,8 +174,9 @@ use MLS 0x004E (AES-256), and the Core wallet prompt labels the suites it signs.
 Setup remains explicit: enabling the feature does not enroll wallets or devices
 without consent. Connection sharing carries ciphertext through native auth;
 the unlock secret stays in the private link fragment and refresh tokens stay
-in the main process. The website's separately controlled Desktop secure-share
-choice remains unchanged.
+in the main process. On the production website, Connect Device cannot yet
+enable Signed Posts and Encrypted DMs on Desktop. That option rolls out after
+a compatible Desktop version is available.
 
 The renderer remembers its first successfully bound port (`renderer_port` in
 its existing store). Later launches prefer that origin for device keys and
@@ -191,6 +192,11 @@ Clicking one restores/focuses the existing main window and opens the chat;
 foreign navigation targets fall back to Notifications.
 
 ## Building and Publishing
+
+Publish the first Desktop release with encrypted DMs only after the C+ backend
+and web releases are live in production. The
+[C+ release checklist](renderer/ops/workstreams/e2ee-suite-0x004e/release-checklist.md#23-desktop-and-phone-within-1-day-of-web-live)
+calls for releasing Desktop within one day of the web release.
 
 > ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.
 > If you skip this step, the previous version may be overwritten and the `electron-updater` will not function correctly.
