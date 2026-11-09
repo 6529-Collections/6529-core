@@ -2472,6 +2472,22 @@ assertContract(
   ipfsContextPath,
   "disabled local IPFS must not fall back to local ports or initialize a file service",
 );
+for (const iframePath of [
+  "renderer/components/drops/view/item/content/media/MediaDisplay.tsx",
+  "renderer/components/nft-image/renderers/NFTHTMLRenderer.tsx",
+]) {
+  assertContract(
+    callsIdentifier(parseSource(iframePath), "useLocalIpfsFrameFallback"),
+    iframePath,
+    "Desktop artwork must retry the remote resolver after a local gateway frame failure",
+  );
+}
+const waveAvatarPath = "renderer/components/waves/drops/WaveDropAuthorPfp.tsx";
+assertContract(
+  callsIdentifier(parseSource(waveAvatarPath), "useGatewayImageLoadState"),
+  waveAvatarPath,
+  "Wave avatars must try the remote resolver when the local IPFS image fails",
+);
 // Owner decision: Desktop pins profile pictures on the user's own IPFS node,
 // with no API fallback, while the website uploads them through the API.
 const pfpUploadPath = "renderer/components/ipfs/profilePictureUpload.ts";

@@ -48,6 +48,11 @@ function allowedChannel(channel: string): string {
   return channel;
 }
 
+const localIpfsFrameFailureListeners = new Set<(url: string) => void>();
+ipcRenderer.on("local-ipfs-frame-failed", (_event, url: string) => {
+  for (const listener of localIpfsFrameFailureListeners) listener(url);
+});
+
 export const api = {
   on: (channel: string, callback: Function) => {
     ipcRenderer.on(allowedChannel(channel), (event: IpcRendererEvent, args: any) =>
@@ -109,6 +114,12 @@ export const api = {
     ipcRenderer.on("ipfs-status-change", listener);
     return () => {
       ipcRenderer.removeListener("ipfs-status-change", listener);
+    };
+  },
+  onLocalIpfsFrameFailed: (callback: (url: string) => void) => {
+    localIpfsFrameFailureListeners.add(callback);
+    return () => {
+      localIpfsFrameFailureListeners.delete(callback);
     };
   },
   getMainWorker: () => ipcRenderer.invoke("get-main-worker"),

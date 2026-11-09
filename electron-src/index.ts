@@ -72,6 +72,7 @@ import {
   getTransactionReconciliationState,
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
 import IPFSServer from "./ipfs/ipfs.server";
+import { observeLocalGatewayFrameFailures } from "./ipfs/local-gateway-frame-failures";
 import {
   LOCAL_IPFS_ENABLED_KEY,
   LocalIpfsPreferences,
@@ -1572,6 +1573,11 @@ async function openMainWindow() {
 
   const url = `http://localhost:${PORT}`;
 
+  observeLocalGatewayFrameFailures(
+    mainWindow.webContents,
+    url,
+    IPFS_SERVER.getGatewayEndpoint(),
+  );
   mainWindow.loadURL(url);
 
   // IPFS starts once the main window is loading and never holds it back;

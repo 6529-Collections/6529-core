@@ -47,6 +47,7 @@ export interface ElectronAPI {
   setLocalIpfsEnabled: (enabled: boolean) => Promise<LocalIpfsPreferencesSnapshot>;
   restartForLocalIpfs: () => Promise<void>;
   onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => () => void;
+  onLocalIpfsFrameFailed: (callback: (url: string) => void) => () => void;
   getMainWorker: () => Promise<any>;
   getScheduledWorkers: () => Promise<any>;
   getCrashReports: () => Promise<any>;
