@@ -4,18 +4,30 @@ import { useSearchParams } from "next/navigation";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import { hexToString } from "viem";
-import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
+import {
+  useChainId,
+  useSendTransaction,
+  useSignMessage,
+  useSignTypedData,
+} from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import styles from "./BrowserConnector.module.css";
 import BrowserConnectorWalletIntentNotice, {
   type BrowserConnectorWalletIntentNoticeType,
 } from "./BrowserConnectorWalletIntentNotice";
+import {
+  getTypedDataRequestAddress,
+  parseTypedDataRequest,
+  SIGN_TYPED_DATA_V4,
+} from "@/wagmiConfig/typedDataRequest";
 import { normalizeBrowserConnectorAddress } from "./browserConnector.helpers";
+import { assertTypedDataRoot } from "@/wagmiConfig/typedDataRoot";
 
 const bootstrapUtilityClasses: Record<string, string> = {
   "pt-2": "tw-pt-2",
@@ -26,11 +38,14 @@ const bootstrapUtilityClasses: Record<string, string> = {
   "bg-danger": "tw-bg-red",
 };
 
+/** Translate the legacy connector layout utilities into scoped Tailwind names. */
 function mapUtilityClasses(className = ""): string {
   return className
     .split(/\s+/)
     .filter(Boolean)
-    .map((classNamePart) => bootstrapUtilityClasses[classNamePart] ?? classNamePart)
+    .map(
+      (classNamePart) => bootstrapUtilityClasses[classNamePart] ?? classNamePart
+    )
     .join(" ");
 }
 
@@ -54,7 +69,10 @@ function Row({
   readonly style?: CSSProperties | undefined;
 }) {
   return (
-    <div className={`tw-flex tw-flex-wrap ${mapUtilityClasses(className)}`} style={style}>
+    <div
+      className={`tw-flex tw-flex-wrap ${mapUtilityClasses(className)}`}
+      style={style}
+    >
       {children}
     </div>
   );
@@ -100,20 +118,16 @@ export default function BrowserConnectorProvider(
 
   const [redirectCountdown, setRedirectCountdown] = useState(3);
 
-  const {
-    signMessage,
-    data: signMessageData,
-    error: signMessageError,
-  } = useSignMessage();
-  const {
-    sendTransaction,
-    data: sendTransactionData,
-    error: sendTransactionError,
-  } = useSendTransaction();
+  const { signMessageAsync } = useSignMessage();
+  const { sendTransactionAsync } = useSendTransaction();
+  const { signTypedDataAsync } = useSignTypedData();
+  const [isSigning, setIsSigning] = useState(false);
+  const signingInFlightRef = useRef(false);
 
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  const responseStartedRef = useRef(false);
   const intendedWalletAddress = useMemo(
     () =>
       normalizeBrowserConnectorAddress(
@@ -141,7 +155,9 @@ export default function BrowserConnectorProvider(
         return null;
       }
       return {
-        type: normalizedConnectedAddress ? "switch-requested" : "connect-requested",
+        type: normalizedConnectedAddress
+          ? "switch-requested"
+          : "connect-requested",
         address: expectedSignerAddress,
       };
     }, [
@@ -192,11 +208,18 @@ export default function BrowserConnectorProvider(
           typeof params?.[0]?.from === "string" ? params[0].from : null;
         break;
       }
+      case SIGN_TYPED_DATA_V4: {
+        requester = getTypedDataRequestAddress(params);
+        break;
+      }
     }
     setRequesterAddress(requester);
   }, [requestParams]);
 
   function startRedirectCountdown(d: any) {
+    // Cancellation wins over a signature that resolves later in the wallet.
+    if (responseStartedRef.current) return false;
+    responseStartedRef.current = true;
     const interval = setInterval(() => {
       setRedirectCountdown((prev) => prev - 1);
     }, 1000);
@@ -204,60 +227,79 @@ export default function BrowserConnectorProvider(
       clearInterval(interval);
       openApp(d);
     }, 3000);
+    return true;
   }
 
-  useEffect(() => {
-    const d = signMessageData ?? sendTransactionData;
-    if (!d) return;
-    setIsSuccess(true);
-    startRedirectCountdown(d);
-  }, [signMessageData, sendTransactionData]);
-
-  useEffect(() => {
-    const e = signMessageError ?? sendTransactionError;
-    if (!e) return;
-
-    const eMsg =
-      e.message
-        ?.split("Request Arguments")[0]
-        ?.split(".")[0]
-        ?.split("Contract Call")[0] ?? "Unknown error";
-    setError(eMsg ?? "");
-  }, [signMessageError, sendTransactionError]);
-
+  /** One wallet request at a time; cancellation wins over any late result. */
   async function onSign() {
+    if (
+      responseStartedRef.current ||
+      signingInFlightRef.current ||
+      !canSignProviderRequest ||
+      !methodParams
+    )
+      return;
+    signingInFlightRef.current = true;
+    setIsSigning(true);
     setError(null);
-    const { method, params } = methodParams;
-    switch (method) {
-      case "personal_sign": {
-        const msg = hexToString(params[0]);
-        signMessage({ message: msg });
-        break;
-      }
-      case "eth_sendTransaction": {
-        const sendParams: any = {
-          to: params[0].to,
-          data: params[0].data,
-        };
-        if (params[0].value) {
-          sendParams.value = params[0].value;
+    try {
+      const { method, params } = methodParams;
+      let result: string;
+      switch (method) {
+        case "personal_sign": {
+          const msg = hexToString(params[0]);
+          result = await signMessageAsync({ message: msg });
+          break;
         }
-        sendTransaction({ ...sendParams, chainId: chainId });
-        break;
+        case "eth_sendTransaction": {
+          const sendParams: any = {
+            to: params[0].to,
+            data: params[0].data,
+          };
+          if (params[0].value) sendParams.value = params[0].value;
+          result = await sendTransactionAsync({ ...sendParams, chainId });
+          break;
+        }
+        case SIGN_TYPED_DATA_V4: {
+          const typedData = parseTypedDataRequest(params);
+          assertTypedDataRoot(typedData);
+          result = await signTypedDataAsync({
+            account: typedData.address as `0x${string}`,
+            domain: typedData.domain,
+            types: typedData.types,
+            primaryType: typedData.primaryType,
+            message: typedData.message,
+          });
+          break;
+        }
+        default:
+          throw new Error(`Unsupported method: ${method}`);
       }
-      default:
-        setError(`Unsupported method: ${method}`);
+      if (startRedirectCountdown(result)) setIsSuccess(true);
+    } catch (signError: unknown) {
+      if (!responseStartedRef.current) {
+        const message =
+          signError instanceof Error ? signError.message : "Unknown error";
+        setError(
+          message.split("Request Arguments")[0]?.split("Contract Call")[0] ??
+            "Unknown error"
+        );
+      }
+    } finally {
+      signingInFlightRef.current = false;
+      setIsSigning(false);
     }
   }
 
+  /** Return cancellation immediately without waiting for the external wallet. */
   async function onCancel() {
-    setIsCancelled(true);
     const d = {
       error: "Cancelled",
     };
-    startRedirectCountdown(d);
+    if (startRedirectCountdown(d)) setIsCancelled(true);
   }
 
+  /** Return one correlated response through the approved desktop scheme. */
   async function openApp(d: any) {
     const serializedInfo = JSON.stringify({
       requestId,
@@ -275,7 +317,9 @@ export default function BrowserConnectorProvider(
       <Container>
         <Row>
           <Col>
-            <p>Error: Missing required information to process this transaction.</p>
+            <p>
+              Error: Missing required information to process this transaction.
+            </p>
             <p>Close this window, return to 6529 Desktop and retry.</p>
           </Col>
         </Row>
@@ -331,9 +375,14 @@ export default function BrowserConnectorProvider(
                       {!isCancelled && (
                         <button
                           onClick={onSign}
+                          disabled={isSigning || isSuccess}
                           className="tw-mt-3 tw-inline-flex tw-w-32 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                         >
-                          {isSuccess ? "Signed" : "Sign"}
+                          {isSuccess
+                            ? "Signed"
+                            : isSigning
+                              ? "Signing…"
+                              : "Sign"}
                         </button>
                       )}
 

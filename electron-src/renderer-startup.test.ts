@@ -4,6 +4,7 @@ import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { RENDERER_PORT_STORE_KEY, resolveRendererPort } from "./renderer-port";
 
 const source = ts.createSourceFile(
   "index.ts",
@@ -89,8 +90,9 @@ test("Next preparation stays pending until its HTTP server binds and returns tha
   ]);
 });
 
-function startApp(prepareNext: (port: number) => Promise<number>) {
+function startApp(prepareNext: (port: number) => Promise<number>, remembered?: number) {
   const calls: string[] = [];
+  const store = new Map<string, unknown>([[RENDERER_PORT_STORE_KEY, remembered]]);
   const noop = () => undefined;
   const context = vm.createContext({
     PORT: undefined,
@@ -103,6 +105,14 @@ function startApp(prepareNext: (port: number) => Promise<number>) {
     DesktopProfileStorage: class {},
     readLegacyDesktopProfiles: noop,
     mainWindow: null,
+    mainWindowStartupComplete: false,
+    pendingDeepLinks: {
+      flush: () => {
+        assert.equal(context.mainWindowStartupComplete, true);
+        assert.equal(calls.at(-1), "window");
+        calls.push("deep links");
+      },
+    },
     splash: null,
     app: {
       whenReady: () => Promise.resolve(),
@@ -118,18 +128,20 @@ function startApp(prepareNext: (port: number) => Promise<number>) {
     Logger: { info: noop, error: () => calls.push("error logged") },
     dialog: { showErrorBox: () => calls.push("startup error") },
     prepareNext,
+    RENDERER_PORT_STORE_KEY,
+    resolveRendererPort,
     resolvePorts: async () => calls.push("IPFS ports"),
     initLogs: async () => calls.push("logs"),
     initStore: noop,
-    getValue: noop,
-    setValue: noop,
+    getValue: (key: string) => store.get(key),
+    setValue: (key: string, value: unknown) => store.set(key, value),
     LOCAL_IPFS_ENABLED_KEY: "local-ipfs-enabled",
     LocalIpfsPreferences: class {},
     IPFSServer: class {},
     createWindow: async () => calls.push("window"),
   });
   vm.runInContext(compiled, context);
-  return { context, calls, done: context.startup as Promise<void> };
+  return { context, calls, store, done: context.startup as Promise<void> };
 }
 
 test("startup opens a window only after binding, using the confirmed fallback port", async () => {
@@ -148,7 +160,9 @@ test("startup opens a window only after binding, using the confirmed fallback po
   await harness.done;
 
   assert.equal(harness.context.PORT, 3001);
-  assert.deepEqual(harness.calls, ["IPFS ports", "logs", "window"]);
+  assert.equal(harness.store.get(RENDERER_PORT_STORE_KEY), 3001);
+  assert.deepEqual(harness.calls, ["IPFS ports", "logs", "window", "deep links"]);
+  assert.equal(harness.context.mainWindowStartupComplete, true);
 });
 
 test("a failed renderer startup shows an error and exits before any app window opens", async () => {
@@ -158,4 +172,16 @@ test("a failed renderer startup shows an error and exits before any app window o
   await harness.done;
   assert.deepEqual(harness.calls, ["error logged", "startup error", "exit 1"]);
   assert.equal(harness.context.PORT, undefined);
+  assert.equal(harness.context.mainWindowStartupComplete, false);
+  assert.equal(harness.store.get(RENDERER_PORT_STORE_KEY), undefined);
+});
+
+test("startup prefers the stored origin while retaining ownership of fallback binding", async () => {
+  const harness = startApp(async (preferred) => {
+    assert.equal(preferred, 3001);
+    return 3002;
+  }, 3001);
+  await harness.done;
+  assert.equal(harness.context.PORT, 3002);
+  assert.equal(harness.store.get(RENDERER_PORT_STORE_KEY), 3001);
 });

@@ -29,6 +29,14 @@ import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import {
+  describeTypedDataField,
+  formatTypedDataValue,
+} from "@/wagmiConfig/typedDataDisplay";
+import {
+  parseTypedDataRequest,
+  SIGN_TYPED_DATA_V4,
+} from "@/wagmiConfig/typedDataRequest";
+import {
   SEED_WALLET_REQUEST_BODY_CLASS,
   SEED_WALLET_REQUEST_DIALOG_CLASS,
   SEED_WALLET_REQUEST_FIXED_SECTION_CLASS,
@@ -189,6 +197,55 @@ export default function ConfirmSeedWalletRequest({
     return hexToString(param).replace(/^\n+/, "").split("\n");
   }
 
+  function printTypedData(request: SeedWalletRequest) {
+    let typedData: ReturnType<typeof parseTypedDataRequest>;
+    try {
+      typedData = parseTypedDataRequest(request.params);
+    } catch (error: unknown) {
+      return (
+        <code className="tw-block tw-break-all tw-pb-3 tw-pt-3 tw-text-red">
+          {error instanceof Error ? error.message : "Invalid typed data"}
+        </code>
+      );
+    }
+    // Format before keying: a domain chain ID is a bigint, which JSON.stringify
+    // cannot serialize.
+    const domainEntries = Object.entries(typedData.domain).map(
+      ([name, value]) => [name, formatTypedDataValue(value)] as const
+    );
+    const messageEntries = Object.entries(typedData.message).map(
+      ([name, value]) =>
+        [
+          name,
+          formatTypedDataValue(value),
+          describeTypedDataField(typedData.primaryType, name, value),
+        ] as const
+    );
+    return (
+      <>
+        <span className="tw-block tw-pt-3">Typed data (EIP-712)</span>
+        <code className="tw-block tw-break-all tw-pb-3">
+          {typedData.primaryType}
+        </code>
+        {withStableKeys(domainEntries).map(({ item: [name, value], key }) => (
+          <code key={`domain:${key}`} className="tw-block tw-break-all tw-pb-1">
+            domain.{name}: {value}
+          </code>
+        ))}
+        {withStableKeys(messageEntries).map(
+          ({ item: [name, value, note], key }) => (
+            <code key={key} className="tw-block tw-break-all tw-pb-1">
+              {name}: {value}
+              {note ? (
+                <span className="tw-text-iron-400"> ({note})</span>
+              ) : null}
+            </code>
+          )
+        )}
+      </>
+    );
+  }
+
   function printParams(request: SeedWalletRequest) {
     if (request.method === "personal_sign") {
       return (
@@ -272,6 +329,8 @@ export default function ConfirmSeedWalletRequest({
           )}
         </>
       );
+    } else if (request.method === SIGN_TYPED_DATA_V4) {
+      return printTypedData(request);
     } else {
       return withStableKeys(request?.params ?? []).map(
         ({ item: param, key }) => (

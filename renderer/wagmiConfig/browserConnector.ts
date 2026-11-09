@@ -24,6 +24,10 @@ import {
 } from "@/components/browser-connector/browserConnector.helpers";
 import { createConnector } from "wagmi";
 import { mainnet, sepolia } from "viem/chains";
+import {
+  getTypedDataRequestAddress,
+  SIGN_TYPED_DATA_V4,
+} from "./typedDataRequest";
 
 interface ProviderRequest {
   method: string;
@@ -111,12 +115,14 @@ const getProviderRequesterAddress = ({
   method,
   params,
 }: ProviderRequest): `0x${string}` | null => {
-  const requester =
-    method === "personal_sign"
-      ? params?.[1]
-      : method === "eth_sendTransaction"
-        ? params?.[0]?.from
-        : null;
+  let requester: string | null | undefined = null;
+  if (method === "personal_sign") {
+    requester = params?.[1];
+  } else if (method === "eth_sendTransaction") {
+    requester = params?.[0]?.from;
+  } else if (method === SIGN_TYPED_DATA_V4) {
+    requester = getTypedDataRequestAddress(params);
+  }
   const normalizedRequester = normalizeBrowserConnectorAddress(requester);
   return normalizedRequester as `0x${string}` | null;
 };

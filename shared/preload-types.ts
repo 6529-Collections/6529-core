@@ -53,6 +53,7 @@ export interface ElectronAPI {
   onWalletConnection: (connectionData: any) => void;
   handleWalletResponse: (response: any) => void;
   onNavigate: (url: any) => void;
+  navigationReady: () => Promise<void>;
   offNavigate: (callback: any) => void;
   onNotificationNavigate: (
     callback: (event: any, payload: NotificationNavigatePayload) => void
@@ -103,6 +104,7 @@ export interface ElectronStore {
 export type ElectronNativeAuthClientType = "native" | "desktop";
 
 export interface ElectronNativeAuthSessionResponse {
+  readonly encrypted_device_setup?: string | null;
   readonly client_type: ElectronNativeAuthClientType;
   readonly address: string;
   readonly role: string | null;
@@ -149,6 +151,7 @@ export interface ElectronNativeAuth {
     readonly client_address: string;
   }) => Promise<NativeAuthResult<ElectronNativeAuthSessionResponse>>;
   createConnectionShare: (request: {
+    readonly encrypted_device_setup?: string;
     readonly access_token?: string | null;
     readonly target_client_type?: ElectronNativeAuthClientType;
     readonly client_type?: ElectronNativeAuthClientType;
