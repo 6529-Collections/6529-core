@@ -57,9 +57,11 @@
 #   .dmg per architecture, so the notarization covers every one.
 #   installers: every program inside the .app must already carry this
 #   Developer ID's signature (hardened runtime, timestamp), and stays byte
-#   for byte as it is; the .app itself is codesigned (hardened runtime,
-#   secure timestamp) and the disk image is made again around it, with the
-#   rest of its contents unchanged.
+#   for byte as it is, except the bundle's executable when it is a program
+#   (checked on a copy outside the bundle, then signed again with the
+#   .app); the .app itself is codesigned (hardened runtime, secure
+#   timestamp) and the disk image is made again around it, with the rest of
+#   its contents unchanged.
 #   Each .dmg is codesigned, notarized (notarytool) and stapled, then checked
 #   with spctl and codesign --verify --strict.
 # Windows (windows-latest): AzureSignTool 6.0.1 signs each .exe and .msi with
@@ -394,16 +396,30 @@ jobs:
           echo "APP_NAME=$(basename "$app")" >> "$GITHUB_ENV"
           xattr -cr "$app"
           # Every program inside must already carry this Developer ID's
-          # signature, each architecture: they are not signed again, so they
-          # stay byte for byte the release's programs.
+          # signature, each architecture. The bundle's executable, when it
+          # is a program (the validator's app from rc.10: Info.plist
+          # CFBundleExecutable validator-app, no launcher script), is signed
+          # again with the app below; every other program is not, so it
+          # stays byte for byte the release's. codesign takes a bundle's
+          # main executable for the bundle, which is not signed yet ("code
+          # has no resources but signature indicates they must be
+          # present"), so that one is checked on a copy outside the bundle.
+          exe=$(plutil -extract CFBundleExecutable raw -o - "$app/Contents/Info.plist") || { echo "::error::the app's Info.plist names no CFBundleExecutable"; exit 1; }
+          exe="$app/Contents/MacOS/$exe"
           n=0
           while IFS= read -r -d '' f; do
             file -b "$f" | grep -q '^Mach-O' || continue
             n=$((n + 1))
-            for a in $(lipo -archs "$f"); do
+            c=$f
+            if [ "$f" = "$exe" ]; then
+              c="$RUNNER_TEMP/bundle-executable/$(basename "$f")"
+              mkdir -p "$(dirname "$c")"
+              cp -p "$f" "$c"
+            fi
+            for a in $(lipo -archs "$c"); do
               rel=${f#"$app"/}
-              codesign --verify --strict -a "$a" "$f" || { echo "::error::$rel ($a): not validly signed"; exit 1; }
-              info=$(codesign --display --verbose=2 -a "$a" "$f" 2>&1)
+              codesign --verify --strict -a "$a" "$c" || { echo "::error::$rel ($a): not validly signed"; exit 1; }
+              info=$(codesign --display --verbose=2 -a "$a" "$c" 2>&1)
               grep -qx "TeamIdentifier=$team" <<< "$info" || { echo "::error::$rel ($a): not signed with this Developer ID (sign it with kind binaries first)"; exit 1; }
               grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$rel ($a): no hardened runtime"; exit 1; }
               grep -q '^Timestamp=' <<< "$info" || { echo "::error::$rel ($a): no secure timestamp"; exit 1; }
