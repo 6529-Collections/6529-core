@@ -1,7 +1,6 @@
 "use client";
 
 import { AuthContext } from "@/components/auth/Auth";
-import { addFileToIpfs } from "@/components/ipfs/IPFSContext";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import type { NFTLite } from "@/components/user/settings/UserSettingsImgSelectMeme";
 import { multiPartUpload } from "@/components/waves/create-wave/services/multiPartUpload";
@@ -23,6 +22,7 @@ import {
   commonApiPost,
   commonApiPostForm,
 } from "@/services/api/common-api";
+import { uploadProfilePictureFile } from "@/components/ipfs/profilePictureUpload";
 import { usePathname, useRouter } from "next/navigation";
 import { useContext, useRef, useState } from "react";
 import { AboutStatementSaveError } from "./about/about-statement-errors";
@@ -103,7 +103,7 @@ async function prepareProfileUpdate(
     body.banner_2 = undefined;
   }
   if (draft.pictureFile)
-    body.pfp_url = `ipfs://${await addFileToIpfs(draft.pictureFile)}`;
+    body.pfp_url = await uploadProfilePictureFile(draft.pictureFile);
   return body;
 }
 

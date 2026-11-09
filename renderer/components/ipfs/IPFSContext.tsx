@@ -313,18 +313,19 @@ export const useIpfsService = (): IpfsService | null => {
 
 let ipfsServicePromise: Promise<IpfsService> | null = null;
 
+/** True where the Desktop bridge can report the user's own IPFS node. */
+export const hasDesktopIpfsBridge = (): boolean =>
+  typeof window !== "undefined" &&
+  (isElectron() || typeof window.api?.getInfo === "function");
+
 const createIpfsService = async (): Promise<IpfsService> => {
-  // Core uses the current native node, including its disabled/starting state.
-  // Retain FE's configured endpoint path when running without the bridge.
-  const config =
-    isElectron() || typeof window.api?.getInfo === "function"
-      ? await readIpfsConfig()
-      : {
-          apiEndpoint: publicEnv.IPFS_API_ENDPOINT,
-          mfsPath: publicEnv.IPFS_MFS_PATH,
-        };
+  // Desktop uploads to its current native node, including its disabled or
+  // starting state. There is no remote upload endpoint to fall back to.
+  const config = await readIpfsConfig();
   if (!config?.apiEndpoint) {
-    throw new Error("Missing IPFS_API_ENDPOINT or local IPFS is unavailable");
+    throw new Error(
+      "Local IPFS is off or unavailable. Turn it on in Local IPFS settings to upload."
+    );
   }
   const { default: IpfsServiceClass } = await import("./IPFSService");
   const service = new IpfsServiceClass({
@@ -339,7 +340,7 @@ const createIpfsService = async (): Promise<IpfsService> => {
   return service;
 };
 
-// Preserve FE's lazy upload API while Core keeps its native status provider.
+// Desktop pins uploads (profile pictures) on the user's own node, lazily.
 const getIpfsService = async (): Promise<IpfsService> => {
   ipfsServicePromise ??= createIpfsService();
   const pending = ipfsServicePromise;

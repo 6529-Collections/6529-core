@@ -2,19 +2,28 @@
 
 import { isElectron } from "@/helpers";
 import { publicEnv } from "@/config/env";
+import { applyDelayJitter } from "@/helpers/jitter.helpers";
+import {
+  getVersionPollHeaders,
+  noteAnnouncedVersion,
+} from "@/lib/version/versionPoll";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { subscribeNativeAppActivity } from "@/services/app-activity/native-app-activity";
 
 const CURRENT = publicEnv.VERSION ?? "unknown"; // baked into the bundle
 const SHOW_NEW_VERSION_TOAST_PARAM = "showNewVersionToast";
-const CLIENT_VERSION_HEADER = "x-6529-client-version";
 const VERSION_ENDPOINT = "/api/version";
 // Showing a tab fires visibilitychange and focus together; check only once.
 const WAKE_RECHECK_DEBOUNCE_MS = 1_000;
+// A hidden tab checks rarely (10-15 min, jittered) so a long-lived tab still
+// learns about new versions and reports itself for adoption telemetry.
+const HIDDEN_CHECK_DELAY_MS = 12.5 * 60 * 1000;
+const HIDDEN_CHECK_JITTER_RATIO = 0.2;
 
 type VersionStatusResponse = {
   readonly stale?: unknown;
+  readonly announced_version?: unknown;
 };
 
 /**
@@ -55,6 +64,7 @@ export function useIsVersionStale(
     let lastCheckAt = Number.NEGATIVE_INFINITY;
     let latestCheckId = 0;
     let timer: ReturnType<typeof setInterval> | undefined;
+    let hiddenTimer: ReturnType<typeof setTimeout> | undefined;
 
     const isHidden = () => document.visibilityState === "hidden";
 
@@ -64,19 +74,18 @@ export function useIsVersionStale(
       latestCheckId += 1;
       const checkId = latestCheckId;
       try {
-        const { stale } = await fetch(VERSION_ENDPOINT, {
+        const response = await fetch(VERSION_ENDPOINT, {
           cache: "no-store",
-          headers: {
-            [CLIENT_VERSION_HEADER]: CURRENT,
-          },
+          headers: getVersionPollHeaders(CURRENT, isHidden()),
         }).then((r) => r.json() as Promise<VersionStatusResponse>);
+        noteAnnouncedVersion(CURRENT, response.announced_version);
 
         if (
           !disposed &&
           checkId === latestCheckId &&
-          typeof stale === "boolean"
+          typeof response.stale === "boolean"
         ) {
-          setStale(stale);
+          setStale(response.stale);
         }
       } catch {
         /* ignore network errors */
@@ -86,6 +95,24 @@ export function useIsVersionStale(
     function stopPolling() {
       clearInterval(timer);
       timer = undefined;
+    }
+
+    function stopHiddenChecks() {
+      clearTimeout(hiddenTimer);
+      hiddenTimer = undefined;
+    }
+
+    function scheduleHiddenCheck() {
+      stopHiddenChecks();
+      hiddenTimer = setTimeout(
+        () => {
+          hiddenTimer = undefined;
+          if (!isHidden()) return;
+          void check();
+          scheduleHiddenCheck();
+        },
+        applyDelayJitter(HIDDEN_CHECK_DELAY_MS, HIDDEN_CHECK_JITTER_RATIO)
+      );
     }
 
     function startPolling() {
@@ -99,6 +126,7 @@ export function useIsVersionStale(
     // Restart the polling cadence from this moment, checking now unless a
     // check just ran (visibilitychange and focus fire together).
     function resumePolling() {
+      stopHiddenChecks();
       stopPolling();
       if (Date.now() - lastCheckAt > WAKE_RECHECK_DEBOUNCE_MS) {
         void check();
@@ -106,8 +134,8 @@ export function useIsVersionStale(
       startPolling();
     }
 
-    // A hidden tab neither polls nor keeps a timer alive; it catches up as
-    // soon as it is shown, focused again, or back online.
+    // A hidden tab drops to the rare hidden check; it catches up as soon as
+    // it is shown, focused again, or back online.
     const onWake = () => {
       if (!isHidden()) {
         resumePolling();
@@ -116,12 +144,15 @@ export function useIsVersionStale(
     const onVisibilityChange = () => {
       if (isHidden()) {
         stopPolling();
+        scheduleHiddenCheck();
       } else {
         resumePolling();
       }
     };
 
-    if (!isHidden()) {
+    if (isHidden()) {
+      scheduleHiddenCheck();
+    } else {
       resumePolling();
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -134,6 +165,7 @@ export function useIsVersionStale(
     return () => {
       disposed = true;
       stopPolling();
+      stopHiddenChecks();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       globalThis.removeEventListener("focus", onWake);
       globalThis.removeEventListener("online", onWake);

@@ -18,10 +18,25 @@ import { createAppWalletConnector } from "@/wagmiConfig/wagmiAppWalletConnector"
 import type { Chain } from "viem";
 import { mainnet } from "viem/chains";
 import type { CreateConnectorFn } from "wagmi";
-import { coinbaseWallet } from "wagmi/connectors";
+import { baseAccount, coinbaseWallet } from "wagmi/connectors";
 import type { AppWallet } from "../app-wallets/AppWalletsContext";
 
 type ConnectionState = "connecting" | "connected" | "disconnected";
+
+/**
+ * AppKit's `enableCoinbase` adds this same Base Account (Coinbase) connector
+ * with the SDK's default telemetry on, which loads Coinbase's analytics
+ * script and reports page performance and wallet requests to Coinbase.
+ * Registering the connector ourselves keeps the identical wallet option
+ * (AppKit skips its own when a `baseAccount` connector already exists) with
+ * the SDK's documented `preference.telemetry` switch turned off.
+ * That reuse was verified on @reown/appkit-adapter-wagmi 1.8.19 (the pinned
+ * version; a test fails when the pin changes): a production build has exactly
+ * one `baseAccount` connector and never loads Coinbase's analytics script.
+ */
+function buildBaseAccountWallet(): CreateConnectorFn {
+  return baseAccount({ preference: { telemetry: false } });
+}
 
 export class AppKitAdapterManager {
   private currentAdapter: WagmiAdapter | null = null;
@@ -134,6 +149,8 @@ export class AppKitAdapterManager {
 
     if (isCapacitor) {
       connectors.push(this.buildCoinbaseV3MobileWallet());
+    } else {
+      connectors.push(buildBaseAccountWallet());
     }
 
     const wagmiAdapter = new WagmiAdapter({
@@ -387,13 +404,12 @@ export class AppKitAdapterManager {
         chains = isCapacitorOrChains;
       }
     } else {
+      // The web signature: (wallets, isCapacitor, chains). Its omitted chains
+      // arrive as the boolean default and must not overwrite isCapacitor.
       isCapacitor = seedWalletsOrIsCapacitor;
-      if (Array.isArray(isCapacitorOrChains)) {
-        chains = isCapacitorOrChains;
-      } else {
-        isCapacitor = isCapacitorOrChains;
-        chains = maybeChains;
-      }
+      chains = Array.isArray(isCapacitorOrChains)
+        ? isCapacitorOrChains
+        : maybeChains;
     }
 
     if (!Array.isArray(chains) || chains.length === 0) {
