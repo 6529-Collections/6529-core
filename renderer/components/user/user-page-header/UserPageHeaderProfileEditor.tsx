@@ -262,7 +262,7 @@ export default function UserPageHeaderProfileEditor({
               if (await editor.save(true)) onSaved();
             }}
           >
-            Upload via 6529
+            {message("user.profileHeader.edit.uploadVia6529")}
           </Button>
         </div>
       )}

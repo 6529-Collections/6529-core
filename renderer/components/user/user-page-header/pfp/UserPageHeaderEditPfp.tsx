@@ -242,7 +242,7 @@ export default function UserPageHeaderEditPfp({
           disabled={saving}
           onClick={() => void submit(true)}
         >
-          Upload via 6529
+          {getUserProfileHeaderMessage("user.profileHeader.edit.uploadVia6529")}
         </Button>
       )}
       <div className="tw-flex tw-flex-col tw-gap-2 tw-pt-5 md:tw-flex-row-reverse md:tw-justify-start">

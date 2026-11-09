@@ -1,15 +1,21 @@
+import { getUserProfileHeaderMessage } from "@/components/user/user-page-header/user-page-header.messages";
 import { uploadProfilePicture } from "@/services/api/profile-picture-upload-api";
 import { addFileToIpfs, hasDesktopIpfsBridge } from "./IPFSContext";
 
+/** A local upload failed and the editor can offer an explicit API retry. */
 export class LocalProfilePictureUploadError extends Error {
   constructor(cause: unknown) {
-    super("Local IPFS couldn’t upload this picture. You can retry through 6529.", {
-      cause,
-    });
+    super(
+      getUserProfileHeaderMessage(
+        "user.profileHeader.edit.localPictureUploadFailed"
+      ),
+      { cause }
+    );
     this.name = "LocalProfilePictureUploadError";
   }
 }
 
+/** Strip metadata through the native bridge before sending the file. */
 async function sanitizeDesktopProfilePicture(file: File): Promise<File> {
   const result = await window.api.sanitizeProfilePicture(
     await file.arrayBuffer(),

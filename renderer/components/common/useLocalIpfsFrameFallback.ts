@@ -3,6 +3,7 @@
 import { canonicalizeLocalInteractiveMediaUrl } from "@/components/common/localInteractiveMediaUrl";
 import { useLayoutEffect } from "react";
 
+/** Normalize directory redirects while retaining the URL's query parameters. */
 function navigationKey(value: string): string | null {
   try {
     const url = new URL(value);
@@ -13,6 +14,7 @@ function navigationKey(value: string): string | null {
   }
 }
 
+/** Subscribe to Electron load failures for the active local IPFS iframe. */
 export function useLocalIpfsFrameFallback(
   url: string | undefined,
   onFailure: () => void,

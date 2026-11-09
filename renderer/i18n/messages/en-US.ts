@@ -1384,6 +1384,9 @@ const USER_PROFILE_HEADER_MESSAGES = objectMessages("user.profileHeader", {
   "edit.picturePreview": "Profile image",
   "edit.uploadCover": "Upload profile cover",
   "edit.uploadPicture": "Upload profile picture",
+  "edit.uploadVia6529": "Upload via 6529",
+  "edit.localPictureUploadFailed":
+    "Local IPFS couldn’t upload this picture. You can retry through 6529.",
   "edit.namePlaceholder": "Please select a username",
   "edit.username": "Username",
   "edit.chooseMeme": "Choose a Meme",
