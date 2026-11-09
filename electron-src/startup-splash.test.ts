@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { observeLocalGatewayFrameFailures } from "./ipfs/local-gateway-frame-failures";
 
 const source = ts.createSourceFile(
   "index.ts",
@@ -110,7 +111,11 @@ function createHarness(
     scheduledTasksStarted: false,
     profileReadinessCallbacks: new WeakMap(),
     getDb: noop,
-    IPFS_SERVER: { start: async () => "starting" },
+    IPFS_SERVER: {
+      start: async () => "starting",
+      getGatewayEndpoint: () => "http://127.0.0.1:8080",
+    },
+    observeLocalGatewayFrameFailures,
     localShortcut: { register: noop },
     hideBackgroundTray: noop,
     createScheduledTasks: () => {
