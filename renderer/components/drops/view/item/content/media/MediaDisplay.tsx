@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import SandboxedExternalIframe from "@/components/common/SandboxedExternalIframe";
+import { useLocalIpfsFrameFallback } from "@/components/common/useLocalIpfsFrameFallback";
 import {
   getMediaGatewayFallbackUrls,
   shouldUseIframeFallbackTimeout,
@@ -82,11 +83,25 @@ function InteractiveHtmlMediaDisplay({
   const [didLoadCurrentUrl, setDidLoadCurrentUrl] = useState(false);
   const [isIframeVisible, setIsIframeVisible] = useState(false);
   const activeUrl = urls[activeIndex];
+  const advanceToNextUrl = useCallback(() => {
+    setActiveIndex((current) =>
+      current === activeIndex && current + 1 < urls.length
+        ? current + 1
+        : current
+    );
+  }, [activeIndex, urls.length]);
+  const isLocalFrame = useLocalIpfsFrameFallback(
+    activeUrl,
+    advanceToNextUrl,
+    isActivated
+  );
   // SandboxedExternalIframe renders nothing for a URL it rejects, so only
   // show the loading status when a frame can actually load.
   const canRenderFrame = useMemo(
-    () => !!activeUrl && canonicalizeInteractiveMediaUrl(activeUrl) !== null,
-    [activeUrl]
+    () =>
+      isLocalFrame ||
+      (!!activeUrl && canonicalizeInteractiveMediaUrl(activeUrl) !== null),
+    [activeUrl, isLocalFrame]
   );
 
   useEffect(() => {
@@ -109,29 +124,28 @@ function InteractiveHtmlMediaDisplay({
       !isIframeVisible ||
       didLoadCurrentUrl ||
       activeIndex + 1 >= urls.length ||
-      !shouldUseIframeFallbackTimeout(activeUrl)
+      (!isLocalFrame && !shouldUseIframeFallbackTimeout(activeUrl))
     ) {
       return;
     }
 
-    const timeoutId = globalThis.setTimeout(() => {
-      setActiveIndex((current) =>
-        current === activeIndex && current + 1 < urls.length
-          ? current + 1
-          : current
-      );
-    }, IFRAME_FALLBACK_TIMEOUT_MS);
+    const timeoutId = globalThis.setTimeout(
+      advanceToNextUrl,
+      IFRAME_FALLBACK_TIMEOUT_MS
+    );
 
     return () => {
       globalThis.clearTimeout(timeoutId);
     };
-  }, [activeIndex, activeUrl, didLoadCurrentUrl, isIframeVisible, urls.length]);
-
-  const advanceToNextUrl = () => {
-    setActiveIndex((current) =>
-      current + 1 < urls.length ? current + 1 : current
-    );
-  };
+  }, [
+    activeIndex,
+    activeUrl,
+    advanceToNextUrl,
+    didLoadCurrentUrl,
+    isIframeVisible,
+    isLocalFrame,
+    urls.length,
+  ]);
 
   const handleFullScreen = useCallback(() => {
     iframeRef.current?.requestFullscreen().catch(() => undefined);

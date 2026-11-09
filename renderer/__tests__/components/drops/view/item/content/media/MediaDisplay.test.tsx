@@ -6,6 +6,11 @@ const mockShouldUseIframeFallbackTimeout = jest.fn();
 const mockSandboxedExternalIframe = jest.fn();
 const mockCanonicalizeInteractiveMediaUrl = jest.fn();
 
+jest.mock("@/components/common/localInteractiveMediaUrl", () => ({
+  canonicalizeLocalInteractiveMediaUrl: (src: string) =>
+    src.startsWith("http://127.0.0.1:8080/ipfs/") ? src : null,
+}));
+
 jest.mock("@/components/waves/memes/submission/constants/security", () => ({
   canonicalizeInteractiveMediaUrl: (src: string) =>
     mockCanonicalizeInteractiveMediaUrl(src),
@@ -498,6 +503,48 @@ describe("MediaDisplay", () => {
       "data-src",
       "https://ipfs.6529.io/ipfs/hash"
     );
+  });
+
+  it("advances to the remote IPFS URL when a local 504 page fired load", () => {
+    const localUrl = "http://127.0.0.1:8080/ipfs/hash";
+    const remoteUrl = "https://media.6529.io/ipfs/hash";
+    mockGetArweaveGatewayFallbackUrls.mockReturnValue([
+      localUrl,
+      remoteUrl,
+      "https://ipfs.io/ipfs/hash",
+    ]);
+    mockShouldUseIframeFallbackTimeout.mockReturnValue(false);
+    let notifyFrameFailure: ((url: string) => void) | undefined;
+    const unsubscribe = jest.fn();
+    const originalApi = Object.getOwnPropertyDescriptor(window, "api");
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {
+        onLocalIpfsFrameFailed: (callback: (url: string) => void) => {
+          notifyFrameFailure = callback;
+          return unsubscribe;
+        },
+      },
+    });
+
+    try {
+      render(<MediaDisplay media_mime_type="text/html" media_url="ipfs://hash" />);
+      expect(screen.getByTestId("iframe")).toHaveAttribute("data-src", localUrl);
+      act(() => mockSandboxedExternalIframe.mock.calls.at(-1)?.[0].onLoad?.());
+      act(() => notifyFrameFailure?.("http://127.0.0.1:8080/ipfs/other"));
+      expect(screen.getByTestId("iframe")).toHaveAttribute("data-src", localUrl);
+
+      act(() => {
+        notifyFrameFailure?.(`${localUrl}/`);
+        notifyFrameFailure?.(`${localUrl}/`);
+      });
+
+      expect(screen.getByTestId("iframe")).toHaveAttribute("data-src", remoteUrl);
+      expect(unsubscribe).toHaveBeenCalled();
+    } finally {
+      if (originalApi) Object.defineProperty(window, "api", originalApi);
+      else Reflect.deleteProperty(window, "api");
+    }
   });
 
   it("auto-advances html when timeout fallback is enabled", async () => {
