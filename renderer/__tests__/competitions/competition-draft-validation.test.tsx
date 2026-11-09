@@ -81,6 +81,10 @@ jest.mock(
 jest.mock("@/components/waves/create-wave/CreateWaveStepContent", () => {
   const Threshold =
     require("@/components/waves/create-wave/voting/CreateWaveVotingThreshold").default;
+  const Review =
+    require("@/components/waves/create-wave/review/CreateWaveReview").default;
+  const Outcomes =
+    require("@/components/waves/create-wave/outcomes/CreateWaveOutcomes").default;
   const { CreateWaveStep } = require("@/types/waves.types");
   const {
     CREATE_WAVE_VALIDATION_ERROR,
@@ -89,25 +93,53 @@ jest.mock("@/components/waves/create-wave/CreateWaveStepContent", () => {
     __esModule: true,
     default: ({
       controller,
+      chatRestricted,
       ...locks
     }: {
       controller: ReturnType<typeof useWaveConfig>;
+      chatRestricted?: boolean | undefined;
       lockSubmissionStrategy?: boolean;
       lockOutcomeDefinitions?: boolean;
       lockVotingCredits?: boolean;
     }) => {
       mockStepProps = locks;
-      return controller.step === CreateWaveStep.VOTING ? (
-        <Threshold
-          threshold={controller.config.approval.threshold}
-          error={controller.errors.includes(
-            CREATE_WAVE_VALIDATION_ERROR.APPROVAL_THRESHOLD_REQUIRED
-          )}
-          setThreshold={controller.onThresholdChange}
-        />
-      ) : (
-        <output>{controller.step}</output>
-      );
+      if (controller.step === CreateWaveStep.VOTING)
+        return (
+          <Threshold
+            threshold={controller.config.approval.threshold}
+            error={controller.errors.includes(
+              CREATE_WAVE_VALIDATION_ERROR.APPROVAL_THRESHOLD_REQUIRED
+            )}
+            setThreshold={controller.onThresholdChange}
+          />
+        );
+      if (controller.step === CreateWaveStep.REVIEW)
+        return (
+          <Review
+            config={controller.config}
+            isCompetition
+            chatRestricted={chatRestricted}
+            groupsCache={{}}
+            description={null}
+          />
+        );
+      if (controller.step === CreateWaveStep.OUTCOMES)
+        return (
+          <Outcomes
+            outcomes={controller.config.outcomes}
+            outcomeType={controller.selectedOutcomeType}
+            waveType={controller.config.overview.type}
+            errors={controller.errors}
+            dates={controller.config.dates}
+            display={controller.config.display}
+            maxWinners={controller.config.approval.maxWinners}
+            setOutcomeType={controller.onOutcomeTypeChange}
+            setOutcomes={controller.setOutcomes}
+            setDisplay={controller.setDisplay}
+            setMaxWinners={controller.onApprovalMaxWinnersChange}
+          />
+        );
+      return <output>{controller.step}</output>;
     },
   };
 });
@@ -129,7 +161,7 @@ jest.mock("@/services/api/competitions-api", () => ({
 const wave = {
   id: "wave",
   visibility: { scope: { group: null } },
-  chat: { scope: { group: null } },
+  chat: { scope: { group: null }, enabled: true },
   wave: { admin_group: { group: null } },
 } as ApiWave;
 const draft = {
@@ -148,6 +180,120 @@ beforeEach(() => {
   HTMLElement.prototype.scrollIntoView = jest.fn();
 });
 afterEach(() => jest.useRealTimers());
+
+it.each([
+  {
+    enabled: true,
+    group: { id: "chat-club", name: "Chat Club", is_hidden: true },
+    expected:
+      "Chat is limited to its selected group. Submission group access is public. Voting access is separate.",
+  },
+  {
+    enabled: true,
+    group: { is_hidden: true },
+    expected:
+      "Chat is limited to its selected group. Submission group access is public. Voting access is separate.",
+  },
+  {
+    enabled: false,
+    group: { is_hidden: true },
+    expected:
+      "Chat is disabled. Submission group access is public. Voting access is separate.",
+  },
+])(
+  "reviews a new competition with the parent's actual chat: $expected",
+  ({ enabled, group, expected }) => {
+    const parent: ApiWave = {
+      ...wave,
+      chat: {
+        ...wave.chat,
+        enabled,
+        scope: {
+          ...wave.chat.scope,
+          group,
+        },
+      },
+    };
+    render(<CompetitionDraftEditor wave={parent} onClose={jest.fn()} />);
+    // Switching type resets form defaults; review must still read the parent chat.
+    fireEvent.click(screen.getByRole("combobox", { name: "Decision type" }));
+    fireEvent.click(screen.getByRole("option", { name: "Approve" }));
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Decision name" }),
+      {
+        target: { value: "Review chat access" },
+      }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText(expected)).toBeVisible();
+    for (let step = 0; step < 3; step++) {
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    }
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Approval threshold" }),
+      {
+        target: { value: "50" },
+      }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Manual" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Manual action" }), {
+      target: { value: "Recognize the winner" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    for (let step = 0; step < 2; step++) {
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    }
+    expect(screen.getByText(expected)).toBeVisible();
+  }
+);
+
+it("defaults anonymous submissions off and saves the creator's explicit choice", async () => {
+  render(<CompetitionDraftEditor wave={wave} onClose={jest.fn()} />);
+  const anonymity = screen.getByRole("checkbox", {
+    name: "Anonymous submissions",
+  });
+  expect(anonymity).not.toBeChecked();
+  fireEvent.click(anonymity);
+  expect(anonymity).toBeChecked();
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
+    target: { value: "Anonymous art" },
+  });
+  await waitFor(() =>
+    expect(createCompetition).toHaveBeenCalledWith(
+      "wave",
+      expect.objectContaining({
+        config: expect.objectContaining({
+          participation: expect.objectContaining({
+            anonymous_submissions: true,
+          }),
+        }),
+      })
+    )
+  );
+});
+
+it("keeps anonymity fixed after publication even before the first entry", () => {
+  const form = renderHook(() =>
+    useWaveConfig({ initialWaveType: ApiWaveType.Rank })
+  );
+  mockConfiguration = competitionFormToDraft(form.result.current.config, "");
+  mockConfiguration.participation.anonymous_submissions = true;
+  form.unmount();
+  render(
+    <CompetitionDraftEditor
+      wave={wave}
+      competition={{ ...draft, lifecycle: "PUBLISHED" } as ApiCompetition}
+      onClose={jest.fn()}
+    />
+  );
+  expect(
+    screen.getByRole("checkbox", { name: "Anonymous submissions" })
+  ).toBeChecked();
+  expect(
+    screen.getByRole("checkbox", { name: "Anonymous submissions" })
+  ).toBeDisabled();
+});
 
 it.each([false, true])(
   "retains published original rule editing and protects credits when permitted=%s",
@@ -185,7 +331,7 @@ it.each([false, true])(
       />
     );
     expect(
-      screen.getByRole("combobox", { name: "Competition type" })
+      screen.getByRole("combobox", { name: "Decision type" })
     ).toBeDisabled();
     for (let step = 0; step < 2; step++)
       fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -281,9 +427,9 @@ it("saves a published original through review without publishing again", async (
 it("keeps an incomplete Approve draft locally and validates the threshold before the next step", async () => {
   jest.useFakeTimers();
   render(<CompetitionDraftEditor wave={wave} onClose={jest.fn()} />);
-  fireEvent.click(screen.getByRole("combobox", { name: "Competition type" }));
+  fireEvent.click(screen.getByRole("combobox", { name: "Decision type" }));
   fireEvent.click(screen.getByRole("option", { name: "Approve" }));
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "Approve test" },
   });
   await act(async () => {
@@ -316,7 +462,7 @@ it("keeps an incomplete Approve draft locally and validates the threshold before
 
 it("continues to save Rank drafts without an approval threshold", async () => {
   render(<CompetitionDraftEditor wave={wave} onClose={jest.fn()} />);
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "Rank test" },
   });
   await waitFor(() => expect(createCompetition).toHaveBeenCalledTimes(1), {
@@ -393,7 +539,7 @@ it("does not autosave an empty threshold and resumes autosaving after it is corr
 it("flushes the latest edit when closing without publishing", async () => {
   const onClose = jest.fn();
   render(<CompetitionDraftEditor wave={wave} onClose={onClose} />);
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "Quick close" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Close editor" }));
@@ -405,20 +551,20 @@ it("flushes the latest edit when closing without publishing", async () => {
 it("restores incomplete edits after closing and reopening", async () => {
   const onClose = jest.fn();
   const view = render(<CompetitionDraftEditor wave={wave} onClose={onClose} />);
-  fireEvent.click(screen.getByRole("combobox", { name: "Competition type" }));
+  fireEvent.click(screen.getByRole("combobox", { name: "Decision type" }));
   fireEvent.click(screen.getByRole("option", { name: "Approve" }));
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "Incomplete Approve" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Close editor" }));
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   view.unmount();
   render(<CompetitionDraftEditor wave={wave} onClose={onClose} />);
-  expect(screen.getByRole("textbox", { name: "Competition name" })).toHaveValue(
+  expect(screen.getByRole("textbox", { name: "Decision name" })).toHaveValue(
     "Incomplete Approve"
   );
   expect(
-    screen.getByRole("combobox", { name: "Competition type" })
+    screen.getByRole("combobox", { name: "Decision type" })
   ).toHaveTextContent("Approve");
   expect(createCompetition).not.toHaveBeenCalled();
 });
@@ -434,7 +580,7 @@ it("saves edits made during creation using the returned draft version before clo
   );
   const onClose = jest.fn();
   render(<CompetitionDraftEditor wave={wave} onClose={onClose} />);
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "First name" },
   });
   await act(async () => {
@@ -442,9 +588,9 @@ it("saves edits made during creation using the returned draft version before clo
   });
   expect(createCompetition).toHaveBeenCalledTimes(1);
   expect(
-    screen.getByRole("textbox", { name: "Competition name" })
+    screen.getByRole("textbox", { name: "Decision name" })
   ).toBeEnabled();
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "Latest name" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Close editor" }));
@@ -471,7 +617,7 @@ it("replays an uncertain create before saving newer edits after reopening", asyn
   const view = render(
     <CompetitionDraftEditor wave={wave} onClose={jest.fn()} />
   );
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "Original name" },
   });
   await act(async () => {
@@ -482,7 +628,7 @@ it("replays an uncertain create before saving newer edits after reopening", asyn
   view.unmount();
   const onClose = jest.fn();
   render(<CompetitionDraftEditor wave={wave} onClose={onClose} />);
-  fireEvent.change(screen.getByRole("textbox", { name: "Competition name" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Decision name" }), {
     target: { value: "Recovered name" },
   });
   await act(async () => {
@@ -505,7 +651,7 @@ it("resolves a lost update response before reverting to the last saved values", 
   const view = render(
     <CompetitionDraftEditor wave={wave} onClose={jest.fn()} />
   );
-  const name = screen.getByRole("textbox", { name: "Competition name" });
+  const name = screen.getByRole("textbox", { name: "Decision name" });
   fireEvent.change(name, { target: { value: "Saved name" } });
   await act(async () => {
     jest.advanceTimersByTime(1000);
@@ -587,7 +733,7 @@ it("offers Close editor, Previous and Publish on review and publishes the saved 
       config: expect.objectContaining({ description: "Latest description" }),
     })
   );
-  expect(mockReplace).toHaveBeenCalledWith("/waves/wave/competitions/draft");
+  expect(mockReplace).toHaveBeenCalledWith("/waves/wave/decisions/draft");
 });
 
 it.each([false, true])(
@@ -603,11 +749,11 @@ it.each([false, true])(
         <CompetitionDraftEditor wave={wave} onClose={jest.fn()} />
       );
       fireEvent.click(
-        screen.getByRole("combobox", { name: "Competition type" })
+        screen.getByRole("combobox", { name: "Decision type" })
       );
       fireEvent.click(screen.getByRole("option", { name: "Approve" }));
       fireEvent.change(
-        screen.getByRole("textbox", { name: "Competition name" }),
+        screen.getByRole("textbox", { name: "Decision name" }),
         { target: { value: "Unfinished approve draft" } }
       );
       const leaving = new Event("beforeunload", { cancelable: true });

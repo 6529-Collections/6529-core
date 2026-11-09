@@ -50,6 +50,10 @@ import {
   isNativeDelegationIndexReady,
 } from "../nftdelegation-worker/nftdelegation-worker.db";
 import { getTdhCheckpointWaitingMessage } from "./tdh-readiness";
+import {
+  completeTdhConsolidations,
+  getPendingTdhConsolidations,
+} from "../../../db/tdh-recalculation";
 
 const data: WorkerData = workerData;
 
@@ -106,7 +110,9 @@ class TDHWorker extends CoreWorker {
       return;
     }
     await this.validateBlock(block);
+    const pending = await getPendingTdhConsolidations(this.getDb().manager);
     const tdhResult = await this.updateTDH(block, lastTDHCalc, policy);
+    await completeTdhConsolidations(this.getDb().manager, pending);
     await setTdhRecalculationNeeded(this.getDb().manager, false);
     await setTdhRunIncomplete(this.getDb().manager, false);
 

@@ -17,19 +17,17 @@ import {
 } from "@/components/utils/toast/AppToast";
 import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
-import { isElectron } from "@/helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
-import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
 import { useContentModerationStateScope } from "@/hooks/content-moderation/useContentModerationStateScope";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useSecureSign } from "@/hooks/useSecureSign";
+import { useDeviceGrantChangeInvalidation } from "@/hooks/device-signing/useDeviceGrantChangeInvalidation";
 import { commonApiFetch } from "@/services/api/common-api";
 import {
   getAuthJwt,
   getWalletAddress,
   hasActiveSessionV2Auth,
   PROFILE_SWITCHED_EVENT,
-  setActiveWalletAccount,
   syncConnectedWalletProfile,
   WALLET_ACCOUNTS_UPDATED_EVENT,
 } from "@/services/auth/auth.utils";
@@ -43,7 +41,7 @@ import {
   ReactQueryWrapperContext,
 } from "../react-query-wrapper/ReactQueryWrapper";
 import { AuthSignModal } from "./AuthSignModal";
-import { createAuthRequestActions } from "./authActions";
+import { useAuthRequestActions } from "./useAuthRequestActions";
 import { AuthContext } from "./authContext";
 import {
   getAuthSessionRole,
@@ -69,7 +67,6 @@ import {
   normalizeSessionV2MigrationDeadline,
 } from "./authSessionUpgrade";
 import type {
-  AuthContextType,
   AuthLoadingState,
   AuthRolloutSettings,
   SessionUpgradePromptStatus,
@@ -82,6 +79,7 @@ import {
 } from "./authValidation";
 import { useSeizeConnectContext } from "./SeizeConnectContext";
 import { useAuthChainGuard } from "./useAuthChainGuard";
+import { useAuthContextValue } from "./useAuthContextValue";
 import { useSessionRecovery } from "./useSessionRecovery";
 
 export default function Auth({
@@ -95,6 +93,7 @@ export default function Auth({
     ReactQueryWrapperContext
   );
   const queryClient = useQueryClient();
+  useDeviceGrantChangeInvalidation(queryClient);
   const pathname = usePathname();
   const router = useRouter();
   const seizeSettingsContext = useSeizeSettingsOptional();
@@ -151,9 +150,9 @@ export default function Auth({
     !isSigningOutAll && isConnectedProfileForAddress ? loadedProfile : null;
   const isConnectedProfileSettling = Boolean(
     !isSigningOutAll &&
-      address &&
-      loadedProfile &&
-      !isConnectedProfileForAddress
+    address &&
+    loadedProfile &&
+    !isConnectedProfileForAddress
   );
   const isFetchingConnectedProfile =
     !isSigningOutAll && (fetchingProfile || isConnectedProfileSettling);
@@ -209,6 +208,12 @@ export default function Auth({
     }
 
     const recheckStoredAuth = () => {
+      if (
+        getWalletAddress()?.toLowerCase() !==
+        latestAddressRef.current?.toLowerCase()
+      ) {
+        abortCurrentAuthOperation();
+      }
       setAuthStorageRevision((revision) => revision + 1);
     };
 
@@ -233,7 +238,7 @@ export default function Auth({
         recheckStoredAuth
       );
     };
-  }, []);
+  }, [abortCurrentAuthOperation]);
 
   const { data: profileProxies } = useQuery<ApiProfileProxy[]>({
     queryKey: [
@@ -440,15 +445,16 @@ export default function Auth({
       setShowSignModal(false);
     }
 
-    // In Electron the active profile is explicit state owned by connector
-    // selection/authentication. A stale live connector must never overwrite it.
+    // The selected profile is explicit state owned by profile selection/auth.
+    // A stale live connector must never overwrite it or validate another profile.
     const activeStoredAddress = getWalletAddress();
     if (
-      !isElectron() &&
       activeStoredAddress &&
       activeStoredAddress.toLowerCase() !== address.toLowerCase()
     ) {
-      setActiveWalletAccount(address);
+      // Another tab selected a different profile. Let the connection provider
+      // adopt it before validating; stale context must never rewrite selection.
+      return undefined;
     }
 
     const currentAddress = address;
@@ -581,29 +587,34 @@ export default function Auth({
     setShowSignModal,
   });
 
-  const { onActiveProfileProxy, requestAuth, requestSessionUpgrade } =
-    createAuthRequestActions({
-      activeProfileProxy,
-      address,
-      authRolloutSettings,
-      canSignActiveWallet,
-      enableWalletAuthentication,
-      expireSessionUpgradeAuth,
-      invalidateAll,
-      isAddressAuthorized,
-      isActiveChainSupported: authChainGuard.isLatestChainSupported,
-      seizeDisconnect,
-      resetSessionUpgradeExpiryDedupe,
-      setActiveProfileProxy,
-      setAuthLoadingState,
-      setSessionUpgradeRequired,
-      setShowSignModal,
-      setSignModalReason,
-      setToast,
-      showSessionUpgradePrompt,
-      signMessage,
-      signModalReason,
-    });
+  const {
+    onActiveProfileProxy,
+    requestAuth,
+    requestSessionUpgrade,
+    requestSignedMessagesGrant,
+  } = useAuthRequestActions({
+    activeProfileProxy,
+    address,
+    authRolloutSettings,
+    canSignActiveWallet,
+    enableWalletAuthentication,
+    expireSessionUpgradeAuth,
+    invalidateAll,
+    isAddressAuthorized,
+    isActiveChainSupported: authChainGuard.isLatestChainSupported,
+    seizeDisconnect,
+    resetSessionUpgradeExpiryDedupe,
+    setActiveProfileProxy,
+    setAuthLoadingState,
+    setSessionUpgradeRequired,
+    setShowSignModal,
+    setSignModalReason,
+    setToast,
+    showSessionUpgradePrompt,
+    signMessage,
+    signModalReason,
+    ownProfileId: connectedProfile?.id ?? null,
+  });
 
   const navigateAfterProfileSwitchForRoute = useCallback(() => {
     navigateAfterProfileSwitch({ pathname, queryClient, router });
@@ -785,44 +796,23 @@ export default function Auth({
     onCancelSignRequest();
     router.push("/about/tech/wallet-authentication");
   };
-  const authContextValue = useMemo<AuthContextType>(
-    () => ({
-      requestAuth,
-      setToast,
-      connectedProfile: connectedProfile ?? null,
-      isAuthenticated: Boolean(connectedProfile?.handle && isAddressAuthorized),
-      fetchingProfile: isFetchingConnectedProfile,
-      receivedProfileProxies,
-      activeProfileProxy,
-      showWaves,
-      isDirectProfileSession,
-      sessionUpgradeRequired,
-      connectionStatus: getProfileConnectedStatus({
-        profile: connectedProfile ?? null,
-        isProxy: !!activeProfileProxy,
-      }),
-      requestSessionUpgrade,
-      ensureActiveSessionV2WebSession:
-        ensureActiveSessionV2WebSessionForActiveWallet,
-      setActiveProfileProxy: onActiveProfileProxy,
-    }),
-    [
-      activeProfileProxy,
-      connectedProfile,
+  const authContextValue = useAuthContextValue({
+    activeProfileProxy,
+    connectedProfile,
+    ensureActiveSessionV2WebSession:
       ensureActiveSessionV2WebSessionForActiveWallet,
-      isAddressAuthorized,
-      isFetchingConnectedProfile,
-      isDirectProfileSession,
-      onActiveProfileProxy,
-      receivedProfileProxies,
-      requestAuth,
-      requestSessionUpgrade,
-      sessionUpgradeRequired,
-      setToast,
-      showWaves,
-    ]
-  );
-
+    fetchingProfile: isFetchingConnectedProfile,
+    isAddressAuthorized,
+    isDirectProfileSession,
+    receivedProfileProxies,
+    requestAuth,
+    requestSessionUpgrade,
+    requestSignedMessagesGrant,
+    sessionUpgradeRequired,
+    setActiveProfileProxy: onActiveProfileProxy,
+    setToast,
+    showWaves,
+  });
   return (
     <AuthContext.Provider value={authContextValue}>
       {children}

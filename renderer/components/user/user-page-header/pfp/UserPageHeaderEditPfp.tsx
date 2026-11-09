@@ -1,7 +1,6 @@
 "use client";
 
 import { AuthContext } from "@/components/auth/Auth";
-import { useIpfsService } from "@/components/ipfs/IPFSContext";
 import MobileWrapperDialog from "@/components/mobile-wrapper-dialog/MobileWrapperDialog";
 import {
   QueryKey,
@@ -19,10 +18,12 @@ import {
   commonApiPost,
   commonApiPostForm,
 } from "@/services/api/common-api";
+import { uploadProfilePictureFile } from "@/components/ipfs/profilePictureUpload";
 import { getUploadErrorMessage } from "@/services/api/upload-error";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FormEvent } from "react";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
+import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { getUserProfileHeaderMessage } from "../user-page-header.messages";
 export default function UserPageHeaderEditPfp({
   profile,
@@ -39,8 +40,6 @@ export default function UserPageHeaderEditPfp({
   readonly onBack?: (() => void) | undefined;
   readonly onClose: () => void;
 }) {
-  const ipfsService = useIpfsService();
-
   const { setToast, requestAuth } = useContext(AuthContext);
   const { onProfileEdit } = useContext(ReactQueryWrapperContext);
 
@@ -59,13 +58,23 @@ export default function UserPageHeaderEditPfp({
     },
   });
 
-  const [imageToShow, setImageToShow] = useState<string | null>(
-    profile.pfp ? getScaledImageUri(profile.pfp, ImageScale.W_200_H_200) : null
-  );
+  const savedImage = profile.pfp
+    ? getScaledImageUri(profile.pfp, ImageScale.W_200_H_200)
+    : null;
 
   const [selectedMeme, setSelectedMeme] = useState<NFTLite | null>(null);
   const [file, setFile] = useState<File | null>();
   const [error, setError] = useState<string | null>(null);
+
+  // The preview URL is revoked when the file is replaced or cleared and when
+  // the editor unmounts.
+  const filePreviewUrl = useObjectUrl(file);
+  let imageToShow = savedImage;
+  if (file) {
+    imageToShow = filePreviewUrl ?? savedImage;
+  } else if (selectedMeme) {
+    imageToShow = selectedMeme.scaled ?? selectedMeme.image;
+  }
 
   const setSelectedMemeAndRemoveFile = (meme: NFTLite) => {
     setSelectedMeme(meme);
@@ -79,14 +88,6 @@ export default function UserPageHeaderEditPfp({
     setError(null);
   };
 
-  useEffect(() => {
-    if (file) {
-      setImageToShow(URL.createObjectURL(file));
-    } else if (selectedMeme) {
-      setImageToShow(selectedMeme.scaled ?? selectedMeme.image);
-    }
-  }, [file, selectedMeme]);
-
   const [saving, setSaving] = useState<boolean>(false);
 
   const updatePfp = useMutation({
@@ -97,14 +98,10 @@ export default function UserPageHeaderEditPfp({
         throw new Error("Profile handle is required");
       }
       if (pfp) {
-        if (!ipfsService) {
-          throw new Error("IPFS service is not initialized");
-        }
         if (!profile.classification) {
           return;
         }
-        const cid = await ipfsService.addFile(pfp as File);
-        const ipfs = `ipfs://${cid}`;
+        const ipfs = await uploadProfilePictureFile(pfp as File);
         const ipfsBody: ApiCreateOrUpdateProfileRequest = {
           handle: profile.handle,
           classification: profile.classification,
@@ -195,21 +192,25 @@ export default function UserPageHeaderEditPfp({
   };
 
   const form = (
-    <form onSubmit={onSubmit} className="tw-px-4 sm:tw-px-6">
+    <form onSubmit={onSubmit} className="tw-px-5 sm:tw-px-6">
       <UserSettingsImgSelectMeme
+        compact
         memes={memes ?? []}
         onMeme={setSelectedMemeAndRemoveFile}
       />
 
-      <div className="tw-my-5 tw-flex tw-w-full tw-items-center tw-gap-3">
+      <div className="tw-my-4 tw-flex tw-w-full tw-items-center tw-gap-3">
         <span className="tw-h-px tw-flex-1 tw-bg-white/5" />
-        <span className="tw-text-[11px] tw-font-medium tw-uppercase tw-tracking-[0.16em] tw-text-iron-600">
-          or
+        <span className="tw-text-xs tw-font-normal tw-text-iron-400">
+          {getUserProfileHeaderMessage(
+            "user.profileHeader.edit.pictureSourceAlternative"
+          )}
         </span>
         <span className="tw-h-px tw-flex-1 tw-bg-white/5" />
       </div>
 
       <UserSettingsImgSelectFile
+        compact
         imageToShow={imageToShow}
         setFile={setFileAndRemoveMeme}
       />
@@ -224,7 +225,7 @@ export default function UserPageHeaderEditPfp({
       <div className="tw-flex tw-flex-col tw-gap-2 tw-pt-5 md:tw-flex-row-reverse md:tw-justify-start">
         <Button
           type="submit"
-          variant="action"
+          variant="primary"
           size="lg"
           loading={saving}
           disabled={!file && !selectedMeme}
@@ -234,7 +235,7 @@ export default function UserPageHeaderEditPfp({
           Save PFP
         </Button>
         <Button
-          variant="secondary"
+          variant="ghost"
           size="lg"
           disabled={saving}
           onClick={onClose}
@@ -260,7 +261,9 @@ export default function UserPageHeaderEditPfp({
       onAfterLeave={onAfterLeave}
       tabletModal
       showHeaderCloseButton
-      showHeaderDivider
+      headerVariant="minimal"
+      headerClassName="!tw-px-5 tw-pb-5 sm:!tw-px-6"
+      titleClassName="!tw-text-base !tw-font-medium"
       showScrollbar
       maxWidthClass="md:tw-max-w-2xl"
     >

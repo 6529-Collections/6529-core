@@ -1,19 +1,25 @@
 "use client";
 
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import { shouldHideSubscriptions } from "@/components/user/layout/userPageVisibility";
+import useCapacitor from "@/hooks/useCapacitor";
+import { useNftPurchasingVisibility } from "@/hooks/useNftPurchasingVisibility";
+import {
+  SIDEBAR_HOVER_CLOSE_DELAY_MS,
+  SIDEBAR_HOVER_OPEN_DELAY_MS,
+} from "@/constants/sidebar";
 import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
 import { useAuth } from "@/components/auth/Auth";
 import ChatBubbleIcon from "@/components/common/icons/ChatBubbleIcon";
 import DropForgeIcon from "@/components/common/icons/DropForgeIcon";
 import Join6529Icon from "@/components/common/icons/Join6529Icon";
 import WatchTowerIcon from "@/components/common/icons/WatchTowerIcon";
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import {
   DROP_FORGE_PATH,
   DROP_FORGE_TITLE,
 } from "@/components/drop-forge/drop-forge.constants";
 import type { SidebarSection } from "@/components/navigation/navTypes";
-import useCapacitor from "@/hooks/useCapacitor";
 import { useDropForgePermissions } from "@/hooks/useDropForgePermissions";
 import { useContentModeratorAccess } from "@/hooks/content-moderation/useContentModeratorAccess";
 import { useSectionMap, useSidebarSections } from "@/hooks/useSidebarSections";
@@ -47,17 +53,12 @@ const getBrowserWindow = (): Window | undefined =>
 
 const getSafePathname = (pathname: string | null): string => pathname ?? "";
 
-const HOVER_OPEN_DELAY_MS = 100;
-const HOVER_CLOSE_DELAY_MS = 200;
-
 const WebSidebarNav = React.forwardRef<
   { closeSubmenu: () => void },
   WebSidebarNavProps
 >(({ isCollapsed = false }, ref) => {
   const pathname = usePathname();
   const safePathname = getSafePathname(pathname);
-  const capacitor = useCapacitor();
-  const { country } = useCookieConsent();
   const { ipfsUrls } = useIpfsContext();
   const { connectedProfile } = useAuth();
   const { appWalletsSupported } = useAppWallets();
@@ -90,11 +91,16 @@ const WebSidebarNav = React.forwardRef<
     undefined
   );
 
+  const { hideNftPurchasing } = useNftPurchasingVisibility();
+  const capacitor = useCapacitor();
+  const consent = useCookieConsent();
   const sections = useSidebarSections(
     appWalletsSupported,
-    capacitor.isIos,
-    country,
-    undefined,
+    hideNftPurchasing,
+    shouldHideSubscriptions({
+      capacitorIsIos: capacitor.isIos,
+      country: consent.country,
+    }),
     ipfsUrls?.webui ?? ""
   );
   const sectionMap = useSectionMap(sections);
@@ -150,7 +156,7 @@ const WebSidebarNav = React.forwardRef<
     hoverCloseTimerRef.current = setTimeout(() => {
       hoverCloseTimerRef.current = undefined;
       closeSubmenu();
-    }, HOVER_CLOSE_DELAY_MS);
+    }, SIDEBAR_HOVER_CLOSE_DELAY_MS);
   }, [clearHoverCloseTimer, closeSubmenu]);
 
   useImperativeHandle(ref, () => ({ closeSubmenu }), [closeSubmenu]);
@@ -237,7 +243,7 @@ const WebSidebarNav = React.forwardRef<
       hoverOpenTimerRef.current = setTimeout(() => {
         hoverOpenTimerRef.current = undefined;
         openCollapsedSubmenu(sectionKey, trigger);
-      }, HOVER_OPEN_DELAY_MS);
+      }, SIDEBAR_HOVER_OPEN_DELAY_MS);
     },
     [
       clearHoverCloseTimer,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import { useNftPurchasingVisibility } from "@/hooks/useNftPurchasingVisibility";
 import RememeImage from "@/components/nft-image/RememeImage";
 import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
 import { RememeReferencesGrid } from "@/components/rememes/RememeReferences";
@@ -8,7 +8,7 @@ import {
   AdditionalDetailsSection,
   MetadataCard,
 } from "@/components/the-memes/MemePageAdditionalDetails";
-import { publicEnv } from "@/config/env";
+import { apiUrl } from "@/services/api/api-endpoints";
 import {
   MEMES_CONTRACT,
   OPENSEA_STORE_FRONT_CONTRACT,
@@ -23,7 +23,6 @@ import {
   parseIpfsUrl,
   parseNftDescriptionToHtml,
 } from "@/helpers/Helpers";
-import useCapacitor from "@/hooks/useCapacitor";
 import { formatInteger } from "@/i18n/format";
 import { DEFAULT_LOCALE, type SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
@@ -68,8 +67,7 @@ interface Props {
 export default function RememePage(props: Readonly<Props>) {
   const locale = props.locale ?? DEFAULT_LOCALE;
   const { setTitle } = useTitle();
-  const capacitor = useCapacitor();
-  const { country } = useCookieConsent();
+  const { hideNftPurchasing } = useNftPurchasingVisibility();
   const [rememe, setRememe] = useState<Rememe>();
 
   const [activeTab, setActiveTab] = useState<Tabs>(Tabs.LIVE);
@@ -100,7 +98,7 @@ export default function RememePage(props: Readonly<Props>) {
           id: props.id,
         });
         const response = await fetchUrl<DBResponse<Rememe>>(
-          `${publicEnv.API_ENDPOINT}/api/rememes?${query}`,
+          apiUrl(`/api/rememes?${query}`),
           { signal: abortController.signal }
         );
         if (cancelled) {
@@ -151,11 +149,11 @@ export default function RememePage(props: Readonly<Props>) {
     const abortController = new AbortController();
 
     fetchAllPages<NFT>(
-      `${
-        publicEnv.API_ENDPOINT
-      }/api/nfts?contract=${MEMES_CONTRACT}&id=${rememe.meme_references.join(
-        ","
-      )}`,
+      apiUrl(
+        `/api/nfts?contract=${MEMES_CONTRACT}&id=${rememe.meme_references.join(
+          ","
+        )}`
+      ),
       { signal: abortController.signal }
     )
       .then((responseNfts) => {
@@ -340,7 +338,7 @@ export default function RememePage(props: Readonly<Props>) {
                   </div>
                 )}
               </div>
-              {(!capacitor.isIos || country === "US") && (
+              {!hideNftPurchasing && (
                 <div className="tw-w-fit tw-max-w-full">
                   <NFTMarketplaceLinks
                     contract={rememe.contract}

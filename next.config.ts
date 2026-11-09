@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { PRODUCTION_ASSET_PREFIX } from "./renderer/config/assetPrefix";
 import type { NextConfig } from "next";
 import {
   PHASE_DEVELOPMENT_SERVER,
@@ -35,11 +36,22 @@ const meebits445Headers = {
   ],
 };
 
+// Mirror renderer/config/profileCmsAssetProxyHeaders.ts for the same reason:
+// a CMS asset opened directly is an inert, sandboxed document.
+const profileCmsAssetProxyHeaders = {
+  source: "/api/profile-cms/assets",
+  headers: [
+    {
+      key: "Content-Security-Policy",
+      value: "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    },
+  ],
+};
+
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_MEDIA_RESOLVER_ENDPOINT = "https://media.6529.io";
-const PRODUCTION_ASSET_HOSTNAME = "dnclu2fna0b2b.cloudfront.net";
 const ARWEAVE_GATEWAY_HOSTS = [
   "arweave.net",
   "ardrive.net",
@@ -148,11 +160,8 @@ function computeVersionFromPkg(): string {
   }
 }
 
-function getAssetPrefix(assetsFromS3: boolean, version: string): string {
-  if (!assetsFromS3) {
-    return "";
-  }
-  return `https://${PRODUCTION_ASSET_HOSTNAME}/web_build/${version}`;
+function getAssetPrefix(assetsFromS3: boolean): string {
+  return assetsFromS3 ? PRODUCTION_ASSET_PREFIX : "";
 }
 
 function resolveAssetsFlagFromEnv(): boolean {
@@ -391,9 +400,7 @@ interface PublicEnv {
   MOBILE_APP_SCHEME?: string;
   CORE_SCHEME?: string;
   GIPHY_API_KEY?: string;
-  IPFS_API_ENDPOINT?: string;
   IPFS_GATEWAY_ENDPOINT?: string;
-  IPFS_MFS_PATH?: string;
   MEDIA_RESOLVER_ENDPOINT?: string;
   WS_ENDPOINT?: string;
   DEV_MODE_MEMES_WAVE_ID?: string;
@@ -522,6 +529,13 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     transpilePackages: ["react-tweet"],
     poweredByHeader: false,
+    // Match FE's per-icon imports in Core's separately owned Next config.
+    modularizeImports: {
+      "@fortawesome/free-solid-svg-icons": {
+        transform: "@fortawesome/free-solid-svg-icons/{{member}}",
+        skipDefaultConversion: true,
+      },
+    },
     redirects() {
       return Promise.resolve([
         {
@@ -547,6 +561,13 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         {
           source: "/about/nft-delegation",
           destination: "/safe-collecting",
+          permanent: true,
+        },
+        // Competitions are now called decisions. `:path*` also matches the
+        // bare collection route, and query strings carry over.
+        {
+          source: "/waves/:wave/competitions/:path*",
+          destination: "/waves/:wave/decisions/:path*",
           permanent: true,
         },
       ]);
@@ -578,6 +599,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
           ),
         },
         meebits445Headers,
+        profileCmsAssetProxyHeaders,
       ];
     },
     turbopack: {
@@ -595,6 +617,9 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         // not from this config file or turbopack.root.
         "@/i18n/localeDictionaries": {
           browser: "./i18n/localeDictionaries.browser.ts",
+        },
+        "@/i18n/sourceMessages": {
+          browser: "./i18n/sourceMessages.browser.ts",
         },
       },
     },
@@ -673,12 +698,17 @@ const nextConfigFactory = (phase: string): NextConfig => {
 
     persistBakedArtifacts(publicEnv, ASSETS_FROM_S3);
 
-    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3);
 
     return {
       ...sharedConfig(publicEnv, assetPrefix),
       env: {
         PUBLIC_RUNTIME: JSON.stringify(publicEnv),
+        PUBLIC_RUNTIME_BROWSER: JSON.stringify({
+          ...publicEnv,
+          VERSION: undefined,
+          VERSION_BUILD_TIMESTAMP: undefined,
+        }),
         API_ENDPOINT: publicEnv.API_ENDPOINT,
         ALLOWLIST_API_ENDPOINT: publicEnv.ALLOWLIST_API_ENDPOINT,
         BACKEND_TARGET: publicEnv.BACKEND_TARGET,
@@ -694,9 +724,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         MOBILE_APP_SCHEME: publicEnv.MOBILE_APP_SCHEME,
         CORE_SCHEME: publicEnv.CORE_SCHEME,
         GIPHY_API_KEY: publicEnv.GIPHY_API_KEY,
-        IPFS_API_ENDPOINT: publicEnv.IPFS_API_ENDPOINT,
         IPFS_GATEWAY_ENDPOINT: publicEnv.IPFS_GATEWAY_ENDPOINT,
-        IPFS_MFS_PATH: publicEnv.IPFS_MFS_PATH,
         MEDIA_RESOLVER_ENDPOINT: publicEnv.MEDIA_RESOLVER_ENDPOINT,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,
@@ -744,7 +772,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
     const VERSION = computeVersionFromPkg();
     const publicEnv = loadBakedRuntimeConfig(VERSION) as PublicEnv;
     const ASSETS_FROM_S3 = loadAssetsFlagAtRuntime();
-    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3);
     return sharedConfig(publicEnv, assetPrefix);
   }
 

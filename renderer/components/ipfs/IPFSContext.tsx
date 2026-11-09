@@ -6,12 +6,7 @@ import {
   to6529ResolverUrl,
 } from "@/lib/media/decentralized-media";
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { isElectron } from "../../helpers";
 import IpfsService from "./IPFSService";
 import type { IpfsStatus } from "@/shared/ipfs-status";
@@ -247,6 +242,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
     let revision = 0;
     const clearService = (status: IpfsStatus) => {
       cachedGatewayBase = null;
+      ipfsServicePromise = null;
       setValue({ ipfsService: null, ipfsUrls: undefined, ipfsStatus: status });
     };
     const refresh = async () => {
@@ -313,6 +309,54 @@ export const useIpfsContext = (): IpfsContextType => {
 export const useIpfsService = (): IpfsService | null => {
   const { ipfsService } = useIpfsContext();
   return ipfsService;
+};
+
+let ipfsServicePromise: Promise<IpfsService> | null = null;
+
+/** True where the Desktop bridge can report the user's own IPFS node. */
+export const hasDesktopIpfsBridge = (): boolean =>
+  typeof window !== "undefined" &&
+  (isElectron() || typeof window.api?.getInfo === "function");
+
+const createIpfsService = async (): Promise<IpfsService> => {
+  // Desktop uploads to its current native node, including its disabled or
+  // starting state. There is no remote upload endpoint to fall back to.
+  const config = await readIpfsConfig();
+  if (!config?.apiEndpoint) {
+    throw new Error(
+      "Local IPFS is off or unavailable. Turn it on in Local IPFS settings to upload."
+    );
+  }
+  const { default: IpfsServiceClass } = await import("./IPFSService");
+  const service = new IpfsServiceClass({
+    apiEndpoint: config.apiEndpoint,
+    mfsPath: config.mfsPath,
+  });
+  try {
+    await service.init();
+  } catch (error: unknown) {
+    console.error("Error initializing IPFS service", error);
+  }
+  return service;
+};
+
+// Desktop pins uploads (profile pictures) on the user's own node, lazily.
+const getIpfsService = async (): Promise<IpfsService> => {
+  ipfsServicePromise ??= createIpfsService();
+  const pending = ipfsServicePromise;
+  try {
+    return await pending;
+  } catch (error: unknown) {
+    if (ipfsServicePromise === pending) {
+      ipfsServicePromise = null;
+    }
+    throw error;
+  }
+};
+
+export const addFileToIpfs = async (file: File): Promise<string> => {
+  const service = await getIpfsService();
+  return service.addFile(file);
 };
 
 export const resolveIpfsUrlSync = (url: string) => {

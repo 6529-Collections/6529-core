@@ -44,9 +44,10 @@ export const publicEnvSchema = z.object({
    * ────────────────
    * API KEYS / CREDENTIALS
    *   • OPTIONAL
+   *   • Everything here reaches the browser. Server-only credentials belong
+   *     in config/serverEnv.ts, never in this schema.
    * ────────────────
    */
-  STAGING_API_KEY: z.string().optional(),
   GIPHY_API_KEY: z.string().optional(),
 
   /**
@@ -56,16 +57,12 @@ export const publicEnvSchema = z.object({
    *   • OPTIONAL
    * ────────────────
    */
-  // 6529 Desktop supplies these through its local runtime when IPFS is enabled.
-  IPFS_API_ENDPOINT: z
-    .string()
-    .url("IPFS_API_ENDPOINT must be a valid URL")
-    .optional(),
+  // 6529 Desktop reads its local node's endpoints from the Electron bridge, so
+  // the gateway is optional there. Profile picture uploads go through the API.
   IPFS_GATEWAY_ENDPOINT: z
     .string()
     .url("IPFS_GATEWAY_ENDPOINT must be a valid URL")
     .optional(),
-  IPFS_MFS_PATH: z.string().optional(),
   MEDIA_RESOLVER_ENDPOINT: z
     .string()
     .url("MEDIA_RESOLVER_ENDPOINT must be a valid URL")
@@ -78,6 +75,9 @@ export const publicEnvSchema = z.object({
   /**
    * ────────────────
    * AUTH / DEV MODE (all optional)
+   *   • Dev auth (USE_DEV_AUTH, DEV_MODE_AUTH_JWT, DEV_MODE_WALLET_ADDRESS)
+   *     only applies in development and test (config/devAuth.ts). Production
+   *     builds for a non-local BASE_ENDPOINT fail when any of them is set.
    * ────────────────
    */
   CORE_SCHEME: z.string().optional(),
@@ -99,7 +99,6 @@ export const publicEnvSchema = z.object({
     .string()
     .url("FARCASTER_WARPCAST_API_BASE must be a valid URL")
     .optional(),
-  FARCASTER_WARPCAST_API_KEY: z.string().optional(),
 
   /**
    * ────────────────
@@ -119,7 +118,22 @@ export const publicEnvSchema = z.object({
     .string()
     .url("STANDALONE_MAIN_SITE_BASE must be a valid URL")
     .optional(),
+  STANDALONE_TEST_BUILD: z
+    .union([z.enum(["true", "false"]), z.boolean()])
+    .transform((value) => value === "true" || value === true)
+    .optional(),
   FEATURE_AB_CARD: z.string().optional(),
+  NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES: z.string().optional(),
+  NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: z.string().optional(),
+  // Gap-only chat sync and batched read markers. On only when exactly
+  // "true"; staging builds set it, production builds leave it unset.
+  NEXT_PUBLIC_FEATURE_CHAT_GAP_SYNC: z.string().optional(),
+  // App-socket PING keepalive and liveness checks (API #2354). On only when
+  // exactly "true"; staging builds set it, production builds leave it unset.
+  NEXT_PUBLIC_FEATURE_WS_PING: z.string().optional(),
+  // End-to-end encrypted DMs and groups (D109). On only when exactly "true";
+  // staging builds set it, production builds leave it unset.
+  NEXT_PUBLIC_E2EE_DM_ENABLED: z.string().optional(),
   NEXT_PUBLIC_PROFILE_CMS_BUILDER_API_ENABLED: z.string().optional(),
   NEXT_PUBLIC_PROFILE_CMS_BUILDER_ENABLED: z.string().optional(),
   NEXT_PUBLIC_CLOUDFRONT_DOMAIN: z.string().optional(),

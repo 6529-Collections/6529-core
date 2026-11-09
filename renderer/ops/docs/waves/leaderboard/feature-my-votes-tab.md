@@ -1,22 +1,43 @@
-# Competition Votes
+# Decision Votes
 
 ## Overview
 
 `My Votes` lists active submissions where your current vote is not `0`.
 Past winners are excluded; their historical vote records remain preserved.
-Rows are ordered by your vote value, highest first. Equal votes are ordered by
-vote time, oldest first. Saving a vote refreshes the loaded pages to reflect its
-new position before more rows load.
+Use the compact sorting control beside **Select all**. It opens a dropdown on
+desktop and the shared bottom sheet below 1024px and in the app.
+The control shows the current order, with **Available in wave** on the same
+toolbar when a wave-wide balance is available. The controls wrap on narrow screens.
+**Reset votes** and the selected count appear only after you select a row;
+clearing the selection hides them again. Choose an order:
+
+- **Your vote amount** (the initial default): highest signed vote first, including
+  negative votes. Equal amounts keep the existing allocation-update order,
+  oldest first, with a stable artwork order when times match.
+- **Leaderboard position**: the decision's current position, highest-ranked
+  first. Ties follow its leaderboard order; entries without a rank come last.
+- **Last voted**: your most recent successfully cast or changed vote first.
+  Automatic credit adjustments and unchanged saves do not count as new votes.
+  Entries without a known vote-change time come last; equal times use a stable
+  artwork order. Older retained vote records have second-level precision.
+
+Each order covers all eligible votes, including pages not loaded yet. Your choice
+is remembered in this browser for the current decision and connected profile.
+Changing sort clears the reset selection and starts the selected order from its
+first page; it does not change a vote. The selector stays available during loading
+and retry, and is disabled while a vote is saving or a bulk reset is running.
+Saving a vote refreshes the loaded pages to reflect its new position before more
+rows load.
 You can update votes one row at a time, reset selected rows to `0`, or open a
 prefilled reply for explaining a vote.
 
 Open **Votes** in the wave's main row, then select **My Votes**. The other
 subtabs are **All votes**, with voter profiles and totals, and **Activity**, with
 vote changes. These three views use compact rounded pills below the main wave
-tabs on desktop, mobile web, and the app. Decision-pause notices appear below the
+tabs on desktop, mobile web, and the app. Notices that results are paused appear below the
 pills. Submission eligibility notices belong to Leaderboard and do not appear in
-Votes. Each view uses the selected competition,
-including the original competition in an older wave. Switching competition changes all three views.
+Votes. Each view uses the selected decision,
+including the original decision in an older wave. Switching decision changes all three views.
 Signed-out viewers can inspect public All votes and Activity; personal votes
 require a connected profile. My Votes rows span the full wave content pane,
 with padding inside each row for its controls.
@@ -111,6 +132,8 @@ On phones, the checkbox, a small artwork thumbnail, and the title with its autho
 
 ## Failure and Recovery
 
+- If the list fails to load or refresh, use **Try again** or choose another sort.
+  Existing rows stay visible during a failed background refresh.
 - If an entry preview is unavailable, its personal vote remains visible with
   **Preview unavailable**, vote controls, and **Try again**. The entry's hidden
   artwork and author details are not displayed.
@@ -137,7 +160,7 @@ On phones, the checkbox, a small artwork thumbnail, and the title with its autho
   object or require dedicated backend support.
 - Vote totals, available votes, and maximum values use locale-aware number
   formatting. Focusing a vote input shows its editable digits without grouping.
-- Competition links use `tab=votes`; `voteTab=mine`, `voteTab=all`, or `voteTab=activity` preserves the subtab on reload and Back/Forward. Older `tab=voters` links open All votes.
+- Decision links use `tab=votes`; `voteTab=mine`, `voteTab=all`, or `voteTab=activity` preserves the subtab on reload and Back/Forward. Older `tab=voters` links open All votes.
 
 ## Related Pages
 

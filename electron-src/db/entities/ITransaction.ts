@@ -82,6 +82,11 @@ export class BaseTransaction {
 @Entity(TRANSACTIONS_TABLE)
 export class Transaction extends BaseTransaction {}
 
+export interface PendingTdhConsolidations {
+  revision: string;
+  wallets: string[];
+}
+
 @Entity(TRANSACTIONS_BLOCKS_TABLE)
 export class TransactionBlock extends SingletonBlockEntity {
   @Column({ type: "boolean", default: false })
@@ -89,6 +94,9 @@ export class TransactionBlock extends SingletonBlockEntity {
 
   @Column({ type: "boolean", default: false })
   tdh_run_incomplete!: boolean;
+
+  @Column({ type: "simple-json", nullable: true, default: null })
+  tdh_pending_consolidations!: PendingTdhConsolidations | null;
 
   @Column({ type: "int", nullable: true })
   reconciliation_from_block!: number | null;

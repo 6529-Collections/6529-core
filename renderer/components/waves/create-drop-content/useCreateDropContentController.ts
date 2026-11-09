@@ -26,7 +26,7 @@ import { getMentionedGroupsFromEditorState } from "@/components/drops/create/lex
 import { getReferencedNftsFromEditorState } from "@/components/drops/create/lexical/utils/nftReferenceDetection";
 import { getMentionedUsersFromEditorState } from "@/components/drops/create/lexical/utils/userMentionDetection";
 import { getMentionedWavesFromEditorState } from "@/components/drops/create/lexical/utils/waveMentionDetection";
-import { useMyStream } from "@/contexts/wave/MyStreamContext";
+import { useMyStreamActions } from "@/contexts/wave/MyStreamContext";
 import { useWaveChatScrollOptional } from "@/contexts/wave/WaveChatScrollContext";
 import { isReservedIdentitySubmissionMetadataKey } from "@/helpers/waves/identity-submission-metadata";
 import { useDropSignature } from "@/hooks/drops/useDropSignature";
@@ -101,7 +101,7 @@ export function useCreateDropContentController({
   initialMarkdownKey = null,
 }: CreateDropContentProps): CreateDropLayoutProps {
   const { isSafeWallet, address } = useSeizeConnectContext();
-  const { isApp } = useDeviceInfo();
+  const { isApp, isMobileDevice, hasTouchScreen } = useDeviceInfo();
   const isMobile = useIsMobileScreen();
   const locale = useBrowserLocale();
   const { actionsContainerRef, isWideContainer, setActionsContainerRef } =
@@ -111,7 +111,7 @@ export function useCreateDropContentController({
   const { requestAuth, setToast, connectedProfile, activeProfileProxy } =
     useAuth();
   const { addOptimisticDrop } = useContext(ReactQueryWrapperContext);
-  const { processIncomingDrop } = useMyStream();
+  const { processIncomingDrop } = useMyStreamActions();
   const waveChatScroll = useWaveChatScrollOptional();
   const { signDrop } = useDropSignature();
 
@@ -446,7 +446,6 @@ export function useCreateDropContentController({
 
   const {
     createDropInputRef,
-    shouldRefocusAfterChatSubmitRef,
     dropEditorRefreshKey,
     onReferencedNft,
     onMentionedUser,
@@ -595,6 +594,7 @@ export function useCreateDropContentController({
     dropModeSessionScopeKey,
     isIdentityPickerAllowed,
     isApp,
+    isDesktop: !isApp && !isMobileDevice && !hasTouchScreen,
     requestAuth,
     setToast,
     signDrop,
@@ -616,7 +616,6 @@ export function useCreateDropContentController({
     setIsStormMode,
     setMetadataOpenState,
     createDropInputRef,
-    shouldRefocusAfterChatSubmitRef,
   });
 
   const onSwitchToDropMode = useCallback(() => {

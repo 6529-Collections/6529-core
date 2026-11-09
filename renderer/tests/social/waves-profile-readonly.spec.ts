@@ -1,9 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 import { ApiProfileClassification } from "../../generated/models/ApiProfileClassification";
+import type { ApiWaveOverviewPage } from "../../generated/models/ApiWaveOverviewPage";
 import type { ApiXTdhGrantsPage } from "../../generated/models/ApiXTdhGrantsPage";
 import { ApiXTdhGrantStatus } from "../../generated/models/ApiXTdhGrantStatus";
 import { ApiXTdhGrantTargetChain } from "../../generated/models/ApiXTdhGrantTargetChain";
 import { ApiXTdhGrantTargetTokenMode } from "../../generated/models/ApiXTdhGrantTargetTokenMode";
+import { fetchWaveDiscoveryPage } from "./waveDiscoveryPagination";
 import type { ApiXTdhGrantTokensPage } from "../../generated/models/ApiXTdhGrantTokensPage";
 import { expectUrlState } from "../support/urlState";
 import { installSurfaceSimulation } from "../support/surfaceSimulation";
@@ -23,7 +25,9 @@ import {
   RESPONSE_TIMEOUT_MS,
 } from "../support/routeReadiness";
 
-import { EN_US_MESSAGES } from "../../i18n/messages/en-US";
+import { installSubscriptionFixtures } from "../support/subscriptionFixtures";
+
+import { EN_US_MESSAGES } from "../../i18n/messages/en-US.complete";
 import {
   captureSafeScreenshot,
   expect,
@@ -114,6 +118,56 @@ async function getFirstWaveId(page: Page) {
     `Expected first wave href to use /waves/{id}; got ${href}`
   ).not.toBeNull();
   return match?.[1] ?? "";
+}
+
+async function getPublicChatMessageTarget(page: Page) {
+  const response = await gotoReadyWithApiResponse(
+    page,
+    "/waves",
+    (url) =>
+      url.pathname === "/api/v2/waves" &&
+      !url.searchParams.has("name") &&
+      !url.searchParams.has("pinned") &&
+      (!url.searchParams.has("page") || url.searchParams.get("page") === "1")
+  );
+  const isEligibleChat = (candidate: ApiWaveOverviewPage["data"][number]) =>
+    !candidate.has_competition &&
+    !candidate.is_private &&
+    !candidate.is_dm_wave &&
+    candidate.total_drops_count > 1;
+  let overview = (await response.json()) as ApiWaveOverviewPage;
+  let wave = overview.data.find(isEligibleChat);
+  const stagingAccess = await response.request().headerValue("x-6529-auth");
+  while (!wave && overview.next) {
+    const nextPage = overview.page + 1;
+    const nextPageUrl = new URL(response.url());
+    nextPageUrl.searchParams.set("page", String(nextPage));
+    overview = await fetchWaveDiscoveryPage(
+      page.context(),
+      nextPageUrl,
+      stagingAccess
+    );
+    expect(overview.page).toBe(nextPage);
+    wave = overview.data.find(isEligibleChat);
+  }
+  expect(
+    wave,
+    "Legacy-link fixture unavailable: public discovery must contain a nonempty public chat wave"
+  ).toBeDefined();
+  const waveId = wave!.id;
+  expect(waveId).toMatch(/^[0-9a-f-]{36}$/i);
+  await gotoReady(page, `/waves/${waveId}`);
+  const message = page
+    .getByRole("region", {
+      name: "Wave chat file upload area",
+      exact: true,
+    })
+    .locator("[data-serial-no]")
+    .first();
+  await expect(message).toBeVisible({ timeout: 15000 });
+  const serialNo = await message.getAttribute("data-serial-no");
+  expect(serialNo).toMatch(/^[1-9]\d*$/);
+  return { waveId, serialNo: serialNo! };
 }
 
 function getProfileFeed(page: Page): Locator {
@@ -533,72 +587,877 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     await captureSafeScreenshot(page, test.info(), "grant-token-empty");
   });
 
+  for (const subscribed of [true, false]) {
+    test(`aligns mint-day visitor status with later rows when subscribed=${subscribed}`, async ({
+      page,
+    }, testInfo) => {
+      await page.clock.setFixedTime(new Date("2026-10-30T00:01:00Z"));
+      await installSubscriptionFixtures(page);
+      await page.route(
+        (url) => url.pathname.endsWith("/memes_latest"),
+        (route) =>
+          route.fulfill({
+            json: {
+              id: 568,
+              contract: "0x33fd426905f149f8376e227d0c9d3340aad17af1",
+              thumbnail: "/profile-cms/templates/memes/1.webp",
+            },
+          })
+      );
+      await page.route(
+        (url) =>
+          url.pathname.includes("/subscriptions/consolidation/upcoming-memes/"),
+        (route) =>
+          route.fulfill({
+            json: [568, 569, 570].map((token_id) => ({
+              token_id,
+              contract: "0x33fd426905f149f8376e227d0c9d3340aad17af1",
+              subscribed,
+              subscribed_count: 2,
+            })),
+          })
+      );
+      await gotoReady(page, `/${PROFILE_HANDLE}/subscriptions`);
+      const upcoming = page.getByRole("region", {
+        name: "Upcoming Drops",
+        exact: true,
+      });
+      const artwork = page
+        .getByRole("region", { name: "Upcoming Drops", exact: true })
+        .locator("img");
+      const mintingToday = upcoming.getByRole("button", {
+        name: "Minting Today",
+      });
+      const statuses = upcoming.getByText(
+        subscribed ? "Subscribed" : "Not subscribed",
+        { exact: true }
+      );
+      await expect(artwork).toBeVisible();
+      await expect(statuses).toHaveCount(3);
+      await expect(upcoming.getByRole("switch")).toHaveCount(0);
+      await expect(upcoming.getByRole("combobox")).toHaveCount(0);
+      for (const width of [390, 492, 639, 640, 1024]) {
+        await page.setViewportSize({ width, height: 900 });
+        const imageBox = await artwork.boundingBox();
+        const labelBox = await mintingToday.boundingBox();
+        expect(imageBox).not.toBeNull();
+        expect(labelBox).not.toBeNull();
+        if (width < 640) {
+          expect(labelBox!.y).toBeGreaterThanOrEqual(
+            imageBox!.y + imageBox!.height
+          );
+          expect(Math.abs(labelBox!.x - imageBox!.x)).toBeLessThanOrEqual(1);
+        } else {
+          expect(labelBox!.x).toBeGreaterThanOrEqual(
+            imageBox!.x + imageBox!.width
+          );
+        }
+        const rightEdges = await statuses.evaluateAll((elements) =>
+          elements.map((element) => element.getBoundingClientRect().right)
+        );
+        expect(
+          Math.max(...rightEdges) - Math.min(...rightEdges)
+        ).toBeLessThanOrEqual(1);
+        await expectNoHorizontalOverflow(page);
+        if (width === 390) {
+          const path = testInfo.outputPath(`mint-day-status-${subscribed}.png`);
+          await upcoming.screenshot({ path });
+          await testInfo.attach("Minting Today mobile layout", {
+            contentType: "image/png",
+            path,
+          });
+        }
+      }
+    });
+  }
+
   test("keeps the full subscription airdrop address available on touch and keyboard", async ({
     page,
     isMobile,
   }) => {
     await gotoReady(page, `/${PROFILE_HANDLE}/subscriptions`);
     await expectProfileShell(page, "Subscriptions");
+    if (page.viewportSize()!.width < 1024) {
+      const settingsOpener = page.getByRole("button", {
+        name: "Minting settings",
+        exact: true,
+      });
+      // Stay touch-only on touch devices. A mouse click here would park the
+      // emulated cursor, and Chrome's hover update at that cursor closes the
+      // tapped address tooltip as soon as it mounts.
+      if (isMobile) {
+        await settingsOpener.tap();
+      } else {
+        await settingsOpener.click();
+      }
+      await expect(
+        page
+          .getByRole("dialog", { name: "Minting settings", exact: true })
+          .getByRole("heading", { name: "Minting settings", exact: true })
+      ).toBeFocused();
+    }
     const address = page.getByRole("button", {
       name: /^0x[0-9a-fA-F]{40}$/,
     });
-    await expect(address).toBeVisible();
-    const fullAddress = (await address.textContent())!.trim();
+    // The address comes from the subscriptions API after the shell renders.
+    await expect(address).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
+    const fullAddress = (await address.getAttribute("aria-label"))!;
     if (isMobile) {
       await address.tap();
     } else {
       await address.focus();
     }
-    await expect(
-      page.getByRole("tooltip", { name: fullAddress })
-    ).toBeVisible();
-    await page
-      .getByRole("heading", { name: "Airdrop Address", exact: true })
-      .click();
-    await expect(page.getByRole("tooltip", { name: fullAddress })).toHaveCount(
-      0
-    );
+    const addressTooltip = page.getByRole("tooltip", { name: fullAddress });
+    await expect(addressTooltip).toBeVisible();
+    // react-tooltip mounts the tooltip at opacity 0 and opens it on a later
+    // timer. Wait until it is readable; dismissing during that handoff can
+    // leave the hidden tooltip mounted.
+    await expect(addressTooltip).toHaveCSS("opacity", "1");
+    const addressHeading = page.getByRole("heading", {
+      name: "Airdrop Address",
+      exact: true,
+    });
+    if (isMobile) {
+      await addressHeading.tap();
+    } else {
+      await addressHeading.click();
+    }
+    await expect(addressTooltip).toHaveCount(0);
+    const addressWidth = await address.evaluate((element) => ({
+      visible: element.clientWidth,
+      content: element.scrollWidth,
+    }));
+    expect(addressWidth.content).toBeLessThanOrEqual(addressWidth.visible + 1);
     await expectNoHorizontalOverflow(page);
   });
 
-  test("keeps subscription history defaults responsive and preserves user toggles", async ({
+  for (const [section, title] of [
+    ["settings", "Minting settings"],
+    ["history", "Subscription History"],
+  ] as const) {
+    test(`opens subscription ${section} from links and taps, not resizing`, async ({
+      page,
+    }) => {
+      await installSubscriptionFixtures(page);
+      await page.setViewportSize({ width: 1024, height: 900 });
+      await gotoReady(
+        page,
+        `/${PROFILE_HANDLE}/subscriptions#profile-subscriptions-${section}`
+      );
+      await expect(
+        page.getByRole("heading", { name: title, exact: true })
+      ).toBeVisible();
+      const sheet = page.getByRole("dialog", { name: title, exact: true });
+      await expect(sheet).toHaveCount(0);
+
+      await page.setViewportSize({ width: 1023, height: 900 });
+      const opener = page.getByRole("button", { name: title, exact: true });
+      await expect(opener).toBeVisible();
+      await expect(sheet).toHaveCount(0);
+      await opener.click();
+      await expect(
+        sheet.getByRole("heading", { name: title, exact: true })
+      ).toBeVisible();
+      await sheet.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(sheet).toHaveCount(0);
+      await expect(opener).toBeFocused();
+      await expect(page).toHaveURL((url) => url.hash === "");
+
+      // Refreshing a dismissed sheet stays closed. Explicit deep links still work.
+      await page.setViewportSize({ width: 390, height: 900 });
+      await page.reload();
+      await expect(opener).toBeVisible();
+      await expect(sheet).toHaveCount(0);
+      await gotoReady(
+        page,
+        `/${PROFILE_HANDLE}/subscriptions#profile-subscriptions-${section}`
+      );
+      await expect(
+        sheet.getByRole("heading", { name: title, exact: true })
+      ).toBeVisible();
+      await expect(
+        sheet.getByRole("heading", { name: title, exact: true })
+      ).toBeFocused();
+      await page.setViewportSize({ width: 1024, height: 900 });
+      await expect(sheet).toHaveCount(0);
+      await page.setViewportSize({ width: 1023, height: 900 });
+      await expect(opener).toBeVisible();
+      await expect(sheet).toHaveCount(0);
+    });
+  }
+
+  for (const width of [390, 1280]) {
+    test(`distinguishes failed subscription reads from empty data at ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await installSubscriptionFixtures(page);
+      let failReads = true;
+      await page.route(
+        (url) => url.pathname.includes("/subscriptions/consolidation/"),
+        async (route) => {
+          if (failReads) {
+            await route.fulfill({
+              status: 503,
+              json: { error: "Unavailable" },
+            });
+          } else {
+            await route.fallback();
+          }
+        }
+      );
+      await gotoReady(page, `/${PROFILE_HANDLE}/subscriptions`);
+      const overview = page
+        .getByRole("region", { name: "Subscription minting" })
+        .locator("#profile-subscriptions-overview");
+      const upcoming = page.getByRole("region", { name: "Upcoming Drops" });
+      await expect(
+        overview.getByText("Unavailable", { exact: true }).first()
+      ).toBeVisible();
+      await expect(overview.getByText("ETH", { exact: true })).toHaveCount(0);
+      await expect(overview.getByText(/mints available/)).toHaveCount(0);
+      await expect(
+        upcoming.getByText("Unavailable", { exact: true })
+      ).toBeVisible();
+      await expect(upcoming.getByText("No upcoming drops found")).toHaveCount(
+        0
+      );
+      await captureSafeScreenshot(
+        page,
+        testInfo,
+        `subscription-read-error-${width}.png`
+      );
+      await overview.screenshot({
+        path: testInfo.outputPath(`subscription-read-error-card-${width}.png`),
+      });
+
+      failReads = false;
+      await page
+        .getByRole("status")
+        .filter({ hasText: "Some subscription data could not be refreshed." })
+        .getByRole("button", { name: "Retry", exact: true })
+        .click();
+      await expect(
+        overview.getByText("0.4 ETH", { exact: true })
+      ).toBeVisible();
+      await expect(
+        upcoming.getByText("The Memes #568", { exact: true })
+      ).toBeVisible();
+      await expect(
+        upcoming.getByText("Unavailable", { exact: true })
+      ).toHaveCount(0);
+    });
+  }
+
+  for (const width of [390, 1342]) {
+    test(`shows one amber funding boundary without changing visitor selections at ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await installSubscriptionFixtures(page);
+      await gotoReady(
+        page,
+        `/${PROFILE_HANDLE}/subscriptions#profile-subscriptions-upcoming`
+      );
+      const upcoming = page.getByRole("region", {
+        name: "Upcoming Drops",
+        exact: true,
+      });
+      const boundary = upcoming.getByText(/^Funded through The Memes #570$/);
+      await expect(boundary).toHaveCount(1);
+      await expect(boundary).toHaveCSS("color", "rgb(253, 230, 138)");
+      await expect(
+        boundary.getByRole("link", { name: "The Memes #570" })
+      ).toHaveAttribute("href", "/the-memes/570");
+      await expect(upcoming.getByText("Unfunded", { exact: true })).toHaveCount(
+        0
+      );
+      await expect(
+        upcoming.getByText("Subscribed", { exact: true })
+      ).toHaveCount(3);
+      await expect(upcoming.getByRole("switch")).toHaveCount(0);
+      await upcoming
+        .getByRole("button", { name: "Show More", exact: true })
+        .click();
+      const fullList =
+        width < 640
+          ? page.getByRole("dialog", { name: "Upcoming Drops", exact: true })
+          : upcoming;
+      await expect(
+        fullList.getByText(/^Funded through The Memes #/)
+      ).toHaveCount(1);
+      await expect(
+        fullList.getByText(/^Next unfunded The Memes #/)
+      ).toHaveCount(0);
+      await expect(fullList.getByText("Unfunded", { exact: true })).toHaveCount(
+        0
+      );
+      await expect(
+        fullList.getByText("Subscribed", { exact: true })
+      ).toHaveCount(5);
+      await expectNoHorizontalOverflow(page);
+      if (width < 640) {
+        await expect(
+          fullList.getByRole("heading", { name: "Upcoming Drops", exact: true })
+        ).toBeFocused();
+        const panel = page
+          .getByRole("dialog", { name: "Upcoming Drops", exact: true })
+          .locator('[id^="headlessui-dialog-panel-"]')
+          .locator("..");
+        await expect
+          .poll(() =>
+            panel.evaluate((element) => {
+              const transform = getComputedStyle(element).transform;
+              return transform === "none"
+                ? 0
+                : new DOMMatrixReadOnly(transform).m42;
+            })
+          )
+          .toBe(0);
+        await expect(
+          fullList.getByText(/^Funded through The Memes #570$/)
+        ).toBeInViewport();
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `subscriptions-funding-boundary-${width}.png`
+        ),
+      });
+    });
+  }
+
+  test("keeps desktop history inline and preserves its selected pill in mobile sheets", async ({
     page,
-  }) => {
+  }, testInfo) => {
+    // Fixed settings ensure the saved UTC date and pagination are covered.
+    await page.clock.setFixedTime(new Date("2026-10-30T00:01:00Z"));
+    await installSubscriptionFixtures(page);
+    // Desktop anchors stay inline; mobile settings/history use shared sheets.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const historyRequests: string[] = [];
+    page.on("request", (request) => {
+      const match =
+        /\/subscriptions\/consolidation\/(redeemed|logs|top-up)\//.exec(
+          new URL(request.url()).pathname
+        );
+      if (match) historyRequests.push(match[1]!);
+    });
     await gotoReadyWithApiResponse(
       page,
-      `/${PROFILE_HANDLE}/subscriptions`,
-      (url) => url.pathname.includes("/subscriptions/consolidation/logs/")
+      `/${PROFILE_HANDLE}/subscriptions#profile-subscriptions-history`,
+      (url) => url.pathname.includes("/subscriptions/consolidation/redeemed/")
     );
     await expectProfileShell(page, "Subscriptions");
-    const isPhone = (page.viewportSize()?.width ?? 0) < 640;
-    const disclosures = page
-      .getByRole("region", { name: "Subscription History", exact: true })
-      .locator("details");
-    await expect(disclosures).toHaveCount(3);
-    for (const disclosure of await disclosures.all()) {
-      await expect(disclosure).toHaveJSProperty("open", !isPhone);
-      await expect(disclosure).toHaveAttribute("aria-busy", "false");
+    const overview = page.getByRole("region", {
+      name: "Subscription minting",
+      exact: true,
+    });
+    const learnMore = overview.getByRole("link", {
+      name: "Learn more",
+      exact: true,
+    });
+    await expect(
+      page
+        .getByRole("main")
+        .getByRole("link", { name: "Learn more", exact: true })
+    ).toHaveCount(1);
+    await expect(learnMore).toHaveAttribute("href", "/about/subscriptions");
+    // Read related geometry together so profile hydration/scroll restoration
+    // cannot move the viewport between the measurements.
+    const header = await learnMore.evaluate((link) => {
+      const section = link.closest("section")!;
+      const title = section.querySelector("h2")!;
+      return {
+        title: title.getBoundingClientRect().toJSON(),
+        link: link.getBoundingClientRect().toJSON(),
+        section: section.getBoundingClientRect().toJSON(),
+      };
+    });
+    expect(
+      Math.abs(header.link.right - header.section.right)
+    ).toBeLessThanOrEqual(1);
+    expect(header.link.left).toBeGreaterThan(header.title.right);
+    expect(
+      Math.abs(
+        header.link.y +
+          header.link.height / 2 -
+          (header.title.y + header.title.height / 2)
+      )
+    ).toBeLessThanOrEqual(1);
+    const history = page
+      .getByRole("region", {
+        name: "Subscription History",
+        exact: true,
+      })
+      .or(
+        page.getByRole("dialog", { name: "Subscription History", exact: true })
+      );
+    await expect(
+      history.getByRole("heading", {
+        name: "Subscription History",
+        exact: true,
+      })
+    ).toBeFocused();
+    await expect(
+      history.getByRole("button", {
+        name: "Subscription History",
+        exact: true,
+      })
+    ).toHaveCount(0);
+    const coverage = page
+      .getByRole("region", { name: "Subscription minting", exact: true })
+      .locator("#profile-subscriptions-overview");
+    const mintingSettings = page
+      .getByRole("region", {
+        name: "Minting settings",
+        exact: true,
+      })
+      .or(page.getByRole("dialog", { name: "Minting settings", exact: true }));
+    const details = coverage.getByRole("button", {
+      name: "Details",
+      exact: true,
+    });
+    await expect(mintingSettings).toBeVisible();
+    await expect(details).toHaveCount(0);
+    await expect(coverage.getByText(/Top up by|Recommended:/)).toHaveCount(0);
+    await expect(
+      coverage.getByText(
+        /Choose a drop|Set up subscriptions|Review settings or refresh/
+      )
+    ).toHaveCount(0);
+    await expect(
+      coverage.getByRole("heading", { level: 2 }).locator("svg")
+    ).toHaveCount(0);
+    const statusGeometry = await coverage.evaluate((element) => {
+      const badge = element
+        .querySelector("#profile-subscriptions-overview-status")
+        ?.getBoundingClientRect();
+      const headline = element
+        .querySelector("#profile-subscriptions-overview-title")
+        ?.getBoundingClientRect();
+      return badge && headline
+        ? { badgeBottom: badge.bottom, headlineTop: headline.top }
+        : null;
+    });
+    expect(statusGeometry).not.toBeNull();
+    expect(statusGeometry!.badgeBottom).toBeLessThanOrEqual(
+      statusGeometry!.headlineTop
+    );
+    const coverageBox = await coverage.boundingBox();
+    const headlineBox = await coverage
+      .getByRole("heading", { level: 2 })
+      .boundingBox();
+    const balanceBox = await page
+      .getByRole("region", { name: "Subscription minting", exact: true })
+      .locator("#subscription-overview-actions")
+      .getByText("Subscription balance", { exact: true })
+      .boundingBox();
+    expect(coverageBox).not.toBeNull();
+    expect(headlineBox).not.toBeNull();
+    expect(balanceBox).not.toBeNull();
+    const descriptionBox = await page
+      .getByRole("region", { name: "Subscription minting", exact: true })
+      .locator("#profile-subscriptions-overview-title + p")
+      .boundingBox();
+    expect(descriptionBox).not.toBeNull();
+    expect(balanceBox!.y).toBeGreaterThanOrEqual(
+      descriptionBox!.y + descriptionBox!.height
+    );
+    expect(balanceBox!.y + balanceBox!.height).toBeLessThanOrEqual(
+      coverageBox!.y + coverageBox!.height
+    );
+    const forecast = coverage.getByRole("button", {
+      name: "Forecast use",
+      exact: true,
+    });
+    await expect(
+      coverage.getByText("Forecast use", { exact: true })
+    ).toBeVisible();
+    await forecast.click();
+    const forecastTooltip = page.getByRole("tooltip").filter({
+      hasText:
+        "Projected from current eligibility, settings, balance, and the published Meme schedule.",
+    });
+    await expect(forecastTooltip).toBeVisible();
+    await expect(
+      forecastTooltip.getByText("Your next selected drops are fully funded.", {
+        exact: true,
+      })
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(forecastTooltip).toBeHidden();
+    await expect(mintingSettings.getByRole("switch")).toHaveCount(0);
+    const visitorMode = mintingSettings.getByRole("group", {
+      name: "Mode",
+      exact: true,
+    });
+    const visitorEditions = mintingSettings.getByRole("group", {
+      name: "Edition Preference",
+      exact: true,
+    });
+    await expect(
+      mintingSettings
+        .getByRole("group", { name: "Mode", exact: true })
+        .locator("[data-setting-value]")
+    ).toHaveText(/^(Manual|Automatic)$/);
+    await expect(visitorMode.getByText(/^(Manual|Automatic)$/)).toHaveCount(1);
+    await expect(
+      mintingSettings
+        .getByRole("group", { name: "Edition Preference", exact: true })
+        .locator("[data-setting-value]")
+    ).toHaveText(/^(One edition|All eligible)$/);
+    await expect(
+      visitorEditions.getByText(/^(One edition|All eligible)$/)
+    ).toHaveCount(1);
+    await expect(visitorEditions.getByText(/^Eligibility x/)).toBeVisible();
+    await expect(visitorMode.getByRole("button")).toHaveCount(0);
+    await expect(visitorEditions.getByRole("button")).toHaveCount(0);
+    await expect(mintingSettings.getByText(/^You will receive/)).toHaveCount(0);
+    await expect(
+      page
+        .getByRole("region", { name: "Upcoming Drops", exact: true })
+        .getByText(
+          /^(You have to opt-in to each specific drop|Automatic airdrops of all eligible drops unless you opt-out)$/
+        )
+    ).toHaveCount(0);
+    await expect(
+      mintingSettings.getByRole("heading", {
+        name: "Airdrop Address",
+        exact: true,
+      })
+    ).toBeVisible();
+    const settingsBox = await mintingSettings.boundingBox();
+    const upcoming = page.getByRole("region", {
+      name: "Upcoming Drops",
+      exact: true,
+    });
+    await expect(upcoming.getByRole("switch")).toHaveCount(0);
+    await expect(upcoming.getByRole("combobox")).toHaveCount(0);
+    await expect(
+      upcoming.getByRole("button", { name: "Show More", exact: true })
+    ).toHaveCSS("justify-content", "center");
+    await expect(
+      upcoming.getByText(/^(Subscribed|Not subscribed)$/)
+    ).toHaveCount(3);
+    const upcomingBox = await upcoming.boundingBox();
+    expect(settingsBox).not.toBeNull();
+    expect(upcomingBox).not.toBeNull();
+    expect(settingsBox!.y + settingsBox!.height).toBeLessThanOrEqual(
+      upcomingBox!.y
+    );
+    const initialViewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 1024, height: initialViewport.height });
+    await expectNoHorizontalOverflow(page);
+    const desktopOverview = await page
+      .getByRole("region", { name: "Subscription minting", exact: true })
+      .boundingBox();
+    const desktopSettings = await mintingSettings.boundingBox();
+    expect(desktopOverview).not.toBeNull();
+    expect(desktopSettings).not.toBeNull();
+    expect(desktopSettings!.x).toBeGreaterThanOrEqual(
+      desktopOverview!.x + desktopOverview!.width
+    );
+    expect(
+      Math.abs(desktopSettings!.y - desktopOverview!.y)
+    ).toBeLessThanOrEqual(1);
+    await page.evaluate(() =>
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname
+      )
+    );
+    await page.setViewportSize({ width: 390, height: initialViewport.height });
+    const narrowTitle = await upcoming
+      .getByText("The Memes #569", { exact: true })
+      .boundingBox();
+    const narrowQuantity = upcoming.getByRole("group", {
+      name: "Subscription quantity for The Memes #569",
+      exact: true,
+    });
+    const narrowQuantityBox = await narrowQuantity.boundingBox();
+    const narrowStatusBox = await upcoming
+      .getByRole("group", {
+        name: "Subscription quantity for The Memes #569",
+        exact: true,
+      })
+      .locator("..")
+      .locator("..")
+      .getByText("Subscribed", { exact: true })
+      .boundingBox();
+    expect(narrowTitle).not.toBeNull();
+    expect(narrowQuantityBox).not.toBeNull();
+    expect(narrowStatusBox).not.toBeNull();
+    // Visitor values may share the title line when space permits; neither
+    // layout may overlap or split quantity from its status.
+    if (narrowQuantityBox!.y < narrowTitle!.y + narrowTitle!.height) {
+      expect(narrowQuantityBox!.x).toBeGreaterThanOrEqual(
+        narrowTitle!.x + narrowTitle!.width
+      );
+    } else {
+      expect(narrowQuantityBox!.y).toBeGreaterThanOrEqual(
+        narrowTitle!.y + narrowTitle!.height
+      );
     }
-    const logs = disclosures.filter({ hasText: "Log History" });
-    const summary = page
-      .getByRole("region", { name: "Subscription History", exact: true })
-      .locator("summary")
-      .filter({ hasText: "Log History" });
-    await summary.click();
-    await expect(logs).toHaveJSProperty("open", isPhone);
+    expect(
+      Math.abs(narrowQuantityBox!.y - narrowStatusBox!.y)
+    ).toBeLessThanOrEqual(1);
+    const settingsOpener = page.getByRole("button", {
+      name: "Minting settings",
+      exact: true,
+    });
+    const compactBox = await settingsOpener.boundingBox();
+    const mobileDropsBox = await upcoming.boundingBox();
+    expect(compactBox).not.toBeNull();
+    expect(mobileDropsBox).not.toBeNull();
+    expect(compactBox!.y).toBeGreaterThanOrEqual(
+      mobileDropsBox!.y + mobileDropsBox!.height
+    );
+    await settingsOpener.click();
+    await expect(
+      mintingSettings.getByRole("heading", {
+        name: "Minting settings",
+        exact: true,
+      })
+    ).toBeFocused();
+    // Let the shared sheet finish entering before comparing row geometry.
+    await mintingSettings
+      .getByRole("heading", { name: "Minting settings", exact: true })
+      .click({ trial: true });
+    await expect(mintingSettings.getByRole("switch")).toHaveCount(0);
+    const settingControls = [
+      mintingSettings.getByRole("group", { name: "Mode", exact: true }),
+      mintingSettings.getByRole("group", {
+        name: "Edition Preference",
+        exact: true,
+      }),
+      mintingSettings.getByRole("heading", {
+        name: "Airdrop Address",
+        exact: true,
+      }),
+    ];
+    const settingBoxes = await Promise.all(
+      settingControls.map((control) => control.boundingBox())
+    );
+    for (const [index, box] of settingBoxes.entries()) {
+      expect(box).not.toBeNull();
+      expect(Math.abs(box!.x - settingBoxes[0]!.x)).toBeLessThanOrEqual(1);
+      if (index > 0) {
+        const previous = settingBoxes[index - 1]!;
+        expect(box!.y).toBeGreaterThanOrEqual(previous.y + previous.height);
+      }
+    }
+    expect(
+      Math.abs(settingBoxes[0]!.width - settingBoxes[1]!.width)
+    ).toBeLessThanOrEqual(1);
+    const modeValue = mintingSettings
+      .getByRole("group", { name: "Mode", exact: true })
+      .locator("[data-setting-value]");
+    const modeLabelBox = await mintingSettings
+      .getByText("Mode", { exact: true })
+      .boundingBox();
+    const modeValueBox = await modeValue.boundingBox();
+    await expect(
+      mintingSettings
+        .getByRole("group", { name: "Mode", exact: true })
+        .locator('[id$="-detail"]')
+    ).toHaveCSS("text-align", "start");
+    expect(modeLabelBox).not.toBeNull();
+    expect(modeValueBox).not.toBeNull();
+    expect(Math.abs(modeValueBox!.x - modeLabelBox!.x)).toBeLessThanOrEqual(1);
+    expect(modeValueBox!.y).toBeGreaterThanOrEqual(
+      modeLabelBox!.y + modeLabelBox!.height
+    );
+    const eligibilityBox = await mintingSettings
+      .getByText(/^Eligibility x/)
+      .boundingBox();
+    const editionLabelBox = await mintingSettings
+      .getByText("Edition Preference", { exact: true })
+      .boundingBox();
+    expect(eligibilityBox).not.toBeNull();
+    await expect(visitorEditions.getByText(/^Eligibility x/)).toHaveCSS(
+      "text-align",
+      "start"
+    );
+    expect(editionLabelBox).not.toBeNull();
+    expect(eligibilityBox!.y).toBeGreaterThanOrEqual(
+      editionLabelBox!.y + editionLabelBox!.height
+    );
+    const addressBox = await mintingSettings
+      .getByRole("button", { name: /^0x[0-9a-fA-F]{40}$/ })
+      .boundingBox();
+    await expect(
+      mintingSettings.getByRole("button", { name: /^0x[0-9a-fA-F]{40}$/ })
+    ).toHaveText(/^·?\s*0x[0-9a-fA-F]{4}\.\.\.[0-9a-fA-F]{4}$/);
+    expect(addressBox).not.toBeNull();
+    expect(addressBox!.y).toBeGreaterThanOrEqual(
+      settingBoxes[2]!.y + settingBoxes[2]!.height
+    );
+    for (const width of [768, 1023]) {
+      await page.setViewportSize({ width, height: initialViewport.height });
+      const inlineLabels = await Promise.all(
+        (await mintingSettings.getByRole("heading", { level: 3 }).all()).map(
+          (label) => label.boundingBox()
+        )
+      );
+      for (const [index, label] of inlineLabels.entries()) {
+        expect(label).not.toBeNull();
+        expect(Math.abs(label!.x - inlineLabels[0]!.x)).toBeLessThanOrEqual(1);
+        if (index > 0) {
+          const previous = inlineLabels[index - 1]!;
+          expect(label!.y).toBeGreaterThan(previous.y + previous.height);
+        }
+      }
+    }
+    await mintingSettings
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
+    await expect(settingsOpener).toBeFocused();
+    await page.setViewportSize({ width: 1920, height: initialViewport.height });
+    await expect(
+      page.getByRole("dialog", { name: "Minting settings", exact: true })
+    ).toHaveCount(0);
+    const inlineModeValue = await modeValue.boundingBox();
+    const inlineModeDate = await mintingSettings
+      .getByRole("group", { name: "Mode", exact: true })
+      .locator('[id$="-detail"]')
+      .boundingBox();
+    expect(inlineModeValue).not.toBeNull();
+    expect(inlineModeDate).not.toBeNull();
+    const sidebarModeLabel = await visitorMode
+      .getByRole("heading", { name: "Mode", exact: true })
+      .boundingBox();
+    expect(sidebarModeLabel).not.toBeNull();
+    expect(inlineModeValue!.y).toBeGreaterThanOrEqual(
+      sidebarModeLabel!.y + sidebarModeLabel!.height
+    );
+    expect(
+      Math.abs(inlineModeValue!.x - sidebarModeLabel!.x)
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(inlineModeDate!.y - inlineModeValue!.y)
+    ).toBeLessThanOrEqual(4);
+    await expect(
+      mintingSettings
+        .getByRole("group", { name: "Mode", exact: true })
+        .locator('[id$="-detail"]')
+    ).toHaveCSS("text-align", "start");
+    await page.setViewportSize(initialViewport);
+    await expect(details).toHaveCount(0);
+    const tabs = history.getByRole("tablist");
+    await expect(tabs).toBeVisible();
+    await expect(tabs.getByRole("tab")).toHaveText([
+      "Redeemed",
+      "Log History",
+      "Top Up History",
+    ]);
+    expect(historyRequests).toEqual(["redeemed"]);
+    const logs = tabs.getByRole("tab", { name: "Log History", exact: true });
+    await logs.click();
+    await expect(logs).toHaveAttribute("aria-selected", "true");
+    await expect(history.getByRole("tabpanel")).toHaveAttribute(
+      "aria-busy",
+      "false"
+    );
+    expect(historyRequests).toEqual(["redeemed", "logs"]);
     const viewport = page.viewportSize()!;
     await page.setViewportSize({
-      width: isPhone ? 900 : 390,
+      width: viewport.width < 640 ? 900 : 390,
       height: viewport.height,
     });
-    await expect(logs).toHaveJSProperty("open", isPhone);
-    await page.setViewportSize(viewport);
-    await expect(logs).toHaveJSProperty("open", isPhone);
-    await summary.press("Enter");
-    await expect(logs).toHaveJSProperty("open", !isPhone);
-    await summary.press("Space");
-    await expect(logs).toHaveJSProperty("open", isPhone);
+    const historyOpener = page.getByRole("button", {
+      name: "Subscription History",
+      exact: true,
+    });
+    await historyOpener.click();
+    await expect(
+      history.getByRole("heading", {
+        name: "Subscription History",
+        exact: true,
+      })
+    ).toBeFocused();
+    await expect(tabs).toBeVisible();
+    await expect(logs).toHaveAttribute("aria-selected", "true");
     await expectNoHorizontalOverflow(page);
+    await history.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(historyOpener).toBeFocused();
+    await page.setViewportSize({ width: 390, height: viewport.height });
+    await expect(
+      upcoming.getByRole("button", { name: "Show More", exact: true })
+    ).toHaveCSS("justify-content", "center");
+    for (const quantity of await upcoming
+      .getByRole("group", {
+        name: /^Subscription quantity for The Memes #/,
+      })
+      .all()) {
+      await expect(quantity).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      const quantityBox = await quantity.boundingBox();
+      const upcomingMobileBox = await upcoming.boundingBox();
+      expect(quantityBox).not.toBeNull();
+      expect(upcomingMobileBox).not.toBeNull();
+      expect(quantityBox!.x).toBeGreaterThanOrEqual(upcomingMobileBox!.x);
+      expect(quantityBox!.x + quantityBox!.width).toBeLessThanOrEqual(
+        upcomingMobileBox!.x + upcomingMobileBox!.width
+      );
+    }
+    for (const status of await upcoming
+      .getByText(/^(Subscribed|Not subscribed)$/)
+      .all()) {
+      await expect(status).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    }
+    // The shorter Redeemed label fits at 390px; exercise scrolling at 320px.
+    await page.setViewportSize({ width: 320, height: viewport.height });
+    await historyOpener.click();
+    const pillLayout = await tabs.evaluate((element) => ({
+      width: element.clientWidth,
+      contentWidth: element.scrollWidth,
+      rowTops: Array.from(
+        element.querySelectorAll('[role="tab"]'),
+        (tab) => tab.getBoundingClientRect().top
+      ),
+    }));
+    expect(new Set(pillLayout.rowTops).size).toBe(1);
+    expect(pillLayout.contentWidth).toBeGreaterThan(pillLayout.width);
+    await expect(logs).toHaveAttribute("aria-selected", "true");
+    await logs.press("ArrowRight");
+    const topUps = tabs.getByRole("tab", {
+      name: "Top Up History",
+      exact: true,
+    });
+    await expect(topUps).toBeFocused();
+    await expect(topUps).toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(() =>
+        topUps.evaluate((tab) => {
+          const pill = tab.getBoundingClientRect();
+          const strip = tab
+            .closest('[role="tablist"]')!
+            .getBoundingClientRect();
+          // Fractional device pixels can leave the final edge <1 CSS px out.
+          return pill.left >= strip.left - 1 && pill.right <= strip.right + 1;
+        })
+      )
+      .toBe(true);
+    await expect(history.getByRole("tabpanel")).toHaveAttribute(
+      "aria-busy",
+      "false"
+    );
+    expect(historyRequests).toEqual(["redeemed", "logs", "top-up"]);
+    await topUps.press("ArrowLeft");
+    await expect(logs).toBeFocused();
+    await expect(logs).toHaveAttribute("aria-selected", "true");
+    await expect(history.getByRole("tabpanel")).toHaveAttribute(
+      "aria-busy",
+      "false"
+    );
+    expect(historyRequests).toEqual(["redeemed", "logs", "top-up"]);
+    await page.setViewportSize(viewport);
+    await expectNoHorizontalOverflow(page);
+    await captureSafeScreenshot(
+      page,
+      testInfo,
+      "subscription-history-pills.png"
+    );
   });
 
   test("scrolls Main Stage Settings and validates live vote Activity in the app", async ({
@@ -648,12 +1507,17 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       contentType: "image/png",
     });
     const competitionPath = new URL(page.url()).pathname;
-    expect(competitionPath).toMatch(/\/competitions\/[^/]+$/);
+    expect(competitionPath).toMatch(/\/decisions\/[^/]+$/);
+    // The page route says "decisions"; the public API keeps "competitions".
+    const competitionApiPath = competitionPath.replace(
+      /\/decisions\/([^/]+)$/,
+      "/competitions/$1"
+    );
     const activityResponse = await gotoReadyWithApiResponse(
       page,
       `${competitionPath}?tab=votes&voteTab=activity`,
       (url) =>
-        url.pathname === `/api/v3${competitionPath}/activity` &&
+        url.pathname === `/api/v3${competitionApiPath}/activity` &&
         url.searchParams.get("offset") === "0"
     );
     const logs: readonly unknown[] = await activityResponse.json();
@@ -731,7 +1595,7 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
         await expect(chat).toHaveCount(0);
         await expect(
           page.getByText(
-            "This competition could not be loaded. It may be unavailable or you may not have access.",
+            "This decision could not be loaded. It may be unavailable or you may not have access.",
             { exact: true }
           )
         ).toHaveCount(0);
@@ -968,8 +1832,8 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       .getByRole("tab", { name: "Leaderboard", exact: true })
       .click();
     await expect(
-      page.getByRole("button", { name: "Toggle decision timeline" })
-    ).toBeVisible();
+      page.getByRole("button", { name: "Toggle results timeline" })
+    ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
     await expect(waveTabs.filter({ visible: true })).toHaveCount(1);
     await expect(
       page.getByRole("main").locator("[data-competition-detail]")
@@ -1127,29 +1991,74 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     });
     expect(feedScrollOffset).toBeGreaterThan(0);
 
-    const visibleFeedPostIndex = await feedPostButtons.evaluateAll(
-      (buttons) => {
-        const feed = buttons[0]?.closest("section");
-        if (!feed) {
-          return -1;
-        }
+    // The virtualized masonry re-renders its cells after the scroll, so a
+    // matched cell can detach before it is measured. Measure against the feed
+    // itself and retry until a connected post intersects it.
+    let visibleFeedPostIndex = -1;
+    await expect
+      .poll(async () => {
+        const profileFeedElement = await profileFeed.elementHandle();
+        try {
+          visibleFeedPostIndex = await feedPostButtons.evaluateAll(
+            (buttons, feed) => {
+              if (!feed?.isConnected) {
+                return -1;
+              }
 
-        const feedRect = feed.getBoundingClientRect();
-        return buttons.findIndex((button) => {
-          const rect = button.getBoundingClientRect();
-          return rect.bottom > feedRect.top && rect.top < feedRect.bottom;
-        });
-      }
-    );
-    expect(visibleFeedPostIndex).toBeGreaterThanOrEqual(0);
+              const feedRect = feed.getBoundingClientRect();
+              return buttons.findIndex((button) => {
+                const rect = button.getBoundingClientRect();
+                return (
+                  button.isConnected &&
+                  rect.height > 0 &&
+                  rect.bottom > feedRect.top &&
+                  rect.top < feedRect.bottom
+                );
+              });
+            },
+            profileFeedElement
+          );
+        } finally {
+          await profileFeedElement?.dispose();
+        }
+        return visibleFeedPostIndex;
+      })
+      .toBeGreaterThanOrEqual(0);
     const visibleFeedPost = feedPostButtons.nth(visibleFeedPostIndex);
     await visibleFeedPost.focus();
-    await visibleFeedPost.press("Enter");
+    // Chat treats serialNo as a one-time jump target and removes it from the
+    // URL once mounted, sometimes within 100 ms of the navigation. Sampling
+    // the address bar can miss that, so observe the committed navigation,
+    // armed before Enter is pressed.
+    await Promise.all([
+      page.waitForURL(
+        (url) =>
+          /^\/waves\/[0-9a-f-]{36}$/i.test(url.pathname) &&
+          Boolean(url.searchParams.get("serialNo")),
+        { waitUntil: "commit", timeout: 20_000 }
+      ),
+      visibleFeedPost.press("Enter"),
+    ]);
+    // The cleanup keeps the pathname, so the current URL names the same wave.
+    const openedWavePath = new URL(page.url()).pathname;
+    expect(openedWavePath).toMatch(/^\/waves\/[0-9a-f-]{36}$/i);
+    // Next syncs that removal into its router in a transition. A Back press
+    // before the transition commits lets the router write the wave URL over
+    // the feed entry, so let the wave consume the target and go idle first.
     await expectUrlState(
       page,
       (url) =>
-        /^\/waves\/[0-9a-f-]{36}$/i.test(url.pathname) &&
-        Boolean(url.searchParams.get("serialNo"))
+        url.pathname === openedWavePath && !url.searchParams.has("serialNo")
+    );
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          if (typeof globalThis.requestIdleCallback === "function") {
+            globalThis.requestIdleCallback(() => resolve(), { timeout: 5_000 });
+          } else {
+            globalThis.setTimeout(resolve, 250);
+          }
+        })
     );
 
     await page.goBack();
@@ -1376,24 +2285,53 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
   });
 
   test("handles legacy wave query links without mutation", async ({ page }) => {
-    const waveId = await getFirstWaveId(page);
-
-    await gotoDocumentWithTransientRetry(
-      page,
-      `/waves?wave=${waveId}&serialNo=1`
-    );
-    // Next can emit the redirect in the streamed document. The initial shell
-    // is visible before that navigation destroys its execution context.
-    await page.waitForURL((url) => url.pathname === `/waves/${waveId}`, {
-      waitUntil: "domcontentloaded",
-      timeout: 45_000,
+    const { waveId, serialNo } = await getPublicChatMessageTarget(page);
+    const wavePath = `/waves/${waveId}`;
+    await test.info().attach("legacy-wave-message-target", {
+      body: JSON.stringify({ waveId, serialNo }),
+      contentType: "application/json",
     });
-    await waitForRouteReady(page);
+    // Observe both the redirect and the chat's target lookup before navigating.
+    // Chat intentionally consumes serialNo; an address-bar check after hydration
+    // races that cleanup and cannot prove which message was actually opened.
+    await Promise.all([
+      page.waitForURL(
+        (url) =>
+          url.pathname === wavePath &&
+          !url.searchParams.has("wave") &&
+          url.searchParams.get("serialNo") === serialNo,
+        { waitUntil: "commit", timeout: 45_000 }
+      ),
+      page.waitForResponse(
+        (response) => {
+          const url = new URL(response.url());
+          return (
+            response.ok() &&
+            url.pathname.endsWith(`/v2/waves/${waveId}/drops`) &&
+            url.searchParams.get("serial_no_limit") === serialNo &&
+            url.searchParams.get("search_strategy") === "FIND_BOTH"
+          );
+        },
+        { timeout: RESPONSE_TIMEOUT_MS }
+      ),
+      gotoDocumentWithTransientRetry(
+        page,
+        `/waves?wave=${waveId}&serialNo=${serialNo}`
+      ),
+    ]);
+    await expectUrlState(
+      page,
+      (url) =>
+        url.pathname === wavePath &&
+        !url.searchParams.has("wave") &&
+        !url.searchParams.has("serialNo")
+    );
+    const target = page
+      .getByRole("region", { name: "Wave chat file upload area", exact: true })
+      .locator(`[data-serial-no="${serialNo}"]`);
+    await expect(target).toBeVisible();
+    await expect(target).toBeInViewport();
     await expectNoHorizontalOverflow(page);
-
-    const url = new URL(page.url());
-    expect(url.searchParams.get("wave")).toBeNull();
-    expect(url.searchParams.get("serialNo")).toBe("1");
   });
 
   test("keeps profile statistics natural and activity loading compact", async ({
@@ -1543,7 +2481,7 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       // Its numeric count replaces the server placeholder only after this
       // streamed section hydrates and its statement query resolves.
       await expect(statements).toHaveAccessibleName(
-        /^\d[\d,]* ID Statements$/,
+        /^ID Statements \d[\d,]*$/,
         { timeout: RESPONSE_TIMEOUT_MS }
       );
       await statements.click();

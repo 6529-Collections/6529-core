@@ -16,6 +16,7 @@ import { writeDelegations } from "./delegation-row";
 import { NativeDelegationScan } from "./delegation-logs";
 import { NATIVE_DELEGATION_INDEX_VERSION } from "../../../../electron-constants";
 import { setTdhRecalculationNeeded } from "../transactions-worker/transactions-worker.db";
+import { queueTdhConsolidations } from "../../../db/tdh-recalculation";
 import {
   retryReplayTransaction,
   type DatabaseWaitUpdate,
@@ -87,8 +88,13 @@ export async function persistNftDelegations(
           );
           await persistNftDelegationBlock(transaction, endBlock, timestamp);
           // Durable even if the worker exits before immediate reconsolidation.
-          if (nftDelegations.consolidations.length)
-            await setTdhRecalculationNeeded(transaction, true);
+          await queueTdhConsolidations(
+            transaction,
+            nftDelegations.consolidations.flatMap((event) => [
+              event.wallet1,
+              event.wallet2,
+            ]),
+          );
         }
       });
       return;
@@ -165,6 +171,28 @@ export async function completeNativeDelegationReplay(
       .getCount();
     if (pending)
       throw new Error("Delegation replay expiry reconciliation incomplete");
+    if (!checkpoint.upgrade && checkpoint.consolidations_changed) {
+      // Compare both sides before replacing live rows, including deleted links.
+      // This also recovers changed wallets from earlier chunks after a restart.
+      const columns =
+        "wallet1, wallet2, block, confirmed, wallet1_registered_at, wallet2_registered_at";
+      const changed: { wallet1: string; wallet2: string }[] =
+        await manager.query(`
+        SELECT wallet1, wallet2 FROM (
+          SELECT ${columns} FROM consolidations
+          EXCEPT SELECT ${columns} FROM consolidations_replay
+        )
+        UNION
+        SELECT wallet1, wallet2 FROM (
+          SELECT ${columns} FROM consolidations_replay
+          EXCEPT SELECT ${columns} FROM consolidations
+        )
+      `);
+      await queueTdhConsolidations(
+        manager,
+        changed.flatMap((row) => [row.wallet1, row.wallet2]),
+      );
+    }
     for (const [live, shadow] of [
       [Consolidation, ReplayConsolidation],
       [Delegation, ReplayDelegation],
@@ -182,7 +210,7 @@ export async function completeNativeDelegationReplay(
       },
       ["id"],
     );
-    if (checkpoint.upgrade || checkpoint.consolidations_changed) {
+    if (checkpoint.upgrade) {
       await setTdhRecalculationNeeded(manager, true);
     }
     await manager.getRepository(ReplayConsolidation).clear();

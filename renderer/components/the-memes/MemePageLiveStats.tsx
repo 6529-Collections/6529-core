@@ -1,6 +1,6 @@
 "use client";
 
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import { useNftPurchasingVisibility } from "@/hooks/useNftPurchasingVisibility";
 import ProfileAvatar, {
   ProfileBadgeSize,
 } from "@/components/common/profile/ProfileAvatar";
@@ -14,7 +14,6 @@ import { buildTooltipId, TOOLTIP_STYLES } from "@/helpers/tooltip.helpers";
 import { formatMintDate } from "@/helpers/mint-date.helpers";
 import { getFileMimeTypeFromMetadata } from "@/helpers/nft.helpers";
 import { useIdentity } from "@/hooks/useIdentity";
-import useCapacitor from "@/hooks/useCapacitor";
 import {
   formatInteger,
   formatNumber,
@@ -40,7 +39,7 @@ const CREATOR_NAME_CLASS =
 const INLINE_METRIC_LABEL_CLASS =
   "tw-text-sm tw-font-medium tw-leading-5 tw-text-iron-400";
 const MARKET_METRIC_LABEL_BASE_CLASS =
-  "tw-mb-1 md:tw-mb-2 tw-text-sm tw-font-medium tw-leading-5";
+  "tw-mb-1 md:tw-mb-2 tw-text-[13px] sm:tw-text-sm tw-font-medium tw-leading-5";
 const MARKET_METRIC_VALUE_CLASS =
   "tw-text-sm tw-font-semibold tw-leading-5 tw-text-white md:tw-text-lg md:tw-leading-6";
 const COLLECTOR_METRIC_VALUE_CLASS =
@@ -274,10 +273,12 @@ function formatLivePercent(locale: SupportedLocale, value: number) {
 export function MemeArtworkDetails({
   nft,
   layout = "default",
+  compactMobile = false,
   locale = DEFAULT_LOCALE,
 }: {
   readonly nft: BaseNFT;
   readonly layout?: "default" | "aligned";
+  readonly compactMobile?: boolean;
   readonly locale?: SupportedLocale | undefined;
 }) {
   const mintDate = getMintDateParts(nft.mint_date, locale);
@@ -313,10 +314,14 @@ export function MemeArtworkDetails({
     : "tw-flex tw-h-7 tw-flex-wrap tw-items-center";
 
   return (
-    <section className="tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-pb-6 tw-pt-8 md:tw-pb-8 lg:tw-pt-0">
+    <section
+      className={`tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 md:tw-pb-8 lg:tw-pt-0 ${compactMobile ? "tw-py-4 sm:tw-pb-6 sm:tw-pt-8" : "tw-pb-6 tw-pt-8"}`}
+    >
       <div className={rowClassName}>
         <div className={creatorClassName}>
-          <div className={ARTWORK_LABEL_CLASS}>
+          <div
+            className={`${ARTWORK_LABEL_CLASS} ${compactMobile ? "max-sm:tw-text-[13px]" : ""}`}
+          >
             {t(locale, "theMemes.detail.live.artwork.createdBy")}
           </div>
           <div className="tw-flex tw-min-w-0 tw-flex-wrap tw-items-center tw-gap-y-2">
@@ -360,7 +365,9 @@ export function MemeArtworkDetails({
           </div>
         </div>
         <div className={itemClassName}>
-          <div className={ARTWORK_LABEL_CLASS}>
+          <div
+            className={`${ARTWORK_LABEL_CLASS} ${compactMobile ? "max-sm:tw-text-[13px]" : ""}`}
+          >
             {t(locale, "theMemes.detail.live.artwork.mintDate")}
           </div>
           <div className={mintDateClassName}>
@@ -522,9 +529,8 @@ function MemeMarketplaceLinks({
   readonly nft: NFT;
   readonly locale: SupportedLocale;
 }) {
-  const capacitor = useCapacitor();
-  const { country } = useCookieConsent();
-  const showMarketplaceLinks = !capacitor.isIos || country === "US";
+  const { hideNftPurchasing } = useNftPurchasingVisibility();
+  const showMarketplaceLinks = !hideNftPurchasing;
 
   if (!showMarketplaceLinks) {
     return null;
@@ -556,7 +562,7 @@ export function MemeNftLivePanel({
       : undefined;
 
   return (
-    <section className="tw-pt-6 md:tw-pt-8">
+    <section className="tw-pt-4 sm:tw-pt-6 md:tw-pt-8">
       <div className={MARKET_OVERVIEW_ROW_CLASS}>
         <MarketMetric
           label={t(locale, "theMemes.detail.live.market.mintPrice")}
@@ -616,7 +622,7 @@ function MarketMetric({
         <span
           className={
             displayValue !== undefined || formattedValue === unavailableLabel
-              ? "tw-break-words tw-text-sm tw-font-medium tw-leading-5 tw-text-iron-500"
+              ? "tw-break-words tw-text-[13px] tw-font-medium tw-leading-5 tw-text-iron-500 sm:tw-text-sm"
               : `${MARKET_METRIC_VALUE_CLASS} tw-break-words`
           }
         >

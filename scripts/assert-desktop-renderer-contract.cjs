@@ -1184,7 +1184,11 @@ assertContract(
   "Auth cancellation must invalidate the active signature before disconnecting",
 );
 assertContract(
-  Boolean(activeWalletStorageWritebackGuard),
+  Boolean(
+    authFunction &&
+      (!callsIdentifier(authFunction, "setActiveWalletAccount") ||
+        activeWalletStorageWritebackGuard),
+  ),
   authProviderPath,
   "passive auth validation must never change the active wallet account in Electron",
 );
@@ -2425,6 +2429,43 @@ assertContract(
   ipfsContextPath,
   "disabled local IPFS must not fall back to local ports or initialize a file service",
 );
+// Owner decision: Desktop pins profile pictures on the user's own IPFS node,
+// with no API fallback, while the website uploads them through the API.
+const pfpUploadPath = "renderer/components/ipfs/profilePictureUpload.ts";
+const pfpUploadFunction = findFunction(
+  parseSource(pfpUploadPath),
+  "uploadProfilePictureFile",
+);
+assertContract(
+  pfpUploadFunction &&
+    callsIdentifier(pfpUploadFunction, "hasDesktopIpfsBridge") &&
+    callsIdentifier(pfpUploadFunction, "addFileToIpfs"),
+  pfpUploadPath,
+  "Desktop must upload profile pictures to the user's local IPFS node",
+);
+const ipfsUploadClient = findVariable(
+  parseSource(ipfsContextPath),
+  "createIpfsService",
+);
+assertContract(
+  ipfsUploadClient &&
+    callsIdentifier(ipfsUploadClient, "readIpfsConfig") &&
+    !ipfsUploadClient.getText().includes("publicEnv"),
+  ipfsContextPath,
+  "Desktop profile picture uploads must use the native node, never a configured remote endpoint",
+);
+for (const pfpEditorPath of [
+  "renderer/components/user/user-page-header/useProfileEditor.ts",
+  "renderer/components/user/user-page-header/pfp/UserPageHeaderEditPfp.tsx",
+]) {
+  const pfpEditor = parseSource(pfpEditorPath);
+  assertContract(
+    callsIdentifier(pfpEditor, "uploadProfilePictureFile") &&
+      !callsIdentifier(pfpEditor, "uploadProfilePicture"),
+    pfpEditorPath,
+    "profile picture editors must keep Desktop's local IPFS upload",
+  );
+}
 const ipfsSettingsPath = "renderer/components/core/app-info/LocalIpfsSettings.tsx";
 const ipfsSettings = parseSource(ipfsSettingsPath).text;
 assertContract(
@@ -2486,6 +2527,38 @@ assertContract(
   desktopSection?.getText(desktopSections).includes('id: "desktop-ipfs"'),
   desktopSectionsPath,
   "desktop IPFS menu must keep a stable row identity while availability changes",
+);
+
+const validatorFeedPath = "renderer/lib/validator-page/releasesBucket.ts";
+const validatorFeed = parseSource(validatorFeedPath).text;
+assertContract(
+  validatorFeed.includes('"https://6529.io/validator/releases.json"') &&
+    validatorFeed.includes('"https://6529.io/validator/releases.json.sig"') &&
+    validatorFeed.includes('credentials: "omit"') &&
+    !validatorFeed.includes('from "./awsCredentials"') &&
+    !validatorFeed.includes("presignS3GetUrl"),
+  validatorFeedPath,
+  "Desktop Validator releases must use the public hosted feed without AWS credentials",
+);
+const validatorFilesPath = "renderer/lib/validator-page/releaseFiles.ts";
+const validatorDownloadPath = findFunction(
+  parseSource(validatorFilesPath),
+  "getReleaseDownloadPath",
+);
+assertContract(
+  validatorDownloadPath?.getText().includes("https://6529.io/validator/download/") &&
+    validatorDownloadPath.getText().includes("encodeURIComponent(release.version)") &&
+    validatorDownloadPath.getText().includes("encodeURIComponent(file.name)"),
+  validatorFilesPath,
+  "Desktop Validator download links must open the hosted access-controlled download in the browser",
+);
+const validatorDownloadSourcePath = "renderer/lib/validator-page/releaseDownload.ts";
+const validatorDownloadSource = parseSource(validatorDownloadSourcePath).text;
+assertContract(
+  validatorDownloadSource.includes("getReleaseDownloadPath(match.release,") &&
+    !validatorDownloadSource.includes("presignReleaseObject"),
+  validatorDownloadSourcePath,
+  "Desktop local Validator download routes must forward to the website instead of signing S3 URLs",
 );
 
 if (failures.length > 0) {

@@ -4,6 +4,7 @@ import { createCompetitionEntry } from "@/services/api/competitions-api";
 
 let mockRequiredMetadata: Array<{ name: string; type: string }> = [];
 let mockTerms: string | null = null;
+let mockAnonymousSubmissions = false;
 const mockSnapshot = {
   title: null,
   parts: [
@@ -57,6 +58,7 @@ jest.mock("@/contexts/CompetitionContext", () => ({
       title: "Competition",
       lifecycle: "PUBLISHED",
       participation: {
+        anonymous_submissions: mockAnonymousSubmissions,
         required_metadata: mockRequiredMetadata,
         required_media: [],
         signature_required: false,
@@ -137,6 +139,35 @@ jest.mock("@/services/api/competitions-api", () => ({
   invalidateCompetition: jest.fn().mockResolvedValue(undefined),
 }));
 
+beforeEach(() => {
+  mockAnonymousSubmissions = false;
+});
+
+it("explains winner disclosure before submitting an anonymous entry", () => {
+  mockAnonymousSubmissions = true;
+  render(<CompetitionEntryForm onClose={jest.fn()} />);
+  expect(
+    screen.getByText(
+      "Your identity will be revealed automatically if this submission wins. Information you include in the submission or its metadata remains visible."
+    )
+  ).toBeInTheDocument();
+});
+
+it("explains how to recover when an older upload cannot be submitted anonymously", async () => {
+  mockAnonymousSubmissions = true;
+  jest.mocked(createCompetitionEntry).mockRejectedValueOnce({
+    status: 400,
+    response: {
+      body: { code: "ANONYMOUS_SUBMISSION_MEDIA_REUPLOAD_REQUIRED" },
+    },
+  });
+  render(<CompetitionEntryForm onClose={jest.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Submit an entry" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Upload your media again, then retry this anonymous submission."
+  );
+});
+
 it("preserves wave and group mentions in the competition submission command and strips legacy signing fields", async () => {
   render(<CompetitionEntryForm onClose={jest.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: "Submit an entry" }));
@@ -179,7 +210,7 @@ it("keeps submission terms separate from the checkbox accessible name", () => {
   mockTerms = "The complete competition participation terms.";
   render(<CompetitionEntryForm onClose={jest.fn()} />);
   const checkbox = screen.getByRole("checkbox", {
-    name: "I agree to this competition’s terms.",
+    name: "I agree to this decision’s terms.",
   });
   expect(checkbox).toHaveAccessibleDescription(mockTerms);
   expect(screen.getByText(mockTerms).closest("label")).toBeNull();

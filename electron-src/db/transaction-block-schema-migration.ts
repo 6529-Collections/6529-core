@@ -11,6 +11,7 @@ interface SqliteTableColumn {
 // Keep these upgrade definitions aligned with the corresponding
 // TransactionBlock columns in entities/ITransaction.ts.
 const RECOVERY_COLUMNS = [
+  { name: "tdh_pending_consolidations", definition: "text DEFAULT NULL" },
   {
     name: "tdh_run_incomplete",
     definition: "boolean NOT NULL DEFAULT (0)",

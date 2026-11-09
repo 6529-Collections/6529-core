@@ -9,6 +9,7 @@ import { NFT } from "./entities/INFT";
 import { Brackets, type SelectQueryBuilder } from "typeorm";
 import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
 import { parseTransactionHashSearch } from "../../shared/transaction-hash-search";
+import { needsTdhRecalculation } from "./tdh-recalculation";
 
 interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
   seasonOptions: number[];
@@ -167,7 +168,7 @@ async function fetchTdhInfo() {
     merkleRoot: tdhMerkle.merkle_root,
     lastCalculation: tdhMerkle.last_update,
     totalTDH,
-    needsRecalculation: transactionBlock?.tdh_needs_recalculation ?? false,
+    needsRecalculation: needsTdhRecalculation(transactionBlock),
   };
 }
 

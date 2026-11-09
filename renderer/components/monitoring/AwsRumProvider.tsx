@@ -1,10 +1,14 @@
 "use client";
 
+import { useOptionalCookieConsent } from "@/components/cookies/CookieConsentContext";
 import { isBrowserConnectorRoute } from "@/components/providers/app-route-provider-features";
 import { publicEnv } from "@/config/env";
+import {
+  clearAwsRumCookies,
+  hasAwsRumPerformanceConsent,
+} from "@/utils/monitoring/awsRumConsent";
 import { AWS_RUM_DISPATCH_CONFIG } from "@/utils/monitoring/awsRumDispatch";
-import { AwsRumExpectedAbortPlugin } from "@/utils/monitoring/awsRumExpectedAbort";
-import { createAwsRumPrivacyPlugin } from "@/utils/monitoring/awsRumPrivacy";
+import { isAwsRumSessionSampled } from "@/utils/monitoring/awsRumSampling";
 import { getAwsRumPageId } from "@/utils/monitoring/mobileLaunchTimingSanitizers";
 import type { AwsRum as AwsRumInstance, AwsRumConfig } from "aws-rum-web";
 import { usePathname } from "next/navigation";
@@ -29,7 +33,7 @@ const AWS_RUM_HTTP_URLS_TO_EXCLUDE: readonly RegExp[] = [
 ];
 
 interface AwsRumProviderProps {
-  readonly children: React.ReactNode;
+  readonly children?: React.ReactNode;
 }
 
 export default function AwsRumProvider({
@@ -37,6 +41,11 @@ export default function AwsRumProvider({
 }: Readonly<AwsRumProviderProps>) {
   const pathname = usePathname();
   const isBrowserConnector = isBrowserConnectorRoute(pathname);
+  // RUM sets the cwr_u/cwr_s performance cookies, so it follows the same
+  // performance consent as Google Analytics and Mixpanel.
+  const hasPerformanceConsent = hasAwsRumPerformanceConsent(
+    useOptionalCookieConsent()
+  );
   const latestPathnameRef = useRef(pathname);
   const awsRumRef = useRef<AwsRumInstance | undefined>(undefined);
   const lastRecordedPageIdRef = useRef<string | undefined>(undefined);
@@ -45,6 +54,13 @@ export default function AwsRumProvider({
     // The connector is a short-lived local transfer surface. It must not
     // initialize site telemetry or create performance-monitoring cookies.
     if (isBrowserConnector) {
+      return;
+    }
+
+    // Without performance consent RUM stays off, and a rejection removes the
+    // cookies an earlier accepted session left behind.
+    if (!hasPerformanceConsent) {
+      clearAwsRumCookies();
       return;
     }
 
@@ -78,15 +94,29 @@ export default function AwsRumProvider({
           return;
         }
 
-        const {
-          AwsRum,
-          FetchPlugin,
-          JsErrorPlugin,
-          NavigationPlugin,
-          ResourcePlugin,
-          WebVitalsPlugin,
-          XhrPlugin,
-        } = await import("aws-rum-web");
+        // Sample before downloading the SDK so unsampled sessions skip the
+        // chunk entirely. The SDK then records every session it is given.
+        if (!isAwsRumSessionSampled(SAMPLE_RATE)) {
+          return;
+        }
+
+        const [
+          {
+            AwsRum,
+            FetchPlugin,
+            JsErrorPlugin,
+            NavigationPlugin,
+            ResourcePlugin,
+            WebVitalsPlugin,
+            XhrPlugin,
+          },
+          { AwsRumExpectedAbortPlugin },
+          { createAwsRumPrivacyPlugin },
+        ] = await Promise.all([
+          import("aws-rum-web"),
+          import("@/utils/monitoring/awsRumExpectedAbort"),
+          import("@/utils/monitoring/awsRumPrivacy"),
+        ]);
 
         if (cancelled) {
           return;
@@ -97,7 +127,7 @@ export default function AwsRumProvider({
           urlsToExclude: [...AWS_RUM_HTTP_URLS_TO_EXCLUDE],
         };
         const config: AwsRumConfig = {
-          sessionSampleRate: SAMPLE_RATE,
+          sessionSampleRate: 1,
           telemetries: [],
           eventPluginsToLoad: [
             createAwsRumPrivacyPlugin(initialPageId),
@@ -137,6 +167,11 @@ export default function AwsRumProvider({
 
     return () => {
       cancelled = true;
+      // aws-rum-web 1.25.0 keeps web-vitals callbacks registered after
+      // disable(), and their session lookup can rewrite cwr_u/cwr_s. Turning
+      // cookie storage off first (the SDK reads this setting on every write)
+      // keeps cookies deleted after a rejection from coming back.
+      awsRum?.allowCookies(false);
       awsRum?.disable();
 
       if (awsRumRef.current === awsRum) {
@@ -148,7 +183,7 @@ export default function AwsRumProvider({
         delete window.awsRum;
       }
     };
-  }, [isBrowserConnector]);
+  }, [hasPerformanceConsent, isBrowserConnector]);
 
   useEffect(() => {
     latestPathnameRef.current = pathname;

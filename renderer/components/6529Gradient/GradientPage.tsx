@@ -1,12 +1,12 @@
 "use client";
 
+import { useNftPurchasingVisibility } from "@/hooks/useNftPurchasingVisibility";
 import Address from "@/components/address/Address";
 import { AuthContext } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import ProfileAvatar, {
   ProfileBadgeSize,
 } from "@/components/common/profile/ProfileAvatar";
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import NftMarketActivity from "@/components/nft-market-activity/NftMarketActivity";
 import MarketDepthPanel from "@/components/nft-market-depth/MarketDepthPanel";
 import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
@@ -25,7 +25,7 @@ import {
   MemePageTitleSkeleton,
 } from "@/components/the-memes/MemePageSkeleton";
 import YouOwnNftBadge from "@/components/you-own-nft-badge/YouOwnNftBadge";
-import { publicEnv } from "@/config/env";
+import { apiUrl } from "@/services/api/api-endpoints";
 import { GRADIENT_CONTRACT } from "@/constants/constants";
 import { useSetTitle } from "@/contexts/TitleContext";
 import type { DBResponse } from "@/entities/IDBResponse";
@@ -413,7 +413,7 @@ export default function GradientPageComponent({
     if (marketActive) params.set("focus", MARKET_TAB_FOCUS);
     return params;
   }, [returnContext, marketActive]);
-  const { country } = useCookieConsent();
+  const { hideNftPurchasing } = useNftPurchasingVisibility();
   const { address: connectedAddress } = useSeizeConnectContext();
   const { connectedProfile } = useContext(AuthContext);
 
@@ -498,7 +498,7 @@ export default function GradientPageComponent({
 
   useEffect(() => {
     const abortController = new AbortController();
-    const initialUrlNfts = `${publicEnv.API_ENDPOINT}/api/nfts/gradients?&page_size=101`;
+    const initialUrlNfts = apiUrl("/api/nfts/gradients?&page_size=101");
     fetchNfts(initialUrlNfts, [], abortController.signal);
     return () => abortController.abort();
   }, [fetchNfts]);
@@ -624,7 +624,7 @@ export default function GradientPageComponent({
                   isOwner={isOwner}
                   collectionRank={collectionRank}
                   collectionCount={collectionCount}
-                  showMarketplaceLinks={!capacitor.isIos || country === "US"}
+                  showMarketplaceLinks={!hideNftPurchasing}
                 />
               </div>
             </div>

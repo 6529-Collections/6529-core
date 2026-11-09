@@ -1103,6 +1103,52 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
+  test("previews public chat with restricted submissions before continuing", async ({
+    baseURL,
+    page,
+  }) => {
+    await gotoCreateWave(page);
+    await page
+      .getByLabel(/Wave Name/)
+      .fill("Sandbox Separate Permissions Wave");
+    await openCompetitionSetup(page, "Rank");
+    await nextStepButton(page).click();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "People with wave access can chat and submit." })
+    ).toBeVisible();
+    const submissions = page.getByRole("group", { name: "Who can drop" });
+    await submissions
+      .getByRole("button", { name: "Edit", exact: true })
+      .click();
+    await submissions.getByRole("button", { name: /^Level/ }).click();
+    await submissions.getByLabel("Level at least").fill("3");
+    await submissions.getByRole("button", { name: "Save changes" }).click();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "only the submission group can submit" })
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({
+          hasText:
+            "People with wave access can chat, but only the submission group can submit.",
+        })
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await nextStepButton(page).click();
+    await previousStepButton(page).click();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "only the submission group can submit" })
+    ).toBeVisible();
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
   test("shows the default rank competition schedule controls", async ({
     baseURL,
     page,
@@ -1283,7 +1329,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
       outcomes: [],
     });
     await page.goto(
-      `/waves/${CREATED_COMPETITION_WAVE_ID}/competitions/${CREATED_COMPETITION_ID}?tab=rules`
+      `/waves/${CREATED_COMPETITION_WAVE_ID}/decisions/${CREATED_COMPETITION_ID}?tab=rules`
     );
     await expect(
       page.getByRole("heading", { name: "Participation", exact: true }).first()
@@ -1818,7 +1864,7 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     await waitForRouteReady(page);
     await dismissNextDevTools(page);
     await expect(
-      page.getByLabel("Competition name", { exact: true })
+      page.getByLabel("Decision name", { exact: true })
     ).toHaveValue(draftName);
     await expect(appearance).toHaveAttribute("aria-expanded", "false");
     await expect(appearance).toContainText("Customized");
@@ -1833,7 +1879,7 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
       .getByRole("button", { name: "Close editor", exact: true })
       .click();
     await expect(page).toHaveURL(
-      new RegExp(`/waves/${CREATED_COMPETITION_WAVE_ID}/competitions$`)
+      new RegExp(`/waves/${CREATED_COMPETITION_WAVE_ID}/decisions$`)
     );
     await page.getByRole("tab", { name: "Drafts", exact: true }).click();
     await page
@@ -1843,7 +1889,7 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
       })
       .click();
     await expect(
-      page.getByLabel("Competition name", { exact: true })
+      page.getByLabel("Decision name", { exact: true })
     ).toHaveValue(draftName);
     await appearance.click();
     await expect(page.getByLabel("Submission button label")).toHaveValue(
@@ -1979,15 +2025,15 @@ async function openCompetitionSetup(page: Page, type: "Rank" | "Approve") {
   const title = await page.getByLabel(/Wave Name/).inputValue();
   const fixture = await installNativeCompetitionCreationApi(page);
   nativeCreationFixtures.set(page, fixture);
-  await page.goto(`/waves/${CREATED_COMPETITION_WAVE_ID}/competitions/new`);
-  const name = page.getByLabel("Competition name", { exact: true });
+  await page.goto(`/waves/${CREATED_COMPETITION_WAVE_ID}/decisions/new`);
+  const name = page.getByLabel("Decision name", { exact: true });
   await expect(name).toBeVisible({
     timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
   });
   await name.fill(title);
   if (type === "Approve") {
     await page
-      .getByRole("combobox", { name: "Competition type", exact: true })
+      .getByRole("combobox", { name: "Decision type", exact: true })
       .click();
     await page.getByRole("option", { name: "Approve", exact: true }).click();
   }
@@ -2003,7 +2049,7 @@ async function publishCompetition(page: Page) {
   await nextStepButton(page).click();
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/competitions/${CREATED_COMPETITION_ID}$`),
+    new RegExp(`/decisions/${CREATED_COMPETITION_ID}$`),
     { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
   );
   expect(nativeCreationFixtures.get(page)?.published()).toBe(true);

@@ -48,6 +48,10 @@ export class ApiDrop {
     'voters_count_available'?: boolean;
     'id': string;
     /**
+    * The client_drop_id sent when the drop was created. Present on the create response (including a retried create) and on the DROP_UPDATE broadcast for that creation, so the author\'s client can match its pending send. Omitted on other reads.
+    */
+    'client_drop_id'?: string | null;
+    /**
     * Sequence number of the drop in Seize
     */
     'serial_no': number;
@@ -86,6 +90,10 @@ export class ApiDrop {
     'moderation'?: ApiDropModeration;
     'subscribed_actions': Array<ApiDropSubscriptionTargetAction>;
     'is_signed': boolean;
+    /**
+    * True when the drop\'s current content is the body of an author\'s device signed create or edit event, the same state as a non-null current_event_id from GET /drops/{dropId}/signed-events. False otherwise, including when the viewer cannot see the drop\'s content or its author is anonymous. Treat a missing value as false.
+    */
+    'is_author_signed'?: boolean;
     'reactions': Array<ApiDropReaction>;
     'boosts': number;
     'is_additional_action_promised': boolean | null;
@@ -121,6 +129,12 @@ export class ApiDrop {
             "baseName": "id",
             "type": "string",
             "format": ""
+        },
+        {
+            "name": "client_drop_id",
+            "baseName": "client_drop_id",
+            "type": "string",
+            "format": "uuid"
         },
         {
             "name": "serial_no",
@@ -281,6 +295,12 @@ export class ApiDrop {
         {
             "name": "is_signed",
             "baseName": "is_signed",
+            "type": "boolean",
+            "format": ""
+        },
+        {
+            "name": "is_author_signed",
+            "baseName": "is_author_signed",
             "type": "boolean",
             "format": ""
         },
