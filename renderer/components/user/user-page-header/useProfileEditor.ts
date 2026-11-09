@@ -22,7 +22,10 @@ import {
   commonApiPost,
   commonApiPostForm,
 } from "@/services/api/common-api";
-import { uploadProfilePictureFile } from "@/components/ipfs/profilePictureUpload";
+import {
+  LocalProfilePictureUploadError,
+  uploadProfilePictureFile,
+} from "@/components/ipfs/profilePictureUpload";
 import { usePathname, useRouter } from "next/navigation";
 import { useContext, useRef, useState } from "react";
 import { AboutStatementSaveError } from "./about/about-statement-errors";
@@ -69,7 +72,8 @@ function initialDraft({
 async function prepareProfileUpdate(
   draft: ProfileDraft,
   profile: ApiIdentity,
-  coverChanged: boolean
+  coverChanged: boolean,
+  retryPictureVia6529: boolean
 ): Promise<ApiCreateOrUpdateProfileRequest> {
   if (draft.name.toLowerCase() !== profile.handle?.toLowerCase()) {
     const availability = await commonApiFetch<{
@@ -93,6 +97,12 @@ async function prepareProfileUpdate(
     banner_1: profile.banner1 ?? undefined,
     banner_2: profile.banner2 ?? undefined,
   };
+  if (draft.pictureFile) {
+    body.pfp_url = await uploadProfilePictureFile(
+      draft.pictureFile,
+      retryPictureVia6529
+    );
+  }
   if (coverChanged && draft.coverMode === "gradient") {
     body.banner_1 = draft.color1;
     body.banner_2 = draft.color2;
@@ -102,8 +112,6 @@ async function prepareProfileUpdate(
       : (savedCover ?? undefined);
     body.banner_2 = undefined;
   }
-  if (draft.pictureFile)
-    body.pfp_url = await uploadProfilePictureFile(draft.pictureFile);
   return body;
 }
 
@@ -170,11 +178,21 @@ export function useProfileEditor(props: ProfileEditorProps) {
   const [draft, setDraft] = useState(() => initialDraft(props));
   const about = draft.about ?? savedStatement?.statement_value ?? "";
   const [error, setError] = useState<string | null>(null);
+  const [retryPicture, setRetryPicture] = useState<File | null>(null);
   const [aboutError, setAboutError] = useState<AboutStatementSaveError | null>(
     null
   );
-  const updateDraft = (patch: Partial<ProfileDraft>) =>
+  const updateDraft = (patch: Partial<ProfileDraft>) => {
+    if (
+      retryPicture &&
+      patch.pictureFile !== undefined &&
+      patch.pictureFile !== retryPicture
+    ) {
+      setRetryPicture(null);
+      setError(null);
+    }
     setDraft((current) => ({ ...current, ...patch }));
+  };
   const savedCover = getBannerImageUrl(savedProfile.banner1);
   const coverChanged =
     draft.coverMode === "image"
@@ -193,6 +211,8 @@ export function useProfileEditor(props: ProfileEditorProps) {
     about !== (savedStatement?.statement_value ?? "") &&
     Boolean(savedStatement ?? about.trim());
   const dirty = profileChanged || aboutChanged || Boolean(draft.meme);
+  const canRetryPictureVia6529 =
+    retryPicture !== null && retryPicture === draft.pictureFile;
 
   const target = encodeURIComponent(
     [savedProfile.primary_wallet, savedProfile.query, savedProfile.handle].find(
@@ -220,18 +240,25 @@ export function useProfileEditor(props: ProfileEditorProps) {
     else onProfileStatementRemove({ profile: savedProfile });
   };
 
-  const save = async (): Promise<boolean> => {
+  const save = async (retryPictureVia6529 = false): Promise<boolean> => {
     if (savingRef.current || !dirty || !draft.name.trim()) return false;
+    if (retryPictureVia6529 && !canRetryPictureVia6529) return false;
     savingRef.current = true;
     setSaving(true);
     setError(null);
     setAboutError(null);
+    if (!retryPictureVia6529) setRetryPicture(null);
     let savedAny = false;
     try {
       const { success } = await requestAuth();
       if (!success) throw new Error(message("user.profileHeader.edit.signIn"));
       const body = profileChanged
-        ? await prepareProfileUpdate(draft, savedProfile, coverChanged)
+        ? await prepareProfileUpdate(
+            draft,
+            savedProfile,
+            coverChanged,
+            retryPictureVia6529
+          )
         : null;
       // Each endpoint saves separately. Keep confirmed results as the retry
       // baseline, while retaining every draft field that has not been saved.
@@ -263,12 +290,16 @@ export function useProfileEditor(props: ProfileEditorProps) {
         onProfileEdit({ profile: updated, previousProfile: currentProfile });
         navigateAfterRename(updated);
       }
+      setRetryPicture(null);
       setToast({
         message: message("user.profileHeader.edit.success"),
         type: "success",
       });
       return true;
     } catch (cause) {
+      if (cause instanceof LocalProfilePictureUploadError) {
+        setRetryPicture(draft.pictureFile);
+      }
       const details =
         getToastErrorDetails(cause) ??
         message("user.profileHeader.edit.saveFailed");
@@ -296,6 +327,7 @@ export function useProfileEditor(props: ProfileEditorProps) {
     error,
     aboutError,
     setAboutError,
+    canRetryPictureVia6529,
     save,
   };
 }
