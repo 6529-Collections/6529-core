@@ -177,12 +177,12 @@ export default function DesktopValidatorStatus({
               )}
             </div>
             <div
-              className={`tw-flex tw-items-start tw-gap-2 tw-rounded-md tw-border tw-border-solid tw-px-2.5 tw-py-2 ${panelTone}`}
+              className={`tw-flex tw-items-center tw-gap-2.5 tw-rounded-md tw-border tw-border-solid tw-px-2.5 tw-py-2 ${panelTone}`}
             >
               <FontAwesomeIcon
                 aria-hidden="true"
                 icon={icon}
-                className={`tw-mt-0.5 tw-size-3 tw-shrink-0 ${panelIconColor}`}
+                className={`tw-size-4 tw-shrink-0 ${panelIconColor}`}
               />
               <div>
                 <div className="tw-font-semibold">{label}</div>

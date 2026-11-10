@@ -30,6 +30,10 @@ export function useSetDesktopValidatorVisibility() {
 /** Share the installation and signing state across controls, with optional polling. */
 export function useDesktopValidatorStatus(refresh = false) {
   const { data: visible } = useDesktopValidatorVisibility();
+  const enabled =
+    visible === true &&
+    typeof window !== "undefined" &&
+    typeof window.api?.getDesktopValidatorStatus === "function";
 
   const { data } = useQuery({
     queryKey: ["desktop-validator-status"],
@@ -37,13 +41,13 @@ export function useDesktopValidatorStatus(refresh = false) {
       window.api
         .getDesktopValidatorStatus()
         .catch(() => ({ service: "unavailable" as const })),
-    enabled: visible === true,
+    enabled,
     retry: false,
     staleTime: 15_000,
-    refetchInterval: visible && refresh ? 30_000 : false,
+    refetchInterval: enabled && refresh ? 30_000 : false,
   });
 
-  return visible ? data : undefined;
+  return enabled ? data : undefined;
 }
 
 export function useOpenDesktopValidator() {
