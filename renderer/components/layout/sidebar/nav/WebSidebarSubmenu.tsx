@@ -24,7 +24,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { isSidebarNavItemActive } from "./sidebarActive";
-import { desktopLocalServiceNavItems } from "./desktopLocalServiceNavItems";
+import { renderDesktopLocalServiceNavItem } from "./desktopLocalServiceNavItems";
 
 const FOCUSABLE_ELEMENT_SELECTOR =
   "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
@@ -259,24 +259,17 @@ function WebSidebarSubmenu({
 
   const topStyle = Number.isFinite(computedTop) ? `${computedTop}px` : "16px";
   const renderLink = (item: SidebarNavItem, nested: boolean = false) => {
-    const LocalService = item.id
-      ? desktopLocalServiceNavItems.get(item.id)
-      : undefined;
-    if (LocalService) {
-      return (
-        <LocalService
-          key={item.id}
-          onNavigate={onClose}
-          className={`tw-touch-action-manipulation tw-flex tw-w-full tw-items-center tw-rounded-lg tw-no-underline tw-ring-offset-iron-950 tw-transition-colors focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-1 ${
-            nested
-              ? "tw-min-h-10 tw-px-3 tw-py-2 tw-text-sm"
-              : "tw-mb-1 tw-px-3 tw-py-2 tw-text-md"
-          }`}
-        />
-      );
-    }
-    const active = isSidebarNavItemActive(item, pathname);
+    const localService = renderDesktopLocalServiceNavItem(item.id, {
+      onNavigate: onClose,
+      className: `tw-touch-action-manipulation tw-flex tw-w-full tw-items-center tw-rounded-lg tw-no-underline tw-ring-offset-iron-950 tw-transition-colors focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-1 ${
+        nested
+          ? "tw-min-h-10 tw-px-3 tw-py-2 tw-text-sm"
+          : "tw-mb-1 tw-px-3 tw-py-2 tw-text-md"
+      }`,
+    });
+    if (localService) return localService;
 
+    const active = isSidebarNavItemActive(item, pathname);
     return (
       <Link
         key={item.href}
