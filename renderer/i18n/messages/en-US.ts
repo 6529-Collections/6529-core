@@ -3432,7 +3432,7 @@ const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 export const EN_US_ROOT_MESSAGES = {
   "desktop.about.showValidator": "Show Validator in 6529 Desktop",
   "desktop.about.showValidatorHelp":
-    "Show Validator status and shortcuts in Desktop. Your validator keeps running when hidden.",
+    "Show Validator in the Desktop title bar. Your validator keeps running when hidden.",
   "desktop.about.showValidatorSaveError": "Could not save your Validator preference. Try again.",
   "desktop.about.showValidatorLoadError": "Could not load your Validator preference.",
   "desktop.about.portPending": "Pending…",

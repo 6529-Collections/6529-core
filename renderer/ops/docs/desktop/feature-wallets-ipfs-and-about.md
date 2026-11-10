@@ -67,9 +67,9 @@ Deleting a wallet or app database is not a TDH repair step. Transaction/NFT work
 
 ### Show or hide the local Validator
 
-When Desktop detects the installed 6529 Validator, the title bar shows its health and **6529 Desktop > Local services > 6529 Validator** opens it. Select the title bar badge to see the Validator version, today's signing status and, when available, the next signing time in UTC and today's result name and picture.
+When Desktop detects the installed 6529 Validator, the title bar shows its health. Select the badge to see the Validator version, today's signing status and, when available, the next signing time in UTC and today's result name and picture. Choose **Open Validator** in the popover to open or focus the standalone app.
 
-In **6529 Desktop > About**, turn off **Show Validator in 6529 Desktop** to hide the badge, update notices, and shortcut. The preference is on by default and saved on this computer across restarts. The separate Validator continues to run and sign when hidden.
+In **6529 Desktop > About**, turn off **Show Validator in 6529 Desktop** to hide the title bar badge and its update notices. The preference is on by default and saved on this computer across restarts. The separate Validator continues to run and sign when hidden.
 
 ### App version, updates, and diagnostics
 
