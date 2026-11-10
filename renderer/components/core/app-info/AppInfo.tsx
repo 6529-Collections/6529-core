@@ -14,7 +14,7 @@ import type { IpfsStatus } from "@/shared/ipfs-status";
 
 interface DesktopAppInfo {
   app_version?: string;
-  environment?: string;
+  supportsInAppUpdates: boolean;
   os?: string;
   arch?: string;
   scheme?: string;
@@ -50,10 +50,9 @@ function bytesToMB(bytes: number): string {
 
 export default function AppInfo() {
   const locale = useBrowserLocale();
-  const [loadedInfo, setInfo] = useState<DesktopAppInfo>();
-  const info = loadedInfo ?? {};
-  const isLocalBuild = info.environment === "local";
-  const canCheckUpdates = loadedInfo !== undefined && !isLocalBuild;
+  const [info, setInfo] = useState<DesktopAppInfo | null>();
+  const [infoRetry, setInfoRetry] = useState(0);
+  const canCheckUpdates = info?.supportsInAppUpdates === true;
 
   const [checkingForUpdates, setCheckingForUpdates] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState<UpdateInfo>();
@@ -76,7 +75,7 @@ export default function AppInfo() {
         })
         .catch(() => {
           if (!disposed && currentRevision === revision) {
-            setInfo((current) => current ?? {});
+            setInfo((current) => current ?? null);
           }
           console.error("Could not refresh Desktop app information");
         });
@@ -87,7 +86,7 @@ export default function AppInfo() {
       disposed = true;
       unsubscribe();
     };
-  }, []);
+  }, [infoRetry]);
 
   const fetchMainWorker = () => {
     window.api.getMainWorker().then(({ mainTask }) => {
@@ -164,18 +163,49 @@ export default function AppInfo() {
   }, [canCheckUpdates]);
 
   function formatIpfsPort(port: number | null | undefined): string | number {
-    if (info.ipfsStatus === "disabled")
+    const status = info?.ipfsStatus;
+    if (status === "disabled")
       return t(locale, "desktop.about.portNotApplicable");
-    if (!info.ipfsStatus || info.ipfsStatus === "starting")
+    if (!status || status === "starting")
       return t(locale, "desktop.about.portPending");
-    if (info.ipfsStatus === "ready" && typeof port === "number" && port > 0)
+    if (status === "ready" && typeof port === "number" && port > 0)
       return port;
     return t(locale, "desktop.about.portUnavailable");
   }
 
   function printAppVersion() {
+    const cardClassName =
+      "tw-rounded-xl tw-bg-iron-950 tw-px-5 tw-py-8 tw-ring-1 tw-ring-inset tw-ring-iron-800";
+    if (!info) {
+      return (
+        <div className={cardClassName}>
+          {info === null ? (
+            <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+              <p role="alert" className="tw-m-0 tw-text-sm">
+                {t(locale, "desktop.about.infoLoadError")}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setInfo(undefined);
+                  setInfoRetry((count) => count + 1);
+                }}
+                className="tw-min-h-11 tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-800 tw-px-3 tw-text-sm tw-font-medium hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
+              >
+                {t(locale, "desktop.about.retry")}
+              </button>
+            </div>
+          ) : (
+            <p role="status" className="tw-m-0 tw-text-sm tw-text-iron-400">
+              {t(locale, "desktop.about.infoLoading")}
+            </p>
+          )}
+        </div>
+      );
+    }
+
     return (
-      <div className="tw-rounded-xl tw-bg-iron-950 tw-px-5 tw-py-8 tw-ring-1 tw-ring-inset tw-ring-iron-800">
+      <div className={cardClassName}>
         <div className="tw-flex tw-flex-wrap tw-justify-between tw-gap-4">
           <div>
             <div className="tw-flex tw-flex-col tw-gap-0.5">
@@ -200,7 +230,7 @@ export default function AppInfo() {
             </div>
           </div>
           <div className="tw-flex tw-items-center tw-gap-2">
-            {isLocalBuild && (
+            {info.supportsInAppUpdates === false && (
               <div className="tw-text-center">
                 <div className="tw-pb-3">
                   <UpdateImage src={UPDATE_UNAVAILABLE_IMAGE} alt="" />

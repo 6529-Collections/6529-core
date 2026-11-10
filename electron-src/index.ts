@@ -97,6 +97,7 @@ import {
   downloadUpdate,
   installUpdate,
   isUpdateInitiatedQuit,
+  supportsInAppUpdates,
 } from "./update";
 import {
   closeLogs,
@@ -2139,8 +2140,10 @@ ipcMain.handle("get-info", () => {
   // not point media at a gateway that is still starting or has stopped.
   const ipfsStatus = IPFS_SERVER?.getStatus() ?? "unavailable";
   const ipfsAvailable = ipfsStatus === "ready";
+  const info = getInfo();
   return {
-    ...getInfo(),
+    ...info,
+    supportsInAppUpdates: supportsInAppUpdates(info.environment),
     port: PORT,
     ipfsStatus,
     ipfsPort: ipfsAvailable ? IPFS_PORT : null,

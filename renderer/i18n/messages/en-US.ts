@@ -3429,6 +3429,9 @@ const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
  * both into the complete dictionary.
  */
 export const EN_US_ROOT_MESSAGES = {
+  "desktop.about.infoLoading": "Loading Desktop details…",
+  "desktop.about.infoLoadError": "Could not load Desktop details.",
+  "desktop.about.retry": "Try again",
   "desktop.about.localUpdatesUnavailable":
     "In-app updates are disabled for local builds.",
   "desktop.about.showValidator": "Show 6529 Validator",
