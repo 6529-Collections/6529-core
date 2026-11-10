@@ -4,6 +4,7 @@ import {
   DropImagePreview,
   getDropImagePreviewSources,
   getGiphyVideoPreviewSources,
+  OriginalDropImage,
 } from "./DropImagePreview";
 import { GiphyPlaybackToggle, GiphyVideoPreview } from "./GiphyVideoPreview";
 import {
@@ -28,8 +29,6 @@ import {
 } from "./ImageMediaModal";
 import type { MediaLoadStrategy } from "./mediaLoadStrategy";
 import { useMediaActions } from "./useMediaActions";
-import Image from "next/image";
-import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { useLocalImagePreviewSource } from "./LocalImagePreviewContext";
 import { ImageQualityToggle } from "./ImageQualityToggle";
 import {
@@ -490,9 +489,9 @@ function DropListItemContentMediaImageContent({
           }`}
         >
           {shouldLoadImage && quality.requested && canToggleOriginal && (
-            <Image
+            <OriginalDropImage
               ref={originalImgRef}
-              src={resolveIpfsUrlSync(src)}
+              src={src}
               alt={t(
                 DEFAULT_LOCALE,
                 isGif
@@ -501,7 +500,6 @@ function DropListItemContentMediaImageContent({
               )}
               fill
               sizes="(max-width: 768px) 100vw, 768px"
-              unoptimized
               loading="eager"
               hidden={!quality.showingOriginal}
               style={{

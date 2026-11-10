@@ -359,8 +359,12 @@ export const addFileToIpfs = async (file: File): Promise<string> => {
   return service.addFile(file);
 };
 
-export const resolveIpfsUrlSync = (url: string) => {
-  const gatewayBase = getConfiguredGatewayBaseForSync();
+/** Use the public resolver directly when the caller can only load one URL. */
+export const resolveIpfsUrlSync = (
+  url: string,
+  { preferLocal = true }: { readonly preferLocal?: boolean } = {}
+) => {
+  const gatewayBase = preferLocal ? getConfiguredGatewayBaseForSync() : null;
 
   if (url.startsWith("ipfs://")) {
     if (!gatewayBase) {

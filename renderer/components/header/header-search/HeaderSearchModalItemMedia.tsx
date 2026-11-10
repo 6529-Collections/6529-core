@@ -25,7 +25,9 @@ const STATIC_ALLOWED_IMAGE_HOSTS = new Set([
 ]);
 
 const getSafeImageSource = (source: string): string | null => {
-  const resolvedSource = resolveIpfsUrlSync(source.trim());
+  const resolvedSource = resolveIpfsUrlSync(source.trim(), {
+    preferLocal: false,
+  });
 
   if (!resolvedSource || resolvedSource.startsWith("//")) {
     return null;

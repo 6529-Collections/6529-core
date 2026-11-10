@@ -51,5 +51,9 @@ export function getScaledResolvedImageUri(
 }
 
 export function getScaledImageUri(url: string, scale: ImageScale): string {
-  return getScaledResolvedImageUri(resolveIpfsUrlSync(url), scale);
+  // Callers that can retry use getScaledResolvedImageUri with gateway candidates.
+  return getScaledResolvedImageUri(
+    resolveIpfsUrlSync(url, { preferLocal: false }),
+    scale
+  );
 }
