@@ -111,31 +111,3 @@ jobs:
             release-work/latest-*.yml
             dist/latest.yml
           if-no-files-found: ignore
-
-      - name: Notify Discord on failure
-        if: ${{ inputs.should_run && failure() }}
-        uses: sarisia/actions-status-discord@v1
-        continue-on-error: true
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        with:
-          status: failure
-          title: "Desktop Windows signing failed 🚨"
-          description: "${{ inputs.env }} v${{ inputs.version }} signing or signed-artifact upload failed. Open the run for details."
-          content: "<@&1162355330798325861>"
-          color: 0xff0000
-
-      - name: Notify CI wave about Windows signing failure
-        if: ${{ inputs.should_run && failure() }}
-        continue-on-error: true
-        env:
-          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
-          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
-          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
-          CI_PIPELINES_TARGET_ENV: ${{ inputs.env }}
-          CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Desktop Windows signing failed"
-          CI_PIPELINES_DESCRIPTION: "${{ inputs.env }} v${{ inputs.version }} signing or signed-artifact upload failed. Open the run for details."
-          CI_PIPELINES_SERVICE: desktop-windows-signing
-          CI_PIPELINES_WORKFLOW: Sign Windows
-        run: node scripts/notify-ci-wave.mjs
