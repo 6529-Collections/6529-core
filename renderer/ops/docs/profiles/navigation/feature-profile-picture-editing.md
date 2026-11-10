@@ -77,7 +77,8 @@ keep the individual picture editor.
 
 - Desktop failures keep unsaved changes in the dialog with an error. If a
   selected Meme already saved before another field failed, retry preserves it
-  and saves only the remaining changes.
+  and saves only the remaining changes. If the local IPFS upload fails, choose
+  **Upload via 6529** to retry the picture upload through the 6529 API.
 
 ### Individual Picture Editor
 
@@ -103,10 +104,10 @@ keep the individual picture editor.
 - The editor supports one source at a time (meme or uploaded file).
 - The modal does not include crop or transform controls.
 - Maximum upload size is 2MB.
-- Uploaded files go to the 6529 API, which checks the file's contents and
-  pins the image on IPFS. A file whose contents are not a PNG, JPEG, GIF or
-  WebP image is rejected whatever its name, and the editor shows the server's
-  message.
+- 6529 Desktop uploads through local IPFS when enabled and uses the 6529 API
+  when local IPFS is disabled. The web uploader also uses the 6529 API.
+  Upload checks use the file's contents. If the contents are outside the
+  supported formats, the editor shows an error.
 - Identifying metadata such as location, camera details and capture time is
   removed from an uploaded picture before it is pinned.
 

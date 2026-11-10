@@ -267,11 +267,14 @@ export const OriginalDropImage = forwardRef<
       : [resolveIpfsUrlSync(src)];
   }, [src]);
 
+  const activeSrc = candidates[index] ?? candidates[0];
+  if (!activeSrc?.trim()) return null;
+
   return (
     <Image
       {...props}
       ref={ref}
-      src={candidates[index] ?? candidates[0] ?? src}
+      src={activeSrc}
       alt={alt}
       unoptimized
       onError={(event) => {

@@ -6865,6 +6865,7 @@
         "To change profile media on desktop, choose Edit beside Preferences and use Profile cover or Profile picture in the combined editor. Smaller layouts keep Edit profile > Profile cover or Profile picture.",
         "Editing requires a confirmed direct owner session and is hidden for visitors, signed-out users and active proxies. Desktop saves all changed profile fields with Save; the smaller picture editor retains Save PFP. Both editors show Select Meme search immediately, separated from file upload by or. Desktop lets you type while Memes load and keeps loading and retry states. Both layouts use compact field styling. Cover editing supports left-aligned Gradient and Image modes.",
         "In profile picture editors, saved or selected images show their preview inside the Upload image area, below Meme search, with no separate preview row. Select Meme search and Upload image remain available to choose a different Meme or file; drag and drop still works.",
+        "6529 Desktop uses local IPFS for profile picture uploads when enabled and the 6529 API when local IPFS is disabled. If a local upload fails, choose Upload via 6529 to retry through the API.",
         "Uploaded profile pictures and banner images are published without identifying metadata such as location, camera details and capture time.",
         "Use these records when users ask how to change profile media."
       ],
@@ -10347,7 +10348,7 @@
       "keywords": ["desktop", "validator", "title bar", "badge"],
       "facts": [
         "When the standalone Validator is installed, the 6529 Desktop title bar badge shows its health. Open it to see the version, signing status and, when available, the next signing time and today's result.",
-        "Choose Open Validator from the title bar badge to open or focus the standalone app.",
+        "Choose Open Validator from the title bar badge to open or focus the standalone app. Use it to inspect an update or check why the service is stopped, not answering, or needs attention. If the popover reports a launch error, use the system app list.",
         "Use 6529 Desktop > About > Show Validator in 6529 Desktop to hide or restore the title bar badge. The preference is on by default and survives restarts. The standalone Validator keeps running and signing when hidden."
       ],
       "canonical_path": "/about/6529-apps",

@@ -17,6 +17,8 @@ import {
   useDesktopValidatorStatus,
   useOpenDesktopValidator,
 } from "@/hooks/useDesktopValidator";
+import { formatTime, formatUtcDate } from "@/i18n/format";
+import type { SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import ValidatorResult from "./ValidatorResult";
 import styles from "./TitleBar.module.css";
@@ -58,20 +60,19 @@ const HEALTH_STYLE = {
   unavailable: { icon: faQuestion, tone: TONE.alert },
 } as const;
 
-function nextSignatureWords(locale: string, unix: number) {
+function nextSignatureWords(locale: SupportedLocale, unix: number) {
   const date = new Date(unix * 1000);
-  const day = new Intl.DateTimeFormat(locale, {
+  const day = formatUtcDate(locale, date, {
     weekday: "short",
     day: "numeric",
     month: "short",
-    timeZone: "UTC",
-  }).format(date);
-  const time = new Intl.DateTimeFormat(locale, {
+  });
+  const time = formatTime(locale, date, {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
     timeZone: "UTC",
-  }).format(date);
+  });
   return { day, time };
 }
 
