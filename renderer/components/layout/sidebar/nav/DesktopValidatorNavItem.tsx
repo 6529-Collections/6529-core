@@ -2,11 +2,11 @@
 
 import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import {
   useDesktopValidatorStatus,
   useOpenDesktopValidator,
 } from "@/hooks/useDesktopValidator";
-import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 
 export default function DesktopValidatorNavItem({
@@ -18,8 +18,10 @@ export default function DesktopValidatorNavItem({
 }) {
   const status = useDesktopValidatorStatus();
   const openValidator = useOpenDesktopValidator();
+  const locale = useBrowserLocale();
+  const checkingInstallation = status === undefined;
   const label = t(
-    DEFAULT_LOCALE,
+    locale,
     status === "not-installed"
       ? "navigation.desktop.validatorGet"
       : "navigation.desktop.validatorTitle"
@@ -29,7 +31,8 @@ export default function DesktopValidatorNavItem({
     <>
       <button
         type="button"
-        disabled={openValidator.isPending || status === undefined}
+        aria-busy={checkingInstallation}
+        disabled={openValidator.isPending || checkingInstallation}
         onClick={() =>
           openValidator.mutate(undefined, { onSuccess: () => onNavigate?.() })
         }
@@ -42,14 +45,13 @@ export default function DesktopValidatorNavItem({
           className="tw-size-3 tw-shrink-0"
         />
       </button>
-      {openValidator.isError && (
-        <p
-          role="alert"
-          className="tw-text-red-300 tw-mx-3 tw-mb-2 tw-mt-0 tw-text-xs"
-        >
-          {t(DEFAULT_LOCALE, "navigation.desktop.validatorOpenFailed")}
-        </p>
-      )}
+      <p
+        role="alert"
+        className="tw-mx-3 tw-mb-2 tw-mt-0 tw-text-xs tw-text-red-300 empty:tw-mb-0"
+      >
+        {openValidator.isError &&
+          t(locale, "navigation.desktop.validatorOpenFailed")}
+      </p>
     </>
   );
 }

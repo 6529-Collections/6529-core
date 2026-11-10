@@ -456,6 +456,10 @@ const NEW_VERSION_TOAST_MESSAGES = objectMessages("newVersionToast", {
 } as const);
 
 const NAVIGATION_MESSAGES = objectMessages("navigation", {
+  "desktop.title": "6529 Desktop",
+  "desktop.wallets": "Wallets",
+  "desktop.ethTransactions": "ETH Transactions",
+  "desktop.tdhCalculation": "TDH Calculation",
   "desktop.myIpfs": "My IPFS",
   "desktop.localServices": "Local services",
   "desktop.validatorTitle": "6529 Validator",

@@ -22,6 +22,11 @@ export function useDesktopValidatorStatus(refresh = false) {
 
 export function useOpenDesktopValidator() {
   return useMutation({
-    mutationFn: () => window.api.openDesktopValidator(),
+    mutationFn: async () => {
+      if (typeof window.api?.openDesktopValidator !== "function") {
+        throw new Error("Desktop Validator launch is unavailable");
+      }
+      await window.api.openDesktopValidator();
+    },
   });
 }

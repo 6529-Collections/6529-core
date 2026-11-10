@@ -228,12 +228,13 @@ test("profile IPC accepts only the owned renderer main frame at its confirmed or
     ts.ScriptTarget.Latest,
     true,
   );
-  const fn = source.statements.find(
+  const functions = source.statements.filter(
     (node) =>
       ts.isFunctionDeclaration(node) &&
-      node.name?.text === "desktopProfileBackend",
+      (node.name?.text === "isMainRenderer" ||
+        node.name?.text === "desktopProfileBackend"),
   );
-  assert.ok(fn);
+  assert.equal(functions.length, 2);
   const mainFrame = { url: "http://localhost:3000/waves" };
   const webContents = { mainFrame };
   const context = vm.createContext({
@@ -244,7 +245,7 @@ test("profile IPC accepts only the owned renderer main frame at its confirmed or
     getPublicRuntimeConfig: () => ({}),
   });
   vm.runInContext(
-    ts.transpileModule(fn.getText(source), {
+    ts.transpileModule(functions.map((fn) => fn.getText(source)).join("\n"), {
       compilerOptions: { target: ts.ScriptTarget.ES2022 },
     }).outputText,
     context,

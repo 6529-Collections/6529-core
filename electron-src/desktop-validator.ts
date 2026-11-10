@@ -103,6 +103,7 @@ async function readValidatorStatus(): Promise<DesktopValidatorStatus> {
       ["status", "--json"],
       { timeout: 5000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
       (error, stdout) => {
+        // A timeout cannot establish that the service stopped.
         resolve(
           interpretValidatorStatus(stdout, error ? (error.code ?? "error") : 0),
         );
@@ -120,11 +121,14 @@ export function getDesktopValidatorStatus(): Promise<DesktopValidatorStatus> {
   return pendingStatus;
 }
 
-export async function openDesktopValidator(launcher: {
-  openPath: (appPath: string) => Promise<string>;
-  openExternal: (url: string) => Promise<void>;
-}): Promise<void> {
-  const installation = await findInstallation();
+export async function openDesktopValidator(
+  launcher: {
+    openPath: (appPath: string) => Promise<string>;
+    openExternal: (url: string) => Promise<void>;
+  },
+  locateInstallation = findInstallation,
+): Promise<void> {
+  const installation = await locateInstallation();
   if (!installation) {
     await launcher.openExternal(DOWNLOAD_URL);
     return;
@@ -132,7 +136,8 @@ export async function openDesktopValidator(launcher: {
 
   // The standalone app handles the OS reopen event on macOS and its
   // single-instance activation on Windows.
-  if (await launcher.openPath(installation.appPath)) {
+  const openError = await launcher.openPath(installation.appPath);
+  if (openError !== "") {
     throw new Error("6529 Validator could not be opened");
   }
 }
