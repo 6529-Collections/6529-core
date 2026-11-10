@@ -86,6 +86,10 @@
   gap: 6px;
 }
 
+.validatorControl {
+  -webkit-app-region: no-drag;
+}
+
 .environmentLabel {
   color: #36f5d2;
   text-shadow: 0 0 10px rgba(54, 245, 210, 0.45);

@@ -457,6 +457,16 @@ const NEW_VERSION_TOAST_MESSAGES = objectMessages("newVersionToast", {
 
 const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "desktop.myIpfs": "My IPFS",
+  "desktop.localServices": "Local services",
+  "desktop.validatorTitle": "6529 Validator",
+  "desktop.validatorChip": "Validator",
+  "desktop.validatorGet": "Get 6529 Validator",
+  "desktop.validatorOpen": "Open Validator",
+  "desktop.validatorStopped": "Validator stopped",
+  "desktop.validatorRunning": "Running · No signature recorded today",
+  "desktop.validatorSigned": "Signed today",
+  "desktop.validatorUnavailable": "Validator status unavailable",
+  "desktop.validatorOpenFailed": "Could not open 6529 Validator.",
   "desktop.ipfsStarting": "My IPFS: starting",
   "desktop.ipfsUnavailable": "My IPFS: unavailable",
   "desktop.ipfsDisabled": "My IPFS: off. Open Local IPFS settings.",

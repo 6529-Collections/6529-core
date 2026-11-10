@@ -26,6 +26,7 @@ import {
 } from "react";
 import styles from "./TitleBar.module.css";
 import TooltipButton from "./TooltipButton";
+import DesktopValidatorStatus from "./DesktopValidatorStatus";
 import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 import { getDesktopNavigationTarget } from "./titlebar-navigation";
 
@@ -469,12 +470,13 @@ export default function TitleBar() {
           />
         )}
       </span>
-      <span
+      <div
         className={`${versionClass} ${versionPositionClass} ${platformPendingClass}`}
         style={TITLEBAR_HEIGHT_STYLE}
       >
         {isMacPlatform ? (
           <>
+            <DesktopValidatorStatus align="right" />
             {environmentLabelElement}
             {versionElement}
           </>
@@ -482,9 +484,10 @@ export default function TitleBar() {
           <>
             {versionElement}
             {environmentLabelElement}
+            <DesktopValidatorStatus align="left" />
           </>
         )}
-      </span>
+      </div>
       <TooltipButton
         buttonStyles={`${infoClass} ${infoPositionClass} ${platformPendingClass} ${
           navigationLoading ? disabledClass : ""

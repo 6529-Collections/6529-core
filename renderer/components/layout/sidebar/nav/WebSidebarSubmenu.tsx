@@ -25,6 +25,7 @@ import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { isSidebarNavItemActive } from "./sidebarActive";
 import DesktopIpfsNavItem from "./DesktopIpfsNavItem";
+import DesktopValidatorNavItem from "./DesktopValidatorNavItem";
 
 const FOCUSABLE_ELEMENT_SELECTOR =
   "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
@@ -95,14 +96,14 @@ function WebSidebarSubmenu({
       }
 
       const container = containerRef.current;
-      const links = Array.from(
-        container?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? []
+      const items = Array.from(
+        container?.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENT_SELECTOR) ?? []
       );
       const activeElement = browserDocument?.activeElement;
       const isLeavingBackwards =
-        event.shiftKey && activeElement === links.at(0);
+        event.shiftKey && activeElement === items.at(0);
       const isLeavingForwards =
-        !event.shiftKey && activeElement === links.at(-1);
+        !event.shiftKey && activeElement === items.at(-1);
 
       if (!isLeavingBackwards && !isLeavingForwards) {
         return;
@@ -259,12 +260,18 @@ function WebSidebarSubmenu({
 
   const topStyle = Number.isFinite(computedTop) ? `${computedTop}px` : "16px";
   const renderLink = (item: SidebarNavItem, nested: boolean = false) => {
-    if (item.id === "desktop-ipfs") {
+    const LocalService =
+      item.id === "desktop-ipfs"
+        ? DesktopIpfsNavItem
+        : item.id === "desktop-validator"
+          ? DesktopValidatorNavItem
+          : null;
+    if (LocalService) {
       return (
-        <DesktopIpfsNavItem
+        <LocalService
           key={item.id}
           onNavigate={onClose}
-          className={`tw-touch-action-manipulation tw-flex tw-items-center tw-rounded-lg tw-no-underline tw-ring-offset-iron-950 tw-transition-colors focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-1 ${
+          className={`tw-touch-action-manipulation tw-flex tw-w-full tw-items-center tw-rounded-lg tw-no-underline tw-ring-offset-iron-950 tw-transition-colors focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-1 ${
             nested
               ? "tw-min-h-10 tw-px-3 tw-py-2 tw-text-sm"
               : "tw-mb-1 tw-px-3 tw-py-2 tw-text-md"

@@ -71,6 +71,10 @@ import {
   getTdhRunIncomplete,
   getTransactionReconciliationState,
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
+import {
+  getDesktopValidatorStatus,
+  openDesktopValidator,
+} from "./desktop-validator";
 import IPFSServer from "./ipfs/ipfs.server";
 import {
   LOCAL_IPFS_ENABLED_KEY,
@@ -2229,13 +2233,31 @@ ipcMain.handle("native-auth:is-available", () => {
   return safeStorage.isEncryptionAvailable();
 });
 
+function isMainRenderer(event: IpcMainInvokeEvent): boolean {
+  return Boolean(
+    mainWindow &&
+      event.sender === mainWindow.webContents &&
+      event.senderFrame === mainWindow.webContents.mainFrame &&
+      new URL(event.senderFrame.url).origin === `http://localhost:${PORT}`
+  );
+}
+
+ipcMain.handle("desktop-validator:status", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator status is only available in the main window");
+  }
+  return getDesktopValidatorStatus();
+});
+
+ipcMain.handle("desktop-validator:open", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator can only be opened from the main window");
+  }
+  return openDesktopValidator(shell);
+});
+
 function desktopProfileBackend(event: IpcMainInvokeEvent): string {
-  if (
-    !mainWindow ||
-    event.sender !== mainWindow.webContents ||
-    event.senderFrame !== mainWindow.webContents.mainFrame ||
-    new URL(event.senderFrame.url).origin !== `http://localhost:${PORT}`
-  ) {
+  if (!isMainRenderer(event)) {
     throw new Error("Desktop profile storage is unavailable to this frame");
   }
   return getApiEndpoint(getPublicRuntimeConfig());

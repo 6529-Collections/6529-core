@@ -28,15 +28,28 @@ function getDesktopSection(ipfsWebuiUrl: string): SidebarSection {
       { name: "Wallets", href: "/core/core-wallets" },
       { name: "ETH Transactions", href: "/core/eth-transactions" },
       { name: "TDH Calculation", href: "/core/tdh-calculation" },
-      {
-        id: "desktop-ipfs",
-        name: t(DEFAULT_LOCALE, "navigation.desktop.myIpfs"),
-        href: ipfsWebuiUrl,
-        isExternal: true,
-      },
       { name: "About", href: "/core/core-info" },
     ],
-    subsections: [],
+    subsections: [
+      {
+        name: t(DEFAULT_LOCALE, "navigation.desktop.localServices"),
+        items: [
+          {
+            id: "desktop-ipfs",
+            name: t(DEFAULT_LOCALE, "navigation.desktop.myIpfs"),
+            href: ipfsWebuiUrl,
+            isExternal: true,
+          },
+          {
+            id: "desktop-validator",
+            name: t(DEFAULT_LOCALE, "navigation.desktop.validatorTitle"),
+            href: "https://6529.io/validator",
+            isExternal: true,
+            activatesSection: false,
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -219,24 +232,24 @@ export function mapSidebarSectionsToPages(
 ): SidebarPageEntry[] {
   return sections.flatMap((section) => {
     const sectionIcon = section.icon;
-    const sectionItems: SidebarPageEntry[] = section.items
-      .filter((item) => item.id !== "desktop-ipfs" || Boolean(item.href))
-      .map((item) => ({
-        name: item.name,
-        href: item.href,
-        section: section.name,
-        icon: sectionIcon,
-      }));
+    const sectionItems: SidebarPageEntry[] = section.items.map((item) => ({
+      name: item.name,
+      href: item.href,
+      section: section.name,
+      icon: sectionIcon,
+    }));
 
     const subsectionItems =
       section.subsections?.flatMap((subsection) =>
-        subsection.items.map((item) => ({
-          name: item.name,
-          href: item.href,
-          section: section.name,
-          subsection: subsection.name,
-          icon: sectionIcon,
-        }))
+        subsection.items
+          .filter((item) => item.id !== "desktop-validator" && Boolean(item.href))
+          .map((item) => ({
+            name: item.name,
+            href: item.href,
+            section: section.name,
+            subsection: subsection.name,
+            icon: sectionIcon,
+          }))
       ) ?? [];
 
     return [...sectionItems, ...subsectionItems];
