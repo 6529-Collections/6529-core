@@ -13,32 +13,22 @@ it("reads no request data in the root layout", () => {
   expect(layout).not.toMatch(/\bheaders\(/);
 });
 
-// On Capacitor these hide the server HTML (an ungated, purchasing-free tree)
-// before the body is parsed, until the commit that reveals the native layout
-// also starts the EULA check. Native detection must stay synchronous, with
-// only the legacy-browser checks ahead of it.
-it("starts native detection synchronously after the legacy-browser checks", () => {
+// The Desktop shell uses its layout bootstraps after the legacy-browser checks.
+// All of these scripts run before hydration.
+it("starts Desktop layout synchronously after the legacy-browser checks", () => {
   const head = layout.slice(layout.indexOf("<head>"), layout.indexOf("</head>"));
-  const stylesIndex = head.indexOf("__html: NATIVE_STARTUP_STYLES");
-  const scriptIdIndex = head.indexOf('id="native-startup-bootstrap"');
-  expect(stylesIndex).toBeGreaterThan(-1);
-  expect(scriptIdIndex).toBeGreaterThan(stylesIndex);
-  const scriptStart = head.lastIndexOf("<", scriptIdIndex);
-  const legacyScripts =
-    head.slice(0, scriptStart).match(/<script\b[^>]*>/gi) ?? [];
-  expect(legacyScripts).toEqual([
+  const startupScripts = head.match(/<script\b[^>]*>/gi) ?? [];
+  expect(startupScripts).toEqual([
     expect.stringContaining("LEGACY_BROWSER_FLAG_SCRIPT"),
     expect.stringContaining("LEGACY_BROWSER_SYNTAX_SCRIPT"),
     expect.stringContaining("LEGACY_BROWSER_NOTICE_SCRIPT"),
+    expect.stringContaining("SMALL_WEB_STARTUP_SCRIPT"),
+    expect.stringContaining("SIDEBAR_STARTUP_SCRIPT"),
   ]);
-  expect(legacyScripts.every((script) => script.startsWith("<script"))).toBe(
-    true
-  );
-  const element = head.slice(scriptStart, head.indexOf("/>", scriptIdIndex));
-  // Lowercase <script> is plain HTML; <Script> would wait for the Next runtime.
-  expect(element).toMatch(/^<script\b/);
-  expect(element).toContain("NATIVE_STARTUP_SCRIPT");
-  expect(element).not.toMatch(/\s(?:async|defer|strategy)\b/);
+  for (const script of startupScripts) {
+    expect(script).toMatch(/^<script\b/);
+    expect(script).not.toMatch(/\s(?:async|defer|strategy)\b/);
+  }
 });
 
 // Browser bundles carry no VERSION, so the chunk holding the baked public env
