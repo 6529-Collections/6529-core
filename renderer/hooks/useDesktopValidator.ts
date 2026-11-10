@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 
+/** Share the installation and signing state across controls, with optional polling. */
 export function useDesktopValidatorStatus(refresh = false) {
   const enabled =
     typeof window !== "undefined" &&

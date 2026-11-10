@@ -11,6 +11,7 @@ interface ValidatorInstallation {
   readonly cliPath: string;
 }
 
+/** Resolve the standalone installers' standard app and CLI paths for this OS. */
 function installationCandidates(): readonly ValidatorInstallation[] {
   if (process.platform === "darwin") {
     return ["/Applications", path.join(homedir(), "Applications")].map(
@@ -41,6 +42,7 @@ function installationCandidates(): readonly ValidatorInstallation[] {
   return [];
 }
 
+/** Require both the launcher and status CLI before using an installation. */
 async function findInstallation(): Promise<ValidatorInstallation | undefined> {
   for (const candidate of installationCandidates()) {
     try {
@@ -68,6 +70,7 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+/** Read today's signature flag only when the CLI reports a live service. */
 export function interpretValidatorStatus(
   stdout: string,
   exitCode: string | number = 0,
@@ -114,6 +117,7 @@ async function readValidatorStatus(): Promise<DesktopValidatorStatus> {
 
 let pendingStatus: Promise<DesktopValidatorStatus> | undefined;
 
+/** Share in-flight status reads so simultaneous controls spawn one CLI call. */
 export function getDesktopValidatorStatus(): Promise<DesktopValidatorStatus> {
   pendingStatus ??= readValidatorStatus().finally(() => {
     pendingStatus = undefined;
@@ -121,6 +125,7 @@ export function getDesktopValidatorStatus(): Promise<DesktopValidatorStatus> {
   return pendingStatus;
 }
 
+/** Open the standalone app or send users without an installation to its download page. */
 export async function openDesktopValidator(
   launcher: {
     openPath: (appPath: string) => Promise<string>;

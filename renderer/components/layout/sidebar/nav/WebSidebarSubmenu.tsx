@@ -24,8 +24,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { isSidebarNavItemActive } from "./sidebarActive";
-import DesktopIpfsNavItem from "./DesktopIpfsNavItem";
-import DesktopValidatorNavItem from "./DesktopValidatorNavItem";
+import { desktopLocalServiceNavItems } from "./desktopLocalServiceNavItems";
 
 const FOCUSABLE_ELEMENT_SELECTOR =
   "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
@@ -260,12 +259,9 @@ function WebSidebarSubmenu({
 
   const topStyle = Number.isFinite(computedTop) ? `${computedTop}px` : "16px";
   const renderLink = (item: SidebarNavItem, nested: boolean = false) => {
-    const LocalService =
-      item.id === "desktop-ipfs"
-        ? DesktopIpfsNavItem
-        : item.id === "desktop-validator"
-          ? DesktopValidatorNavItem
-          : null;
+    const LocalService = item.id
+      ? desktopLocalServiceNavItems.get(item.id)
+      : undefined;
     if (LocalService) {
       return (
         <LocalService

@@ -8,8 +8,7 @@ import Link from "next/link";
 import React, { useCallback, useMemo } from "react";
 import { isSidebarNavItemActive } from "./sidebarActive";
 import { useHasHydrated } from "@/hooks/useHasHydrated";
-import DesktopIpfsNavItem from "./DesktopIpfsNavItem";
-import DesktopValidatorNavItem from "./DesktopValidatorNavItem";
+import { desktopLocalServiceNavItems } from "./desktopLocalServiceNavItems";
 
 interface WebSidebarExpandableGroupProps {
   readonly name: string;
@@ -95,8 +94,10 @@ function GroupLink({
 }) {
   const active = isSidebarNavItemActive(item, pathname);
   const rowClass = "tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-min-h-11 tw-w-[calc(100%-2.75rem)] tw-items-center tw-justify-start tw-rounded-xl tw-border-none tw-py-2 tw-pl-3 tw-pr-3 tw-text-sm tw-font-medium tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 desktop-hover:tw-min-h-9 motion-reduce:tw-transition-none";
-  if (item.id === "desktop-ipfs") return <DesktopIpfsNavItem className={rowClass} />;
-  if (item.id === "desktop-validator") return <DesktopValidatorNavItem className={rowClass} />;
+  const LocalService = item.id
+    ? desktopLocalServiceNavItems.get(item.id)
+    : undefined;
+  if (LocalService) return <LocalService className={rowClass} />;
 
   return (
     <Link

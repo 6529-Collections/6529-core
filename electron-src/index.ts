@@ -2233,6 +2233,7 @@ ipcMain.handle("native-auth:is-available", () => {
   return safeStorage.isEncryptionAvailable();
 });
 
+/** Restrict privileged desktop calls to the owned main frame at the bound origin. */
 function isMainRenderer(event: IpcMainInvokeEvent): boolean {
   return Boolean(
     mainWindow &&
