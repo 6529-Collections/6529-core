@@ -35,6 +35,7 @@ import { useWaveRealtimeUpdater } from "./hooks/useWaveRealtimeUpdater";
 import { useDmUnreadConversations } from "@/services/dm-unread/DmUnreadStateProvider";
 import { useMarkWaveNotificationsRead } from "@/hooks/useMarkWaveNotificationsRead";
 import { WaveUnreadProvider } from "./WaveUnreadContext";
+import { WaveChatReadContext } from "./WaveChatReadContext";
 
 import type {
   ActiveWaveContextData,
@@ -111,6 +112,20 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   const pathname = usePathname() as string | null;
   const { activeWaveId, hasActiveWaveDropTarget, setActiveWave } =
     useActiveWaveManager();
+  const [displayedChatWaveId, setDisplayedChatWaveId] = useState<string | null>(
+    null
+  );
+  // During navigation, decline reads until the displayed Chat and route agree.
+  const activeReadWaveId =
+    displayedChatWaveId === activeWaveId ? displayedChatWaveId : null;
+  const registerChat = useCallback((waveId: string) => {
+    setDisplayedChatWaveId(waveId);
+    return () => {
+      setDisplayedChatWaveId((current) =>
+        current === waveId ? null : current
+      );
+    };
+  }, []);
   const [
     directMessagesListActivationCount,
     setDirectMessagesListActivationCount,
@@ -157,12 +172,17 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
     () => new Set(dmWavesData.waves.map((wave) => wave.id)),
     [dmWavesData.waves]
   );
-  const wavesHookData = useEnhancedWavesListCore(activeWaveId, mainWavesData, {
-    enabled: isMainWavesListEnabled,
-    supportsPinning: true,
-    otherListWaveIds: dmWaveIds,
-    preserveBackendWaveOrder: true,
-  });
+  // Keep the selected wave live, but only its displayed Chat panel can read it.
+  const wavesHookData = useEnhancedWavesListCore(
+    activeReadWaveId,
+    mainWavesData,
+    {
+      enabled: isMainWavesListEnabled,
+      supportsPinning: true,
+      otherListWaveIds: dmWaveIds,
+      preserveBackendWaveOrder: true,
+    }
+  );
   const dmWavesHookData = useEnhancedWavesListCore(activeWaveId, dmWavesData, {
     enabled: isDirectMessagesListEnabled,
     supportsPinning: false,
@@ -198,6 +218,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   });
   const {
     registerWave,
+    activateWave,
     prefetchWave,
     syncNewestMessages,
     fetchNextPage,
@@ -214,13 +235,13 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   });
   const { clearWave } = waveMessagesStore;
   const refreshWaveMessages = useCallback(
-    (waveId: string) => {
+    async (waveId: string) => {
       if (!clearWave(waveId)) return;
       cancelWaveDataFetch(waveId);
       cancelPaginationFetch(waveId);
-      registerWave(waveId);
+      await activateWave(waveId);
     },
-    [cancelWaveDataFetch, cancelPaginationFetch, clearWave, registerWave]
+    [activateWave, cancelWaveDataFetch, cancelPaginationFetch, clearWave]
   );
   const refetchAllMainWaves = wavesHookData.refetchAllWaves;
   const refetchAllDmWaves = dmWavesHookData.refetchAllWaves;
@@ -296,8 +317,9 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   );
 
   // Instantiate the real-time updater hook
-  const { processIncomingDrop, processDropRemoved } = useWaveRealtimeUpdater({
+  const realtime = useWaveRealtimeUpdater({
     activeWaveId,
+    activeReadWaveId,
     getData: waveMessagesStore.getData,
     hasServerFeedSeed: waveMessagesStore.hasServerFeedSeed,
     isWaveInUse: waveMessagesStore.isWaveInUse,
@@ -308,7 +330,10 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
     removeDrops: waveMessagesStore.removeDrops,
     removeWaveDeliveredNotifications,
     isWaveMuted,
+    refreshWaveMessages,
   });
+  const { processIncomingDrop, processDropRemoved, applyReplyPlacement } =
+    realtime;
 
   // processIncomingDrop is rebuilt when the active wave, its mute state or
   // wave eligibility changes. Expose a stable wrapper that always calls the
@@ -319,7 +344,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   }, [processIncomingDrop]);
   const stableProcessIncomingDrop = useCallback<
     MyStreamActionsContextType["processIncomingDrop"]
-  >((drop, type) => processIncomingDropRef.current(drop, type), []);
+  >((...args) => processIncomingDropRef.current(...args), []);
 
   const setActiveWaveAndRegister = useCallback<ActiveWaveContextData["set"]>(
     (waveId, options) => {
@@ -541,6 +566,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
       processDropRemoved,
       processDropsRemoved: waveMessagesStore.removeDrops,
       refreshWaveMessages,
+      applyReplyPlacement,
       applyOptimisticDropUpdate: waveMessagesStore.optimisticUpdateDrop,
     }),
     [
@@ -562,6 +588,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
       processDropRemoved,
       waveMessagesStore.removeDrops,
       refreshWaveMessages,
+      applyReplyPlacement,
       waveMessagesStore.optimisticUpdateDrop,
     ]
   );
@@ -667,7 +694,9 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
     <MyStreamActionsContext.Provider value={actionsValue}>
       <WaveUnreadProvider value={wavesHookData.unreadSource}>
         <MyStreamContext.Provider value={contextValue}>
-          {children}
+          <WaveChatReadContext.Provider value={registerChat}>
+            {children}
+          </WaveChatReadContext.Provider>
         </MyStreamContext.Provider>
       </WaveUnreadProvider>
     </MyStreamActionsContext.Provider>

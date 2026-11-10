@@ -42,7 +42,18 @@ export function triggerDirectDownload(url: string, fileName: string) {
   const anchor = document.createElement("a");
   anchor.href = safeUrl;
   anchor.download = fileName;
-  document.body.append(anchor);
+  // A modal's focus trap blocks clicks outside it, including synthetic links.
+  const container =
+    document.activeElement?.closest("dialog[open], [role='dialog']") ??
+    // A disabled download button can lose focus while the fetch completes.
+    [
+      ...document.querySelectorAll(
+        "dialog[open], [role='dialog'][aria-modal='true']"
+      ),
+    ].at(-1) ??
+    document.body;
+  anchor.addEventListener("click", (event) => event.stopPropagation());
+  container.append(anchor);
   anchor.click();
   anchor.remove();
 }

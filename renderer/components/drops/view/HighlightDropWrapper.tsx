@@ -2,10 +2,7 @@
 
 import { classNames } from "@/helpers/Helpers";
 import { useIntersectionObserver } from "@/hooks/scroll/useIntersectionObserver";
-import type {
-  MutableRefObject,
-  ReactNode
-} from "react";
+import type { ReactNode } from "react";
 import {
   forwardRef,
   useCallback,
@@ -17,6 +14,7 @@ import {
 
 interface HighlightDropWrapperProps {
   readonly active: boolean;
+  readonly emphasize?: boolean | undefined;
   readonly scrollContainer?: HTMLElement | null | undefined;
   readonly children: ReactNode;
   readonly className?: string | undefined;
@@ -38,6 +36,7 @@ const HighlightDropWrapper = forwardRef<
   (
     {
       active,
+      emphasize = false,
       scrollContainer,
       children,
       className = "",
@@ -50,9 +49,7 @@ const HighlightDropWrapper = forwardRef<
     },
     forwardedRef
   ) => {
-    const innerRef = useRef<HTMLDivElement | null>(
-      null
-    ) as MutableRefObject<HTMLDivElement | null>;
+    const innerRef = useRef<HTMLDivElement | null>(null);
     const [phase, setPhase] = useState<"idle" | "highlight" | "fading">("idle");
     const phaseRef = useRef(phase);
     const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -65,14 +62,17 @@ const HighlightDropWrapper = forwardRef<
     const lastExtendedRef = useRef(false);
     const prevActiveRef = useRef(false);
 
-    const setNode = (node: HTMLDivElement | null) => {
-      innerRef.current = node;
-      if (typeof forwardedRef === "function") {
-        forwardedRef(node);
-      } else if (forwardedRef) {
-        forwardedRef.current = node;
-      }
-    };
+    const setNode = useCallback(
+      (node: HTMLDivElement | null) => {
+        innerRef.current = node;
+        if (typeof forwardedRef === "function") {
+          forwardedRef(node);
+        } else if (forwardedRef) {
+          forwardedRef.current = node;
+        }
+      },
+      [forwardedRef]
+    );
 
     useEffect(() => {
       phaseRef.current = phase;
@@ -246,7 +246,10 @@ const HighlightDropWrapper = forwardRef<
     const classes = classNames(
       className,
       transitionClasses,
-      isHighlighted ? "tw-bg-[#25263f]" : "",
+      isHighlighted && !emphasize ? "tw-bg-[#25263f]" : "",
+      isHighlighted && emphasize
+        ? "tw-relative tw-bg-[#263d68] after:tw-pointer-events-none after:tw-absolute after:tw-inset-y-0 after:tw-left-0 after:tw-w-[3px] after:tw-bg-primary-300"
+        : "",
       !isHighlighted && isFading ? "tw-bg-transparent" : ""
     );
 
