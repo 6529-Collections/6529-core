@@ -5,27 +5,87 @@ import {
   openDesktopValidator,
 } from "./desktop-validator";
 
-const signedToday = JSON.stringify({
+const cycleRoot =
+  "0xb82dbe7bbe8e17aff22e43cc349351b3f95c733fcd56bf3237592b023c55b998";
+const signedToday = {
   format: 1,
+  release: "0.1.0-rc.14",
+  role: "SIGNER",
+  today: 20767,
   day: { state: "IN_CERTIFICATE", signed: true },
+  cycles: [
+    { day: 20766, cycle_root: "0x" + "a".repeat(64) },
+    { day: 20767, cycle_root: cycleRoot },
+  ],
+};
+
+test("returns today's counted signature, result and next signing time from live status", () => {
+  assert.deepEqual(interpretValidatorStatus(JSON.stringify(signedToday)), {
+    service: "running",
+    health: "all-good",
+    release: "0.1.0-rc.14",
+    signing: "counted",
+    nextSignatureAt: 1794356100,
+    resultRoot: cycleRoot,
+  });
 });
 
-test("shows today's signature even if the live validator reports a warning", () => {
-  assert.equal(interpretValidatorStatus(signedToday), "signed");
-  assert.equal(interpretValidatorStatus(signedToday, 5), "signed");
+test("keeps a signature visible while distinguishing routine and required updates", () => {
+  const withUpdate = (state: string, autoOn = false) =>
+    JSON.stringify({
+      ...signedToday,
+      update: { state, newer: true, auto: { on: autoOn } },
+    });
+  assert.deepEqual(interpretValidatorStatus(withUpdate("URGENT"), 5), {
+    service: "running",
+    health: "update-needed",
+    release: "0.1.0-rc.14",
+    signing: "counted",
+    nextSignatureAt: undefined,
+    resultRoot: cycleRoot,
+  });
+  assert.match(
+    JSON.stringify(interpretValidatorStatus(withUpdate("AVAILABLE"))),
+    /"health":"update-available"/,
+  );
+  assert.match(
+    JSON.stringify(interpretValidatorStatus(withUpdate("URGENT", true))),
+    /"health":"update-available"/,
+  );
 });
 
 test("never shows a stopped validator's cached signature as live", () => {
-  assert.equal(interpretValidatorStatus(signedToday, 3), "stopped");
+  assert.deepEqual(interpretValidatorStatus(JSON.stringify(signedToday), 3), {
+    service: "stopped",
+  });
+});
+
+test("does not reuse another day's result or call a sent signature counted", () => {
+  const status = interpretValidatorStatus(
+    JSON.stringify({
+      ...signedToday,
+      today: 20768,
+      day: { state: "SENT", signed: true },
+    }),
+  );
+  assert.equal(status.service, "running");
+  assert.equal(status.signing, "signed");
+  assert.equal(status.resultRoot, undefined);
 });
 
 test("distinguishes a running node without a signature from an unreadable status", () => {
-  assert.equal(
-    interpretValidatorStatus('{"format":1,"day":{"signed":false}}'),
-    "running",
+  const running = interpretValidatorStatus(
+    '{"format":1,"day":{"signed":false}}',
   );
-  assert.equal(interpretValidatorStatus(signedToday, "EACCES"), "unavailable");
-  assert.equal(interpretValidatorStatus("invalid JSON"), "unavailable");
+  assert.equal(running.service, "running");
+  assert.equal(running.signing, "not-signed");
+  assert.deepEqual(
+    interpretValidatorStatus(JSON.stringify(signedToday), "EACCES"),
+    { service: "unavailable" },
+  );
+  assert.deepEqual(interpretValidatorStatus("invalid JSON"), {
+    service: "unavailable",
+  });
 });
 
 const installation = {

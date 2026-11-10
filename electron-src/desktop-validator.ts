@@ -2,7 +2,10 @@ import { execFile } from "node:child_process";
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
-import type { DesktopValidatorStatus } from "../shared/desktop-validator";
+import type {
+  DesktopValidatorHealth,
+  DesktopValidatorStatus,
+} from "../shared/desktop-validator";
 
 const DOWNLOAD_URL = "https://6529.io/validator";
 
@@ -70,24 +73,135 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-/** Read today's signature flag only when the CLI reports a live service. */
+const SECONDS_PER_DAY = 86_400;
+const SIGNING_OFFSET_SECONDS = 15 * 60;
+const PREPARING_STATES = new Set([
+  "JOINING",
+  "SYNCING",
+  "LAUNCH",
+  "AUTHORIZED",
+  "COMPUTING_EARLIER",
+  "COMPUTING",
+]);
+
+function getHealth(
+  snapshot: Record<string, unknown>,
+  dayState: unknown,
+  exitCode: string | number,
+): DesktopValidatorHealth {
+  const update = asRecord(snapshot["update"]);
+  const auto = asRecord(update?.["auto"]);
+  const alerts = Array.isArray(snapshot["alerts"]) ? snapshot["alerts"] : [];
+  const updateNeedsAttention = alerts.some((value: unknown) => {
+    const alert = asRecord(value);
+    return (
+      alert?.["needs_you"] === true &&
+      ["UPDATE_URGENT", "UPDATE_DEADLINE", "UNSAFE_RELEASE"].includes(
+        String(alert["code"]),
+      )
+    );
+  });
+  if (
+    updateNeedsAttention ||
+    update?.["unsafe_reason"] ||
+    (update?.["state"] === "URGENT" &&
+      update["newer"] === true &&
+      !update["latest_unsafe"] &&
+      (auto?.["on"] !== true || auto["state"] === "BLOCKED"))
+  ) {
+    return "update-needed";
+  }
+  if (snapshot["signing_paused"] === true || dayState === "PAUSED")
+    return "paused";
+  if (typeof dayState === "string" && PREPARING_STATES.has(dayState))
+    return "getting-ready";
+  if (
+    exitCode === 5 ||
+    dayState === "MISSED" ||
+    dayState === "DIFFERS" ||
+    dayState === "ERROR"
+  ) {
+    return "needs-attention";
+  }
+  if (update?.["state"] === "AVAILABLE" || update?.["state"] === "URGENT") {
+    if (update["newer"] === true && !update["latest_unsafe"])
+      return "update-available";
+  }
+  if (
+    snapshot["role"] === "WATCHER" ||
+    dayState === "NO_KEY" ||
+    dayState === "NOT_AUTHORIZED"
+  ) {
+    return "not-signing";
+  }
+  return "all-good";
+}
+
+/** Keep the IPC response small and never expose cached signing as live. */
 export function interpretValidatorStatus(
   stdout: string,
   exitCode: string | number = 0,
 ): DesktopValidatorStatus {
   // Exit 3 can print an old snapshot. Exit 5 means live status with a warning.
-  if (exitCode === 3) return "stopped";
-  if (exitCode !== 0 && exitCode !== 5) return "unavailable";
+  if (exitCode === 3) return { service: "stopped" };
+  if (exitCode !== 0 && exitCode !== 5) return { service: "unavailable" };
 
   try {
     const snapshot = asRecord(JSON.parse(stdout));
-    const signed = asRecord(snapshot?.["day"])?.["signed"];
+    const day = asRecord(snapshot?.["day"]);
+    const signed = day?.["signed"];
     if (snapshot?.["format"] !== 1 || typeof signed !== "boolean") {
-      return "unavailable";
+      return { service: "unavailable" };
     }
-    return signed ? "signed" : "running";
+    const today = snapshot["today"];
+    const cycles = snapshot["cycles"];
+    const cycle =
+      typeof today === "number" && Array.isArray(cycles)
+        ? cycles.map(asRecord).find((record) => record?.["day"] === today)
+        : undefined;
+    const dayState = day?.["state"];
+    const health = getHealth(snapshot, dayState, exitCode);
+    const cycleKeys = cycle?.["keys"];
+    const counted =
+      signed &&
+      (dayState === "IN_CERTIFICATE" ||
+        (dayState === "FINAL" &&
+          Array.isArray(cycleKeys) &&
+          cycleKeys.some(
+            (key: unknown) => asRecord(key)?.["in_certificate"] === true,
+          )));
+    const root = cycle?.["cycle_root"];
+    const release = snapshot["release"];
+    const nextAt =
+      typeof today === "number" && Number.isSafeInteger(today)
+        ? (today + 1) * SECONDS_PER_DAY + SIGNING_OFFSET_SECONDS
+        : undefined;
+    const updateBy = snapshot["update_by_unix"];
+    const updateDeadline = asRecord(snapshot["update"])?.["deadline_unix"];
+    const canSignNext =
+      signed &&
+      snapshot["role"] === "SIGNER" &&
+      (health === "all-good" || health === "update-available") &&
+      nextAt !== undefined &&
+      Number.isSafeInteger(nextAt) &&
+      (typeof updateBy !== "number" || nextAt < updateBy) &&
+      (typeof updateDeadline !== "number" || nextAt < updateDeadline);
+    return {
+      service: "running",
+      health,
+      release:
+        typeof release === "string" && /^[\w.+-]{1,64}$/.test(release)
+          ? release
+          : undefined,
+      signing: counted ? "counted" : signed ? "signed" : "not-signed",
+      nextSignatureAt: canSignNext ? nextAt : undefined,
+      resultRoot:
+        typeof root === "string" && /^0x[0-9a-f]{64}$/i.test(root)
+          ? root
+          : undefined,
+    };
   } catch {
-    return "unavailable";
+    return { service: "unavailable" };
   }
 }
 
@@ -96,9 +210,9 @@ async function readValidatorStatus(): Promise<DesktopValidatorStatus> {
   try {
     installation = await findInstallation();
   } catch {
-    return "unavailable";
+    return { service: "unavailable" };
   }
-  if (!installation) return "not-installed";
+  if (!installation) return { service: "not-installed" };
 
   return new Promise((resolve) => {
     execFile(

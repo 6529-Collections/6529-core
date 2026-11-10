@@ -65,6 +65,12 @@ If you have an independent recovery phrase or private-key backup, the local Impo
 
 Deleting a wallet or app database is not a TDH repair step. Transaction/NFT worker recovery only needs the relevant indexed-data controls, not your wallet secrets. Keep independently recoverable wallet backups before any app-data removal.
 
+### Show or hide the local Validator
+
+When Desktop detects the installed 6529 Validator, the title bar shows its health and **6529 Desktop > Local services > 6529 Validator** opens it. Select the title bar badge to see the Validator version, today's signing status and, when available, the next signing time in UTC and today's result name and picture.
+
+In **6529 Desktop > About**, turn off **Show Validator in 6529 Desktop** to hide the badge, update notices, and shortcut. The preference is on by default and saved on this computer across restarts. The separate Validator continues to run and sign when hidden.
+
 ### App version, updates, and diagnostics
 
 Open 6529 Desktop > About for the installed version, OS/architecture, app scheme, app port, IPFS ports, updater status, and App Logs. Opening About checks for updates.

@@ -53,6 +53,8 @@ export interface ElectronAPI {
   offSeedWalletsChange: (callback: any) => void;
   getInfo: () => Promise<any>;
   getIpfsInfo: () => Promise<any>;
+  getDesktopValidatorVisible: () => Promise<boolean>;
+  setDesktopValidatorVisible: (visible: boolean) => Promise<boolean>;
   getDesktopValidatorStatus: () => Promise<DesktopValidatorStatus>;
   openDesktopValidator: () => Promise<void>;
   sanitizeProfilePicture: (bytes: ArrayBuffer) => Promise<SanitizedProfilePicture>;

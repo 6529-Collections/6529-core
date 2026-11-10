@@ -1,24 +1,49 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+const visibilityKey = ["desktop-validator-visible"] as const;
+
+export function useDesktopValidatorVisibility() {
+  const supported =
+    typeof window !== "undefined" &&
+    typeof window.api?.getDesktopValidatorVisible === "function";
+
+  return useQuery({
+    queryKey: visibilityKey,
+    queryFn: () => window.api.getDesktopValidatorVisible(),
+    enabled: supported,
+    retry: false,
+    staleTime: Infinity,
+  });
+}
+
+export function useSetDesktopValidatorVisibility() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (visible: boolean) =>
+      window.api.setDesktopValidatorVisible(visible),
+    onSuccess: (visible) => queryClient.setQueryData(visibilityKey, visible),
+  });
+}
 
 /** Share the installation and signing state across controls, with optional polling. */
 export function useDesktopValidatorStatus(refresh = false) {
-  const enabled =
-    typeof window !== "undefined" &&
-    typeof window.api?.getDesktopValidatorStatus === "function";
+  const { data: visible } = useDesktopValidatorVisibility();
 
-  return useQuery({
+  const { data } = useQuery({
     queryKey: ["desktop-validator-status"],
     queryFn: () =>
       window.api
         .getDesktopValidatorStatus()
-        .catch(() => "unavailable" as const),
-    enabled,
+        .catch(() => ({ service: "unavailable" as const })),
+    enabled: visible === true,
     retry: false,
     staleTime: 15_000,
-    refetchInterval: refresh ? 30_000 : false,
-  }).data;
+    refetchInterval: visible && refresh ? 30_000 : false,
+  });
+
+  return visible ? data : undefined;
 }
 
 export function useOpenDesktopValidator() {

@@ -10335,6 +10335,30 @@
       "brief_answer": "Open **6529 Desktop > Wallets** to create or import a 6529 Desktop wallet for signing. You do not need a wallet to run indexing or TDH calculation. What would you like to do: create, import, or connect one? Never share your recovery phrase or private key here."
     },
     {
+      "id": "desktop.validator-visibility",
+      "kind": "workflow",
+      "title": "Show or hide 6529 Validator in Desktop",
+      "aliases": [
+        "hide validator in desktop",
+        "hide validator badge",
+        "show validator in desktop",
+        "open validator from desktop"
+      ],
+      "keywords": ["desktop", "validator", "title bar", "badge", "local services"],
+      "facts": [
+        "When the standalone Validator is installed, the 6529 Desktop title bar badge shows its health. Open it to see the version, signing status and, when available, the next signing time and today's result.",
+        "Use 6529 Desktop > Local services > 6529 Validator to open the standalone app.",
+        "Use 6529 Desktop > About > Show Validator in 6529 Desktop to hide or restore the status and shortcut. The preference is on by default and survives restarts. The standalone Validator keeps running and signing when hidden."
+      ],
+      "canonical_path": "/about/6529-apps",
+      "link_label": "6529 Apps",
+      "suppress_source_links": true,
+      "related_paths": ["/about/6529-apps"],
+      "tags": ["desktop-core"],
+      "source_refs": ["ops/docs/desktop/feature-wallets-ipfs-and-about.md"],
+      "brief_answer": "In **6529 Desktop > About**, turn off **Show Validator in 6529 Desktop** to hide the badge and shortcut. The Validator keeps running and signing, and Desktop remembers the choice after restarting."
+    },
+    {
       "id": "desktop.wallet-backup",
       "kind": "workflow",
       "title": "6529 Desktop wallet backup and password problems",

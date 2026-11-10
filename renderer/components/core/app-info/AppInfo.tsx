@@ -6,6 +6,7 @@ import DotLoader from "../../dotLoader/DotLoader";
 import { Task } from "../eth-scanner/Workers";
 import LogsViewer from "../logs-viewer/LogsViewer";
 import LocalIpfsSettings from "./LocalIpfsSettings";
+import DesktopValidatorSettings from "./DesktopValidatorSettings";
 import { DesktopPageHeading } from "../DesktopHeadings";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
@@ -216,6 +217,7 @@ export default function AppInfo() {
       <div className="tw-mt-6">
         <LocalIpfsSettings />
       </div>
+      <DesktopValidatorSettings />
       {mainTask?.logFile && (
         <div className="tw-mt-6">{printMainWorkerLogs(mainTask.logFile)}</div>
       )}

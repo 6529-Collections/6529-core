@@ -2264,6 +2264,23 @@ function isMainRenderer(event: IpcMainInvokeEvent): boolean {
   );
 }
 
+const DESKTOP_VALIDATOR_VISIBLE_KEY = "desktop-validator-visible";
+
+ipcMain.handle("desktop-validator:get-visible", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator preferences are only available in the main window");
+  }
+  return getValue(DESKTOP_VALIDATOR_VISIBLE_KEY) !== false;
+});
+
+ipcMain.handle("desktop-validator:set-visible", (event, visible: unknown) => {
+  if (!isMainRenderer(event) || typeof visible !== "boolean") {
+    throw new Error("Invalid Validator preference change");
+  }
+  setValue(DESKTOP_VALIDATOR_VISIBLE_KEY, visible);
+  return visible;
+});
+
 ipcMain.handle("desktop-validator:status", (event) => {
   if (!isMainRenderer(event)) {
     throw new Error("Validator status is only available in the main window");

@@ -16,12 +16,14 @@ import {
 } from "@heroicons/react/24/outline";
 import { useMemo, type ComponentType } from "react";
 import { useBrowserLocale } from "./useBrowserLocale";
+import { useDesktopValidatorStatus } from "./useDesktopValidator";
 
 type SidebarSubsection = NonNullable<SidebarSection["subsections"]>[number];
 type SidebarNavItem = SidebarSubsection["items"][number];
 
 function getDesktopSection(
   ipfsWebuiUrl: string,
+  showValidator: boolean,
   locale: SupportedLocale
 ): SidebarSection {
   return {
@@ -53,13 +55,17 @@ function getDesktopSection(
             href: ipfsWebuiUrl,
             isExternal: true,
           },
-          {
-            id: "desktop-validator",
-            name: t(locale, "navigation.desktop.validatorTitle"),
-            href: "https://6529.io/validator",
-            isExternal: true,
-            activatesSection: false,
-          },
+          ...(showValidator
+            ? [
+                {
+                  id: "desktop-validator",
+                  name: t(locale, "navigation.desktop.validatorTitle"),
+                  href: "https://6529.io/validator",
+                  isExternal: true,
+                  activatesSection: false,
+                },
+              ]
+            : []),
         ],
       },
     ],
@@ -193,6 +199,7 @@ function buildSidebarSections(
   hideSubscriptions: boolean,
   hideSubscriptionReports: boolean,
   ipfsWebuiUrl: string,
+  showValidator: boolean,
   locale: SupportedLocale
 ): SidebarSection[] {
   return [
@@ -204,7 +211,7 @@ function buildSidebarSections(
       hideSubscriptions,
       hideSubscriptionReports
     ),
-    getDesktopSection(ipfsWebuiUrl, locale),
+    getDesktopSection(ipfsWebuiUrl, showValidator, locale),
   ];
 }
 
@@ -215,6 +222,10 @@ export function useSidebarSections(
   ipfsWebuiUrl = ""
 ): SidebarSection[] {
   const locale = useBrowserLocale();
+  const validatorStatus = useDesktopValidatorStatus();
+  const showValidator =
+    validatorStatus !== undefined &&
+    validatorStatus.service !== "not-installed";
   return useMemo(
     () =>
       buildSidebarSections(
@@ -222,6 +233,7 @@ export function useSidebarSections(
         hideSubscriptions,
         hideSubscriptionReports,
         ipfsWebuiUrl,
+        showValidator,
         locale
       ),
     [
@@ -229,6 +241,7 @@ export function useSidebarSections(
       hideSubscriptions,
       hideSubscriptionReports,
       ipfsWebuiUrl,
+      showValidator,
       locale,
     ]
   );
@@ -264,7 +277,9 @@ export function mapSidebarSectionsToPages(
     const subsectionItems =
       section.subsections?.flatMap((subsection) =>
         subsection.items
-          .filter((item) => item.id !== "desktop-validator" && Boolean(item.href))
+          .filter(
+            (item) => item.id !== "desktop-validator" && Boolean(item.href)
+          )
           .map((item) => ({
             name: item.name,
             href: item.href,
