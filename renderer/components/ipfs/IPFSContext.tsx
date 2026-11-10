@@ -319,8 +319,8 @@ export const hasDesktopIpfsBridge = (): boolean =>
   (isElectron() || typeof window.api?.getInfo === "function");
 
 const createIpfsService = async (): Promise<IpfsService> => {
-  // Desktop uploads to its current native node, including its disabled or
-  // starting state. There is no remote upload endpoint to fall back to.
+  // This client always uploads to Desktop's native node. The profile picture
+  // flow handles the separate 6529 API path.
   const config = await readIpfsConfig();
   if (!config?.apiEndpoint) {
     throw new Error(

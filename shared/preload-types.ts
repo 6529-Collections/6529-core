@@ -23,6 +23,15 @@ export interface NotificationNavigatePayload
   readonly path: string;
 }
 
+export type SanitizedProfilePicture =
+  | {
+      readonly ok: true;
+      readonly bytes: ArrayBuffer;
+      readonly contentType: string;
+      readonly fileName: string;
+    }
+  | { readonly ok: false; readonly error: string };
+
 export interface ElectronAPI {
   on: (channel: string, callback: Function) => void;
   send: (channel: string, ...args: any[]) => void;
@@ -46,10 +55,12 @@ export interface ElectronAPI {
   getIpfsInfo: () => Promise<any>;
   getDesktopValidatorStatus: () => Promise<DesktopValidatorStatus>;
   openDesktopValidator: () => Promise<void>;
+  sanitizeProfilePicture: (bytes: ArrayBuffer) => Promise<SanitizedProfilePicture>;
   getLocalIpfsPreferences: () => Promise<LocalIpfsPreferencesSnapshot>;
   setLocalIpfsEnabled: (enabled: boolean) => Promise<LocalIpfsPreferencesSnapshot>;
   restartForLocalIpfs: () => Promise<void>;
   onIpfsStatusChange: (callback: (status: IpfsStatus) => void) => () => void;
+  onLocalIpfsFrameFailed: (callback: (url: string) => void) => () => void;
   getMainWorker: () => Promise<any>;
   getScheduledWorkers: () => Promise<any>;
   getCrashReports: () => Promise<any>;

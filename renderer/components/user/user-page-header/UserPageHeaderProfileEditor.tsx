@@ -53,6 +53,11 @@ export default function UserPageHeaderProfileEditor({
       : null);
   const nameChanged =
     editor.name.toLowerCase() !== editor.savedProfile.handle?.toLowerCase();
+  const canSave =
+    editor.dirty &&
+    !!editor.name.trim() &&
+    !checkingName &&
+    (!nameChanged || nameAvailable);
   const {
     data: memes,
     isPending: loadingMemes,
@@ -247,6 +252,20 @@ export default function UserPageHeaderProfileEditor({
           )}
         </div>
       )}
+      {editor.canRetryPictureVia6529 && (
+        <div className="tw-px-4 tw-pb-3 sm:tw-px-6">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={editor.saving || !canSave}
+            onClick={async () => {
+              if (await editor.save(true)) onSaved();
+            }}
+          >
+            {message("user.profileHeader.edit.uploadVia6529")}
+          </Button>
+        </div>
+      )}
       <div className="tw-sticky tw-bottom-0 tw-z-10 tw-flex tw-justify-end tw-gap-2 tw-border-x-0 tw-border-b-0 tw-border-t tw-border-solid tw-border-white/[0.06] tw-bg-iron-950 tw-px-4 tw-py-3 sm:tw-px-6">
         <Button
           variant="ghost"
@@ -262,12 +281,7 @@ export default function UserPageHeaderProfileEditor({
           size="md"
           className="tw-min-w-20 !tw-border-0 !tw-shadow-none"
           loading={editor.saving}
-          disabled={
-            !editor.dirty ||
-            !editor.name.trim() ||
-            checkingName ||
-            (nameChanged && !nameAvailable)
-          }
+          disabled={!canSave}
         >
           {message("user.profileHeader.aboutEdit.save")}
         </Button>

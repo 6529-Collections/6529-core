@@ -226,19 +226,9 @@ export function ConfirmModalShell(props: {
           select[data-confirm-focused="true"],
           textarea[data-confirm-focused="true"],
           [tabindex][data-confirm-focused="true"] {
-            outline: 3px solid rgba(255, 255, 255, 0.98) !important;
-            outline-offset: 4px !important;
-            box-shadow:
-              0 0 0 8px rgba(82, 139, 255, 0.8),
-              0 0 28px rgba(82, 139, 255, 0.95),
-              0 0 42px rgba(255, 255, 255, 0.35) !important;
-            filter: brightness(1.28) saturate(1.16) !important;
-            transform: translateY(-2px) scale(1.03) !important;
-          }
-          input[data-confirm-focused="true"],
-          select[data-confirm-focused="true"],
-          textarea[data-confirm-focused="true"] {
-            transform: none !important;
+            outline: 2px solid #528bff !important;
+            outline-offset: 2px !important;
+            box-shadow: none !important;
           }
         `}</style>
       </div>
