@@ -1,4 +1,7 @@
-import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+"use client";
+
+import { useGatewayImageLoadState } from "@/components/common/image/useGatewayImageLoadState";
+import { getScaledResolvedImageUri, ImageScale } from "@/helpers/image.helpers";
 
 const SIZE_CLASSES = {
   xs: "tw-size-6 tw-text-[10px]",
@@ -26,15 +29,20 @@ export function E2eeAvatar({
   rounded = false,
 }: E2eeAvatarProps) {
   const initial = name.trim().charAt(0).toUpperCase() || "?";
+  const { activeSrc, isPlaceholder, handleError } = useGatewayImageLoadState(
+    pfp,
+    false
+  );
   return (
     <span
       aria-hidden="true"
       className={`tw-relative tw-inline-flex tw-flex-shrink-0 tw-items-center tw-justify-center tw-overflow-hidden ${rounded ? "tw-rounded-lg" : "tw-rounded-full"} tw-bg-iron-800 tw-font-semibold tw-text-iron-200 tw-ring-1 tw-ring-white/10 ${SIZE_CLASSES[size]} ${className}`}
     >
-      {pfp ? (
+      {activeSrc && !isPlaceholder ? (
         // eslint-disable-next-line @next/next/no-img-element -- profile pictures come from arbitrary remote hosts, as in ProfileAvatar; keep them unoptimized.
         <img
-          src={getScaledImageUri(pfp, ImageScale.W_AUTO_H_50)}
+          src={getScaledResolvedImageUri(activeSrc, ImageScale.W_AUTO_H_50)}
+          onError={handleError}
           alt=""
           className="tw-h-full tw-w-full tw-object-cover"
         />

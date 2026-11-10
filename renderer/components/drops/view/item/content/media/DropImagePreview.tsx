@@ -4,6 +4,8 @@ import { useLocalImagePreviewSource } from "./LocalImagePreviewContext";
 import { getGiphyVideoRendition } from "@/app/api/og-metadata/_lib/giphyRenditions";
 import { isAllowedOgImageSourceUrl } from "@/app/api/og-metadata/_lib/imageProxyPolicy";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
+import { getMediaGatewayFallbackUrls } from "@/components/nft-image/utils/gateway-fallback";
+import { parseDecentralizedMediaRef } from "@/lib/media/decentralized-media";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import {
   getAnimatedImagePreviewUri,
@@ -17,6 +19,7 @@ import {
   forwardRef,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -78,7 +81,7 @@ export function getDropImagePreviewSources(
   scale: ImageScale,
   preferAnimation = false
 ) {
-  const original = resolveIpfsUrlSync(src);
+  const original = resolveIpfsUrlSync(src, { preferLocal: false });
   // An IPFS gateway URL is still an original, even when resolving it changes
   // the URL string. Try bounded CDN copies before the guarded external proxy.
   const previews = [scale, ImageScale.AUTOx450].map((size) =>
@@ -245,3 +248,40 @@ export const DropImagePreview = forwardRef<HTMLImageElement, Props>(
   )
 );
 DropImagePreview.displayName = "DropImagePreview";
+
+type OriginalDropImageProps = Omit<ImageProps, "src" | "unoptimized"> & {
+  readonly src: string;
+};
+
+/** Keep original quality while trying another gateway for public IPFS media. */
+export const OriginalDropImage = forwardRef<
+  HTMLImageElement,
+  OriginalDropImageProps
+>(({ src, alt, onError, ...props }, ref) => {
+  const [attempt, setAttempt] = useState({ src, index: 0 });
+  const index = attempt.src === src ? attempt.index : 0;
+  const candidates = useMemo(() => {
+    const protocol = parseDecentralizedMediaRef(src)?.protocol;
+    return protocol === "ipfs" || protocol === "ipns"
+      ? getMediaGatewayFallbackUrls(src)
+      : [resolveIpfsUrlSync(src)];
+  }, [src]);
+
+  return (
+    <Image
+      {...props}
+      ref={ref}
+      src={candidates[index] ?? candidates[0] ?? src}
+      alt={alt}
+      unoptimized
+      onError={(event) => {
+        if (index + 1 < candidates.length) {
+          setAttempt({ src, index: index + 1 });
+        } else {
+          onError?.(event);
+        }
+      }}
+    />
+  );
+});
+OriginalDropImage.displayName = "OriginalDropImage";

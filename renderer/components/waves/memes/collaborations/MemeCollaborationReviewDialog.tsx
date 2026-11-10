@@ -24,7 +24,7 @@ function reviewMediaUrls(state: ApiMemeCollaborationState): string[] {
     ...new Set(
       [state.artwork?.image_url, state.artwork?.animation_url]
         .filter((url): url is string => !!url)
-        .map(resolveIpfsUrlSync)
+        .map((url) => resolveIpfsUrlSync(url))
         .filter((url) => {
           try {
             return ["https:", "http:"].includes(

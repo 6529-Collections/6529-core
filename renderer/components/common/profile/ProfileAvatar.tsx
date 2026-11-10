@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
+"use client";
 
-import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import type { ReactNode } from "react";
+import { useGatewayImageLoadState } from "@/components/common/image/useGatewayImageLoadState";
+import { getScaledResolvedImageUri, ImageScale } from "@/helpers/image.helpers";
 
 export enum ProfileBadgeSize {
   COMPACT = "COMPACT",
@@ -29,6 +31,10 @@ export default function ProfileAvatar({
   alt = "Profile picture",
   fallbackContent = null,
 }: ProfileAvatarProps) {
+  const { activeSrc, isPlaceholder, handleError } = useGatewayImageLoadState(
+    pfpUrl ?? null,
+    false
+  );
   return (
     <div
       className={`${AVATAR_SIZE_CLASSES[size]} tw-relative tw-flex-shrink-0 tw-rounded-lg tw-bg-iron-900`}
@@ -36,10 +42,11 @@ export default function ProfileAvatar({
       <div className="tw-h-full tw-w-full tw-rounded-lg">
         <div className="tw-h-full tw-w-full tw-max-w-full tw-overflow-hidden tw-rounded-lg tw-bg-iron-900 tw-ring-1 tw-ring-white/10">
           <div className="tw-flex tw-h-full tw-items-center tw-justify-center tw-overflow-hidden tw-rounded-lg tw-text-center">
-            {pfpUrl ? (
+            {activeSrc && !isPlaceholder ? (
               // Profile avatars can come from arbitrary remote hosts, so this stays unoptimized.
               <img
-                src={getScaledImageUri(pfpUrl, ImageScale.W_AUTO_H_50)}
+                src={getScaledResolvedImageUri(activeSrc, ImageScale.W_AUTO_H_50)}
+                onError={handleError}
                 alt={alt}
                 className="tw-h-full tw-w-full tw-bg-transparent tw-object-cover"
               />
