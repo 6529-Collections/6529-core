@@ -13,24 +13,22 @@ it("reads no request data in the root layout", () => {
   expect(layout).not.toMatch(/\bheaders\(/);
 });
 
-// On Capacitor these hide the server HTML (an ungated, purchasing-free tree)
-// before the body is parsed, until the commit that reveals the native layout
-// also starts the EULA check. They must stay synchronous and first in <head>.
-it("starts native detection before any other head script", () => {
+// The Desktop shell uses its layout bootstraps after the legacy-browser checks.
+// All of these scripts run before hydration.
+it("starts Desktop layout synchronously after the legacy-browser checks", () => {
   const head = layout.slice(layout.indexOf("<head>"), layout.indexOf("</head>"));
-  const stylesIndex = head.indexOf("__html: NATIVE_STARTUP_STYLES");
-  const scriptIdIndex = head.indexOf('id="native-startup-bootstrap"');
-  expect(stylesIndex).toBeGreaterThan(-1);
-  expect(scriptIdIndex).toBeGreaterThan(stylesIndex);
-  expect(head.indexOf("<script")).toBe(head.lastIndexOf("<", scriptIdIndex));
-  const element = head.slice(
-    head.lastIndexOf("<", scriptIdIndex),
-    head.indexOf("/>", scriptIdIndex)
-  );
-  // Lowercase <script> is plain HTML; <Script> would wait for the Next runtime.
-  expect(element).toMatch(/^<script\b/);
-  expect(element).toContain("NATIVE_STARTUP_SCRIPT");
-  expect(element).not.toContain("strategy=");
+  const startupScripts = head.match(/<script\b[^>]*>/gi) ?? [];
+  expect(startupScripts).toEqual([
+    expect.stringContaining("LEGACY_BROWSER_FLAG_SCRIPT"),
+    expect.stringContaining("LEGACY_BROWSER_SYNTAX_SCRIPT"),
+    expect.stringContaining("LEGACY_BROWSER_NOTICE_SCRIPT"),
+    expect.stringContaining("SMALL_WEB_STARTUP_SCRIPT"),
+    expect.stringContaining("SIDEBAR_STARTUP_SCRIPT"),
+  ]);
+  for (const script of startupScripts) {
+    expect(script).toMatch(/^<script\b/);
+    expect(script).not.toMatch(/\s(?:async|defer|strategy)\b/);
+  }
 });
 
 // Browser bundles carry no VERSION, so the chunk holding the baked public env

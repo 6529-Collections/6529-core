@@ -145,6 +145,7 @@ export * from '../models/ApiCmsPublishedSite';
 export * from '../models/ApiCmsSignatureEnvelope';
 export * from '../models/ApiCmsSite';
 export * from '../models/ApiCmsStorageLocation';
+export * from '../models/ApiCollapsedReplyThread';
 export * from '../models/ApiCollectAccount';
 export * from '../models/ApiCollectAcquisitionPlan';
 export * from '../models/ApiCollectAnalysis';
@@ -589,6 +590,7 @@ export * from '../models/ApiMarketTransaction';
 export * from '../models/ApiMediaResolveRequest';
 export * from '../models/ApiMediaResolveResponse';
 export * from '../models/ApiMediaUploadMimeType';
+export * from '../models/ApiMediaUploadPurpose';
 export * from '../models/ApiMemeCardDropMapping';
 export * from '../models/ApiMemeCollaborationArtwork';
 export * from '../models/ApiMemeCollaborationCredit';
@@ -765,6 +767,7 @@ export * from '../models/ApiSessionRefreshNativeRequest';
 export * from '../models/ApiSessionRefreshWebRequest';
 export * from '../models/ApiSessionWebResponse';
 export * from '../models/ApiSetCompetitionVoteRequest';
+export * from '../models/ApiSetDropReplyCollapseRequest';
 export * from '../models/ApiSetPinnedDropRequest';
 export * from '../models/ApiSetProfileWaveRequest';
 export * from '../models/ApiStartMultipartMediaUploadResponse';
@@ -1134,6 +1137,7 @@ import { ApiCmsPublishedSite } from '../models/ApiCmsPublishedSite';
 import { ApiCmsSignatureEnvelope } from '../models/ApiCmsSignatureEnvelope';
 import { ApiCmsSite } from '../models/ApiCmsSite';
 import { ApiCmsStorageLocation } from '../models/ApiCmsStorageLocation';
+import { ApiCollapsedReplyThread } from '../models/ApiCollapsedReplyThread';
 import { ApiCollectAccount } from '../models/ApiCollectAccount';
 import { ApiCollectAcquisitionPlan  , ApiCollectAcquisitionPlanStatusEnum  , ApiCollectAcquisitionPlanOptimalityEnum             } from '../models/ApiCollectAcquisitionPlan';
 import { ApiCollectAnalysis               } from '../models/ApiCollectAnalysis';
@@ -1213,7 +1217,7 @@ import { ApiCommunityMetric } from '../models/ApiCommunityMetric';
 import { ApiCommunityMetricSample } from '../models/ApiCommunityMetricSample';
 import { ApiCommunityMetrics } from '../models/ApiCommunityMetrics';
 import { ApiCommunityMetricsSeries } from '../models/ApiCommunityMetricsSeries';
-import { ApiCompetition                       } from '../models/ApiCompetition';
+import { ApiCompetition                        } from '../models/ApiCompetition';
 import { ApiCompetitionActionRequest } from '../models/ApiCompetitionActionRequest';
 import { ApiCompetitionAward } from '../models/ApiCompetitionAward';
 import { ApiCompetitionAwardPage } from '../models/ApiCompetitionAwardPage';
@@ -1306,7 +1310,7 @@ import { ApiCreateGroup } from '../models/ApiCreateGroup';
 import { ApiCreateGroupDescription          } from '../models/ApiCreateGroupDescription';
 import { ApiCreateLegacyDesktopConnectionShareRequest , ApiCreateLegacyDesktopConnectionShareRequestClientTypeEnum     } from '../models/ApiCreateLegacyDesktopConnectionShareRequest';
 import { ApiCreateLegacyDesktopConnectionShareResponse } from '../models/ApiCreateLegacyDesktopConnectionShareResponse';
-import { ApiCreateMediaUploadUrlRequest   } from '../models/ApiCreateMediaUploadUrlRequest';
+import { ApiCreateMediaUploadUrlRequest    } from '../models/ApiCreateMediaUploadUrlRequest';
 import { ApiCreateMediaUrlResponse } from '../models/ApiCreateMediaUrlResponse';
 import { ApiCreateMentionedWave } from '../models/ApiCreateMentionedWave';
 import { ApiCreateNewProfileProxy } from '../models/ApiCreateNewProfileProxy';
@@ -1339,7 +1343,7 @@ import { ApiCreateWaveOutcome        } from '../models/ApiCreateWaveOutcome';
 import { ApiCreateWaveOutcomeDistributionItem } from '../models/ApiCreateWaveOutcomeDistributionItem';
 import { ApiCreatedProfileCmsAgentGrant } from '../models/ApiCreatedProfileCmsAgentGrant';
 import { ApiCuratedProfileWaveDropsPage } from '../models/ApiCuratedProfileWaveDropsPage';
-import { ApiCurationDrop                                       } from '../models/ApiCurationDrop';
+import { ApiCurationDrop                                         } from '../models/ApiCurationDrop';
 import { ApiCurationDropsPage } from '../models/ApiCurationDropsPage';
 import { ApiDecentralizedMediaProtocol } from '../models/ApiDecentralizedMediaProtocol';
 import { ApiDecentralizedMediaResolution          } from '../models/ApiDecentralizedMediaResolution';
@@ -1358,7 +1362,7 @@ import { ApiDistributionAirdropsUploadResponse } from '../models/ApiDistribution
 import { ApiDmDropsUnreadCount } from '../models/ApiDmDropsUnreadCount';
 import { ApiDmUnreadConversationState } from '../models/ApiDmUnreadConversationState';
 import { ApiDmUnreadSnapshot } from '../models/ApiDmUnreadSnapshot';
-import { ApiDrop                                        } from '../models/ApiDrop';
+import { ApiDrop                                           } from '../models/ApiDrop';
 import { ApiDropAndDropVote } from '../models/ApiDropAndDropVote';
 import { ApiDropAndWave } from '../models/ApiDropAndWave';
 import { ApiDropAttachmentReference } from '../models/ApiDropAttachmentReference';
@@ -1406,7 +1410,7 @@ import { ApiDropSubscriptionActions } from '../models/ApiDropSubscriptionActions
 import { ApiDropSubscriptionTargetAction } from '../models/ApiDropSubscriptionTargetAction';
 import { ApiDropTraceItem } from '../models/ApiDropTraceItem';
 import { ApiDropType } from '../models/ApiDropType';
-import { ApiDropV2                                 } from '../models/ApiDropV2';
+import { ApiDropV2                                   } from '../models/ApiDropV2';
 import { ApiDropV2ContextProfileContext } from '../models/ApiDropV2ContextProfileContext';
 import { ApiDropV2Page } from '../models/ApiDropV2Page';
 import { ApiDropV2PageWithoutCount } from '../models/ApiDropV2PageWithoutCount';
@@ -1418,7 +1422,7 @@ import { ApiDropVoteSummary } from '../models/ApiDropVoteSummary';
 import { ApiDropVoter } from '../models/ApiDropVoter';
 import { ApiDropVotersPage } from '../models/ApiDropVotersPage';
 import { ApiDropWinningContext } from '../models/ApiDropWinningContext';
-import { ApiDropWithoutWave                                      } from '../models/ApiDropWithoutWave';
+import { ApiDropWithoutWave                                        } from '../models/ApiDropWithoutWave';
 import { ApiDropWithoutWavesPageWithoutCount } from '../models/ApiDropWithoutWavesPageWithoutCount';
 import { ApiDropsLeaderboardPage } from '../models/ApiDropsLeaderboardPage';
 import { ApiDropsLeaderboardPageV2 } from '../models/ApiDropsLeaderboardPageV2';
@@ -1578,6 +1582,7 @@ import { ApiMarketTransaction    , ApiMarketTransactionPurposeEnum  , ApiMarketT
 import { ApiMediaResolveRequest } from '../models/ApiMediaResolveRequest';
 import { ApiMediaResolveResponse } from '../models/ApiMediaResolveResponse';
 import { ApiMediaUploadMimeType } from '../models/ApiMediaUploadMimeType';
+import { ApiMediaUploadPurpose } from '../models/ApiMediaUploadPurpose';
 import { ApiMemeCardDropMapping } from '../models/ApiMemeCardDropMapping';
 import { ApiMemeCollaborationArtwork } from '../models/ApiMemeCollaborationArtwork';
 import { ApiMemeCollaborationCredit } from '../models/ApiMemeCollaborationCredit';
@@ -1754,6 +1759,7 @@ import { ApiSessionRefreshNativeRequest, ApiSessionRefreshNativeRequestClientTyp
 import { ApiSessionRefreshWebRequest, ApiSessionRefreshWebRequestClientTypeEnum    } from '../models/ApiSessionRefreshWebRequest';
 import { ApiSessionWebResponse    , ApiSessionWebResponseClientTypeEnum    } from '../models/ApiSessionWebResponse';
 import { ApiSetCompetitionVoteRequest } from '../models/ApiSetCompetitionVoteRequest';
+import { ApiSetDropReplyCollapseRequest } from '../models/ApiSetDropReplyCollapseRequest';
 import { ApiSetPinnedDropRequest } from '../models/ApiSetPinnedDropRequest';
 import { ApiSetProfileWaveRequest } from '../models/ApiSetProfileWaveRequest';
 import { ApiStartMultipartMediaUploadResponse     } from '../models/ApiStartMultipartMediaUploadResponse';
@@ -2165,6 +2171,7 @@ let enumsMap: Set<string> = new Set<string>([
     "ApiMarketTransactionPurposeEnum",
     "ApiMarketTransactionApprovalScopeEnum",
     "ApiMediaUploadMimeType",
+    "ApiMediaUploadPurpose",
     "ApiMemeCollaborationInvitationStatusEnum",
     "ApiMemeCollaborationResponseRequestActionEnum",
     "ApiMemesExtendedDataTokenTypeEnum",
@@ -2420,6 +2427,7 @@ let typeMap: {[index: string]: any} = {
     "ApiCmsSignatureEnvelope": ApiCmsSignatureEnvelope,
     "ApiCmsSite": ApiCmsSite,
     "ApiCmsStorageLocation": ApiCmsStorageLocation,
+    "ApiCollapsedReplyThread": ApiCollapsedReplyThread,
     "ApiCollectAccount": ApiCollectAccount,
     "ApiCollectAcquisitionPlan": ApiCollectAcquisitionPlan,
     "ApiCollectAnalysis": ApiCollectAnalysis,
@@ -2989,6 +2997,7 @@ let typeMap: {[index: string]: any} = {
     "ApiSessionRefreshWebRequest": ApiSessionRefreshWebRequest,
     "ApiSessionWebResponse": ApiSessionWebResponse,
     "ApiSetCompetitionVoteRequest": ApiSetCompetitionVoteRequest,
+    "ApiSetDropReplyCollapseRequest": ApiSetDropReplyCollapseRequest,
     "ApiSetPinnedDropRequest": ApiSetPinnedDropRequest,
     "ApiSetProfileWaveRequest": ApiSetProfileWaveRequest,
     "ApiStartMultipartMediaUploadResponse": ApiStartMultipartMediaUploadResponse,
