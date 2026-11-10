@@ -463,8 +463,7 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "desktop.myIpfs": "My IPFS",
   "desktop.localServices": "Local services",
   "desktop.validatorTitle": "6529 Validator",
-  "desktop.validatorChip": "Validator",
-  "desktop.validatorOpen": "Open Validator",
+  "desktop.validatorOpen": "Open 6529 Validator",
   "desktop.validatorStopped": "Stopped",
   "desktop.validatorRunning": "Running",
   "desktop.validatorAllGood": "All good",
@@ -476,7 +475,7 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "desktop.validatorUpdateNeeded": "Update needed",
   "desktop.validatorUnavailable": "Not answering",
   "desktop.validatorNothingToDo": "Nothing to do.",
-  "desktop.validatorUpdateAction": "Open Validator for update details.",
+  "desktop.validatorUpdateAction": "Open 6529 Validator for update details.",
   "desktop.validatorService": "Service",
   "desktop.validatorToday": "Today",
   "desktop.validatorResult": "Today's result",
@@ -3430,9 +3429,9 @@ const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
  * both into the complete dictionary.
  */
 export const EN_US_ROOT_MESSAGES = {
-  "desktop.about.showValidator": "Show Validator in 6529 Desktop",
+  "desktop.about.showValidator": "Show 6529 Validator",
   "desktop.about.showValidatorHelp":
-    "Show Validator in the Desktop title bar. Your validator keeps running when hidden.",
+    "Show 6529 Validator in the title bar. Your validator keeps running when hidden.",
   "desktop.about.showValidatorSaveError": "Could not save your Validator preference. Try again.",
   "desktop.about.showValidatorLoadError": "Could not load your Validator preference.",
   "desktop.about.portPending": "Pending…",

@@ -1,8 +1,13 @@
 "use client";
 
-import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import {
-  faArrowUpRightFromSquare,
+  Popover,
+  PopoverBackdrop,
+  PopoverButton,
+  PopoverPanel,
+} from "@headlessui/react";
+import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
+import {
   faCheck,
   faCircleInfo,
   faExclamation,
@@ -84,9 +89,11 @@ function StatusRow({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div className="tw-flex tw-items-center tw-justify-between tw-gap-3 tw-border-0 tw-border-b tw-border-solid tw-border-iron-700 tw-py-1.5 last:tw-border-0">
+    <div className="tw-flex tw-min-h-11 tw-items-center tw-justify-between tw-gap-3 tw-border-0 tw-border-b tw-border-solid tw-border-iron-700 tw-py-1">
       <dt className="tw-shrink-0 tw-text-iron-300">{label}</dt>
-      <dd className="tw-m-0 tw-min-w-0 tw-text-right">{children}</dd>
+      <dd className="tw-m-0 tw-min-w-0 tw-break-words tw-text-right">
+        {children}
+      </dd>
     </div>
   );
 }
@@ -108,6 +115,14 @@ export default function DesktopValidatorStatus({
   const label = t(locale, HEALTH_LABEL[health]);
   const title = t(locale, "navigation.desktop.validatorTitle");
   const { icon, tone } = HEALTH_STYLE[health];
+  const mutedPanel = health === "all-good" || health === "update-available";
+  const panelTone = mutedPanel ? TONE.neutral : tone;
+  const panelIconColor =
+    health === "all-good"
+      ? "tw-text-emerald-300"
+      : health === "update-available"
+        ? "tw-text-primary-300"
+        : "";
   const showChipLabel =
     health === "update-needed" ||
     health === "update-available" ||
@@ -123,22 +138,30 @@ export default function DesktopValidatorStatus({
     >
       <PopoverButton
         aria-describedby={showChipLabel ? undefined : statusId}
-        className={`tw-flex tw-h-5 tw-items-center tw-gap-1.5 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-px-1.5 tw-font-medium hover:tw-brightness-125 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 ${tone}`}
+        className={`tw-relative tw-z-[1] tw-flex tw-h-5 tw-items-center tw-gap-1.5 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-px-1.5 tw-font-medium hover:tw-brightness-125 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 ${tone}`}
       >
         <FontAwesomeIcon
           aria-hidden="true"
           icon={icon}
           className="tw-size-2.5"
         />
-        {t(locale, "navigation.desktop.validatorChip")}
+        {title}
         {showChipLabel && <span>· {label}</span>}
       </PopoverButton>
       <span id={statusId} className="tw-sr-only">
         {label}
       </span>
 
+      <PopoverBackdrop
+        className={`tw-fixed tw-inset-0 tw-z-0 ${styles["validatorControl"]}`}
+      />
       <PopoverPanel
-        className={`tw-absolute tw-top-full tw-mt-2 tw-w-72 tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-900 tw-p-3 tw-text-sm tw-text-iron-100 tw-shadow-xl ${align === "right" ? "tw-right-0" : "tw-left-0"}`}
+        anchor={{
+          to: align === "right" ? "bottom end" : "bottom start",
+          gap: 8,
+          padding: 8,
+        }}
+        className={`tailwind-scope tw-z-[1001] tw-w-[360px] tw-max-w-[calc(100vw-1rem)] tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-900 tw-p-3.5 tw-font-sans tw-text-sm tw-text-iron-100 tw-shadow-xl ${styles["validatorControl"]}`}
       >
         {({ close }) => (
           <>
@@ -154,12 +177,12 @@ export default function DesktopValidatorStatus({
               )}
             </div>
             <div
-              className={`tw-flex tw-items-start tw-gap-2 tw-rounded-md tw-border tw-border-solid tw-p-2 ${tone}`}
+              className={`tw-flex tw-items-start tw-gap-2 tw-rounded-md tw-border tw-border-solid tw-px-2.5 tw-py-2 ${panelTone}`}
             >
               <FontAwesomeIcon
                 aria-hidden="true"
                 icon={icon}
-                className="tw-mt-0.5 tw-size-3 tw-shrink-0"
+                className={`tw-mt-0.5 tw-size-3 tw-shrink-0 ${panelIconColor}`}
               />
               <div>
                 <div className="tw-font-semibold">{label}</div>
@@ -175,7 +198,7 @@ export default function DesktopValidatorStatus({
                 )}
               </div>
             </div>
-            <dl className="tw-my-2 tw-text-xs">
+            <dl className="tw-mb-3.5 tw-mt-2 tw-text-xs">
               {status.service !== "unavailable" && (
                 <StatusRow
                   label={t(locale, "navigation.desktop.validatorService")}
@@ -220,13 +243,12 @@ export default function DesktopValidatorStatus({
               onClick={() =>
                 openValidator.mutate(undefined, { onSuccess: () => close() })
               }
-              className="tw-flex tw-w-full tw-items-center tw-justify-between tw-gap-2 tw-rounded-md tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-800 tw-px-2 tw-py-1.5 tw-text-left tw-font-semibold hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 disabled:tw-opacity-60"
+              className="tw-flex tw-min-h-11 tw-w-full tw-items-center tw-justify-between tw-gap-3 tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-800 tw-px-3 tw-py-2 tw-text-left tw-font-semibold hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 disabled:tw-opacity-60"
             >
               {t(locale, "navigation.desktop.validatorOpen")}
-              <FontAwesomeIcon
+              <ArrowUpRightIcon
                 aria-hidden="true"
-                icon={faArrowUpRightFromSquare}
-                className="tw-size-3 tw-shrink-0"
+                className="tw-size-3.5 tw-shrink-0 tw-text-iron-300"
               />
             </button>
             <p
