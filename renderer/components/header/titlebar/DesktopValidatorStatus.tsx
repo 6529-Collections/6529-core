@@ -10,10 +10,10 @@ import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import {
   faCheck,
   faCircleInfo,
-  faExclamation,
   faMinus,
   faPause,
   faQuestion,
+  faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useId } from "react";
@@ -46,11 +46,16 @@ const SIGNING_LABEL = {
   "not-signed": "navigation.desktop.validatorNotSigned",
 } as const;
 
+const NEUTRAL_PANEL = "tw-border-iron-700 tw-bg-iron-800";
+
 const TONE = {
-  good: "tw-border-emerald-500/30 tw-bg-emerald-500/10 tw-text-emerald-300",
-  alert: "tw-border-amber-500/30 tw-bg-amber-500/10 tw-text-amber-300",
-  info: "tw-border-primary-400/30 tw-bg-primary-400/10 tw-text-primary-300",
-  neutral: "tw-border-iron-700 tw-bg-iron-800 tw-text-iron-200",
+  good: { iconColor: "tw-text-emerald-300", panelTone: NEUTRAL_PANEL },
+  alert: {
+    iconColor: "tw-text-amber-300",
+    panelTone: "tw-border-amber-500/30 tw-bg-amber-500/10",
+  },
+  info: { iconColor: "tw-text-primary-300", panelTone: NEUTRAL_PANEL },
+  neutral: { iconColor: "tw-text-iron-300", panelTone: NEUTRAL_PANEL },
 } as const;
 
 const HEALTH_STYLE = {
@@ -58,17 +63,12 @@ const HEALTH_STYLE = {
   "getting-ready": { icon: faCircleInfo, tone: TONE.neutral },
   paused: { icon: faPause, tone: TONE.neutral },
   "not-signing": { icon: faMinus, tone: TONE.neutral },
-  "needs-attention": { icon: faExclamation, tone: TONE.alert },
+  "needs-attention": { icon: faTriangleExclamation, tone: TONE.alert },
   "update-available": { icon: faCircleInfo, tone: TONE.info },
-  "update-needed": { icon: faExclamation, tone: TONE.alert },
+  "update-needed": { icon: faTriangleExclamation, tone: TONE.alert },
   stopped: { icon: faMinus, tone: TONE.neutral },
   unavailable: { icon: faQuestion, tone: TONE.alert },
 } as const;
-
-const PANEL_ICON_COLOR: Partial<Record<keyof typeof HEALTH_STYLE, string>> = {
-  "all-good": "tw-text-emerald-300",
-  "update-available": "tw-text-primary-300",
-};
 
 function nextSignatureWords(locale: SupportedLocale, unix: number) {
   const date = new Date(unix * 1000);
@@ -119,10 +119,10 @@ export default function DesktopValidatorStatus({
   const health = status.service === "running" ? status.health : status.service;
   const label = t(locale, HEALTH_LABEL[health]);
   const title = t(locale, "navigation.desktop.validatorTitle");
-  const { icon, tone } = HEALTH_STYLE[health];
-  const mutedPanel = health === "all-good" || health === "update-available";
-  const panelTone = mutedPanel ? TONE.neutral : tone;
-  const panelIconColor = PANEL_ICON_COLOR[health] ?? "";
+  const {
+    icon,
+    tone: { iconColor, panelTone },
+  } = HEALTH_STYLE[health];
   const showChipLabel =
     health === "update-needed" ||
     health === "update-available" ||
@@ -134,16 +134,16 @@ export default function DesktopValidatorStatus({
 
   return (
     <Popover
-      className={`tailwind-scope tw-relative tw-flex tw-font-sans ${styles["validatorControl"]}`}
+      className={`tailwind-scope tw-relative tw-flex ${styles["validatorControl"]}`}
     >
       <PopoverButton
         aria-describedby={showChipLabel ? undefined : statusId}
-        className={`tw-relative tw-z-[1] tw-flex tw-h-5 tw-items-center tw-gap-1.5 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-px-1.5 tw-font-medium hover:tw-brightness-125 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 ${tone}`}
+        className={`tw-relative tw-z-[1] tw-flex tw-h-[18px] tw-items-center tw-gap-1 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-border-iron-700 tw-bg-transparent tw-px-1 tw-text-iron-100 hover:tw-bg-iron-900 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 ${styles["validatorChip"]}`}
       >
         <FontAwesomeIcon
           aria-hidden="true"
           icon={icon}
-          className="tw-size-2.5"
+          className={`tw-size-2.5 tw-shrink-0 ${iconColor}`}
         />
         {title}
         {showChipLabel && <span>· {label}</span>}
@@ -177,26 +177,26 @@ export default function DesktopValidatorStatus({
               )}
             </div>
             <div
-              className={`tw-flex tw-items-center tw-gap-2.5 tw-rounded-md tw-border tw-border-solid tw-px-2.5 tw-py-2 ${panelTone}`}
+              className={`tw-rounded-md tw-border tw-border-solid tw-px-2.5 tw-py-2 ${panelTone}`}
             >
-              <FontAwesomeIcon
-                aria-hidden="true"
-                icon={icon}
-                className={`tw-size-4 tw-shrink-0 ${panelIconColor}`}
-              />
-              <div>
-                <div className="tw-font-semibold">{label}</div>
-                {health === "all-good" && (
-                  <p className="tw-mb-0 tw-mt-0.5 tw-text-xs tw-text-iron-200">
-                    {t(locale, "navigation.desktop.validatorNothingToDo")}
-                  </p>
-                )}
-                {health === "update-needed" && (
-                  <p className="tw-mb-0 tw-mt-0.5 tw-text-xs tw-text-iron-200">
-                    {t(locale, "navigation.desktop.validatorUpdateAction")}
-                  </p>
-                )}
+              <div className="tw-flex tw-items-center tw-gap-1.5 tw-font-semibold">
+                <FontAwesomeIcon
+                  aria-hidden="true"
+                  icon={icon}
+                  className={`tw-size-3 tw-shrink-0 ${iconColor}`}
+                />
+                {label}
               </div>
+              {health === "all-good" && (
+                <p className="tw-m-0 tw-text-xs tw-text-iron-300">
+                  {t(locale, "navigation.desktop.validatorNothingToDo")}
+                </p>
+              )}
+              {health === "update-needed" && (
+                <p className="tw-m-0 tw-text-xs tw-text-iron-300">
+                  {t(locale, "navigation.desktop.validatorUpdateAction")}
+                </p>
+              )}
             </div>
             <dl className="tw-mb-3.5 tw-mt-2 tw-text-xs">
               {status.service !== "unavailable" && (
