@@ -3429,6 +3429,8 @@ const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
  * both into the complete dictionary.
  */
 export const EN_US_ROOT_MESSAGES = {
+  "desktop.about.localUpdatesUnavailable":
+    "In-app updates are disabled for local builds.",
   "desktop.about.showValidator": "Show 6529 Validator",
   "desktop.about.showValidatorHelp":
     "Show 6529 Validator in the title bar. Your validator keeps running when hidden.",

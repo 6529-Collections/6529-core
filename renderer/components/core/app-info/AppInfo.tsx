@@ -14,6 +14,7 @@ import type { IpfsStatus } from "@/shared/ipfs-status";
 
 interface DesktopAppInfo {
   app_version?: string;
+  environment?: string;
   os?: string;
   arch?: string;
   scheme?: string;
@@ -36,6 +37,9 @@ interface UpdateInfo {
   version: string;
 }
 
+const UPDATE_UNAVAILABLE_IMAGE =
+  "https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/28.GIF";
+
 function bytesToKB(bytes: number): string {
   return parseInt((bytes / 1024).toFixed(0)).toLocaleString();
 }
@@ -46,7 +50,10 @@ function bytesToMB(bytes: number): string {
 
 export default function AppInfo() {
   const locale = useBrowserLocale();
-  const [info, setInfo] = useState<DesktopAppInfo>({});
+  const [loadedInfo, setInfo] = useState<DesktopAppInfo>();
+  const info = loadedInfo ?? {};
+  const isLocalBuild = info.environment === "local";
+  const canCheckUpdates = loadedInfo !== undefined && !isLocalBuild;
 
   const [checkingForUpdates, setCheckingForUpdates] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState<UpdateInfo>();
@@ -68,6 +75,9 @@ export default function AppInfo() {
           if (!disposed && currentRevision === revision) setInfo(newInfo);
         })
         .catch(() => {
+          if (!disposed && currentRevision === revision) {
+            setInfo((current) => current ?? {});
+          }
           console.error("Could not refresh Desktop app information");
         });
     };
@@ -87,10 +97,11 @@ export default function AppInfo() {
 
   useEffect(() => {
     fetchMainWorker();
-    window.updater.checkUpdates();
   }, []);
 
   useEffect(() => {
+    if (!canCheckUpdates) return;
+
     const handleUpdateAvailable = (_event: any, info: any) => {
       setUpdateError(false);
       setCheckingForUpdates(false);
@@ -141,6 +152,7 @@ export default function AppInfo() {
     window.updater.onUpdateError(handleUpdateError);
     window.updater.onUpdateProgress(handleUpdateProgress);
     window.updater.onUpdateDownloaded(handleUpdateDownloaded);
+    window.updater.checkUpdates();
 
     return () => {
       window.updater.offUpdateAvailable(handleUpdateAvailable);
@@ -149,7 +161,7 @@ export default function AppInfo() {
       window.updater.offUpdateProgress(handleUpdateProgress);
       window.updater.offUpdateDownloaded(handleUpdateDownloaded);
     };
-  }, []);
+  }, [canCheckUpdates]);
 
   function formatIpfsPort(port: number | null | undefined): string | number {
     if (info.ipfsStatus === "disabled")
@@ -187,20 +199,32 @@ export default function AppInfo() {
               </span>
             </div>
           </div>
-          <span className="tw-flex tw-items-center tw-gap-2">
-            {checkingForUpdates && (
+          <div className="tw-flex tw-items-center tw-gap-2">
+            {isLocalBuild && (
+              <div className="tw-text-center">
+                <div className="tw-pb-3">
+                  <UpdateImage src={UPDATE_UNAVAILABLE_IMAGE} alt="" />
+                </div>
+                {t(locale, "desktop.about.localUpdatesUnavailable")}
+              </div>
+            )}
+            {canCheckUpdates && (
               <>
-                Checking For Updates <DotLoader />
+                {checkingForUpdates && (
+                  <>
+                    Checking For Updates <DotLoader />
+                  </>
+                )}
+                {updateProgress && <UpdateProgress progress={updateProgress} />}
+                {updateAvailable && <UpdateAvailable info={updateAvailable} />}
+                {updateNotAvailable && (
+                  <UpdateNotAvailable info={updateNotAvailable} />
+                )}
+                {updateError && <UpdateError error={updateError} />}
+                {updateDownloaded && <UpdateDownloaded info={updateDownloaded} />}
               </>
             )}
-            {updateProgress && <UpdateProgress progress={updateProgress} />}
-            {updateAvailable && <UpdateAvailable info={updateAvailable} />}
-            {updateNotAvailable && (
-              <UpdateNotAvailable info={updateNotAvailable} />
-            )}
-            {updateError && <UpdateError error={updateError} />}
-            {updateDownloaded && <UpdateDownloaded info={updateDownloaded} />}
-          </span>
+          </div>
         </div>
       </div>
     );
@@ -307,7 +331,7 @@ function UpdateError(
     <div className="tw-text-center">
       <div className="tw-pb-3">
         <UpdateImage
-          src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/28.GIF"
+          src={UPDATE_UNAVAILABLE_IMAGE}
           alt="error"
         />
       </div>
