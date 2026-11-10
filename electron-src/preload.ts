@@ -8,6 +8,7 @@ import {
 import type {
   NotificationNavigationContext,
   NotificationNavigatePayload,
+  SanitizedProfilePicture,
 } from "../shared/preload-types";
 
 import type {
@@ -47,6 +48,11 @@ function allowedChannel(channel: string): string {
   }
   return channel;
 }
+
+const localIpfsFrameFailureListeners = new Set<(url: string) => void>();
+ipcRenderer.on("local-ipfs-frame-failed", (_event, url: string) => {
+  for (const listener of localIpfsFrameFailureListeners) listener(url);
+});
 
 export const api = {
   on: (channel: string, callback: Function) => {
@@ -97,6 +103,8 @@ export const api = {
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
   getIpfsInfo: () => ipcRenderer.invoke("get-ipfs-info"),
+  sanitizeProfilePicture: (bytes: ArrayBuffer): Promise<SanitizedProfilePicture> =>
+    ipcRenderer.invoke("sanitize-profile-picture", bytes),
   getLocalIpfsPreferences: (): Promise<LocalIpfsPreferencesSnapshot> =>
     ipcRenderer.invoke("get-local-ipfs-preferences"),
   setLocalIpfsEnabled: (enabled: boolean): Promise<LocalIpfsPreferencesSnapshot> =>
@@ -109,6 +117,12 @@ export const api = {
     ipcRenderer.on("ipfs-status-change", listener);
     return () => {
       ipcRenderer.removeListener("ipfs-status-change", listener);
+    };
+  },
+  onLocalIpfsFrameFailed: (callback: (url: string) => void) => {
+    localIpfsFrameFailureListeners.add(callback);
+    return () => {
+      localIpfsFrameFailureListeners.delete(callback);
     };
   },
   getMainWorker: () => ipcRenderer.invoke("get-main-worker"),

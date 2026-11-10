@@ -11,7 +11,10 @@ type GatewayImageLoadState = {
   mode: GatewayImageLoadMode;
 };
 
-export function useGatewayImageLoadState(src: string | null = null) {
+export function useGatewayImageLoadState(
+  src: string | null = null,
+  shouldOptimize: boolean | ((url: string) => boolean) = true
+) {
   const normalizedSrc = src;
   const candidateUrls = useMemo(
     () => (normalizedSrc ? getMediaGatewayFallbackUrls(normalizedSrc) : []),
@@ -34,6 +37,10 @@ export function useGatewayImageLoadState(src: string | null = null) {
         };
 
   const activeSrc = candidateUrls[currentState.candidateIndex] ?? null;
+  const canOptimize =
+    typeof shouldOptimize === "function"
+      ? activeSrc !== null && shouldOptimize(activeSrc)
+      : shouldOptimize;
   const isPlaceholder =
     normalizedSrc === null ||
     activeSrc === null ||
@@ -44,7 +51,7 @@ export function useGatewayImageLoadState(src: string | null = null) {
       return;
     }
 
-    if (currentState.mode === "optimized") {
+    if (currentState.mode === "optimized" && canOptimize) {
       setLoadState({
         src: normalizedSrc,
         candidateIndex: currentState.candidateIndex,
@@ -72,7 +79,7 @@ export function useGatewayImageLoadState(src: string | null = null) {
   return {
     activeSrc,
     isPlaceholder,
-    unoptimized: currentState.mode === "unoptimized",
+    unoptimized: !canOptimize || currentState.mode === "unoptimized",
     handleError,
   };
 }

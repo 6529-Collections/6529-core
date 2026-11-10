@@ -7,7 +7,9 @@ import NFTMediaContainer from "@/components/nft-image/NFTMediaContainer";
 import styles from "@/components/nft-image/NFTImage.module.css";
 import type { BaseRendererProps } from "@/components/nft-image/types/renderer-props";
 import { withArweaveFallback } from "@/components/nft-image/utils/gateway-fallback";
+import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { getNFTMediaRendererAttributes } from "@/components/nft-image/media-renderer-marker";
+import { parseDecentralizedMediaRef } from "@/lib/media/decentralized-media";
 import Image from "next/image";
 
 function getSrc(
@@ -40,6 +42,13 @@ function getMetadataImage(nft: BaseRendererProps["nft"]): string | undefined {
   return typeof image === "string" ? image : undefined;
 }
 
+function getPublicArtworkImageUrl(source: string): string {
+  const protocol = parseDecentralizedMediaRef(source)?.protocol;
+  return protocol === "ipfs" || protocol === "ipns"
+    ? resolveIpfsUrlSync(source, { preferLocal: false })
+    : source;
+}
+
 function getArtworkImageDimensions(props: Readonly<BaseRendererProps>) {
   const dimensions =
     props.artworkLayout && "metadata" in props.nft
@@ -59,6 +68,11 @@ function getArtworkImageDimensions(props: Readonly<BaseRendererProps>) {
 
 export default function NFTImageRenderer(props: Readonly<BaseRendererProps>) {
   const src = getSrc(props.nft, !!props.showThumbnail, !!props.showOriginal);
+  const thumbnailSrc = getPublicArtworkImageUrl(props.nft.thumbnail);
+  const scaledSrc = props.nft.scaled
+    ? getPublicArtworkImageUrl(props.nft.scaled)
+    : null;
+  const originalSrc = getPublicArtworkImageUrl(props.nft.image);
   const shouldLazyLoad = !!props.showThumbnail || props.height === 300;
   const imageWrapperClassName = styles["imageWrapper"] ?? "";
   const dimensions = getArtworkImageDimensions(props);
@@ -98,19 +112,20 @@ export default function NFTImageRenderer(props: Readonly<BaseRendererProps>) {
           maxHeight: "100%",
         }}
         id={props.id ?? `image-${props.nft.id}`}
-        src={src}
+        src={getPublicArtworkImageUrl(src)}
         alt={props.nft.name}
         onError={withArweaveFallback(({ currentTarget }) => {
-          if (currentTarget.src === props.nft.thumbnail) {
-            currentTarget.src = props.nft.scaled
-              ? props.nft.scaled
-              : props.nft.image;
-          } else if (currentTarget.src === props.nft.scaled) {
-            currentTarget.src = props.nft.image;
+          if (currentTarget.src === thumbnailSrc && thumbnailSrc !== originalSrc) {
+            currentTarget.src = scaledSrc && scaledSrc !== thumbnailSrc
+              ? scaledSrc
+              : originalSrc;
+          } else if (currentTarget.src === scaledSrc && scaledSrc !== originalSrc) {
+            currentTarget.src = originalSrc;
           } else {
             const metadataImage = getMetadataImage(props.nft);
             if (metadataImage) {
-              currentTarget.src = metadataImage;
+              const metadataSrc = getPublicArtworkImageUrl(metadataImage);
+              if (metadataSrc !== currentTarget.src) currentTarget.src = metadataSrc;
             }
           }
         })}

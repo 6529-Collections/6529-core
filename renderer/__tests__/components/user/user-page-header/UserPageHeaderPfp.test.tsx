@@ -4,9 +4,12 @@ import { imageConfigDefault } from "next/dist/shared/lib/image-config";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { publicEnv } from "@/config/env";
 import UserPageHeaderPfp from "@/components/user/user-page-header/pfp/UserPageHeaderPfp";
+import { E2eeAvatar } from "@/components/e2ee/ui/E2eeAvatar";
+import * as ipfs from "@/components/ipfs/IPFSContext";
 
 const cid = "QmZ41GvrNSPUpSs4mfQy4jxUNudcLM6CXUTFwqtVd2m2XP";
 const source = `https://media.6529.io/ipfs/${cid}`;
+const localSource = `http://127.0.0.1:9255/ipfs/${cid}`;
 
 function picture(pfp: string | null) {
   return (
@@ -87,6 +90,20 @@ describe("UserPageHeaderPfp", () => {
     expect(screen.getByRole("img")).not.toHaveAttribute("srcset");
   });
 
+  it("retries the public resolver after the local profile picture fails", () => {
+    jest.spyOn(ipfs, "resolveIpfsUrlSync").mockReturnValue(localSource);
+    render(picture(`ipfs://${cid}`));
+
+    expect(screen.getByRole("img")).toHaveAttribute("src", localSource);
+    fireEvent.error(screen.getByRole("img"));
+
+    const remote = new URL(
+      screen.getByRole("img").getAttribute("src")!,
+      "http://localhost"
+    );
+    expect(remote.searchParams.get("url")).toBe(source);
+  });
+
   it("renders placeholder when no pfp", () => {
     const { container } = render(picture(null));
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
@@ -96,5 +113,21 @@ describe("UserPageHeaderPfp", () => {
       "sm:tw-h-28",
       "sm:tw-w-28"
     );
+  });
+});
+
+describe("Encrypted chat avatars", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("tries the public resolver immediately after the local image fails", () => {
+    jest.spyOn(ipfs, "resolveIpfsUrlSync").mockReturnValue(localSource);
+    const { container } = render(
+      <E2eeAvatar name="HiddenDragon" pfp={`ipfs://${cid}`} />
+    );
+
+    const avatar = () => container.querySelector("img")!;
+    expect(avatar()).toHaveAttribute("src", localSource);
+    fireEvent.error(avatar());
+    expect(avatar()).toHaveAttribute("src", source);
   });
 });

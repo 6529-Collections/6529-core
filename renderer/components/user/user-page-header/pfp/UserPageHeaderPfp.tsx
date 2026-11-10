@@ -2,8 +2,8 @@
 
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import Image from "next/image";
-import { useState } from "react";
-import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import { useGatewayImageLoadState } from "@/components/common/image/useGatewayImageLoadState";
+import { getScaledResolvedImageUri, ImageScale } from "@/helpers/image.helpers";
 import { parseDecentralizedMediaRef } from "@/lib/media/decentralized-media";
 import { isGifImageUrl } from "@/helpers/gif-preview.helpers";
 import { getUserProfileHeaderMessage } from "../user-page-header.messages";
@@ -19,26 +19,26 @@ export default function UserPageHeaderPfp({
   readonly defaultBanner1: string;
   readonly defaultBanner2: string;
 }) {
-  const avatarSrc = profile.pfp
-    ? getScaledImageUri(profile.pfp, ImageScale.W_200_H_200)
-    : null;
-  const [failedAvatarSrc, setFailedAvatarSrc] = useState<string | null>(null);
+  const { activeSrc, isPlaceholder, handleError, unoptimized } =
+    useGatewayImageLoadState(
+      profile.pfp,
+      (candidate) =>
+        Boolean(parseDecentralizedMediaRef(profile.pfp)) &&
+        new URL(candidate).port === "" &&
+        !isGifImageUrl(candidate)
+    );
   const glassWrapperClass =
     "tw-relative tw-z-10 tw-inline-flex tw-flex-shrink-0 tw-p-0.5 tw-rounded-xl tw-bg-white/10 tw-backdrop-blur-md tw-ring-1 tw-ring-white/20 tw-shadow-2xl";
 
-  if (avatarSrc) {
+  if (activeSrc && !isPlaceholder) {
     return (
       <div className={glassWrapperClass}>
         <Image
-          unoptimized={
-            !parseDecentralizedMediaRef(profile.pfp) ||
-            new URL(avatarSrc).port !== "" ||
-            isGifImageUrl(avatarSrc) ||
-            failedAvatarSrc === avatarSrc
-          }
-          src={avatarSrc}
+          key={`${activeSrc}-${unoptimized}`}
+          unoptimized={unoptimized}
+          src={getScaledResolvedImageUri(activeSrc, ImageScale.W_200_H_200)}
           sizes="(min-width: 640px) 112px, 80px"
-          onError={() => setFailedAvatarSrc(avatarSrc)}
+          onError={handleError}
           alt={getUserProfileHeaderMessage("user.profileHeader.pfp.alt", {
             name: profileLabel,
           })}

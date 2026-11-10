@@ -4,13 +4,12 @@ import {
   DropImagePreview,
   getDropImagePreviewSources,
   getGiphyVideoPreviewSources,
+  OriginalDropImage,
 } from "./DropImagePreview";
 import { GiphyPlaybackToggle, GiphyVideoPreview } from "./GiphyVideoPreview";
 import Button from "@/components/utils/button/Button";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
-import Image from "next/image";
-import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { ImageScale } from "@/helpers/image.helpers";
 import { isGifImageUrl } from "@/helpers/gif-preview.helpers";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
@@ -360,10 +359,10 @@ export function ImageMediaModal({
                     >
                       {/* Drop media can come from arbitrary hosts outside Next image config. */}
                       {originalRequested && (
-                        <Image
+                        <OriginalDropImage
                           key={`original-${src}`}
                           ref={playingOriginal ? imageRef : null}
-                          src={resolveIpfsUrlSync(src)}
+                          src={src}
                           alt={t(
                             DEFAULT_LOCALE,
                             isGif
@@ -372,7 +371,6 @@ export function ImageMediaModal({
                           )}
                           fill
                           sizes="95vw"
-                          unoptimized
                           loading="eager"
                           hidden={!playingOriginal}
                           onLoad={quality.onLoad}

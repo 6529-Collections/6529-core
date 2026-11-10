@@ -169,7 +169,7 @@ export const getDropPreviewImageUrl = (
       preview_image?: string;
     };
     if (!parsed?.preview_image) return null;
-    return resolveIpfsUrlSync(parsed.preview_image);
+    return resolveIpfsUrlSync(parsed.preview_image, { preferLocal: false });
   } catch {
     return null;
   }
@@ -188,7 +188,7 @@ export const getDropPromoVideoUrl = (
       promo_video?: string;
     };
     if (!parsed?.promo_video) return null;
-    return resolveIpfsUrlSync(parsed.promo_video);
+    return resolveIpfsUrlSync(parsed.promo_video, { preferLocal: false });
   } catch {
     return null;
   }

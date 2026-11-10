@@ -2472,19 +2472,50 @@ assertContract(
   ipfsContextPath,
   "disabled local IPFS must not fall back to local ports or initialize a file service",
 );
-// Owner decision: Desktop pins profile pictures on the user's own IPFS node,
-// with no API fallback, while the website uploads them through the API.
+for (const iframePath of [
+  "renderer/components/drops/view/item/content/media/MediaDisplay.tsx",
+  "renderer/components/nft-image/renderers/NFTHTMLRenderer.tsx",
+]) {
+  assertContract(
+    callsIdentifier(parseSource(iframePath), "useLocalIpfsFrameFallback"),
+    iframePath,
+    "Desktop artwork must retry the remote resolver after a local gateway frame failure",
+  );
+}
+const waveAvatarPath = "renderer/components/waves/drops/WaveDropAuthorPfp.tsx";
+assertContract(
+  callsIdentifier(parseSource(waveAvatarPath), "useGatewayImageLoadState"),
+  waveAvatarPath,
+  "Wave avatars must try the remote resolver when the local IPFS image fails",
+);
+// Desktop prefers its native node and permits the API when local IPFS is
+// disabled or the user explicitly retries a failed local upload.
 const pfpUploadPath = "renderer/components/ipfs/profilePictureUpload.ts";
+const pfpUploadSource = parseSource(pfpUploadPath);
 const pfpUploadFunction = findFunction(
-  parseSource(pfpUploadPath),
+  pfpUploadSource,
   "uploadProfilePictureFile",
 );
 assertContract(
   pfpUploadFunction &&
     callsIdentifier(pfpUploadFunction, "hasDesktopIpfsBridge") &&
-    callsIdentifier(pfpUploadFunction, "addFileToIpfs"),
+    pfpUploadFunction.getText().includes('info?.status !== "disabled"') &&
+    pfpUploadFunction.getText().includes("if (retryVia6529)") &&
+    pfpUploadFunction.getText().includes("throw new LocalProfilePictureUploadError"),
   pfpUploadPath,
-  "Desktop must upload profile pictures to the user's local IPFS node",
+  "Desktop must prefer local IPFS and require a choice to retry failed local uploads through 6529",
+);
+assertContract(
+  pfpUploadFunction &&
+    findVariable(pfpUploadFunction, "sanitized")
+      ?.initializer?.getText() === "await sanitizeDesktopProfilePicture(file)" &&
+    pfpUploadFunction.getText().includes("addFileToIpfs(sanitized)") &&
+    pfpUploadFunction.getText().includes("uploadProfilePicture(sanitized)") &&
+    findFunction(pfpUploadSource, "sanitizeDesktopProfilePicture")
+      ?.getText()
+      .includes("window.api.sanitizeProfilePicture("),
+  pfpUploadPath,
+  "Desktop must sanitize profile pictures before local or API uploads",
 );
 const ipfsUploadClient = findVariable(
   parseSource(ipfsContextPath),
@@ -2495,7 +2526,7 @@ assertContract(
     callsIdentifier(ipfsUploadClient, "readIpfsConfig") &&
     !ipfsUploadClient.getText().includes("publicEnv"),
   ipfsContextPath,
-  "Desktop profile picture uploads must use the native node, never a configured remote endpoint",
+  "The Desktop IPFS upload client must target the native node",
 );
 for (const pfpEditorPath of [
   "renderer/components/user/user-page-header/useProfileEditor.ts",
@@ -2506,7 +2537,7 @@ for (const pfpEditorPath of [
     callsIdentifier(pfpEditor, "uploadProfilePictureFile") &&
       !callsIdentifier(pfpEditor, "uploadProfilePicture"),
     pfpEditorPath,
-    "profile picture editors must keep Desktop's local IPFS upload",
+    "profile picture editors must use the shared upload policy",
   );
 }
 const ipfsSettingsPath = "renderer/components/core/app-info/LocalIpfsSettings.tsx";

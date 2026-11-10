@@ -114,7 +114,9 @@ function WebSidebarUser({
     "motion-safe:tw-animate-sidebar-account-fade-in tw-flex tw-h-14 tw-w-full tw-items-center tw-gap-x-2 tw-rounded-xl tw-border-none tw-bg-transparent tw-px-2 tw-py-2";
   const avatarClasses =
     "tw-relative tw-flex tw-size-10 tw-shrink-0 tw-items-center tw-justify-center tw-overflow-hidden tw-rounded-xl tw-bg-iron-900 tw-ring-2 tw-ring-inset tw-ring-white/10";
-  const resolvedPfp = profile?.pfp ? resolveIpfsUrlSync(profile.pfp) : null;
+  const resolvedPfp = profile?.pfp
+    ? resolveIpfsUrlSync(profile.pfp, { preferLocal: false })
+    : null;
 
   useEffect(
     () => () => {

@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
-import type { SyntheticEvent } from "react";
+import { useEffect, useRef } from "react";
 import type { BaseNFT } from "@/entities/INFT";
 import { getResolvedAnimationSrc } from "@/components/nft-image/utils/animation-source";
-import { withArweaveFallback } from "@/components/nft-image/utils/gateway-fallback";
+import { useGatewayImageLoadState } from "@/components/common/image/useGatewayImageLoadState";
 import { getNFTMediaRendererAttributes } from "@/components/nft-image/media-renderer-marker";
 
 type ModelViewerElement = HTMLElement & {
@@ -13,7 +12,10 @@ export default function NFTModel(
   props: Readonly<{ nft: BaseNFT; id?: string | undefined }>
 ) {
   const modelRef = useRef<ModelViewerElement | null>(null);
-  const handleArweaveError = useMemo(() => withArweaveFallback(), []);
+  const { activeSrc, isPlaceholder, handleError } = useGatewayImageLoadState(
+    getResolvedAnimationSrc(props.nft),
+    false
+  );
 
   useEffect(() => {
     async function loadModelViewer() {
@@ -33,23 +35,12 @@ export default function NFTModel(
       return;
     }
 
-    const nativeErrorHandler = (event: Event) => {
-      const currentTarget = event.currentTarget as ModelViewerElement | null;
-      if (!currentTarget) {
-        return;
-      }
-
-      handleArweaveError({
-        currentTarget,
-      } as SyntheticEvent<ModelViewerElement, Event>);
-    };
-
-    modelElement.addEventListener("error", nativeErrorHandler);
+    modelElement.addEventListener("error", handleError);
 
     return () => {
-      modelElement.removeEventListener("error", nativeErrorHandler);
+      modelElement.removeEventListener("error", handleError);
     };
-  }, [handleArweaveError]);
+  }, [handleError]);
 
   return (
     // @ts-ignore
@@ -57,7 +48,7 @@ export default function NFTModel(
       {...getNFTMediaRendererAttributes("glb")}
       ref={modelRef}
       id={props.id ?? `iframe-${props.nft.id}`}
-      src={getResolvedAnimationSrc(props.nft)}
+      src={isPlaceholder ? undefined : activeSrc ?? undefined}
       alt={props.nft.name}
       auto-rotate
       camera-controls

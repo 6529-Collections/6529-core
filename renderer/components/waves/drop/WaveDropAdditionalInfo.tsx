@@ -96,11 +96,11 @@ export const WaveDropAdditionalInfo = ({
       );
 
       const previewImageValue = additionalMedia.preview_image
-        ? resolveIpfsUrlSync(additionalMedia.preview_image)
+        ? resolveIpfsUrlSync(additionalMedia.preview_image, { preferLocal: false })
         : "";
 
       const promoVideoValue = additionalMedia.promo_video
-        ? resolveIpfsUrlSync(additionalMedia.promo_video)
+        ? resolveIpfsUrlSync(additionalMedia.promo_video, { preferLocal: false })
         : "";
 
       const resolvedMediaUrls = additionalMedia.artwork_commentary_media
@@ -108,7 +108,7 @@ export const WaveDropAdditionalInfo = ({
           (url): url is string =>
             typeof url === "string" && url.trim().length > 0
         )
-        .map((url) => resolveIpfsUrlSync(url))
+        .map((url) => resolveIpfsUrlSync(url, { preferLocal: false }))
         .filter((url): url is string => url.length > 0);
       const mediaItemsValue = Array.from(new Set(resolvedMediaUrls)).map(
         (url) => {

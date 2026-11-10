@@ -8,6 +8,7 @@ import styles from "@/components/nft-image/NFTImage.module.css";
 import type { BaseRendererProps } from "@/components/nft-image/types/renderer-props";
 import { getResolvedAnimationSrc } from "@/components/nft-image/utils/animation-source";
 import { getResolvedImageSrc } from "@/components/nft-image/utils/image-source";
+import { getMediaGatewayFallbackUrls } from "@/components/nft-image/utils/gateway-fallback";
 import { getVideoPosterSrc } from "@/components/nft-image/utils/video-poster";
 import { getNFTMediaRendererAttributes } from "@/components/nft-image/media-renderer-marker";
 import useIsConstrainedNetwork from "@/hooks/useIsConstrainedNetwork";
@@ -26,8 +27,9 @@ export default function NFTVideoRenderer(props: Readonly<BaseRendererProps>) {
     props.nft.compressed_animation
       ? props.nft.compressed_animation
       : animationSrc;
-  const fallbackSources =
-    compressedAnimationSrc && animationSrc ? [animationSrc] : [];
+  const sources = [primarySrc, compressedAnimationSrc ? animationSrc : undefined]
+    .flatMap((source) => source ? getMediaGatewayFallbackUrls(source) : []);
+  const [videoSrc, ...fallbackSources] = sources;
   const poster = getVideoPosterSrc([
     props.showThumbnail ? props.nft.thumbnail : undefined,
     props.showOriginal ? undefined : props.nft.scaled,
@@ -59,7 +61,7 @@ export default function NFTVideoRenderer(props: Readonly<BaseRendererProps>) {
         {...getNFTMediaRendererAttributes("video")}
         id={props.id ?? `video-${props.nft.id}`}
         template="ambient-media"
-        src={primarySrc}
+        src={videoSrc}
         fallbackSources={fallbackSources}
         poster={poster}
         aspectRatioHint={aspectRatioHint}
