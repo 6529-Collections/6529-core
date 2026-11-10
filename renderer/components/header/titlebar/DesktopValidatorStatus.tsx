@@ -65,6 +65,11 @@ const HEALTH_STYLE = {
   unavailable: { icon: faQuestion, tone: TONE.alert },
 } as const;
 
+const PANEL_ICON_COLOR: Partial<Record<keyof typeof HEALTH_STYLE, string>> = {
+  "all-good": "tw-text-emerald-300",
+  "update-available": "tw-text-primary-300",
+};
+
 function nextSignatureWords(locale: SupportedLocale, unix: number) {
   const date = new Date(unix * 1000);
   const day = formatUtcDate(locale, date, {
@@ -117,12 +122,7 @@ export default function DesktopValidatorStatus({
   const { icon, tone } = HEALTH_STYLE[health];
   const mutedPanel = health === "all-good" || health === "update-available";
   const panelTone = mutedPanel ? TONE.neutral : tone;
-  const panelIconColor =
-    health === "all-good"
-      ? "tw-text-emerald-300"
-      : health === "update-available"
-        ? "tw-text-primary-300"
-        : "";
+  const panelIconColor = PANEL_ICON_COLOR[health] ?? "";
   const showChipLabel =
     health === "update-needed" ||
     health === "update-available" ||

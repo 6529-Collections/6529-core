@@ -105,7 +105,9 @@ keep the individual picture editor.
 - The modal does not include crop or transform controls.
 - Maximum upload size is 2MB.
 - 6529 Desktop uploads through local IPFS when enabled and uses the 6529 API
-  when local IPFS is disabled. The web uploader also uses the 6529 API.
+  when local IPFS is disabled. Restart Desktop after changing this setting.
+  Until then, uploads use the setting that was active when Desktop started.
+  The web uploader also uses the 6529 API.
   Upload checks use the file's contents. If the contents are outside the
   supported formats, the editor shows an error.
 - Identifying metadata such as location, camera details and capture time is
