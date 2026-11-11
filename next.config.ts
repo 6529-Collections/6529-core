@@ -1,5 +1,9 @@
 import dotenv from "dotenv";
 import { PRODUCTION_ASSET_PREFIX } from "./renderer/config/assetPrefix";
+import {
+  FIRST_PARTY_MEDIA_RESOLVER_HOSTS,
+  USER_CONTENT_CSP_SOURCES,
+} from "./renderer/lib/media/decentralized-media";
 import type { NextConfig } from "next";
 import {
   PHASE_DEVELOPMENT_SERVER,
@@ -335,6 +339,9 @@ function createSecurityHeaders(
   const configuredIpfsGatewaySource =
     getConfiguredIpfsGatewaySource(ipfsGatewayEndpoint);
   const mediaResolverSource = getMediaResolverSource(mediaResolverEndpoint);
+  const userContentSources = USER_CONTENT_CSP_SOURCES.filter(
+    (source) => source !== mediaResolverSource,
+  );
   const mediaSrc = joinSources([
     "'self'",
     "blob:",
@@ -343,7 +350,9 @@ function createSecurityHeaders(
     "https://6529-artwork-documentation-987989283142-us-east-1.s3.us-east-1.amazonaws.com",
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
+    "https://i2c.seadn.io",
     mediaResolverSource,
+    ...userContentSources,
     configuredIpfsGatewaySource,
     arweaveGatewaySources,
     ...IPFS_FALLBACK_MEDIA_SOURCES,
@@ -355,6 +364,7 @@ function createSecurityHeaders(
     "'self'",
     ...localGatewaySources,
     mediaResolverSource,
+    ...userContentSources,
     configuredIpfsGatewaySource,
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
@@ -493,10 +503,13 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         { protocol: "http", hostname: "seize.io" },
         { protocol: "https", hostname: "staging.6529.io" },
         { protocol: "http", hostname: "staging.6529.io" },
-        {
-          protocol: "https",
-          hostname: getMediaResolverHostname(publicEnv.MEDIA_RESOLVER_ENDPOINT),
-        },
+        ...Array.from(
+          new Set([
+            ...FIRST_PARTY_MEDIA_RESOLVER_HOSTS,
+            getMediaResolverHostname(publicEnv.MEDIA_RESOLVER_ENDPOINT),
+          ]),
+          (hostname) => ({ protocol: "https" as const, hostname }),
+        ),
         { protocol: "https", hostname: "arweave.net" },
         { protocol: "http", hostname: "arweave.net" },
         ...ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES.map((hostname) => ({
