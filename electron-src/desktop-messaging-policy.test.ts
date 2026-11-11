@@ -22,6 +22,9 @@ const constants = new Set([
   "IPFS_FALLBACK_GATEWAY_HOSTS",
   "IPFS_FALLBACK_MEDIA_SOURCES",
   "IPFS_FALLBACK_FRAME_SOURCES",
+  "USER_CONTENT_PATH_GATEWAY_HOST",
+  "USER_CONTENT_ARTWORK_HOSTS",
+  "USER_CONTENT_MEDIA_SOURCES",
 ]);
 const functions = new Set([
   "joinSources",
@@ -107,6 +110,47 @@ test("production MLS WASM permission follows the baked flag without enabling Jav
     // The MLS module is fetched from the app's own origin.
     assert.match(csp, /connect-src [^;]*'self'/);
   }
+});
+
+test("media and frame sources allow the separate user content domain and keep existing hosts", () => {
+  const context = vm.createContext({ URL });
+  vm.runInContext(
+    `${compiled}
+    globalThis.policy = createSecurityHeaders("", "", "").find(
+      (header) => header.key === "Content-Security-Policy",
+    ).value;
+    globalThis.existing = [
+      DEFAULT_MEDIA_RESOLVER_ENDPOINT,
+      ...ARWEAVE_GATEWAY_CSP_SOURCES,
+      ...IPFS_FALLBACK_MEDIA_SOURCES,
+      ...IPFS_FALLBACK_FRAME_SOURCES,
+    ];`,
+    context,
+  );
+  const directive = (name: string) =>
+    (context.policy as string)
+      .split(";")
+      .map((part) => part.trim().split(/\s+/))
+      .find(([directiveName]) => directiveName === name)
+      ?.slice(1) ?? [];
+  for (const name of ["media-src", "frame-src"]) {
+    const sources = directive(name);
+    for (const added of [
+      "https://media.6529usercontent.com",
+      "https://*.ipfs.6529usercontent.com",
+    ])
+      assert.ok(sources.includes(added), `${name} must allow ${added}`);
+    for (const kept of [
+      ...(context.existing as string[]),
+      "'self'",
+      "http://127.0.0.1:*",
+      "https://localhost:*",
+    ])
+      assert.ok(sources.includes(kept), `${name} must keep ${kept}`);
+  }
+  assert.ok(directive("media-src").includes("blob:"));
+  assert.ok(directive("media-src").includes("https://*.twimg.com"));
+  assert.ok(directive("frame-src").includes("https://www.youtube.com"));
 });
 
 test("the renderer's MLS WASM module is packaged and matches its manifest", () => {
