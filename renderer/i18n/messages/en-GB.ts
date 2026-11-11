@@ -1191,6 +1191,8 @@ export const EN_GB_MESSAGES = {
   "desktop.profiles.saveError": "Could not save your profiles. Retry before quitting to keep your changes.",
   "desktop.profiles.saveRetrying": "Retrying profile save…",
   "desktop.profiles.retry": "Retry",
+  "e2ee.message.taskChecked": "Checked task",
+  "e2ee.message.taskUnchecked": "Unchecked task",
   "e2ee.message.imageLink": "Image link",
   "e2ee.message.imageLinkFrom": "Image from {host}",
   "e2ee.message.markdownTable": "Message table",

@@ -1323,6 +1323,8 @@ export const FR_FR_MESSAGES = {
   "desktop.profiles.saveError": "Impossible d’enregistrer vos profils. Réessayez avant de quitter pour conserver vos modifications.",
   "desktop.profiles.saveRetrying": "Nouvelle tentative d’enregistrement des profils…",
   "desktop.profiles.retry": "Réessayer",
+  "e2ee.message.taskChecked": "Tâche cochée",
+  "e2ee.message.taskUnchecked": "Tâche non cochée",
   "e2ee.message.imageLink": "Lien vers l’image",
   "e2ee.message.imageLinkFrom": "Image de {host}",
   "e2ee.message.markdownTable": "Tableau du message",

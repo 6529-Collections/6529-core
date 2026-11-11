@@ -1310,6 +1310,8 @@ export const ES_ES_MESSAGES = {
   "desktop.profiles.saveError": "No se han podido guardar tus perfiles. Reinténtalo antes de salir para conservar los cambios.",
   "desktop.profiles.saveRetrying": "Reintentando guardar los perfiles…",
   "desktop.profiles.retry": "Reintentar",
+  "e2ee.message.taskChecked": "Tarea marcada",
+  "e2ee.message.taskUnchecked": "Tarea sin marcar",
   "e2ee.message.imageLink": "Enlace de imagen",
   "e2ee.message.imageLinkFrom": "Imagen de {host}",
   "e2ee.message.markdownTable": "Tabla del mensaje",
