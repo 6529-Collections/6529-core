@@ -148,9 +148,12 @@ test("media and frame sources allow the separate user content domain and keep ex
     ])
       assert.ok(sources.includes(kept), `${name} must keep ${kept}`);
   }
-  assert.ok(directive("media-src").includes("blob:"));
-  assert.ok(directive("media-src").includes("https://*.twimg.com"));
-  assert.ok(directive("frame-src").includes("https://www.youtube.com"));
+  // Exact sources in each directive's list, not substrings of the header.
+  const mediaSources = new Set(directive("media-src"));
+  const frameSources = new Set(directive("frame-src"));
+  assert.ok(mediaSources.has("blob:"));
+  assert.ok(mediaSources.has("https://*.twimg.com"));
+  assert.ok(frameSources.has("https://www.youtube.com"));
 });
 
 test("the renderer's MLS WASM module is packaged and matches its manifest", () => {
