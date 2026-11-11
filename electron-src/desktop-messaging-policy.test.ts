@@ -6,6 +6,7 @@ import vm from "node:vm";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import ts from "typescript";
+import { USER_CONTENT_CSP_SOURCES } from "../renderer/lib/media/decentralized-media";
 
 // Execute the actual header generator and headers() method without loading
 // Next or its build/runtime side effects.
@@ -76,6 +77,7 @@ test("production MLS WASM permission follows the baked flag without enabling Jav
   for (const enabled of [true, false]) {
     const context = vm.createContext({
       URL,
+      USER_CONTENT_CSP_SOURCES,
       publicEnv: { NEXT_PUBLIC_E2EE_DM_ENABLED: enabled ? "true" : "" },
       // Deliberately opposite: the runtime shell must not determine this policy.
       process: {
