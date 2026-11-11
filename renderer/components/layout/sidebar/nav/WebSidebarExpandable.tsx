@@ -11,7 +11,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import WebSidebarExpandableGroup from "./WebSidebarExpandableGroup";
 import WebSidebarNavItem from "./WebSidebarNavItem";
 import { isSidebarNavItemActive } from "./sidebarActive";
-import DesktopIpfsNavItem from "./DesktopIpfsNavItem";
 
 interface WebSidebarExpandableProps {
   readonly section: SidebarSection;
@@ -161,33 +160,29 @@ function WebSidebarExpandable({
                   }
                   return (
                     <li key={item.id ?? item.href} className="tw-m-0 tw-p-0">
-                      {item.id === "desktop-ipfs" ? (
-                        <DesktopIpfsNavItem className="tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-min-h-11 tw-w-[calc(100%-2.75rem)] tw-items-center tw-justify-start tw-rounded-xl tw-border-none tw-py-2 tw-pl-3 tw-pr-3 tw-text-sm tw-font-medium tw-no-underline tw-transition-colors focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 desktop-hover:tw-min-h-10" />
-                      ) : (
-                        <Link
-                          href={item.href}
-                          target={item.isExternal ? "_blank" : undefined}
-                          rel={
-                            item.isExternal ? "noopener noreferrer" : undefined
-                          }
-                          className={`tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-min-h-11 tw-w-[calc(100%-2.75rem)] tw-cursor-pointer tw-items-center tw-justify-start tw-rounded-xl tw-border-none tw-py-2 tw-pl-3 tw-pr-3 tw-text-sm tw-font-medium tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 desktop-hover:tw-min-h-10 motion-reduce:tw-transition-none ${itemStateClassName}`}
-                          aria-current={
-                            active && !isAncestorContext ? "page" : undefined
-                          }
-                        >
-                          <span className="tw-flex tw-min-w-0 tw-items-center tw-gap-2">
-                            <span className="tw-min-w-0 tw-break-words">
-                              {item.name}
-                            </span>
-                            {item.isExternal && (
-                              <FontAwesomeIcon
-                                icon={faExternalLinkAlt}
-                                className="tw-h-3 tw-w-3 tw-flex-shrink-0"
-                              />
-                            )}
+                      <Link
+                        href={item.href}
+                        target={item.isExternal ? "_blank" : undefined}
+                        rel={
+                          item.isExternal ? "noopener noreferrer" : undefined
+                        }
+                        className={`tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-min-h-11 tw-w-[calc(100%-2.75rem)] tw-cursor-pointer tw-items-center tw-justify-start tw-rounded-xl tw-border-none tw-py-2 tw-pl-3 tw-pr-3 tw-text-sm tw-font-medium tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 desktop-hover:tw-min-h-10 motion-reduce:tw-transition-none ${itemStateClassName}`}
+                        aria-current={
+                          active && !isAncestorContext ? "page" : undefined
+                        }
+                      >
+                        <span className="tw-flex tw-min-w-0 tw-items-center tw-gap-2">
+                          <span className="tw-min-w-0 tw-break-words">
+                            {item.name}
                           </span>
-                        </Link>
-                      )}
+                          {item.isExternal && (
+                            <FontAwesomeIcon
+                              icon={faExternalLinkAlt}
+                              className="tw-h-3 tw-w-3 tw-flex-shrink-0"
+                            />
+                          )}
+                        </span>
+                      </Link>
                     </li>
                   );
                 })}

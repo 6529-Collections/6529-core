@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 import type { DesktopProfileState } from "../shared/desktop-profile-state";
+import type { DesktopValidatorStatus } from "../shared/desktop-validator";
 import {
   LogLine,
   ScheduledWorkerStatus,
@@ -103,6 +104,14 @@ export const api = {
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
   getIpfsInfo: () => ipcRenderer.invoke("get-ipfs-info"),
+  getDesktopValidatorVisible: (): Promise<boolean> =>
+    ipcRenderer.invoke("desktop-validator:get-visible"),
+  setDesktopValidatorVisible: (visible: boolean): Promise<boolean> =>
+    ipcRenderer.invoke("desktop-validator:set-visible", visible),
+  getDesktopValidatorStatus: (): Promise<DesktopValidatorStatus> =>
+    ipcRenderer.invoke("desktop-validator:status"),
+  openDesktopValidator: (): Promise<void> =>
+    ipcRenderer.invoke("desktop-validator:open"),
   sanitizeProfilePicture: (bytes: ArrayBuffer): Promise<SanitizedProfilePicture> =>
     ipcRenderer.invoke("sanitize-profile-picture", bytes),
   getLocalIpfsPreferences: (): Promise<LocalIpfsPreferencesSnapshot> =>

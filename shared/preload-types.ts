@@ -6,6 +6,7 @@ import type {
 } from "./types";
 import type { NativeAuthResult } from "./native-auth-result";
 import type { DesktopProfileState } from "./desktop-profile-state";
+import type { DesktopValidatorStatus } from "./desktop-validator";
 import type {
   IpfsStatus,
   LocalIpfsPreferencesSnapshot,
@@ -52,6 +53,10 @@ export interface ElectronAPI {
   offSeedWalletsChange: (callback: any) => void;
   getInfo: () => Promise<any>;
   getIpfsInfo: () => Promise<any>;
+  getDesktopValidatorVisible: () => Promise<boolean>;
+  setDesktopValidatorVisible: (visible: boolean) => Promise<boolean>;
+  getDesktopValidatorStatus: () => Promise<DesktopValidatorStatus>;
+  openDesktopValidator: () => Promise<void>;
   sanitizeProfilePicture: (bytes: ArrayBuffer) => Promise<SanitizedProfilePicture>;
   getLocalIpfsPreferences: () => Promise<LocalIpfsPreferencesSnapshot>;
   setLocalIpfsEnabled: (enabled: boolean) => Promise<LocalIpfsPreferencesSnapshot>;

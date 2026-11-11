@@ -22,10 +22,17 @@ export default function UserPageHeaderPfp({
   const { activeSrc, isPlaceholder, handleError, unoptimized } =
     useGatewayImageLoadState(
       profile.pfp,
-      (candidate) =>
-        Boolean(parseDecentralizedMediaRef(profile.pfp)) &&
-        new URL(candidate).port === "" &&
-        !isGifImageUrl(candidate)
+      (candidate) => {
+        if (!parseDecentralizedMediaRef(profile.pfp) || isGifImageUrl(candidate)) {
+          return false;
+        }
+
+        try {
+          return new URL(candidate).port === "";
+        } catch {
+          return false;
+        }
+      }
     );
   const glassWrapperClass =
     "tw-relative tw-z-10 tw-inline-flex tw-flex-shrink-0 tw-p-0.5 tw-rounded-xl tw-bg-white/10 tw-backdrop-blur-md tw-ring-1 tw-ring-white/20 tw-shadow-2xl";

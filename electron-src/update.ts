@@ -1,5 +1,6 @@
 import { autoUpdater } from "electron-updater";
 import { isDev } from "./utils/env";
+import { getEnvironment } from "./utils/info";
 import Logger from "electron-log";
 
 let mainWindow: Electron.BrowserWindow | null;
@@ -7,6 +8,11 @@ export let isUpdateInitiatedQuit = false;
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
+
+/** Local packages do not include an update feed. */
+export function supportsInAppUpdates(environment: string) {
+  return environment !== "local";
+}
 
 export function checkForUpdates(window: Electron.BrowserWindow | null) {
   if (window) {
@@ -18,7 +24,7 @@ export function checkForUpdates(window: Electron.BrowserWindow | null) {
       version: "1.0.0",
       files: [],
     });
-  } else {
+  } else if (supportsInAppUpdates(getEnvironment())) {
     autoUpdater.checkForUpdates();
   }
 }

@@ -71,6 +71,10 @@ import {
   getTdhRunIncomplete,
   getTransactionReconciliationState,
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
+import {
+  getDesktopValidatorStatus,
+  openDesktopValidator,
+} from "./desktop-validator";
 import IPFSServer from "./ipfs/ipfs.server";
 import { observeLocalGatewayFrameFailures } from "./ipfs/local-gateway-frame-failures";
 import { sanitizeProfilePicture } from "./ipfs/sanitize-profile-picture";
@@ -93,6 +97,7 @@ import {
   downloadUpdate,
   installUpdate,
   isUpdateInitiatedQuit,
+  supportsInAppUpdates,
 } from "./update";
 import {
   closeLogs,
@@ -2135,8 +2140,10 @@ ipcMain.handle("get-info", () => {
   // not point media at a gateway that is still starting or has stopped.
   const ipfsStatus = IPFS_SERVER?.getStatus() ?? "unavailable";
   const ipfsAvailable = ipfsStatus === "ready";
+  const info = getInfo();
   return {
-    ...getInfo(),
+    ...info,
+    supportsInAppUpdates: supportsInAppUpdates(info.environment),
     port: PORT,
     ipfsStatus,
     ipfsPort: ipfsAvailable ? IPFS_PORT : null,
@@ -2250,13 +2257,49 @@ ipcMain.handle("native-auth:is-available", () => {
   return safeStorage.isEncryptionAvailable();
 });
 
+/** Restrict privileged desktop calls to the owned main frame at the bound origin. */
+function isMainRenderer(event: IpcMainInvokeEvent): boolean {
+  return Boolean(
+    mainWindow &&
+      event.sender === mainWindow.webContents &&
+      event.senderFrame === mainWindow.webContents.mainFrame &&
+      new URL(event.senderFrame.url).origin === `http://localhost:${PORT}`
+  );
+}
+
+const DESKTOP_VALIDATOR_VISIBLE_KEY = "desktop-validator-visible";
+
+ipcMain.handle("desktop-validator:get-visible", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator preferences are only available in the main window");
+  }
+  return getValue(DESKTOP_VALIDATOR_VISIBLE_KEY) !== false;
+});
+
+ipcMain.handle("desktop-validator:set-visible", (event, visible: unknown) => {
+  if (!isMainRenderer(event) || typeof visible !== "boolean") {
+    throw new Error("Invalid Validator preference change");
+  }
+  setValue(DESKTOP_VALIDATOR_VISIBLE_KEY, visible);
+  return visible;
+});
+
+ipcMain.handle("desktop-validator:status", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator status is only available in the main window");
+  }
+  return getDesktopValidatorStatus();
+});
+
+ipcMain.handle("desktop-validator:open", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator can only be opened from the main window");
+  }
+  return openDesktopValidator(shell);
+});
+
 function desktopProfileBackend(event: IpcMainInvokeEvent): string {
-  if (
-    !mainWindow ||
-    event.sender !== mainWindow.webContents ||
-    event.senderFrame !== mainWindow.webContents.mainFrame ||
-    new URL(event.senderFrame.url).origin !== `http://localhost:${PORT}`
-  ) {
+  if (!isMainRenderer(event)) {
     throw new Error("Desktop profile storage is unavailable to this frame");
   }
   return getApiEndpoint(getPublicRuntimeConfig());

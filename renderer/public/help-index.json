@@ -6862,6 +6862,7 @@
         "To change profile media on desktop, choose Edit beside Preferences and use Profile cover or Profile picture in the combined editor. Smaller layouts keep Edit profile > Profile cover or Profile picture.",
         "Editing requires a confirmed direct owner session and is hidden for visitors, signed-out users and active proxies. Desktop saves all changed profile fields with Save; the smaller picture editor retains Save PFP. Both editors show Select Meme search immediately, separated from file upload by or. Desktop lets you type while Memes load and keeps loading and retry states. Both layouts use compact field styling. Cover editing supports left-aligned Gradient and Image modes.",
         "In profile picture editors, saved or selected images show their preview inside the Upload image area, below Meme search, with no separate preview row. Select Meme search and Upload image remain available to choose a different Meme or file; drag and drop still works.",
+        "6529 Desktop uses local IPFS for profile picture uploads when enabled and the 6529 API when local IPFS is disabled. If a local upload fails, choose Upload via 6529 to retry through the API.",
         "Uploaded profile pictures and banner images are published without identifying metadata such as location, camera details and capture time.",
         "Use these records when users ask how to change profile media."
       ],
@@ -10327,6 +10328,30 @@
         "https://github.com/6529-Collections/6529-core/blob/5d8a06e5ea66835f09ec89db40d4db714759462b/electron-src/db/db.ts"
       ],
       "brief_answer": "Open **6529 Desktop > Wallets** to create or import a 6529 Desktop wallet for signing. You do not need a wallet to run indexing or TDH calculation. What would you like to do: create, import, or connect one? Never share your recovery phrase or private key here."
+    },
+    {
+      "id": "desktop.validator-visibility",
+      "kind": "workflow",
+      "title": "Show or hide 6529 Validator in Desktop",
+      "aliases": [
+        "hide validator in desktop",
+        "hide validator badge",
+        "show validator in desktop",
+        "open validator from desktop"
+      ],
+      "keywords": ["desktop", "validator", "title bar", "badge"],
+      "facts": [
+        "When the standalone Validator is installed, the 6529 Desktop title bar badge shows its health. Open it to see the version, signing status and, when available, the next signing time and today's result.",
+        "Choose Open 6529 Validator from the title bar badge to open or focus the standalone app. Use it to inspect an update or check why the service is stopped, not answering, or needs attention. If the popover reports a launch error, use the system app list.",
+        "Use 6529 Desktop > About > Show 6529 Validator to hide or restore the title bar badge. The preference is on by default and survives restarts. The standalone Validator keeps running and signing when hidden."
+      ],
+      "canonical_path": "/about/6529-apps",
+      "link_label": "6529 Apps",
+      "suppress_source_links": true,
+      "related_paths": ["/about/6529-apps"],
+      "tags": ["desktop-core"],
+      "source_refs": ["ops/docs/desktop/feature-wallets-ipfs-and-about.md"],
+      "brief_answer": "In **6529 Desktop > About**, turn off **Show 6529 Validator** to hide the title bar badge. The Validator keeps running and signing, and Desktop remembers the choice after restarting."
     },
     {
       "id": "desktop.wallet-backup",

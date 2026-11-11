@@ -8,35 +8,54 @@ import {
   getAboutNavItemLabel,
   getVisibleAboutNavGroups,
 } from "@/components/about/about.routes";
-import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { DEFAULT_LOCALE, type SupportedLocale } from "@/i18n/locales";
 import { t, type MessageKey } from "@/i18n/messages";
 import {
   BuildingLibraryIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { useMemo, type ComponentType } from "react";
+import { useBrowserLocale } from "./useBrowserLocale";
 
 type SidebarSubsection = NonNullable<SidebarSection["subsections"]>[number];
 type SidebarNavItem = SidebarSubsection["items"][number];
 
-function getDesktopSection(ipfsWebuiUrl: string): SidebarSection {
+function getDesktopSection(
+  ipfsWebuiUrl: string,
+  locale: SupportedLocale
+): SidebarSection {
   return {
     key: "6529-desktop",
-    name: "6529 Desktop",
+    name: t(locale, "navigation.desktop.title"),
     icon: DesktopIcon,
     items: [
-      { name: "Wallets", href: "/core/core-wallets" },
-      { name: "ETH Transactions", href: "/core/eth-transactions" },
-      { name: "TDH Calculation", href: "/core/tdh-calculation" },
       {
-        id: "desktop-ipfs",
-        name: t(DEFAULT_LOCALE, "navigation.desktop.myIpfs"),
-        href: ipfsWebuiUrl,
-        isExternal: true,
+        name: t(locale, "navigation.desktop.wallets"),
+        href: "/core/core-wallets",
       },
-      { name: "About", href: "/core/core-info" },
+      {
+        name: t(locale, "navigation.desktop.ethTransactions"),
+        href: "/core/eth-transactions",
+      },
+      {
+        name: t(locale, "navigation.desktop.tdhCalculation"),
+        href: "/core/tdh-calculation",
+      },
+      { name: t(locale, "navigation.primary.about"), href: "/core/core-info" },
     ],
-    subsections: [],
+    subsections: [
+      {
+        name: t(locale, "navigation.desktop.localServices"),
+        items: [
+          {
+            id: "desktop-ipfs",
+            name: t(locale, "navigation.desktop.myIpfs"),
+            href: ipfsWebuiUrl,
+            isExternal: true,
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -166,7 +185,8 @@ function buildSidebarSections(
   appWalletsSupported: boolean,
   hideSubscriptions: boolean,
   hideSubscriptionReports: boolean,
-  ipfsWebuiUrl: string
+  ipfsWebuiUrl: string,
+  locale: SupportedLocale
 ): SidebarSection[] {
   return [
     getNftsSection(hideSubscriptions),
@@ -177,7 +197,7 @@ function buildSidebarSections(
       hideSubscriptions,
       hideSubscriptionReports
     ),
-    getDesktopSection(ipfsWebuiUrl),
+    getDesktopSection(ipfsWebuiUrl, locale),
   ];
 }
 
@@ -187,15 +207,23 @@ export function useSidebarSections(
   hideSubscriptionReports = hideSubscriptions,
   ipfsWebuiUrl = ""
 ): SidebarSection[] {
+  const locale = useBrowserLocale();
   return useMemo(
     () =>
       buildSidebarSections(
         appWalletsSupported,
         hideSubscriptions,
         hideSubscriptionReports,
-        ipfsWebuiUrl
+        ipfsWebuiUrl,
+        locale
       ),
-    [appWalletsSupported, hideSubscriptions, hideSubscriptionReports, ipfsWebuiUrl]
+    [
+      appWalletsSupported,
+      hideSubscriptions,
+      hideSubscriptionReports,
+      ipfsWebuiUrl,
+      locale,
+    ]
   );
 }
 
@@ -219,24 +247,24 @@ export function mapSidebarSectionsToPages(
 ): SidebarPageEntry[] {
   return sections.flatMap((section) => {
     const sectionIcon = section.icon;
-    const sectionItems: SidebarPageEntry[] = section.items
-      .filter((item) => item.id !== "desktop-ipfs" || Boolean(item.href))
-      .map((item) => ({
-        name: item.name,
-        href: item.href,
-        section: section.name,
-        icon: sectionIcon,
-      }));
+    const sectionItems: SidebarPageEntry[] = section.items.map((item) => ({
+      name: item.name,
+      href: item.href,
+      section: section.name,
+      icon: sectionIcon,
+    }));
 
     const subsectionItems =
       section.subsections?.flatMap((subsection) =>
-        subsection.items.map((item) => ({
-          name: item.name,
-          href: item.href,
-          section: section.name,
-          subsection: subsection.name,
-          icon: sectionIcon,
-        }))
+        subsection.items
+          .filter((item) => Boolean(item.href))
+          .map((item) => ({
+            name: item.name,
+            href: item.href,
+            section: section.name,
+            subsection: subsection.name,
+            icon: sectionIcon,
+          }))
       ) ?? [];
 
     return [...sectionItems, ...subsectionItems];

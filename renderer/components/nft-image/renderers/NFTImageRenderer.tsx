@@ -49,6 +49,15 @@ function getPublicArtworkImageUrl(source: string): string {
     : source;
 }
 
+/** Compare candidates in the same URL form as the browser's image source. */
+function normalizeImageUrl(source: string, baseUrl: string): string {
+  try {
+    return new URL(source, baseUrl).href;
+  } catch {
+    return source;
+  }
+}
+
 function getArtworkImageDimensions(props: Readonly<BaseRendererProps>) {
   const dimensions =
     props.artworkLayout && "metadata" in props.nft
@@ -115,17 +124,24 @@ export default function NFTImageRenderer(props: Readonly<BaseRendererProps>) {
         src={getPublicArtworkImageUrl(src)}
         alt={props.nft.name}
         onError={withArweaveFallback(({ currentTarget }) => {
-          if (currentTarget.src === thumbnailSrc && thumbnailSrc !== originalSrc) {
-            currentTarget.src = scaledSrc && scaledSrc !== thumbnailSrc
+          const baseUrl = currentTarget.baseURI;
+          const thumbnailUrl = normalizeImageUrl(thumbnailSrc, baseUrl);
+          const scaledUrl = scaledSrc ? normalizeImageUrl(scaledSrc, baseUrl) : null;
+          const originalUrl = normalizeImageUrl(originalSrc, baseUrl);
+
+          if (currentTarget.src === thumbnailUrl && thumbnailUrl !== originalUrl) {
+            currentTarget.src = scaledSrc && scaledUrl !== thumbnailUrl
               ? scaledSrc
               : originalSrc;
-          } else if (currentTarget.src === scaledSrc && scaledSrc !== originalSrc) {
+          } else if (currentTarget.src === scaledUrl && scaledUrl !== originalUrl) {
             currentTarget.src = originalSrc;
           } else {
             const metadataImage = getMetadataImage(props.nft);
             if (metadataImage) {
               const metadataSrc = getPublicArtworkImageUrl(metadataImage);
-              if (metadataSrc !== currentTarget.src) currentTarget.src = metadataSrc;
+              if (normalizeImageUrl(metadataSrc, baseUrl) !== currentTarget.src) {
+                currentTarget.src = metadataSrc;
+              }
             }
           }
         })}

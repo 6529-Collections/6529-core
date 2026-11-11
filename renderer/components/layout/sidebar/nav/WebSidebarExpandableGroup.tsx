@@ -8,6 +8,7 @@ import Link from "next/link";
 import React, { useCallback, useMemo } from "react";
 import { isSidebarNavItemActive } from "./sidebarActive";
 import { useHasHydrated } from "@/hooks/useHasHydrated";
+import { renderDesktopLocalServiceNavItem } from "./desktopLocalServiceNavItems";
 
 interface WebSidebarExpandableGroupProps {
   readonly name: string;
@@ -71,7 +72,7 @@ function WebSidebarExpandableGroup({
         }`}
       >
         <div className="tw-overflow-hidden">
-          <div id={`group-${name}`} className="tw-mt-0.5">
+          <div id={`group-${name}`} className="tw-mt-0.5" inert={!expanded}>
             {items.map((item) => (
               <GroupLink key={item.name} item={item} pathname={pathname} />
             ))}
@@ -91,14 +92,19 @@ function GroupLink({
   readonly item: SidebarNavItem;
   readonly pathname: string | null;
 }) {
-  const active = isSidebarNavItemActive(item, pathname);
+  const rowClass = "tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-min-h-11 tw-w-[calc(100%-2.75rem)] tw-items-center tw-justify-start tw-rounded-xl tw-border-none tw-py-2 tw-pl-3 tw-pr-3 tw-text-sm tw-font-medium tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 desktop-hover:tw-min-h-9 motion-reduce:tw-transition-none";
+  const localService = renderDesktopLocalServiceNavItem(item.id, {
+    className: rowClass,
+  });
+  if (localService) return localService;
 
+  const active = isSidebarNavItemActive(item, pathname);
   return (
     <Link
       href={item.href}
       target={item.isExternal ? "_blank" : undefined}
       rel={item.isExternal ? "noopener noreferrer" : undefined}
-      className={`tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-min-h-11 tw-w-[calc(100%-2.75rem)] tw-cursor-pointer tw-items-center tw-justify-start tw-rounded-xl tw-border-none tw-py-2 tw-pl-3 tw-pr-3 tw-text-sm tw-font-medium tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 desktop-hover:tw-min-h-9 ${
+      className={`${rowClass} tw-cursor-pointer ${
         active
           ? "tw-bg-iron-900 tw-text-white active:tw-text-white desktop-hover:hover:tw-bg-iron-900 desktop-hover:hover:tw-text-white"
           : "tw-bg-transparent tw-text-iron-400 active:tw-text-white desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white"

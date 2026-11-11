@@ -6,6 +6,7 @@ import DotLoader from "../../dotLoader/DotLoader";
 import { Task } from "../eth-scanner/Workers";
 import LogsViewer from "../logs-viewer/LogsViewer";
 import LocalIpfsSettings from "./LocalIpfsSettings";
+import DesktopValidatorSettings from "./DesktopValidatorSettings";
 import { DesktopPageHeading } from "../DesktopHeadings";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
@@ -13,6 +14,7 @@ import type { IpfsStatus } from "@/shared/ipfs-status";
 
 interface DesktopAppInfo {
   app_version?: string;
+  supportsInAppUpdates: boolean;
   os?: string;
   arch?: string;
   scheme?: string;
@@ -35,6 +37,9 @@ interface UpdateInfo {
   version: string;
 }
 
+const UPDATE_UNAVAILABLE_IMAGE =
+  "https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/28.GIF";
+
 function bytesToKB(bytes: number): string {
   return parseInt((bytes / 1024).toFixed(0)).toLocaleString();
 }
@@ -45,7 +50,9 @@ function bytesToMB(bytes: number): string {
 
 export default function AppInfo() {
   const locale = useBrowserLocale();
-  const [info, setInfo] = useState<DesktopAppInfo>({});
+  const [info, setInfo] = useState<DesktopAppInfo | null>();
+  const [infoRetry, setInfoRetry] = useState(0);
+  const canCheckUpdates = info?.supportsInAppUpdates === true;
 
   const [checkingForUpdates, setCheckingForUpdates] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState<UpdateInfo>();
@@ -67,6 +74,9 @@ export default function AppInfo() {
           if (!disposed && currentRevision === revision) setInfo(newInfo);
         })
         .catch(() => {
+          if (!disposed && currentRevision === revision) {
+            setInfo((current) => current ?? null);
+          }
           console.error("Could not refresh Desktop app information");
         });
     };
@@ -76,7 +86,7 @@ export default function AppInfo() {
       disposed = true;
       unsubscribe();
     };
-  }, []);
+  }, [infoRetry]);
 
   const fetchMainWorker = () => {
     window.api.getMainWorker().then(({ mainTask }) => {
@@ -86,10 +96,11 @@ export default function AppInfo() {
 
   useEffect(() => {
     fetchMainWorker();
-    window.updater.checkUpdates();
   }, []);
 
   useEffect(() => {
+    if (!canCheckUpdates) return;
+
     const handleUpdateAvailable = (_event: any, info: any) => {
       setUpdateError(false);
       setCheckingForUpdates(false);
@@ -140,6 +151,7 @@ export default function AppInfo() {
     window.updater.onUpdateError(handleUpdateError);
     window.updater.onUpdateProgress(handleUpdateProgress);
     window.updater.onUpdateDownloaded(handleUpdateDownloaded);
+    window.updater.checkUpdates();
 
     return () => {
       window.updater.offUpdateAvailable(handleUpdateAvailable);
@@ -148,21 +160,52 @@ export default function AppInfo() {
       window.updater.offUpdateProgress(handleUpdateProgress);
       window.updater.offUpdateDownloaded(handleUpdateDownloaded);
     };
-  }, []);
+  }, [canCheckUpdates]);
 
   function formatIpfsPort(port: number | null | undefined): string | number {
-    if (info.ipfsStatus === "disabled")
+    const status = info?.ipfsStatus;
+    if (status === "disabled")
       return t(locale, "desktop.about.portNotApplicable");
-    if (!info.ipfsStatus || info.ipfsStatus === "starting")
+    if (!status || status === "starting")
       return t(locale, "desktop.about.portPending");
-    if (info.ipfsStatus === "ready" && typeof port === "number" && port > 0)
+    if (status === "ready" && typeof port === "number" && port > 0)
       return port;
     return t(locale, "desktop.about.portUnavailable");
   }
 
   function printAppVersion() {
+    const cardClassName =
+      "tw-rounded-xl tw-bg-iron-950 tw-px-5 tw-py-8 tw-ring-1 tw-ring-inset tw-ring-iron-800";
+    if (!info) {
+      return (
+        <div className={cardClassName}>
+          {info === null ? (
+            <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+              <p role="alert" className="tw-m-0 tw-text-sm">
+                {t(locale, "desktop.about.infoLoadError")}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setInfo(undefined);
+                  setInfoRetry((count) => count + 1);
+                }}
+                className="tw-min-h-11 tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-800 tw-px-3 tw-text-sm tw-font-medium hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
+              >
+                {t(locale, "desktop.about.retry")}
+              </button>
+            </div>
+          ) : (
+            <p role="status" className="tw-m-0 tw-text-sm tw-text-iron-400">
+              {t(locale, "desktop.about.infoLoading")}
+            </p>
+          )}
+        </div>
+      );
+    }
+
     return (
-      <div className="tw-rounded-xl tw-bg-iron-950 tw-px-5 tw-py-8 tw-ring-1 tw-ring-inset tw-ring-iron-800">
+      <div className={cardClassName}>
         <div className="tw-flex tw-flex-wrap tw-justify-between tw-gap-4">
           <div>
             <div className="tw-flex tw-flex-col tw-gap-0.5">
@@ -186,20 +229,32 @@ export default function AppInfo() {
               </span>
             </div>
           </div>
-          <span className="tw-flex tw-items-center tw-gap-2">
-            {checkingForUpdates && (
+          <div className="tw-flex tw-items-center tw-gap-2">
+            {info.supportsInAppUpdates === false && (
+              <div className="tw-text-center">
+                <div className="tw-pb-3">
+                  <UpdateImage src={UPDATE_UNAVAILABLE_IMAGE} alt="" />
+                </div>
+                {t(locale, "desktop.about.localUpdatesUnavailable")}
+              </div>
+            )}
+            {canCheckUpdates && (
               <>
-                Checking For Updates <DotLoader />
+                {checkingForUpdates && (
+                  <>
+                    Checking For Updates <DotLoader />
+                  </>
+                )}
+                {updateProgress && <UpdateProgress progress={updateProgress} />}
+                {updateAvailable && <UpdateAvailable info={updateAvailable} />}
+                {updateNotAvailable && (
+                  <UpdateNotAvailable info={updateNotAvailable} />
+                )}
+                {updateError && <UpdateError error={updateError} />}
+                {updateDownloaded && <UpdateDownloaded info={updateDownloaded} />}
               </>
             )}
-            {updateProgress && <UpdateProgress progress={updateProgress} />}
-            {updateAvailable && <UpdateAvailable info={updateAvailable} />}
-            {updateNotAvailable && (
-              <UpdateNotAvailable info={updateNotAvailable} />
-            )}
-            {updateError && <UpdateError error={updateError} />}
-            {updateDownloaded && <UpdateDownloaded info={updateDownloaded} />}
-          </span>
+          </div>
         </div>
       </div>
     );
@@ -216,6 +271,7 @@ export default function AppInfo() {
       <div className="tw-mt-6">
         <LocalIpfsSettings />
       </div>
+      <DesktopValidatorSettings />
       {mainTask?.logFile && (
         <div className="tw-mt-6">{printMainWorkerLogs(mainTask.logFile)}</div>
       )}
@@ -305,7 +361,7 @@ function UpdateError(
     <div className="tw-text-center">
       <div className="tw-pb-3">
         <UpdateImage
-          src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/28.GIF"
+          src={UPDATE_UNAVAILABLE_IMAGE}
           alt="error"
         />
       </div>
