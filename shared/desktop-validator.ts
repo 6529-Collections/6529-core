@@ -7,6 +7,11 @@ export type DesktopValidatorHealth =
   | "update-available"
   | "update-needed";
 
+export interface DesktopValidatorNetworkAgreement {
+  readonly signingAccounts: number;
+  readonly signedTdhShare: number;
+}
+
 export type DesktopValidatorStatus =
   | { readonly service: "not-installed" | "stopped" | "unavailable" }
   | {
@@ -16,4 +21,5 @@ export type DesktopValidatorStatus =
       readonly signing: "counted" | "signed" | "not-signed";
       readonly nextSignatureAt?: number | undefined;
       readonly resultRoot?: string | undefined;
+      readonly networkAgreement?: DesktopValidatorNetworkAgreement;
     };

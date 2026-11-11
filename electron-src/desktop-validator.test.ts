@@ -30,6 +30,50 @@ test("returns today's counted signature, result and next signing time from live 
   });
 });
 
+test("reports the signing accounts and counted TDH share for today's result", () => {
+  const certificate = {
+    cycle_day: signedToday.today,
+    cycle_root: cycleRoot,
+    signing_accounts: 157,
+    signed_keys: 165,
+    signed_weight: 422_186_635,
+    w: 466_218_645,
+    raw_registered_tdh: 500_000_000,
+  };
+  const withCertificate = (overrides: Partial<typeof certificate> = {}) =>
+    interpretValidatorStatus(
+      JSON.stringify({
+        ...signedToday,
+        cycles: [
+          {
+            day: signedToday.today,
+            cycle_root: cycleRoot,
+            certificate: { ...certificate, ...overrides },
+          },
+        ],
+      }),
+    );
+
+  const status = withCertificate();
+  assert.equal(status.service, "running");
+  assert.deepEqual(status.networkAgreement, {
+    signingAccounts: 157,
+    signedTdhShare: 422_186_635 / 466_218_645,
+  });
+
+  for (const overrides of [
+    { cycle_day: signedToday.today - 1 },
+    { cycle_root: "0x" + "a".repeat(64) },
+    { w: 0 },
+    { signing_accounts: -1 },
+    { signed_weight: certificate.w + 1 },
+  ]) {
+    const incomplete = withCertificate(overrides);
+    assert.equal(incomplete.service, "running");
+    assert.equal(incomplete.networkAgreement, undefined);
+  }
+});
+
 test("keeps a signature visible while distinguishing routine and required updates", () => {
   const withUpdate = (state: string, autoOn = false) =>
     JSON.stringify({

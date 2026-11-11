@@ -22,7 +22,13 @@ import {
   useDesktopValidatorStatus,
   useOpenDesktopValidator,
 } from "@/hooks/useDesktopValidator";
-import { formatTime, formatUtcDate } from "@/i18n/format";
+import {
+  formatInteger,
+  formatPercent,
+  formatTime,
+  formatUtcDate,
+  selectPluralCategory,
+} from "@/i18n/format";
 import type { SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import ValidatorResult from "./ValidatorResult";
@@ -94,7 +100,7 @@ function StatusRow({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div className="tw-flex tw-min-h-11 tw-items-center tw-justify-between tw-gap-3 tw-border-0 tw-border-b tw-border-solid tw-border-iron-700 tw-py-1">
+    <div className="tw-flex tw-min-h-11 tw-items-center tw-justify-between tw-gap-3 tw-border-0 tw-border-b tw-border-solid tw-border-iron-700 tw-py-1 last:tw-border-b-0">
       <dt className="tw-shrink-0 tw-text-iron-300">{label}</dt>
       <dd className="tw-m-0 tw-min-w-0 tw-break-words tw-text-right">
         {children}
@@ -131,6 +137,7 @@ export default function DesktopValidatorStatus({
   const release = running?.release;
   const releaseBadge = release?.match(/rc\.\d+$/)?.[0] ?? release;
   const next = running?.nextSignatureAt;
+  const networkAgreement = running?.networkAgreement;
 
   return (
     <Popover
@@ -138,7 +145,7 @@ export default function DesktopValidatorStatus({
     >
       <PopoverButton
         aria-describedby={showChipLabel ? undefined : statusId}
-        className={`tw-relative tw-z-[1] tw-flex tw-h-[18px] tw-items-center tw-gap-1 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-border-iron-700 tw-bg-transparent tw-px-1 tw-text-iron-100 hover:tw-bg-iron-900 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 ${styles["validatorChip"]}`}
+        className={`tw-relative tw-z-[1] tw-flex tw-h-[22px] tw-items-center tw-gap-1 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-border-iron-700 tw-bg-transparent tw-px-1.5 tw-text-iron-100 hover:tw-bg-iron-900 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 aria-expanded:tw-border-iron-500 aria-expanded:tw-bg-iron-800 ${styles["validatorChip"]}`}
       >
         <FontAwesomeIcon
           aria-hidden="true"
@@ -188,7 +195,7 @@ export default function DesktopValidatorStatus({
                 {label}
               </div>
               {health === "all-good" && (
-                <p className="tw-m-0 tw-text-xs tw-text-iron-300">
+                <p className="tw-m-0 tw-text-[11px] tw-leading-4 tw-text-iron-300">
                   {t(locale, "navigation.desktop.validatorNothingToDo")}
                 </p>
               )}
@@ -223,6 +230,28 @@ export default function DesktopValidatorStatus({
                   label={t(locale, "navigation.desktop.validatorResult")}
                 >
                   <ValidatorResult root={running.resultRoot} />
+                </StatusRow>
+              )}
+              {networkAgreement && (
+                <StatusRow
+                  label={t(locale, "navigation.desktop.validatorNetwork")}
+                >
+                  {t(
+                    locale,
+                    selectPluralCategory(
+                      locale,
+                      networkAgreement.signingAccounts
+                    ) === "one"
+                      ? "navigation.desktop.validatorNetworkSummary.one"
+                      : "navigation.desktop.validatorNetworkSummary.other",
+                    {
+                      accounts: formatInteger(
+                        locale,
+                        networkAgreement.signingAccounts
+                      ),
+                      share: formatPercent(locale, networkAgreement.signedTdhShare),
+                    }
+                  )}
                 </StatusRow>
               )}
               {next !== undefined && (

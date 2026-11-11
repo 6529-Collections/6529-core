@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import type {
   DesktopValidatorHealth,
+  DesktopValidatorNetworkAgreement,
   DesktopValidatorStatus,
 } from "../shared/desktop-validator";
 
@@ -137,6 +138,43 @@ function getHealth(
   return "all-good";
 }
 
+function getNetworkAgreement(
+  cycle: Record<string, unknown> | undefined,
+  resultRoot: string | undefined,
+): DesktopValidatorNetworkAgreement | undefined {
+  const certificate = asRecord(cycle?.["certificate"]);
+  const certificateRoot = certificate?.["cycle_root"];
+  if (
+    !certificate ||
+    !resultRoot ||
+    typeof certificateRoot !== "string" ||
+    certificateRoot.toLowerCase() !== resultRoot.toLowerCase() ||
+    certificate["cycle_day"] !== cycle?.["day"]
+  ) {
+    return undefined;
+  }
+
+  const signingAccounts = certificate["signing_accounts"];
+  const signedWeight = certificate["signed_weight"];
+  const countedWeight = certificate["w"];
+  if (
+    typeof signingAccounts !== "number" ||
+    !Number.isSafeInteger(signingAccounts) ||
+    signingAccounts < 0 ||
+    typeof signedWeight !== "number" ||
+    !Number.isSafeInteger(signedWeight) ||
+    signedWeight < 0 ||
+    typeof countedWeight !== "number" ||
+    !Number.isSafeInteger(countedWeight) ||
+    countedWeight <= 0 ||
+    signedWeight > countedWeight
+  ) {
+    return undefined;
+  }
+
+  return { signingAccounts, signedTdhShare: signedWeight / countedWeight };
+}
+
 /** Keep the IPC response small and never expose cached signing as live. */
 export function interpretValidatorStatus(
   stdout: string,
@@ -171,6 +209,11 @@ export function interpretValidatorStatus(
             (key: unknown) => asRecord(key)?.["in_certificate"] === true,
           )));
     const root = cycle?.["cycle_root"];
+    const resultRoot =
+      typeof root === "string" && /^0x[0-9a-f]{64}$/i.test(root)
+        ? root
+        : undefined;
+    const networkAgreement = getNetworkAgreement(cycle, resultRoot);
     const release = snapshot["release"];
     const nextAt =
       typeof today === "number" && Number.isSafeInteger(today)
@@ -195,10 +238,8 @@ export function interpretValidatorStatus(
           : undefined,
       signing: counted ? "counted" : signed ? "signed" : "not-signed",
       nextSignatureAt: canSignNext ? nextAt : undefined,
-      resultRoot:
-        typeof root === "string" && /^0x[0-9a-f]{64}$/i.test(root)
-          ? root
-          : undefined,
+      resultRoot,
+      ...(networkAgreement ? { networkAgreement } : {}),
     };
   } catch {
     return { service: "unavailable" };
