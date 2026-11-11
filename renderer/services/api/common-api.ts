@@ -7,6 +7,7 @@ import {
   getWalletAddress,
   getWalletRole,
 } from "../auth/auth.utils";
+import { assertWriteMatchesDisplayedWallet } from "../auth/displayed-wallet-guard";
 import { prepareSubmissionRequestKey } from "./submission-request-key";
 import { sessionAwareFetch } from "./session-aware-fetch";
 
@@ -70,6 +71,14 @@ export const getStructuredApiErrorCode = (
   return typeof code === "string" && code.trim().length > 0 ? code : undefined;
 };
 
+/** Header sets whose Authorization is the stored session this module added. */
+const storedSessionHeaders = new WeakSet<Record<string, string>>();
+
+const hasOwnAuthorization = (headers?: Record<string, string>): boolean =>
+  Object.keys(headers ?? {}).some(
+    (key) => key.toLowerCase() === "authorization"
+  );
+
 const getHeaders = (
   headers?: Record<string, string>,
   contentType: boolean = true,
@@ -79,12 +88,16 @@ const getHeaders = (
 ) => {
   const apiAuth = includeStagingAuthHeaders ? getStagingAuth() : null;
   const walletAuth = includeWalletAuthHeaders ? getAuthJwt() : null;
-  return {
+  const result: Record<string, string> = {
     ...(contentType ? { "Content-Type": "application/json" } : {}),
     ...(apiAuth ? { "x-6529-auth": apiAuth } : {}),
     ...(walletAuth ? { Authorization: `Bearer ${walletAuth}` } : {}),
     ...(headers ?? {}),
   };
+  if (walletAuth && !hasOwnAuthorization(headers)) {
+    storedSessionHeaders.add(result);
+  }
+  return result;
 };
 
 const resolveWalletAuthHeadersOption = ({
@@ -388,6 +401,12 @@ const executeApiRequest = async <T>({
   credentials,
   cache,
 }: ExecuteApiRequestParams): Promise<T> => {
+  assertWriteMatchesDisplayedWallet({
+    url,
+    method,
+    headers,
+    usesStoredSession: manageWalletAuth && storedSessionHeaders.has(headers),
+  });
   const requestStartedAtMs = getRequestTimingNow();
   let status: RequestStatus = "unknown";
   const requestInit = createRequestInit({
@@ -455,8 +474,9 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
     param.requestOrigin
   );
 
+  const manageWalletAuth = resolveWalletAuthHeadersOption(param);
   return executeApiRequest<T>({
-    manageWalletAuth: param.includeWalletAuth !== false,
+    manageWalletAuth,
     url,
     method: "GET",
     headers: getHeaders(
@@ -464,11 +484,7 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
       false,
       param.includeAuthHeaders ?? true,
       param.includeStagingAuthHeaders ?? param.includeAuthHeaders ?? true,
-      resolveWalletAuthHeadersOption({
-        includeAuthHeaders: param.includeAuthHeaders,
-        includeWalletAuth: param.includeWalletAuth,
-        includeWalletAuthHeaders: param.includeWalletAuthHeaders,
-      })
+      manageWalletAuth
     ),
     signal: param.signal,
     errorMode: param.errorMode ?? "legacy-string",
@@ -617,17 +633,17 @@ export const commonApiPost = async <T, U, Z = Record<string, string>>(param: {
     param.params as Record<string, string> | undefined
   );
 
-  const submission =
-    param.includeWalletAuth === false
-      ? null
-      : prepareSubmissionRequestKey(param.endpoint, param.body, () => {
-          const address = getWalletAddress();
-          return address
-            ? `${address.toLowerCase()}:${getWalletRole() ?? ""}`
-            : "";
-        });
+  const manageWalletAuth = resolveWalletAuthHeadersOption(param);
+  const submission = manageWalletAuth
+    ? prepareSubmissionRequestKey(param.endpoint, param.body, () => {
+        const address = getWalletAddress();
+        return address
+          ? `${address.toLowerCase()}:${getWalletRole() ?? ""}`
+          : "";
+      })
+    : null;
   const result = await executeApiRequest<U>({
-    manageWalletAuth: param.includeWalletAuth !== false,
+    manageWalletAuth,
     url,
     method: "POST",
     headers: getHeaders(
@@ -637,11 +653,7 @@ export const commonApiPost = async <T, U, Z = Record<string, string>>(param: {
       true,
       param.includeAuthHeaders ?? true,
       param.includeStagingAuthHeaders ?? param.includeAuthHeaders ?? true,
-      resolveWalletAuthHeadersOption({
-        includeAuthHeaders: param.includeAuthHeaders,
-        includeWalletAuth: param.includeWalletAuth,
-        includeWalletAuthHeaders: param.includeWalletAuthHeaders,
-      })
+      manageWalletAuth
     ),
     body: JSON.stringify(param.body),
     signal: param.signal,

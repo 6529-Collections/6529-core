@@ -1,12 +1,19 @@
 /** @jest-environment node */
 import type { BucketObject } from "@/lib/validator-page/releasesBucket";
 import { TEST_FEED } from "./fixtures";
+import { signFeed } from "./feedSigning";
 
 const mockRead = jest.fn<Promise<BucketObject>, [string]>();
+
 jest.mock("@/lib/validator-page/releasesBucket", () => ({
   FEED_OBJECT_KEY: "feed/releases.json",
   FEED_SIGNATURE_OBJECT_KEY: "feed/releases.json.sig",
   readReleaseObject: (key: string) => mockRead(key),
+}));
+jest.mock("@/lib/validator-page/feedSigningKeys", () => ({
+  FEED_SIGNING_KEYS: [
+    jest.requireActual("./feedSigning").TEST_FEED_SIGNING_KEY,
+  ],
 }));
 
 import { serveFeedObject } from "@/lib/validator-page/feedResponse";
@@ -14,7 +21,7 @@ import { resolveReleaseDownload } from "@/lib/validator-page/releaseDownload";
 import { resetReleaseFeedCacheForTests } from "@/lib/validator-page/releaseFeed";
 
 const FEED_BYTES = new TextEncoder().encode(JSON.stringify(TEST_FEED));
-const SIG_BYTES = new Uint8Array([0x30, 0x45, 0x02, 0x21]);
+const SIG_BYTES = signFeed(FEED_BYTES);
 
 function found(body: Uint8Array<ArrayBuffer>, etag: string): BucketObject {
   return {
@@ -29,6 +36,14 @@ function storeHas(objects: Record<string, BucketObject>) {
   mockRead.mockImplementation(
     async (key) => objects[key] ?? { state: "missing" }
   );
+}
+
+/** The feed and its signature, as 6529 uploads them. */
+function storeHasSigned(feed: Uint8Array<ArrayBuffer> = FEED_BYTES) {
+  storeHas({
+    "feed/releases.json": found(feed, '"e"'),
+    "feed/releases.json.sig": found(signFeed(feed), '"s"'),
+  });
 }
 
 describe("release feed endpoints and downloads", () => {
@@ -81,10 +96,7 @@ describe("release feed endpoints and downloads", () => {
     expect(missing.status).toBe(404);
 
     resetReleaseFeedCacheForTests();
-    mockRead.mockResolvedValue({
-      state: "error",
-      reason: "hosted feed answered 500",
-    });
+    mockRead.mockResolvedValue({ state: "error", reason: "hosted feed answered 500" });
     const failed = await serveFeedObject(
       new Request("https://6529.io/x"),
       "feed"
@@ -93,8 +105,61 @@ describe("release feed endpoints and downloads", () => {
     expect(failed.headers.get("cache-control")).toBe("no-store");
   });
 
+  it.each([
+    ["no signature", {}],
+    [
+      "a signature over other bytes",
+      { "feed/releases.json.sig": found(signFeed(new Uint8Array([1])), '"s"') },
+    ],
+    [
+      "a signature by an untrusted key",
+      {
+        "feed/releases.json.sig": found(
+          signFeed(FEED_BYTES, `0x${"12".repeat(20)}`),
+          '"s"'
+        ),
+      },
+    ],
+  ])(
+    "serves nothing and offers no file for a feed with %s",
+    async (_name, sig) => {
+      storeHas({ "feed/releases.json": found(FEED_BYTES, '"e"'), ...sig });
+      const feed = await serveFeedObject(
+        new Request("https://6529.io/x"),
+        "feed"
+      );
+      expect(feed.status).toBe(503);
+      expect(
+        await resolveReleaseDownload(["6529-Validator-0.1.0.dmg"])
+      ).not.toMatchObject({ state: "found" });
+    }
+  );
+
+  it("keeps the newer feed when an older signed one replaces it", async () => {
+    const feedOf = (sequence: number) =>
+      new TextEncoder().encode(JSON.stringify({ ...TEST_FEED, sequence }));
+    const newer = feedOf(1_793_620_900);
+    storeHasSigned(newer);
+    const nowSpy = jest.spyOn(Date, "now");
+    nowSpy.mockReturnValue(1_000_000);
+    const first = await serveFeedObject(
+      new Request("https://6529.io/x"),
+      "feed"
+    );
+    expect(new Uint8Array(await first.arrayBuffer())).toEqual(newer);
+
+    storeHasSigned(feedOf(1_793_620_800));
+    nowSpy.mockReturnValue(1_000_000 + 2 * 60 * 1000);
+    const second = await serveFeedObject(
+      new Request("https://6529.io/x"),
+      "feed"
+    );
+    expect(new Uint8Array(await second.arrayBuffer())).toEqual(newer);
+    nowSpy.mockRestore();
+  });
+
   it("keeps serving the last good feed when the hosted feed fails later", async () => {
-    storeHas({ "feed/releases.json": found(FEED_BYTES, '"e"') });
+    storeHasSigned();
     const nowSpy = jest.spyOn(Date, "now");
     nowSpy.mockReturnValue(1_000_000);
     expect(
@@ -109,7 +174,7 @@ describe("release feed endpoints and downloads", () => {
   });
 
   it("forwards only listed files to the hosted download gate", async () => {
-    storeHas({ "feed/releases.json": found(FEED_BYTES, '"e"') });
+    storeHasSigned();
     const latest = await resolveReleaseDownload(["6529-Validator-0.1.0.dmg"]);
     expect(latest).toEqual({
       state: "found",

@@ -1,5 +1,5 @@
-import { ApiWallet } from "@/generated/models/ApiWallet";
-import { openInExternalBrowser } from "@/helpers";
+import type { ApiWallet } from "@/generated/models/ApiWallet";
+import { openUrlInNewTab } from "@/helpers/open-url.helpers";
 import { useCopyToClipboard } from "react-use";
 
 export default function UserAddressesSelectDropdownItem({
@@ -20,7 +20,7 @@ export default function UserAddressesSelectDropdownItem({
 
   const openOpensea = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    openInExternalBrowser(`https://opensea.io/${getEnsOrWallet()}`);
+    openUrlInNewTab(`https://opensea.io/${getEnsOrWallet()}`);
   };
 
   return (
