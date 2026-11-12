@@ -1,5 +1,6 @@
 "use client";
 
+import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
 import { useSearch } from "@/contexts/SearchContext";
 import {
   faArrowDown,
@@ -38,7 +39,10 @@ export default function SearchBar() {
   if (!isOpen) return null;
 
   return (
-    <div className="tw-fixed tw-top-[30px] tw-right-4 tw-z-[1001] tw-bg-neutral-900 tw-text-white tw-rounded-bl-lg tw-px-3 tw-py-2 tw-flex tw-items-center tw-gap-2 tw-shadow-xl">
+    <div
+      className="tw-fixed tw-right-4 tw-z-[1001] tw-bg-neutral-900 tw-text-white tw-rounded-bl-lg tw-px-3 tw-py-2 tw-flex tw-items-center tw-gap-2 tw-shadow-xl"
+      style={{ top: CORE_TITLEBAR_HEIGHT_PX }}
+    >
       <input
         ref={inputRef}
         value={query}
