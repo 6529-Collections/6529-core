@@ -39,16 +39,17 @@
 }
 
 .info {
+  --app-info-button-height: 16px;
   -webkit-app-region: no-drag;
   background-color: white;
   color: black;
   position: fixed;
   z-index: 1000;
-  height: 16px;
+  height: var(--app-info-button-height);
   min-width: 16px;
   border: none;
   border-radius: 10px;
-  top: 7px;
+  top: calc((var(--core-titlebar-height) - var(--app-info-button-height)) / 2);
 
 }
 

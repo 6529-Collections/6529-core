@@ -492,6 +492,7 @@ export default function TitleBar() {
         buttonStyles={`${infoClass} ${infoPositionClass} ${platformPendingClass} ${
           navigationLoading ? disabledClass : ""
         }`}
+        style={TITLEBAR_HEIGHT_STYLE}
         placement="left"
         onClick={() => !navigationLoading && router.push("/core/core-info")}
         icon={faInfo}

@@ -40,6 +40,7 @@ import {
   SET_RPC_PROVIDER_ACTIVE,
   STOP_WORKER,
 } from "../electron-constants";
+import { CORE_TITLEBAR_HEIGHT_PX } from "../shared/desktop-titlebar";
 import {
   ScheduledWorkerStatus,
   SeedWalletRequest,
@@ -1565,7 +1566,7 @@ async function openMainWindow() {
     titleBarOverlay: {
       color: "#000",
       symbolColor: "#fff",
-      height: 30,
+      height: CORE_TITLEBAR_HEIGHT_PX,
     },
     webPreferences: {
       nodeIntegration: false,
