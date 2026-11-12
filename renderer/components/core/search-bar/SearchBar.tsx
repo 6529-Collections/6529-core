@@ -1,5 +1,6 @@
 "use client";
 
+import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
 import { useSearch } from "@/contexts/SearchContext";
 import {
   faArrowDown,
@@ -38,7 +39,10 @@ export default function SearchBar() {
   if (!isOpen) return null;
 
   return (
-    <div className="tw-fixed tw-top-[30px] tw-right-4 tw-z-[1001] tw-bg-neutral-900 tw-text-white tw-rounded-bl-lg tw-px-3 tw-py-2 tw-flex tw-items-center tw-gap-2 tw-shadow-xl">
+    <div
+      className="tw-fixed tw-right-4 tw-z-[1001] tw-max-w-[calc(100%-2rem)] tw-bg-neutral-900 tw-text-white tw-rounded-bl-lg tw-px-3 tw-py-2 tw-flex tw-items-center tw-gap-2 tw-shadow-xl"
+      style={{ top: CORE_TITLEBAR_HEIGHT_PX }}
+    >
       <input
         ref={inputRef}
         value={query}
@@ -54,28 +58,28 @@ export default function SearchBar() {
           }
         }}
         placeholder="Find..."
-        className="tw-bg-neutral-800 tw-text-white tw-border tw-border-neutral-600 tw-rounded-md tw-px-2 tw-py-1 tw-text-sm tw-w-[180px] focus:tw-outline-none focus:tw-border-white tw-placeholder-gray-400"
+        className="tw-bg-neutral-800 tw-text-white tw-border tw-border-neutral-600 tw-rounded-md tw-px-2 tw-py-1 tw-text-sm tw-w-[180px] tw-min-w-0 focus:tw-outline-none focus:tw-border-white tw-placeholder-gray-400"
       />
-      <span className="tw-text-xs tw-tabular-nums tw-min-w-[48px] tw-text-center">
+      <span className="tw-shrink-0 tw-text-xs tw-tabular-nums tw-min-w-[48px] tw-text-center">
         <span className={total > 0 ? "" : "tw-invisible"}>
           {`${current + 1} / ${total}`}
         </span>
       </span>
       <FontAwesomeIcon
         icon={faArrowUp}
-        className="tw-cursor-pointer tw-text-white hover:tw-text-gray-300"
+        className="tw-shrink-0 tw-cursor-pointer tw-text-white hover:tw-text-gray-300"
         title="Previous"
         onClick={prev}
       />
       <FontAwesomeIcon
         icon={faArrowDown}
-        className="tw-cursor-pointer tw-text-white hover:tw-text-gray-300"
+        className="tw-shrink-0 tw-cursor-pointer tw-text-white hover:tw-text-gray-300"
         title="Next"
         onClick={next}
       />
       <FontAwesomeIcon
         icon={faXmark}
-        className="tw-cursor-pointer tw-text-red-400 hover:tw-text-red-200 tw-ml-1"
+        className="tw-shrink-0 tw-cursor-pointer tw-text-red-400 hover:tw-text-red-200 tw-ml-1"
         title="Close"
         onClick={close}
       />

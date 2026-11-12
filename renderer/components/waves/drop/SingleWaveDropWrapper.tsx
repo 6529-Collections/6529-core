@@ -2,10 +2,12 @@
 
 import { CompactModeProvider } from "@/contexts/CompactModeContext";
 import videoFrameStyles from "@/components/drops/view/item/content/media/SeizeVideoFrame.module.css";
+import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
 import clsx from "clsx";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import useIsMobileLayoutViewport from "@/hooks/useIsMobileLayoutViewport";
+import { isElectron } from "@/helpers";
 import {
   Dialog,
   DialogPanel,
@@ -199,7 +201,10 @@ export const SingleWaveDropWrapper: React.FC<SingleWaveDropWrapperProps> = ({
           >
             <div
               className="tw-fixed tw-left-[var(--left-rail,0px)] tw-right-0 tw-top-0 tw-max-h-[100dvh] tw-overflow-hidden tw-overscroll-none"
-              style={mobileChatPanelStyle}
+              style={{
+                ...mobileChatPanelStyle,
+                top: isElectron() ? CORE_TITLEBAR_HEIGHT_PX : 0,
+              }}
             >
               <TransitionChild
                 as={Fragment}

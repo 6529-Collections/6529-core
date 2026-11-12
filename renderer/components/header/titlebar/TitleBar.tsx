@@ -368,7 +368,9 @@ export default function TitleBar() {
   const environmentLabelElement = environmentLabel ? (
     <span className={styles["environmentLabel"]}>{environmentLabel}</span>
   ) : null;
-  const versionElement = version ? <span>{version}</span> : null;
+  const versionElement = version ? (
+    <span className={styles["versionNumber"]}>{version}</span>
+  ) : null;
 
   return (
     <>
@@ -490,12 +492,15 @@ export default function TitleBar() {
       </div>
       <TooltipButton
         buttonStyles={`${infoClass} ${infoPositionClass} ${platformPendingClass} ${
+          updateAvailable ? styles["infoUpdate"] : ""
+        } ${
           navigationLoading ? disabledClass : ""
         }`}
+        style={TITLEBAR_HEIGHT_STYLE}
         placement="left"
         onClick={() => !navigationLoading && router.push("/core/core-info")}
         icon={faInfo}
-        content="App Info"
+        content={updateAvailable ? "App Info (update available)" : "App Info"}
         buttonContent={updateAvailable ? "Update Available" : ""}
       />
     </>
