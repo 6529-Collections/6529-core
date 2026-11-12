@@ -42,6 +42,7 @@ const PLAINTEXT_DM_MEMBERS = ["alice", "bob"];
 const DM_POLICIES = new Set(["EVERYONE", "PEOPLE_I_FOLLOW", "NOBODY"]);
 const HEX_ADDRESS = /^0x[0-9a-f]{40}$/u;
 const BASE64_FIELD = /^[A-Za-z0-9+/]{16,}={0,2}$/u;
+const GROUP_ENTRIES_PATH = /^e2ee\/groups\/0x[0-9a-f]+\/entries$/u;
 
 function writeJson(res, status, body, corsHeaders) {
   const text = JSON.stringify(body);
@@ -370,9 +371,11 @@ function createE2eeSandboxApi({ corsHeaders }) {
       return { ok: true };
     },
     fault: (body) => {
+      if (body.target !== "groupEntries") {
+        throw new Error("Unknown E2EE sandbox fault target.");
+      }
       const fault = {
         method: String(body.method || "POST").toUpperCase(),
-        path: new RegExp(String(body.path)),
         kind: body.kind ?? null,
         status: Number(body.status || 500),
         hits: 0,
@@ -438,7 +441,7 @@ function createE2eeSandboxApi({ corsHeaders }) {
     const fault = faults.find(
       (candidate) =>
         candidate.method === method &&
-        candidate.path.test(path) &&
+        GROUP_ENTRIES_PATH.test(path) &&
         (candidate.kind === null || body?.kind === candidate.kind)
     );
     if (fault) {
