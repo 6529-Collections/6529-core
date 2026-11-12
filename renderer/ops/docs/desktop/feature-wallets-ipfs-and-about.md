@@ -71,7 +71,7 @@ When Desktop detects the installed 6529 Validator, the title bar shows its healt
 
 In **6529 Desktop > About**, turn off **Show 6529 Validator** to hide the title bar badge and its update notices. The preference is on by default and saved on this computer across restarts. The separate Validator continues to run and sign when hidden. If Validator is missing, About shows **Get 6529 Validator** in place of the switch and opens the download page in your browser.
 
-Under **6529 Desktop > Local Services**, choose **Open 6529 Validator** to launch the installed app or **Get 6529 Validator** to open its download page. This menu is available with the title bar badge hidden.
+Under **6529 Desktop > Local Services**, choose **6529 Validator** to launch the installed app or **Get 6529 Validator** to open its download page. This menu is available with the title bar badge hidden.
 
 - **Stopped** means the service is off. **Not answering** means Desktop could not read its status. Open Validator to start it or check its status. If Desktop has no Validator installation to show, the badge is absent.
 - **Getting ready** means Validator is preparing or catching up. **Not signing yet** means it is running without signing. **Paused** means signing is on hold. Open Validator to check what it is waiting for or to resume signing.

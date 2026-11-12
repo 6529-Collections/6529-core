@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
+import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import {
   useDesktopValidatorInstallation,
@@ -29,7 +30,7 @@ export default function DesktopValidatorNavItem({
     ? "navigation.desktop.validatorCheckingInstallation"
     : installed === false
       ? "navigation.desktop.validatorGet"
-      : "navigation.desktop.validatorOpen";
+      : "navigation.desktop.validatorTitle";
 
   return (
     <>
@@ -48,7 +49,11 @@ export default function DesktopValidatorNavItem({
           {t(locale, label)}
         </span>
         {!checking && (
-          <ArrowUpRightIcon aria-hidden="true" className="tw-size-4 tw-shrink-0" />
+          <FontAwesomeIcon
+            aria-hidden="true"
+            icon={faExternalLinkAlt}
+            className="tw-h-4 tw-w-4 tw-shrink-0"
+          />
         )}
       </button>
       <div role="alert">
