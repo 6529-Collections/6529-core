@@ -53,6 +53,11 @@ function getDesktopSection(
             href: ipfsWebuiUrl,
             isExternal: true,
           },
+          {
+            id: "desktop-validator",
+            name: t(locale, "navigation.desktop.validatorTitle"),
+            href: "",
+          },
         ],
       },
     ],
@@ -247,12 +252,14 @@ export function mapSidebarSectionsToPages(
 ): SidebarPageEntry[] {
   return sections.flatMap((section) => {
     const sectionIcon = section.icon;
-    const sectionItems: SidebarPageEntry[] = section.items.map((item) => ({
-      name: item.name,
-      href: item.href,
-      section: section.name,
-      icon: sectionIcon,
-    }));
+    const sectionItems: SidebarPageEntry[] = section.items
+      .filter((item) => Boolean(item.href))
+      .map((item) => ({
+        name: item.name,
+        href: item.href,
+        section: section.name,
+        icon: sectionIcon,
+      }));
 
     const subsectionItems =
       section.subsections?.flatMap((subsection) =>

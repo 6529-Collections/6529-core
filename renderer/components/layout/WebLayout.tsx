@@ -65,7 +65,8 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
       }) as CSSProperties,
     [sidebarWidth]
   );
-  const mainStyle = useMemo<CSSProperties>(
+  // On the compact layout, the measured header includes the title bar inset.
+  const titlebarInset = useMemo<CSSProperties>(
     () => ({ paddingTop: CORE_TITLEBAR_HEIGHT_PX }),
     []
   );
@@ -89,6 +90,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
         active={isSmall}
         onMenuToggle={toggleCollapsed}
         isMenuOpen={isOffcanvasOpen}
+        style={isSmall ? titlebarInset : undefined}
       />
       <div className="tailwind-scope" data-web-sidebar="true">
         <WebSidebar
@@ -104,7 +106,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
       </div>
       <main
         ref={searchContainerRef}
-        style={isSmall ? undefined : mainStyle}
+        style={isSmall ? undefined : titlebarInset}
         className={
           isSmall
             ? "tw-transition-opacity tw-duration-300"

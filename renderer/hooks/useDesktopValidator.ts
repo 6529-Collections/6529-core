@@ -27,11 +27,33 @@ export function useSetDesktopValidatorVisibility() {
   });
 }
 
+/** Check for the app without polling its service or reading the badge preference. */
+export function useDesktopValidatorInstallation(active = true) {
+  const supported =
+    typeof window !== "undefined" &&
+    typeof window.api?.isDesktopValidatorInstalled === "function";
+  const enabled = supported && active;
+  const { data: installed, isError } = useQuery({
+    queryKey: ["desktop-validator-installed"],
+    queryFn: () => window.api.isDesktopValidatorInstalled(),
+    enabled,
+    retry: false,
+    staleTime: 5_000,
+    refetchInterval: enabled ? 15_000 : false,
+  });
+
+  return { supported, installed, isError };
+}
+
 /** Share the installation and signing state across controls, with optional polling. */
 export function useDesktopValidatorStatus(refresh = false) {
   const { data: visible } = useDesktopValidatorVisibility();
+  const installation = useDesktopValidatorInstallation(visible === true);
+  const canReadStatus =
+    !installation.supported || (installation.installed ?? installation.isError);
   const enabled =
     visible === true &&
+    canReadStatus &&
     typeof window !== "undefined" &&
     typeof window.api?.getDesktopValidatorStatus === "function";
 

@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { CORE_TITLEBAR_HEIGHT_PX } from "../shared/desktop-titlebar";
 import { observeLocalGatewayFrameFailures } from "./ipfs/local-gateway-frame-failures";
 
 const source = ts.createSourceFile(
@@ -85,6 +86,7 @@ function createHarness(
     windowCreation: null,
     latestSplashMessage: "Loading",
     BrowserWindow: FakeWindow,
+    CORE_TITLEBAR_HEIGHT_PX,
     path,
     __dirname: "/FAKE",
     PORT: 3000,
