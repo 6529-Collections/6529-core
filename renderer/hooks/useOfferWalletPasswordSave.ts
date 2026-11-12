@@ -15,6 +15,10 @@ export function useOfferWalletPasswordSave() {
     try {
       const result = await bridge.offerSave(address, password);
       if (result.ok || result.code === "unavailable") return;
+      if (result.code === "busy") {
+        showToast(t(locale, "desktop.walletPasswords.saveBusy"), "warning", true);
+        return;
+      }
     } catch {
       // The wallet operation already succeeded. Report only the save failure.
     }

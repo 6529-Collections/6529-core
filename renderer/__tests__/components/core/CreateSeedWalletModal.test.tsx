@@ -40,6 +40,8 @@ it("requires a fresh backup confirmation before creating a wallet with a generat
   const createButton = screen.getByRole("button", { name: "Create" });
   const confirmation = screen.getByRole("checkbox", { name: /saved this password/i });
   expect(createButton).toBeDisabled();
+  expect(confirmation).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "Show wallet password" }));
   await user.click(confirmation);
   expect(createButton).toBeEnabled();
 

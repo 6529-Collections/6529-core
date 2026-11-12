@@ -56,13 +56,10 @@ export class WalletKeychain {
   offerSave(
     address: unknown,
     password: unknown,
-    confirm: () => Promise<"save" | "skip" | "cancelled">,
+    confirm: () => Promise<"save" | "skip" | "cancelled" | "busy">,
   ): Promise<WalletPasswordResult<boolean>> {
     return this.run<boolean>(address, async (native, address, account) => {
-      if (
-        this.declinedOffers.has(account) ||
-        await native.contains(this.service, account)
-      ) {
+      if (this.declinedOffers.has(account)) {
         return { ok: true, value: false };
       }
       if (
@@ -73,7 +70,13 @@ export class WalletKeychain {
       ) {
         return { ok: false, code: "invalid-password" };
       }
+      const saved = await native.read(this.service, account);
+      if (saved === password) return { ok: true, value: false };
+      // A re-import can replace the wallet password. Remove the stale item
+      // and get fresh consent before saving the new one.
+      if (saved !== null) await native.forget(this.service, account);
       const decision = await confirm();
+      if (decision === "busy") return { ok: false, code: "busy" };
       if (decision === "skip") this.declinedOffers.add(account);
       if (decision !== "save") return { ok: true, value: false };
       await native.save(this.service, account, password);
@@ -92,24 +95,17 @@ export class WalletKeychain {
   async deleteWallet(
     address: string,
     remove: (address: string) => Promise<void>,
-  ): Promise<void> {
+  ): Promise<WalletPasswordResult<null>> {
     if (!this.native) {
       await remove(address);
-      return;
+      return { ok: true, value: null };
     }
-    const result = await this.run<null>(address, async (native, address, account) => {
+    return this.run<null>(address, async (native, address, account) => {
       await native.forget(this.service, account);
       await remove(address);
       this.declinedOffers.delete(account);
       return { ok: true, value: null };
     });
-    if (!result.ok) {
-      throw new Error(
-        result.code === "busy"
-          ? "Wait for the current Keychain request and try again."
-          : "Could not delete the wallet and its saved password.",
-      );
-    }
   }
 
   private async run<T>(

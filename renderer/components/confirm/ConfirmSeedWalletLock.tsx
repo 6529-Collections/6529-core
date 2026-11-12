@@ -106,7 +106,7 @@ export default function ConfirmSeedWalletLock(
   const handleLock = () => {
     props.onLock();
     props.onHide();
-    showToast("Wallet Locked!", "success", true);
+    showToast(t(locale, "desktop.walletPasswords.locked"), "success", true);
   };
 
   const handleUnlock = async () => {
@@ -126,16 +126,16 @@ export default function ConfirmSeedWalletLock(
       }
       const success = await props.onUnlock(password);
       if (!success) {
-        showToast("Failed to unlock wallet", "error", true);
+        showToast(t(locale, "desktop.walletPasswords.unlockFailed"), "error", true);
         focusPasswordInput();
         return;
       }
-      showToast("Wallet Unlocked!", "success", true);
+      showToast(t(locale, "desktop.walletPasswords.unlocked"), "success", true);
       setWalletPass("");
       if (walletPass) await offerSave(props.address, password);
     } catch {
       if (!walletPass) clearSavedPassword();
-      showToast("Failed to unlock wallet", "error", true);
+      showToast(t(locale, "desktop.walletPasswords.unlockFailed"), "error", true);
       focusPasswordInput();
     } finally {
       setUnlocking(false);
@@ -182,7 +182,7 @@ export default function ConfirmSeedWalletLock(
               onClick={props.onHide}
               className={confirmBtnSecondary}
             >
-              Close
+              {t(locale, "desktop.walletPasswords.close")}
             </button>
             {props.unlockedWallet ? (
               <button
@@ -190,7 +190,7 @@ export default function ConfirmSeedWalletLock(
                 onClick={handleLock}
                 className={confirmBtnDanger}
               >
-                Lock
+                {t(locale, "desktop.walletPasswords.lock")}
               </button>
             ) : (
               <button
@@ -199,7 +199,10 @@ export default function ConfirmSeedWalletLock(
                 onClick={handleUnlock}
                 className={confirmBtnPrimary}
               >
-                {unlocking ? "Unlocking..." : "Unlock"}
+                {t(
+                  locale,
+                  unlocking ? "desktop.walletPasswords.unlocking" : "desktop.walletPasswords.unlock"
+                )}
               </button>
             )}
           </span>
@@ -221,7 +224,9 @@ export default function ConfirmSeedWalletLock(
       ) : (
         <>
           <div className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1">
-            <label htmlFor="connected-wallet-password">Wallet Password</label>
+            <label htmlFor="connected-wallet-password">
+              {t(locale, "desktop.walletPasswords.walletPassword")}
+            </label>
             <button
               type="button"
               onClick={() => setPassHidden(!passHidden)}
@@ -236,6 +241,7 @@ export default function ConfirmSeedWalletLock(
               <FontAwesomeIcon
                 icon={passHidden ? faEyeSlash : faEye}
                 height={18}
+                aria-hidden="true"
                 className="tw-cursor-pointer"
               />
             </button>
@@ -256,11 +262,13 @@ export default function ConfirmSeedWalletLock(
               if (event.key === "Enter") void handleUnlock();
             }}
           />
-          {hasSavedPassword && (
-            <p className="tw-mb-0 tw-mt-2 tw-text-sm tw-text-iron-400">
-              {t(locale, "desktop.walletPasswords.unlockHint")}
-            </p>
-          )}
+          <div aria-live="polite">
+            {hasSavedPassword && (
+              <p className="tw-mb-0 tw-mt-2 tw-text-sm tw-text-iron-400">
+                {t(locale, "desktop.walletPasswords.unlockHint")}
+              </p>
+            )}
+          </div>
         </>
       )}
     </ConfirmModalShell>

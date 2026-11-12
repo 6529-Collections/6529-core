@@ -1859,7 +1859,11 @@ ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
   const address = args[0];
   Logger.info(`Deleting seed wallet: ${address}`);
   walletKeychain.deleteWallet(address, deleteSeedWallet)
-    .then(() => {
+    .then((result) => {
+      if (!result.ok) {
+        event.returnValue = { error: true, code: result.code };
+        return;
+      }
       event.returnValue = {
         error: false,
       };
@@ -1870,7 +1874,6 @@ ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
       Logger.error(`Error deleting seed wallet: ${error}`);
       event.returnValue = {
         error: true,
-        data: error,
       };
     });
 });
@@ -2347,11 +2350,12 @@ ipcMain.handle(
       if (
         !owner?.isVisible() ||
         navigation !== walletPasswordNavigation ||
-        !isMainRenderer(event) ||
-        walletSavePrompt
+        !isMainRenderer(event)
       ) {
         return "cancelled";
       }
+      // The owner can display one native sheet at a time.
+      if (walletSavePrompt) return "busy";
       const controller = new AbortController();
       walletSavePrompt = controller;
       try {

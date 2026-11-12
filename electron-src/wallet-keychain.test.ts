@@ -68,6 +68,28 @@ test("wallet deletion forgets its password and excludes concurrent saves", async
   assert.equal(deleted, true);
 });
 
+test("a busy or failed Keychain leaves the wallet record available for retry", async () => {
+  const { make, native } = fixture();
+  const keychain = make("/test/profile");
+  const remove = async () => {
+    assert.fail("wallet deletion must wait for Keychain cleanup");
+  };
+  const first = keychain.offerSave(ADDRESS, PASSWORD, accept);
+  assert.deepEqual(await keychain.deleteWallet(ADDRESS, remove), {
+    ok: false,
+    code: "busy",
+  });
+  await first;
+
+  native.forget = async () => {
+    throw new Error("Keychain unavailable");
+  };
+  assert.deepEqual(await keychain.deleteWallet(ADDRESS, remove), {
+    ok: false,
+    code: "failed",
+  });
+});
+
 test("a stale Keychain password is never returned", async () => {
   const { make, items } = fixture();
   const keychain = make("/test/profile");
@@ -77,6 +99,24 @@ test("a stale Keychain password is never returned", async () => {
     ok: false,
     code: "invalid-password",
   });
+});
+
+test("replaces a stale password only after fresh consent", async () => {
+  const { make, items } = fixture();
+  const keychain = make("/test/profile");
+  await keychain.offerSave(ADDRESS, PASSWORD, accept);
+  for (const key of items.keys()) items.set(key, "stale");
+
+  assert.deepEqual(
+    await keychain.offerSave(ADDRESS, PASSWORD, async () => "busy"),
+    { ok: false, code: "busy" },
+  );
+  assert.equal(items.size, 0);
+  assert.deepEqual(await keychain.offerSave(ADDRESS, PASSWORD, accept), {
+    ok: true,
+    value: true,
+  });
+  assert.deepEqual(await keychain.request(ADDRESS), { ok: true, value: PASSWORD });
 });
 
 test("saving requires consent and a declined offer is not repeated in the same session", async () => {

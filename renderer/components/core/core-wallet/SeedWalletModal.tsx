@@ -120,7 +120,9 @@ export function CreateSeedWalletModal(
     if (!canSubmit) return;
     if (walletPass.length < SEED_MIN_PASS_LENGTH) {
       showError(
-        `Password must be at least ${SEED_MIN_PASS_LENGTH} characters long`
+        t(locale, "desktop.walletPasswords.passwordTooShort", {
+          count: SEED_MIN_PASS_LENGTH,
+        })
       );
       return;
     }
@@ -134,15 +136,23 @@ export function CreateSeedWalletModal(
           )
         : await createSeedWallet(walletName, walletPass);
       if (data.error) {
-        showToast(`Error ${imported ? "importing" : "creating"} wallet - ${data.data}`, "error");
+        showToast(
+          t(
+            locale,
+            imported
+              ? "desktop.walletPasswords.importFailed"
+              : "desktop.walletPasswords.createFailed"
+          ),
+          "error"
+        );
         return;
       }
       const address = imported?.address ?? data.data;
       if (typeof address === "string") await offerSave(address, walletPass);
       showToast(
         imported
-          ? "Wallet imported successfully!"
-          : `Wallet '${walletName}' created successfully - Download Recovery File immediately!`,
+          ? t(locale, "desktop.walletPasswords.imported")
+          : t(locale, "desktop.walletPasswords.created", { name: walletName }),
         "success"
       );
       handleHide(true);
@@ -154,7 +164,12 @@ export function CreateSeedWalletModal(
   return (
     <ConfirmModalShell
       show={props.show}
-      title={`${props.import ? "Import" : "Create New"} Wallet`}
+      title={t(
+        locale,
+        props.import
+          ? "desktop.walletPasswords.importTitle"
+          : "desktop.walletPasswords.createTitle"
+      )}
       onBackdropClick={() => {
         if (!saving) handleHide(false);
       }}
@@ -166,7 +181,7 @@ export function CreateSeedWalletModal(
             onClick={() => handleHide(false)}
             className={confirmBtnSecondary}
           >
-            Cancel
+            {t(locale, "desktop.walletPasswords.cancel")}
           </button>
           <button
             type="button"
@@ -174,20 +189,23 @@ export function CreateSeedWalletModal(
             onClick={handleSubmit}
             className={confirmBtnPrimary}
           >
-            {props.import ? "Import" : "Create"}
+            {t(
+              locale,
+              props.import ? "desktop.walletPasswords.import" : "desktop.walletPasswords.create"
+            )}
           </button>
         </>
       }
     >
       <label htmlFor="new-wallet-name" className="tw-block tw-pb-1">
-        Wallet Name
+        {t(locale, "desktop.walletPasswords.walletName")}
       </label>
       <input
         id="new-wallet-name"
         disabled={saving}
         autoFocus
         type="text"
-        placeholder="My Wallet..."
+        placeholder={t(locale, "desktop.walletPasswords.walletNamePlaceholder")}
         value={walletName}
         className={confirmInputClass}
         onChange={(e) => {
@@ -195,12 +213,14 @@ export function CreateSeedWalletModal(
           if (/^[a-zA-Z0-9 ]*$/.test(value)) setWalletName(value);
           else
             showError(
-              "Name can only contain alphanumeric characters and spaces"
+              t(locale, "desktop.walletPasswords.invalidName")
             );
         }}
       />
       <div className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1 tw-pt-3">
-        <label htmlFor="new-wallet-password">Wallet Password</label>
+        <label htmlFor="new-wallet-password">
+          {t(locale, "desktop.walletPasswords.walletPassword")}
+        </label>
         <button
           type="button"
           onClick={() => setPassHidden(!passHidden)}
@@ -215,6 +235,7 @@ export function CreateSeedWalletModal(
           <FontAwesomeIcon
             icon={passHidden ? faEyeSlash : faEye}
             height={18}
+            aria-hidden="true"
             className="tw-cursor-pointer"
           />
         </button>
@@ -222,6 +243,9 @@ export function CreateSeedWalletModal(
       <div className="tw-flex tw-items-center tw-gap-2">
         <input
           id="new-wallet-password"
+          aria-describedby={
+            generatedPasswordNeedsBackup ? "wallet-password-backup-hint" : undefined
+          }
           autoComplete="new-password"
           disabled={saving}
           type={passHidden ? "password" : "text"}
@@ -235,7 +259,7 @@ export function CreateSeedWalletModal(
               setConfirmedPasswordBackup(false);
               if (!value) setGeneratedPasswordNeedsBackup(false);
             } else {
-              showError("Password must not contain any whitespace characters");
+              showError(t(locale, "desktop.walletPasswords.passwordWhitespace"));
             }
           }}
         />
@@ -251,22 +275,27 @@ export function CreateSeedWalletModal(
         )}
       </div>
       {generatedPasswordNeedsBackup && (
-        <label className="tw-mt-3 tw-flex tw-items-start tw-gap-2 tw-text-sm">
-          <input
-            type="checkbox"
-            className="tw-mt-0.5 tw-size-4 tw-shrink-0"
-            checked={confirmedPasswordBackup}
-            disabled={saving}
-            onChange={(event) => setConfirmedPasswordBackup(event.target.checked)}
-          />
-          {t(locale, "desktop.walletPasswords.confirmBackup")}
-        </label>
+        <div className="tw-mt-3 tw-text-sm">
+          <p id="wallet-password-backup-hint" className="tw-mb-2">
+            {t(locale, "desktop.walletPasswords.backupHint")}
+          </p>
+          <label className="tw-flex tw-items-start tw-gap-2">
+            <input
+              type="checkbox"
+              className="tw-mt-0.5 tw-size-4 tw-shrink-0"
+              checked={confirmedPasswordBackup}
+              disabled={saving || (passHidden && !confirmedPasswordBackup)}
+              onChange={(event) => setConfirmedPasswordBackup(event.target.checked)}
+            />
+            {t(locale, "desktop.walletPasswords.confirmBackup")}
+          </label>
+        </div>
       )}
-      <p className="tw-mb-1 tw-mt-4">
+      <p className="tw-mb-1 tw-mt-4" aria-live="polite">
         {error ? (
           <span className="tw-text-red-400">{error}</span>
         ) : (
-          <>Provide a name and password for your new wallet</>
+          t(locale, "desktop.walletPasswords.setupPrompt")
         )}
       </p>
     </ConfirmModalShell>
@@ -336,7 +365,7 @@ export function UnlockSeedWalletModal(
         password
       );
       if (!areEqualAddresses(props.address, decryptedAddress)) {
-        showUnlockError("Failed to unlock wallet");
+        showUnlockError(t(locale, "desktop.walletPasswords.unlockFailed"));
         return;
       }
       if (walletPass) await offerSave(props.address, password);
@@ -344,7 +373,7 @@ export function UnlockSeedWalletModal(
       handleHide();
     } catch {
       if (!walletPass) clearSavedPassword();
-      showUnlockError("Failed to unlock wallet");
+      showUnlockError(t(locale, "desktop.walletPasswords.unlockFailed"));
     } finally {
       setUnlocking(false);
     }
@@ -353,7 +382,7 @@ export function UnlockSeedWalletModal(
   return (
     <ConfirmModalShell
       show={props.show}
-      title="Unlock Wallet"
+      title={t(locale, "desktop.walletPasswords.unlockTitle")}
       onBackdropClick={() => {
         if (!unlocking) handleHide();
       }}
@@ -365,7 +394,7 @@ export function UnlockSeedWalletModal(
             onClick={handleHide}
             className={confirmBtnSecondary}
           >
-            Cancel
+            {t(locale, "desktop.walletPasswords.cancel")}
           </button>
           <button
             type="button"
@@ -373,13 +402,18 @@ export function UnlockSeedWalletModal(
             onClick={handleUnlock}
             className={confirmBtnPrimary}
           >
-            {unlocking ? "Unlocking..." : "Unlock"}
+            {t(
+              locale,
+              unlocking ? "desktop.walletPasswords.unlocking" : "desktop.walletPasswords.unlock"
+            )}
           </button>
         </>
       }
     >
       <div className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1 tw-pt-3">
-        <label htmlFor="unlock-wallet-password">Wallet Password</label>
+        <label htmlFor="unlock-wallet-password">
+          {t(locale, "desktop.walletPasswords.walletPassword")}
+        </label>
         <button
           type="button"
           onClick={() => setPassHidden(!passHidden)}
@@ -394,6 +428,7 @@ export function UnlockSeedWalletModal(
           <FontAwesomeIcon
             icon={passHidden ? faEyeSlash : faEye}
             height={18}
+            aria-hidden="true"
             className="tw-cursor-pointer"
           />
         </button>
@@ -411,7 +446,7 @@ export function UnlockSeedWalletModal(
         onChange={(e) => {
           const value = e.target.value;
           if (/^\S*$/.test(value)) setWalletPass(value);
-          else showError("Password must not contain any whitespace characters");
+          else showError(t(locale, "desktop.walletPasswords.passwordWhitespace"));
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") void handleUnlock();
@@ -423,7 +458,7 @@ export function UnlockSeedWalletModal(
         ) : hasSavedPassword ? (
           t(locale, "desktop.walletPasswords.unlockHint")
         ) : (
-          "Provide wallet password to continue"
+          t(locale, "desktop.walletPasswords.unlockPrompt")
         )}
       </p>
     </ConfirmModalShell>

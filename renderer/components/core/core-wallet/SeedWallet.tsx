@@ -150,14 +150,21 @@ export default function SeedWallet(
       }
       const data = await deleteSeedWallet(address);
       if (data.error) {
-        console.error(data.error);
-        showToast(`Error deleting wallet - ${data.error}`, "error");
+        showToast(
+          t(
+            locale,
+            data.code === "busy"
+              ? "desktop.walletPasswords.deleteBusy"
+              : "desktop.walletPasswords.deleteFailed"
+          ),
+          "error"
+        );
       } else {
         router.push("/core/core-wallets");
         showToast(`Wallet '${name}' deleted successfully`, "success");
       }
     },
-    [account.address]
+    [account.address, locale, router, showToast]
   );
 
   const deleteWallet = (name: string, address: string) => {
