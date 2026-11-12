@@ -2,15 +2,30 @@ import { renderHook } from "@testing-library/react";
 import { useSidebarSections } from "@/hooks/useSidebarSections";
 
 describe("useSidebarSections", () => {
-  it("returns the menu IA groups with the Museum reading room link", () => {
-    const { result } = renderHook(() => useSidebarSections(false, false));
+  it("returns the menu groups with the Museum and desktop navigation", () => {
+    const ipfsUrl = "http://127.0.0.1:5001/webui";
+    const { result } = renderHook(() => useSidebarSections(false, false, ipfsUrl));
 
     expect(result.current.map((section) => section.key)).toEqual([
       "nfts",
       "museum",
       "waves",
       "about",
+      "6529-desktop",
     ]);
+
+    const desktopSection = result.current.find(
+      (section) => section.key === "6529-desktop"
+    );
+    expect(desktopSection?.items).toContainEqual(
+      expect.objectContaining({ href: "/core/core-wallets" })
+    );
+    expect(desktopSection?.subsections?.[0]?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "desktop-ipfs", href: ipfsUrl }),
+        expect.objectContaining({ id: "desktop-validator" }),
+      ])
+    );
 
     const nftsSection = result.current.find(
       (section) => section.key === "nfts"
@@ -220,12 +235,12 @@ describe("useSidebarSections", () => {
       ...(section.subsections ?? []).flatMap((subsection) => subsection.items),
     ]);
 
-    expect(allItems).toEqual(
-      expect.not.arrayContaining([
-        expect.objectContaining({ name: "Subscription Minting" }),
-        expect.objectContaining({ name: "Subscriptions Report" }),
-        expect.objectContaining({ name: "Meme Subscriptions Data" }),
-      ])
-    );
+    for (const name of [
+      "Subscription Minting",
+      "Subscriptions Report",
+      "Meme Subscriptions Data",
+    ]) {
+      expect(allItems).not.toContainEqual(expect.objectContaining({ name }));
+    }
   });
 });

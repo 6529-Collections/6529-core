@@ -5,6 +5,7 @@ import WebSidebarNav from "@/components/layout/sidebar/WebSidebarNav";
 
 jest.mock("next/navigation", () => ({
   usePathname: jest.fn(),
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 jest.mock("@/components/app-wallets/AppWalletsContext", () => ({
@@ -13,6 +14,10 @@ jest.mock("@/components/app-wallets/AppWalletsContext", () => ({
 
 jest.mock("@/components/auth/Auth", () => ({
   useAuth: () => mockMembershipAuth,
+}));
+
+jest.mock("@/components/ipfs/IPFSContext", () => ({
+  useIpfsContext: () => ({ ipfsStatus: "disabled", ipfsUrls: undefined }),
 }));
 
 jest.mock("@/components/cookies/CookieConsentContext", () => ({
@@ -140,6 +145,7 @@ describe("WebSidebarNav", () => {
       screen.getByRole("link", { name: "DMs" }),
       screen.getByRole("link", { name: "Join 6529" }),
       screen.getByRole("button", { name: "About" }),
+      screen.getByRole("button", { name: "6529 Desktop" }),
       screen.getByRole("link", { name: "Drop Forge" }),
     ]);
   });
