@@ -464,6 +464,7 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "desktop.localServices": "Local services",
   "desktop.validatorTitle": "6529 Validator",
   "desktop.validatorOpen": "Open 6529 Validator",
+  "desktop.validatorGet": "Get 6529 Validator",
   "desktop.validatorStopped": "Stopped",
   "desktop.validatorRunning": "Running",
   "desktop.validatorAllGood": "All good",
@@ -3440,6 +3441,9 @@ export const EN_US_ROOT_MESSAGES = {
   "desktop.about.showValidator": "Show 6529 Validator",
   "desktop.about.showValidatorHelp":
     "Show 6529 Validator in the title bar. Your validator keeps running when hidden.",
+  "desktop.about.showValidatorInstallHelp": "Show Validator status in the title bar.",
+  "desktop.about.validatorNotInstalled": "6529 Validator isn’t installed on this computer.",
+  "desktop.about.validatorInstallationError": "Could not check whether 6529 Validator is installed.",
   "desktop.about.showValidatorSaveError": "Could not save your Validator preference. Try again.",
   "desktop.about.showValidatorLoadError": "Could not load your Validator preference.",
   "desktop.about.portPending": "Pending…",

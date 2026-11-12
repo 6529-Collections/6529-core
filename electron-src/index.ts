@@ -73,6 +73,7 @@ import {
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
 import {
   getDesktopValidatorStatus,
+  isDesktopValidatorInstalled,
   openDesktopValidator,
 } from "./desktop-validator";
 import IPFSServer from "./ipfs/ipfs.server";
@@ -2289,6 +2290,13 @@ ipcMain.handle("desktop-validator:status", (event) => {
     throw new Error("Validator status is only available in the main window");
   }
   return getDesktopValidatorStatus();
+});
+
+ipcMain.handle("desktop-validator:is-installed", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator installation is only available in the main window");
+  }
+  return isDesktopValidatorInstalled();
 });
 
 ipcMain.handle("desktop-validator:open", (event) => {

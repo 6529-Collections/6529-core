@@ -53,6 +53,11 @@ function getDesktopSection(
             href: ipfsWebuiUrl,
             isExternal: true,
           },
+          {
+            id: "desktop-validator",
+            name: t(locale, "navigation.desktop.validatorTitle"),
+            href: "",
+          },
         ],
       },
     ],
