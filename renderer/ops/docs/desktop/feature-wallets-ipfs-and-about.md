@@ -29,6 +29,8 @@ Create Wallet opens Create New Wallet: choose a name and password and select Cre
 
 Import Wallet offers Mnemonic (the current form accepts 12 words) or Private Key. Enter it only in the trusted local app, Validate, check the resulting address, then Import Wallet with a name and password. Never send a phrase, key, or password to the help bot.
 
+On macOS, **Generate** fills the password field during setup. Reveal and securely back up the generated password, then confirm the backup to continue. After creating, importing, or manually unlocking a wallet, a macOS sheet can offer to save its password in this Mac’s Keychain. With a saved password, leave the field blank and choose **Unlock**. You can still enter the password manually. Choose **Wallet settings** on the wallet details page and select **Forget saved password** to remove it from Keychain. Deleting the wallet also removes its saved password.
+
 Use the 6529 Desktop wallet connector in the wallet connection flow to select a saved wallet and unlock it when prompted. Review signature/transaction requests before approving; an unlocked wallet and an authenticated 6529 session are distinct states.
 
 Wallet details show the address and password-protected reveal/copy controls plus Download Recovery File. That download contains the decrypted private key and available mnemonic in a plaintext text file; keep it private and securely backed up, never send it to the bot. Private-key-only imports have no mnemonic.

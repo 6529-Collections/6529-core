@@ -17,6 +17,7 @@ import Logger from "electron-log";
 import { app, BrowserWindow, dialog, Menu, Notification } from "electron/main";
 import fs from "fs";
 import { getPort } from "get-port-please";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import open, { apps } from "open";
@@ -45,6 +46,8 @@ import {
   SeedWalletRequest,
   TRANSACTIONS_START_BLOCK,
 } from "../shared/types";
+import { decryptData } from "../shared/encrypt";
+import { WalletKeychain, type MacWalletKeychainNative } from "./wallet-keychain";
 import type { NotificationNavigationContext } from "../shared/preload-types";
 import {
   NativeAuthApiError,
@@ -1665,7 +1668,11 @@ async function openMainWindow() {
 
 function initListeners(mw: BrowserWindow) {
   mw.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
-    if (isMainFrame && !isInPlace) navigationReadyWindows.delete(mw);
+    if (isMainFrame && !isInPlace) {
+      navigationReadyWindows.delete(mw);
+      walletPasswordNavigation++;
+      walletSavePrompt?.abort();
+    }
   });
   mw.webContents.on("did-finish-load", () => pendingDeepLinks.flush());
 
@@ -1851,7 +1858,7 @@ ipcMain.on(GET_SEED_WALLET, (event, args) => {
 ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
   const address = args[0];
   Logger.info(`Deleting seed wallet: ${address}`);
-  deleteSeedWallet(address)
+  walletKeychain.deleteWallet(address, deleteSeedWallet)
     .then(() => {
       event.returnValue = {
         error: false,
@@ -2266,6 +2273,116 @@ function isMainRenderer(event: IpcMainInvokeEvent): boolean {
       new URL(event.senderFrame.url).origin === `http://localhost:${PORT}`
   );
 }
+
+let nativeWalletKeychain: MacWalletKeychainNative | null = null;
+if (process.platform === "darwin") {
+  try {
+    nativeWalletKeychain = createRequire(__filename)(
+      path.join(__dirname, "assets", "native", "macos-wallet-keychain.node"),
+    ) as MacWalletKeychainNative;
+  } catch {
+    Logger.warn("macOS wallet Keychain bridge is unavailable");
+  }
+}
+
+let walletPasswordNavigation = 0;
+let walletSavePrompt: AbortController | null = null;
+const walletKeychain = new WalletKeychain(
+  nativeWalletKeychain,
+  path.resolve(app.getPath("userData")),
+  async (address, password) => {
+    const wallet = await getSeedWallet(address);
+    if (!wallet) return false;
+    try {
+      const decrypted = await decryptData(
+        wallet.address,
+        wallet.address_hashed,
+        password,
+      );
+      return decrypted.toLowerCase() === wallet.address.toLowerCase();
+    } catch {
+      return false;
+    }
+  },
+);
+
+function requireWalletPasswordRenderer(event: IpcMainInvokeEvent): void {
+  if (!isMainRenderer(event)) {
+    throw new Error("Wallet password request is not allowed");
+  }
+}
+
+ipcMain.handle("wallet-passwords:is-available", (event) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.isAvailable();
+});
+
+ipcMain.handle("wallet-passwords:generate", (event) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.generate();
+});
+
+ipcMain.handle("wallet-passwords:request", async (event, address: unknown) => {
+  requireWalletPasswordRenderer(event);
+  const navigation = walletPasswordNavigation;
+  const result = await walletKeychain.request(address);
+  if (navigation !== walletPasswordNavigation || !isMainRenderer(event)) {
+    return { ok: false, code: "unavailable" };
+  }
+  return result;
+});
+
+ipcMain.handle("wallet-passwords:has-saved", (event, address: unknown) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.hasSavedPassword(address);
+});
+
+ipcMain.handle(
+  "wallet-passwords:offer-save",
+  (event, address: unknown, password: unknown) => {
+    requireWalletPasswordRenderer(event);
+    const navigation = walletPasswordNavigation;
+    const owner = mainWindow;
+    return walletKeychain.offerSave(address, password, async () => {
+      if (
+        !owner?.isVisible() ||
+        navigation !== walletPasswordNavigation ||
+        !isMainRenderer(event) ||
+        walletSavePrompt
+      ) {
+        return "cancelled";
+      }
+      const controller = new AbortController();
+      walletSavePrompt = controller;
+      try {
+        const { response } = await dialog.showMessageBox(owner, {
+          type: "question",
+          message: "Save this wallet password on this Mac?",
+          detail: "The password stays in this Mac’s Keychain. You can remove it in the wallet’s settings.",
+          buttons: ["Save Password", "Not Now"],
+          defaultId: 0,
+          cancelId: 1,
+          signal: controller.signal,
+        });
+        if (
+          controller.signal.aborted ||
+          navigation !== walletPasswordNavigation ||
+          !isMainRenderer(event)
+        ) {
+          return "cancelled";
+        }
+        return response === 0 ? "save" : "skip";
+      } finally {
+        walletSavePrompt = null;
+      }
+    });
+  },
+);
+
+ipcMain.handle("wallet-passwords:forget", (event, address: unknown) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.forget(address);
+});
 
 const DESKTOP_VALIDATOR_VISIBLE_KEY = "desktop-validator-visible";
 

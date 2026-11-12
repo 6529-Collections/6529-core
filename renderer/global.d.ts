@@ -1,4 +1,5 @@
 export {};
+import type { ElectronWalletPasswords } from "../shared/wallet-passwords";
 import {
   ElectronAPI,
   ElectronNativeAuth,
@@ -11,6 +12,7 @@ import {
 
 declare global {
   interface Window {
+    walletPasswords?: ElectronWalletPasswords;
     api: ElectronAPI;
     nativeAuth?: ElectronNativeAuth;
     updater: ElectronUpdater;

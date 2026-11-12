@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import type { ElectronWalletPasswords } from "../shared/wallet-passwords";
 import type { DesktopProfileState } from "../shared/desktop-profile-state";
 import type { DesktopValidatorStatus } from "../shared/desktop-validator";
 import {
@@ -54,6 +55,17 @@ const localIpfsFrameFailureListeners = new Set<(url: string) => void>();
 ipcRenderer.on("local-ipfs-frame-failed", (_event, url: string) => {
   for (const listener of localIpfsFrameFailureListeners) listener(url);
 });
+
+const walletPasswords: ElectronWalletPasswords = {
+  isAvailable: () => ipcRenderer.invoke("wallet-passwords:is-available"),
+  generate: () => ipcRenderer.invoke("wallet-passwords:generate"),
+  hasSavedPassword: (address) => ipcRenderer.invoke("wallet-passwords:has-saved", address),
+  request: (address) => ipcRenderer.invoke("wallet-passwords:request", address),
+  offerSave: (address, password) =>
+    ipcRenderer.invoke("wallet-passwords:offer-save", address, password),
+  forget: (address) => ipcRenderer.invoke("wallet-passwords:forget", address),
+};
+contextBridge.exposeInMainWorld("walletPasswords", walletPasswords);
 
 export const api = {
   on: (channel: string, callback: Function) => {

@@ -3,6 +3,10 @@
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
+import { confirmBtnSecondarySmall } from "@/components/shared/ConfirmModalShell";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { useSavedWalletPassword } from "@/hooks/useSavedWalletPassword";
+import { t } from "@/i18n/messages";
 import { deleteSeedWallet, getSeedWallet } from "@/electron";
 import { MNEMONIC_NA } from "@/electron-constants";
 import { getRandomKey, openInExternalBrowser } from "@/helpers";
@@ -63,6 +67,30 @@ export default function SeedWallet(
   const [addressCopied, setAddressCopied] = useState(false);
   const [mnemonicCopied, setMnemonicCopied] = useState(false);
   const [privateKeyCopied, setPrivateKeyCopied] = useState(false);
+  const [forgettingPassword, setForgettingPassword] = useState(false);
+  const locale = useBrowserLocale();
+  const { hasSavedPassword, clearSavedPassword } = useSavedWalletPassword(
+    isRevealingPhrase || isRevealingPrivateKey || isDownloading
+      ? undefined
+      : seedWallet?.address
+  );
+
+  const forgetSavedPassword = async (address: string) => {
+    setForgettingPassword(true);
+    try {
+      const result = await window.walletPasswords?.forget(address);
+      if (result?.ok) {
+        clearSavedPassword();
+        showToast(t(locale, "desktop.walletPasswords.forgotten"), "success", true);
+        return;
+      }
+    } catch {
+      // Report the failure without exposing Keychain details.
+    } finally {
+      setForgettingPassword(false);
+    }
+    showToast(t(locale, "desktop.walletPasswords.forgetFailed"), "error", true);
+  };
 
   function setEncryptedPhrase() {
     setPhrase(Array(12).fill("x".repeat(8)));
@@ -445,6 +473,21 @@ export default function SeedWallet(
             full_width={true}
           />
         </div>
+        {hasSavedPassword && (
+          <details className="tw-mt-5 tw-text-sm">
+            <summary className="tw-w-fit tw-cursor-pointer tw-rounded focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400">
+              {t(locale, "desktop.walletPasswords.settings")}
+            </summary>
+            <button
+              type="button"
+              className={`${confirmBtnSecondarySmall} tw-mt-2 disabled:tw-opacity-50`}
+              disabled={forgettingPassword}
+              onClick={() => void forgetSavedPassword(seedWallet.address)}
+            >
+              {t(locale, "desktop.walletPasswords.forget")}
+            </button>
+          </details>
+        )}
         <div className="tw-mt-5 tw-flex tw-items-center tw-gap-2">
           <button
             type="button"

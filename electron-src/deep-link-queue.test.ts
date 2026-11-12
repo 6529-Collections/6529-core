@@ -38,7 +38,7 @@ test("only a main-frame document navigation resets deep-link readiness", () => {
       },
     },
   };
-  const context = vm.createContext({ mw, navigationReadyWindows });
+  const context = vm.createContext({ mw, navigationReadyWindows, walletPasswordNavigation: 0, walletSavePrompt: null });
   vm.runInContext(
     ts.transpileModule(registration.getText(source), {
       compilerOptions: { target: ts.ScriptTarget.ES2022 },
@@ -50,8 +50,10 @@ test("only a main-frame document navigation resets deep-link readiness", () => {
   assert.equal(navigationReadyWindows.has(mw), true);
   navigate({}, "http://localhost:6529/iframe", false, false);
   assert.equal(navigationReadyWindows.has(mw), true);
+  assert.equal(context.walletPasswordNavigation, 0);
   navigate({}, "http://localhost:6529/connection/accept", false, true);
   assert.equal(navigationReadyWindows.has(mw), false);
+  assert.equal(context.walletPasswordNavigation, 1);
 });
 
 test("cold-start links retain private fragments until the current renderer is ready", () => {
