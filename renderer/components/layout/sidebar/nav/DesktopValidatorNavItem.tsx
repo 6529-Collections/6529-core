@@ -7,7 +7,6 @@ import {
   useOpenDesktopValidator,
 } from "@/hooks/useDesktopValidator";
 import { t } from "@/i18n/messages";
-import { DESKTOP_VALIDATOR_DOWNLOAD_URL } from "@/shared/desktop-validator";
 
 export default function DesktopValidatorNavItem({
   className,
@@ -24,55 +23,41 @@ export default function DesktopValidatorNavItem({
 
   const actionClassName = `${className} tw-gap-2 tw-bg-transparent tw-text-left tw-text-iron-300 desktop-hover:hover:tw-bg-iron-700/50 desktop-hover:hover:tw-text-white`;
 
-  if (installed === false) {
-    return (
-      <a
-        href={DESKTOP_VALIDATOR_DOWNLOAD_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={actionClassName}
-        onClick={onNavigate}
-      >
-        <span className="tw-min-w-0 tw-break-words">
-          {t(locale, "navigation.desktop.validatorGet")}
-        </span>
-        <ArrowUpRightIcon aria-hidden="true" className="tw-size-4 tw-shrink-0" />
-      </a>
-    );
-  }
-
-  const canOpen = installed === true || isError;
+  const checking = installed === undefined && !isError;
+  const busy = checking || openValidator.isPending;
+  const label = checking
+    ? "navigation.desktop.validatorCheckingInstallation"
+    : installed === false
+      ? "navigation.desktop.validatorGet"
+      : "navigation.desktop.validatorOpen";
 
   return (
     <>
       <button
         type="button"
         className={`${actionClassName} tw-border-0`}
-        disabled={!canOpen}
-        aria-disabled={openValidator.isPending}
+        aria-disabled={busy || undefined}
+        aria-busy={busy || undefined}
         onClick={() => {
-          if (!openValidator.isPending) {
+          if (!busy) {
             openValidator.mutate(undefined, { onSuccess: () => onNavigate?.() });
           }
         }}
       >
         <span className="tw-min-w-0 tw-break-words">
-          {t(
-            locale,
-            canOpen
-              ? "navigation.desktop.validatorOpen"
-              : "navigation.desktop.validatorTitle"
-          )}
+          {t(locale, label)}
         </span>
-        {canOpen && (
+        {!checking && (
           <ArrowUpRightIcon aria-hidden="true" className="tw-size-4 tw-shrink-0" />
         )}
       </button>
-      {openValidator.isError && (
-        <p role="alert" className="tw-text-red-300 tw-mx-3 tw-my-1 tw-text-sm">
-          {t(locale, "navigation.desktop.validatorOpenFailed")}
-        </p>
-      )}
+      <div role="alert">
+        {openValidator.isError && (
+          <p className="tw-text-red-300 tw-mx-3 tw-my-1 tw-text-sm">
+            {t(locale, "navigation.desktop.validatorOpenFailed")}
+          </p>
+        )}
+      </div>
     </>
   );
 }

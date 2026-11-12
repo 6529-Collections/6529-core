@@ -465,6 +465,7 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "desktop.validatorTitle": "6529 Validator",
   "desktop.validatorOpen": "Open 6529 Validator",
   "desktop.validatorGet": "Get 6529 Validator",
+  "desktop.validatorCheckingInstallation": "Checking for 6529 Validator…",
   "desktop.validatorStopped": "Stopped",
   "desktop.validatorRunning": "Running",
   "desktop.validatorAllGood": "All good",
