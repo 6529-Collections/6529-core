@@ -75,12 +75,22 @@
 }
 
 .version {
+  --titlebar-controls-offset: 30px;
+  /* Keep room for the status when the native overlay reports an empty area. */
+  --titlebar-available-width: max(
+    env(titlebar-area-width, 100vw),
+    calc(100vw - 240px)
+  );
   color: rgb(154, 154, 154);
   font-size: 10px;
   font-family: monospace;
   position: fixed;
   z-index: 1000;
   height: var(--core-titlebar-height);
+  max-width: max(
+    0px,
+    calc(var(--titlebar-available-width) - var(--titlebar-controls-offset) - 8px)
+  );
   top: 0px;
   display: flex;
   align-items: center;
@@ -98,26 +108,59 @@
 .environmentLabel {
   color: #36f5d2;
   text-shadow: 0 0 10px rgba(54, 245, 210, 0.45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.versionMac {
-  right: 30px;
+.versionNumber {
+  flex-shrink: 0;
+}
+
+.versionMac,
+.versionMacUpdate {
+  right: var(--titlebar-controls-offset);
 }
 
 .platformPending {
   visibility: hidden;
 }
 
-.versionMacUpdate {
-  right: 118px;
-}
-
-.versionWin {
-  left: 30px;
-}
-
+.versionMacUpdate,
 .versionWinUpdate {
-  left: 118px;
+  --titlebar-controls-offset: 118px;
+}
+
+.versionWin,
+.versionWinUpdate {
+  left: var(--titlebar-controls-offset);
+}
+
+@media (max-width: 430px) {
+  .environmentLabel {
+    display: none;
+  }
+}
+
+@media (max-width: 340px) {
+  .versionMacUpdate,
+  .versionWinUpdate {
+    --titlebar-controls-offset: 30px;
+  }
+
+  .infoUpdate {
+    box-shadow: 0 0 0 2px #4d8aff;
+  }
+
+  .infoUpdate .buttonContent {
+    display: none;
+  }
+}
+
+@media (max-width: 260px) {
+  .versionNumber {
+    display: none;
+  }
 }
 
 .buttonContent {

@@ -69,6 +69,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
     <>
       <button
         ref={buttonRef as RefObject<HTMLButtonElement>}
+        aria-label={content}
         data-tooltip-id={tooltipId}
         className={`${buttonStyles} tw-flex`}
         style={style}

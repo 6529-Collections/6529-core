@@ -141,19 +141,21 @@ export default function DesktopValidatorStatus({
 
   return (
     <Popover
-      className={`tailwind-scope tw-relative tw-flex ${styles["validatorControl"]}`}
+      className={`tailwind-scope tw-relative tw-flex tw-min-w-0 ${styles["validatorControl"]}`}
     >
       <PopoverButton
         aria-describedby={showChipLabel ? undefined : statusId}
-        className={`tw-relative tw-z-[1] tw-flex tw-h-[22px] tw-items-center tw-gap-1 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-border-iron-700 tw-bg-transparent tw-px-1.5 tw-text-iron-100 hover:tw-bg-iron-900 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 aria-expanded:tw-border-iron-500 aria-expanded:tw-bg-iron-800 ${styles["validatorChip"]}`}
+        className={`tw-relative tw-z-[1] tw-flex tw-h-[22px] tw-min-w-0 tw-items-center tw-gap-1 tw-whitespace-nowrap tw-rounded tw-border tw-border-solid tw-border-iron-700 tw-bg-transparent tw-px-1.5 tw-text-iron-100 hover:tw-bg-iron-900 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 aria-expanded:tw-border-iron-500 aria-expanded:tw-bg-iron-800 ${styles["validatorChip"]}`}
       >
         <FontAwesomeIcon
           aria-hidden="true"
           icon={icon}
           className={`tw-size-2.5 tw-shrink-0 ${iconColor}`}
         />
-        {title}
-        {showChipLabel && <span>· {label}</span>}
+        <span className="tw-truncate">
+          {title}
+          {showChipLabel && ` · ${label}`}
+        </span>
       </PopoverButton>
       <span id={statusId} className="tw-sr-only">
         {label}
