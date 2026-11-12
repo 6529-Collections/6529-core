@@ -1,8 +1,5 @@
 "use client";
 
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
-import { shouldHideSubscriptions } from "@/components/user/layout/userPageVisibility";
-import useCapacitor from "@/hooks/useCapacitor";
 import { useNftPurchasingVisibility } from "@/hooks/useNftPurchasingVisibility";
 import {
   SIDEBAR_HOVER_CLOSE_DELAY_MS,
@@ -93,15 +90,9 @@ const WebSidebarNav = React.forwardRef<
   );
 
   const { hideNftPurchasing } = useNftPurchasingVisibility();
-  const capacitor = useCapacitor();
-  const consent = useCookieConsent();
   const sections = useSidebarSections(
     appWalletsSupported,
     hideNftPurchasing,
-    shouldHideSubscriptions({
-      capacitorIsIos: capacitor.isIos,
-      country: consent.country,
-    }),
     ipfsUrls?.webui ?? ""
   );
   const sectionMap = useSectionMap(sections);
