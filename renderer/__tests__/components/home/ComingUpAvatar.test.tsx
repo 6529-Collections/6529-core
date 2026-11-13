@@ -2,6 +2,11 @@ import ProfileAvatar from "@/components/common/profile/ProfileAvatar";
 import ComingUpAvatar from "@/components/home/next-mint-leading/ComingUpAvatar";
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
 
+// The avatar components need no providers. Keep the fetch spy scoped to image requests.
+jest.mock("@testing-library/react", () =>
+  jest.requireActual("@testing-library/react")
+);
+
 jest.mock("@/components/ipfs/IPFSContext", () => ({
   resolveIpfsUrlSync: (src: string) => src,
 }));
