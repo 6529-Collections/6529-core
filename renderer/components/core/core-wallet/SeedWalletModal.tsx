@@ -4,15 +4,18 @@ import {
   ConfirmModalShell,
   confirmBtnPrimary,
   confirmBtnSecondary,
+  confirmBtnSecondarySmall,
   confirmInputClass,
 } from "@/components/shared/ConfirmModalShell";
-import { areEqualAddresses } from "@/helpers/Helpers";
-import { decryptData } from "@/shared/encrypt";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "../../../contexts/ToastContext";
 import { createSeedWallet, importSeedWallet } from "../../../electron";
+import { useOfferWalletPasswordSave } from "@/hooks/useOfferWalletPasswordSave";
+import type { WalletRecoveryField, WalletRecoveryResult } from "@/shared/wallet-passwords";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
 
 export const SEED_MIN_PASS_LENGTH = 6;
 
@@ -45,7 +48,32 @@ export function CreateSeedWalletModal(
   const [walletPass, setWalletPass] = useState("");
   const [passHidden, setPassHidden] = useState(true);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [canGenerate, setCanGenerate] = useState(false);
+  const [generatedPasswordNeedsBackup, setGeneratedPasswordNeedsBackup] =
+    useState(false);
+  const [confirmedPasswordBackup, setConfirmedPasswordBackup] = useState(false);
+  const offerSave = useOfferWalletPasswordSave();
+  const locale = useBrowserLocale();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!props.show) return;
+    const bridge = window.walletPasswords;
+    if (!bridge) return;
+    let active = true;
+    void bridge.isAvailable().then(
+      (available) => {
+        if (active) setCanGenerate(available);
+      },
+      () => {
+        if (active) setCanGenerate(false);
+      }
+    );
+    return () => {
+      active = false;
+    };
+  }, [props.show]);
 
   const showError = (message: string) => {
     showTimedError(message, setError, timeoutRef);
@@ -54,124 +82,218 @@ export function CreateSeedWalletModal(
   const handleHide = (refresh: boolean) => {
     setWalletName("");
     setWalletPass("");
+    setGeneratedPasswordNeedsBackup(false);
+    setConfirmedPasswordBackup(false);
     setError("");
+    setPassHidden(true);
     props.onHide(refresh);
   };
 
-  const handleCreate = useCallback(async () => {
+  const generatePassword = async () => {
+    setSaving(true);
+    try {
+      const generated = await window.walletPasswords?.generate();
+      if (generated?.ok) {
+        setWalletPass(generated.value);
+        setGeneratedPasswordNeedsBackup(true);
+        setConfirmedPasswordBackup(false);
+        setPassHidden(true);
+        setError("");
+        return;
+      }
+    } catch {
+      // The user can still enter a password.
+    } finally {
+      setSaving(false);
+    }
+    showError(t(locale, "desktop.walletPasswords.generateFailed"));
+  };
+
+  const canSubmit =
+    !saving &&
+    Boolean(walletName && walletPass) &&
+    (!generatedPasswordNeedsBackup || confirmedPasswordBackup);
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
     if (walletPass.length < SEED_MIN_PASS_LENGTH) {
-      showError(`Password must be at least ${SEED_MIN_PASS_LENGTH} characters long`);
+      showError(
+        t(locale, "desktop.walletPasswords.passwordTooShort", {
+          count: SEED_MIN_PASS_LENGTH,
+        })
+      );
       return;
     }
     setError("");
-    const data = await createSeedWallet(walletName, walletPass);
-    if (data.error) {
-      showToast(`Error creating wallet - ${data.data}`, "error");
-    } else {
+    setSaving(true);
+    try {
+      const imported = props.import;
+      const data = imported
+        ? await importSeedWallet(
+            walletName, walletPass, imported.address, imported.mnemonic, imported.privateKey
+          )
+        : await createSeedWallet(walletName, walletPass);
+      if (data.error) {
+        showToast(
+          t(
+            locale,
+            imported
+              ? "desktop.walletPasswords.importFailed"
+              : "desktop.walletPasswords.createFailed"
+          ),
+          "error"
+        );
+        return;
+      }
+      const address = imported?.address ?? data.data;
+      if (typeof address === "string") await offerSave(address, walletPass);
       showToast(
-        `Wallet '${walletName}' created successfully - Download Recovery File immediately!`,
+        imported
+          ? t(locale, "desktop.walletPasswords.imported")
+          : t(locale, "desktop.walletPasswords.created", { name: walletName }),
         "success"
       );
       handleHide(true);
+    } finally {
+      setSaving(false);
     }
-  }, [walletName, walletPass, showToast]);
-
-  const handleImport = useCallback(async () => {
-    if (!props.import) return;
-    if (walletPass.length < SEED_MIN_PASS_LENGTH) {
-      showError(`Password must be at least ${SEED_MIN_PASS_LENGTH} characters long`);
-      return;
-    }
-    setError("");
-    const data = await importSeedWallet(
-      walletName,
-      walletPass,
-      props.import.address,
-      props.import.mnemonic,
-      props.import.privateKey
-    );
-    if (data.error) {
-      showToast(`Error importing wallet - ${data.data}`, "error");
-    } else {
-      showToast("Wallet imported successfully!", "success");
-      handleHide(true);
-    }
-  }, [walletName, walletPass, props.import, showToast]);
+  };
 
   return (
     <ConfirmModalShell
       show={props.show}
-      title={`${props.import ? "Import" : "Create New"} Wallet`}
-      onBackdropClick={() => handleHide(false)}
+      title={t(
+        locale,
+        props.import
+          ? "desktop.walletPasswords.importTitle"
+          : "desktop.walletPasswords.createTitle"
+      )}
+      onBackdropClick={() => {
+        if (!saving) handleHide(false);
+      }}
       footer={
         <>
           <button
             type="button"
+            disabled={saving}
             onClick={() => handleHide(false)}
             className={confirmBtnSecondary}
           >
-            Cancel
+            {t(locale, "desktop.walletPasswords.cancel")}
           </button>
-          {props.import ? (
-            <button
-              type="button"
-              disabled={!walletName || !walletPass}
-              onClick={handleImport}
-              className={confirmBtnPrimary}
-            >
-              Import
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={!walletName || !walletPass}
-              onClick={handleCreate}
-              className={confirmBtnPrimary}
-            >
-              Create
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={handleSubmit}
+            className={confirmBtnPrimary}
+          >
+            {t(
+              locale,
+              props.import ? "desktop.walletPasswords.import" : "desktop.walletPasswords.create"
+            )}
+          </button>
         </>
       }
     >
-      <label className="tw-block tw-pb-1">Wallet Name</label>
+      <label htmlFor="new-wallet-name" className="tw-block tw-pb-1">
+        {t(locale, "desktop.walletPasswords.walletName")}
+      </label>
       <input
+        id="new-wallet-name"
+        disabled={saving}
         autoFocus
         type="text"
-        placeholder="My Wallet..."
+        placeholder={t(locale, "desktop.walletPasswords.walletNamePlaceholder")}
         value={walletName}
         className={confirmInputClass}
         onChange={(e) => {
           const value = e.target.value;
           if (/^[a-zA-Z0-9 ]*$/.test(value)) setWalletName(value);
-          else showError("Name can only contain alphanumeric characters and spaces");
+          else
+            showError(
+              t(locale, "desktop.walletPasswords.invalidName")
+            );
         }}
       />
-      <label className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pt-3 tw-pb-1">
-        <span>Wallet Password</span>
-        <FontAwesomeIcon
-          icon={passHidden ? faEyeSlash : faEye}
-          height={18}
+      <div className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1 tw-pt-3">
+        <label htmlFor="new-wallet-password">
+          {t(locale, "desktop.walletPasswords.walletPassword")}
+        </label>
+        <button
+          type="button"
           onClick={() => setPassHidden(!passHidden)}
-          className="tw-cursor-pointer"
+          aria-label={t(
+            locale,
+            passHidden
+              ? "desktop.walletPasswords.showPassword"
+              : "desktop.walletPasswords.hidePassword"
+          )}
+          className="tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-1 tw-text-inherit focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
+        >
+          <FontAwesomeIcon
+            icon={passHidden ? faEyeSlash : faEye}
+            height={18}
+            aria-hidden="true"
+            className="tw-cursor-pointer"
+          />
+        </button>
+      </div>
+      <div className="tw-flex tw-items-center tw-gap-2">
+        <input
+          id="new-wallet-password"
+          aria-describedby={
+            generatedPasswordNeedsBackup ? "wallet-password-backup-hint" : undefined
+          }
+          autoComplete="new-password"
+          disabled={saving}
+          type={passHidden ? "password" : "text"}
+          placeholder="******"
+          value={walletPass}
+          className={confirmInputClass}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (/^\S*$/.test(value)) {
+              setWalletPass(value);
+              setConfirmedPasswordBackup(false);
+              if (!value) setGeneratedPasswordNeedsBackup(false);
+            } else {
+              showError(t(locale, "desktop.walletPasswords.passwordWhitespace"));
+            }
+          }}
         />
-      </label>
-      <input
-        type={passHidden ? "password" : "text"}
-        placeholder="******"
-        value={walletPass}
-        className={confirmInputClass}
-        onChange={(e) => {
-          const value = e.target.value;
-          if (/^\S*$/.test(value)) setWalletPass(value);
-          else showError("Password must not contain any whitespace characters");
-        }}
-      />
-      <p className="tw-mt-4 tw-mb-1">
+        {canGenerate && (
+          <button
+            type="button"
+            className={`${confirmBtnSecondarySmall} tw-shrink-0 disabled:tw-opacity-50`}
+            disabled={saving}
+            onClick={() => void generatePassword()}
+          >
+            {t(locale, "desktop.walletPasswords.generate")}
+          </button>
+        )}
+      </div>
+      {generatedPasswordNeedsBackup && (
+        <div className="tw-mt-3 tw-text-sm">
+          <p id="wallet-password-backup-hint" className="tw-mb-2">
+            {t(locale, "desktop.walletPasswords.backupHint")}
+          </p>
+          <label className="tw-flex tw-items-start tw-gap-2">
+            <input
+              type="checkbox"
+              className="tw-mt-0.5 tw-size-4 tw-shrink-0"
+              checked={confirmedPasswordBackup}
+              disabled={saving || (passHidden && !confirmedPasswordBackup)}
+              onChange={(event) => setConfirmedPasswordBackup(event.target.checked)}
+            />
+            {t(locale, "desktop.walletPasswords.confirmBackup")}
+          </label>
+        </div>
+      )}
+      <p className="tw-mb-1 tw-mt-4" aria-live="polite">
         {error ? (
           <span className="tw-text-red-400">{error}</span>
         ) : (
-          <>Provide a name and password for your new wallet</>
+          t(locale, "desktop.walletPasswords.setupPrompt")
         )}
       </p>
     </ConfirmModalShell>
@@ -182,12 +304,13 @@ export function UnlockSeedWalletModal(
   props: Readonly<{
     show: boolean;
     address: string;
-    address_hashed: string;
-    onUnlock: (pass: string) => void;
+    field: WalletRecoveryField;
+    onUnlock: (result: WalletRecoveryResult) => void;
     onHide: () => void;
   }>
 ) {
   const [walletPass, setWalletPass] = useState("");
+  const locale = useBrowserLocale();
   const [passHidden, setPassHidden] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState("");
@@ -201,79 +324,98 @@ export function UnlockSeedWalletModal(
   const handleHide = () => {
     setWalletPass("");
     setError("");
-    setUnlocking(false);
+    setPassHidden(true);
     props.onHide();
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && walletPass) handleUnlock();
-  };
+  const canUnlock = walletPass.length >= SEED_MIN_PASS_LENGTH;
 
-  const showUnlockError = () => {
-    setUnlocking(false);
-    showError("Failed to unlock wallet");
+  const showUnlockError = (message: string) => {
+    showError(message);
     inputRef.current?.focus();
     inputRef.current?.select();
   };
 
-  const handleUnlock = useCallback(async () => {
+  const handleUnlock = async () => {
+    if (unlocking || !canUnlock) return;
     setError("");
     setUnlocking(true);
-    const doUnlock = async () => {
-      try {
-        const decryptedAddress = await decryptData(
-          props.address,
-          props.address_hashed,
-          walletPass
-        );
-        if (areEqualAddresses(props.address, decryptedAddress)) {
-          props.onUnlock(walletPass);
-          handleHide();
-        } else {
-          showUnlockError();
-        }
-      } catch {
-        showUnlockError();
+    try {
+      const result = await window.walletPasswords?.recover(
+        props.address, props.field, walletPass
+      );
+      if (!result?.ok) {
+        if (result?.code === "cancelled") return;
+        showUnlockError(t(locale, "desktop.walletPasswords.unlockFailed"));
+        return;
       }
-    };
-    setTimeout(doUnlock, 0);
-  }, [walletPass, props]);
+      props.onUnlock(result.value);
+      handleHide();
+    } catch {
+      showUnlockError(t(locale, "desktop.walletPasswords.unlockFailed"));
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   return (
     <ConfirmModalShell
       show={props.show}
-      title="Unlock Wallet"
-      onBackdropClick={handleHide}
+      title={t(locale, "desktop.walletPasswords.unlockTitle")}
+      onBackdropClick={() => {
+        if (!unlocking) handleHide();
+      }}
       footer={
         <>
-          <button type="button" onClick={handleHide} className={confirmBtnSecondary}>
-            Cancel
+          <button
+            type="button"
+            disabled={unlocking}
+            onClick={handleHide}
+            className={confirmBtnSecondary}
+          >
+            {t(locale, "desktop.walletPasswords.cancel")}
           </button>
           <button
             type="button"
-            disabled={
-              unlocking ||
-              !walletPass ||
-              walletPass.length < SEED_MIN_PASS_LENGTH
-            }
+            disabled={unlocking || !canUnlock}
             onClick={handleUnlock}
             className={confirmBtnPrimary}
           >
-            {unlocking ? "Unlocking..." : "Unlock"}
+            {t(
+              locale,
+              unlocking ? "desktop.walletPasswords.unlocking" : "desktop.walletPasswords.unlock"
+            )}
           </button>
         </>
       }
     >
-      <label className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pt-3 tw-pb-1">
-        <span>Wallet Password</span>
-        <FontAwesomeIcon
-          icon={passHidden ? faEyeSlash : faEye}
-          height={18}
+      <div className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1 tw-pt-3">
+        <label htmlFor="unlock-wallet-password">
+          {t(locale, "desktop.walletPasswords.walletPassword")}
+        </label>
+        <button
+          type="button"
           onClick={() => setPassHidden(!passHidden)}
-          className="tw-cursor-pointer"
-        />
-      </label>
+          aria-label={t(
+            locale,
+            passHidden
+              ? "desktop.walletPasswords.showPassword"
+              : "desktop.walletPasswords.hidePassword"
+          )}
+          className="tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-1 tw-text-inherit focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
+        >
+          <FontAwesomeIcon
+            icon={passHidden ? faEyeSlash : faEye}
+            height={18}
+            aria-hidden="true"
+            className="tw-cursor-pointer"
+          />
+        </button>
+      </div>
       <input
+        id="unlock-wallet-password"
+        readOnly={unlocking}
+        autoComplete="current-password"
         ref={inputRef}
         autoFocus
         type={passHidden ? "password" : "text"}
@@ -283,15 +425,17 @@ export function UnlockSeedWalletModal(
         onChange={(e) => {
           const value = e.target.value;
           if (/^\S*$/.test(value)) setWalletPass(value);
-          else showError("Password must not contain any whitespace characters");
+          else showError(t(locale, "desktop.walletPasswords.passwordWhitespace"));
         }}
-        onKeyDown={handleKeyPress}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") void handleUnlock();
+        }}
       />
-      <p className="tw-mt-4 tw-mb-1">
+      <p className="tw-mb-1 tw-mt-4" aria-live="polite">
         {error ? (
           <span className="tw-text-red-400">{error}</span>
         ) : (
-          <>Provide wallet password to continue</>
+          t(locale, "desktop.walletPasswords.unlockPrompt")
         )}
       </p>
     </ConfirmModalShell>

@@ -22,6 +22,8 @@ import {
   STOP_WORKER,
 } from "../../../electron-constants";
 import { decryptData, getEncryptionVersion } from "../../../shared/encrypt";
+import { SEED_WALLET_CONNECTION_STORE } from "../../../renderer/wagmiConfig/seedWalletConnectionState";
+import type { ElectronSeedConnector } from "../../../shared/preload-types";
 import { waitFor } from "../lib/app";
 import { assert, skip } from "../lib/report";
 import { apiGet, bridge, invoke, sendSync, type SuiteContext } from "./context";
@@ -81,6 +83,43 @@ export async function runDesktopChecks(ctx: SuiteContext): Promise<void> {
       wrongPasswordRejected = true;
     }
     assert(wrongPasswordRejected, "a wrong password decrypted the key");
+  });
+  await r.check("F3", "wallet-main-sign", "Unlock and sign through the desktop wallet bridge", async () => {
+    if (!createdAddress) skip("no created wallet");
+    const address = createdAddress;
+    const message = "6529 desktop signing bridge";
+    const request = {
+      requestId: "function-suite-wallet-sign",
+      from: address,
+      chainId: 1,
+      method: "personal_sign",
+      params: [ethers.hexlify(ethers.toUtf8Bytes(message)), address],
+    };
+    await bridge(page, "store", "set", SEED_WALLET_CONNECTION_STORE, JSON.stringify({
+      accounts: [address],
+      chainId: request.chainId,
+    }));
+    try {
+      const unlocked = await bridge(page, "walletPasswords", "unlock", address, WALLET_PASSWORD);
+      assert(unlocked?.ok === true && unlocked.value === null, "unlock did not return status only");
+      const signed = await page.evaluate(async (pendingRequest) => {
+        const connector = (window as Window & { seedConnector?: ElectronSeedConnector }).seedConnector;
+        if (!connector) throw new Error("Desktop wallet bridge is missing");
+        const unsubscribe = connector.onInitRequest((pending) => {
+          if (pending.requestId === pendingRequest.requestId) {
+            connector.confirm(pending.requestId);
+          }
+        });
+        try {
+          return await connector.initRequest(pendingRequest);
+        } finally {
+          unsubscribe();
+        }
+      }, request);
+      assert(signed.ok && ethers.verifyMessage(message, signed.value) === address, "main-process signature does not verify");
+    } finally {
+      await bridge(page, "seedConnector", "disconnect");
+    }
   });
   await r.check("F3", "wallet-import", "Import a wallet from a mnemonic and list it", async () => {
     const wallet = ethers.Wallet.fromPhrase(TEST_MNEMONIC);

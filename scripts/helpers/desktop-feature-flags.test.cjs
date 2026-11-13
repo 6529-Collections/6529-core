@@ -101,3 +101,19 @@ test("dev runs bake the same flags as builds for each backend", () => {
     }
   });
 });
+
+test("packaging passes the target OS to the Electron asset build", () => {
+  withEnv({ DESKTOP_BUILD_PLATFORM: "darwin" }, () => {
+    for (const [flag, platform] of [
+      ["--win", "win32"],
+      ["--linux", "linux"],
+      ["--mac", "darwin"],
+    ]) {
+      const env = getBuildEnvironment(
+        { appEnvironment: "staging", electronBuilder: [flag, "--publish", "never"] },
+        "live",
+      );
+      assert.equal(env.DESKTOP_BUILD_PLATFORM, platform);
+    }
+  });
+});

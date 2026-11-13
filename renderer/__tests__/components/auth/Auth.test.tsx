@@ -22,6 +22,7 @@ import {
   screen,
   fireEvent,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getAccount } from "@wagmi/core";
@@ -3801,20 +3802,21 @@ describe("Auth component", () => {
         </ReactQueryWrapperContext.Provider>
       );
 
-      const modalTitle = await screen.findByText("Sign Authentication Request");
-      const dialog = modalTitle.closest('[role="dialog"]');
-      if (!dialog) {
-        throw new Error("Expected authentication dialog");
-      }
+      const dialog = await screen.findByRole("dialog", {
+        name: "Sign in to 6529",
+      });
       expect(document.querySelector("dialog")).not.toBeInTheDocument();
 
-      fireEvent.keyDown(screen.getByText("Sign"), { key: "Escape" });
+      fireEvent.keyDown(
+        within(dialog).getByRole("button", { name: "Sign message" }),
+        { key: "Escape" }
+      );
 
       await waitFor(() => {
         expect(mockSeizeDisconnect).toHaveBeenCalledTimes(1);
       });
       expect(
-        screen.queryByText("Sign Authentication Request")
+        screen.queryByRole("dialog", { name: "Sign in to 6529" })
       ).not.toBeInTheDocument();
     });
 

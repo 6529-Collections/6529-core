@@ -3,10 +3,8 @@
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { getSeedWallet, getSeedWallets } from "@/electron";
 import { areEqualAddresses } from "@/helpers/Helpers";
-import { decryptData } from "@/shared/encrypt";
 import { ISeedWallet, SeedWalletRequest } from "@/shared/types";
 import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
-import { ethers } from "ethers";
 import React, {
   createContext,
   useCallback,
@@ -32,7 +30,7 @@ interface SeedWalletContextType {
   isFetched: boolean;
   isUnlocked: boolean;
   handleRequest: (
-    callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void,
+    callback: (request: SeedWalletRequest) => void,
     request: SeedWalletRequest
   ) => void;
   setShowPasswordModal: (show: boolean) => void;
@@ -67,30 +65,30 @@ export const SeedWalletProvider: React.FC<{
   const [isSeedWallet, setIsSeedWallet] = useState<boolean>(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const connectedAddressRef = useRef<string | null>(null);
-  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
-
   const [lockedWallet, setLockedWallet] = useState<ISeedWallet>();
-  const [unlockedWallet, setUnlockedWallet] = useState<ethers.Wallet>();
+  const [unlockedAddress, setUnlockedAddress] = useState<string>();
+  const isUnlocked = areEqualAddresses(unlockedAddress, activeAddress);
+  const unlockRevisionRef = useRef(0);
   const lastConnectorSyncTargetRef = useRef<string | null>(null);
   const isDisconnectingRef = useRef(false);
 
   const [pendingCallback, setPendingCallback] = useState<{
-    callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void;
+    callback: (request: SeedWalletRequest) => void;
     request: SeedWalletRequest;
   }>();
   isDisconnectingRef.current = isDisconnecting;
 
   const handleRequest = (
-    callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void,
+    callback: (request: SeedWalletRequest) => void,
     request: SeedWalletRequest
   ) => {
     if (isDisconnectingRef.current) {
-      window.seedConnector?.reject(request);
+      window.seedConnector?.reject(request.requestId);
       return;
     }
 
-    if (isFetched && unlockedWallet) {
-      callback(unlockedWallet, request);
+    if (isFetched && areEqualAddresses(unlockedAddress, request.from)) {
+      callback(request);
     } else {
       setPendingCallback(() => {
         return { callback, request };
@@ -98,41 +96,11 @@ export const SeedWalletProvider: React.FC<{
     }
   };
 
-  const unlockWallet = useCallback(
-    async (wallet: ISeedWallet, password: string): Promise<boolean> => {
-      const handleSuccess = (decryptedPrivateKey: string) => {
-        setUnlockedWallet(new ethers.Wallet(decryptedPrivateKey));
-        return true;
-      };
-      const handleError = (e: string) => {
-        console.log("Failed to unlock wallet", e);
-        lockWallet(false);
-        setIsFetched(true);
-        return false;
-      };
-      return decryptData(wallet.address, wallet.address_hashed, password)
-        .then(async (decryptedAddress) => {
-          if (areEqualAddresses(connectedAddress, decryptedAddress)) {
-            return decryptData(wallet.address, wallet.private_key, password)
-              .then(async (decryptedPrivateKey) => {
-                return handleSuccess(decryptedPrivateKey);
-              })
-              .catch((e) => handleError(e.message));
-          } else {
-            return handleError("Address does not match");
-          }
-        })
-        .catch((e) => handleError(e.message));
-    },
-    [connectedAddress]
-  );
-
   const lockWallet = useCallback((clearCallback: boolean = true) => {
-    setUnlockedWallet(undefined);
-    setIsUnlocked(false);
-    if (clearCallback) {
-      setPendingCallback(undefined);
-    }
+    unlockRevisionRef.current++;
+    void window.walletPasswords?.lock().catch(() => {});
+    setUnlockedAddress(undefined);
+    if (clearCallback) setPendingCallback(undefined);
   }, []);
 
   useEffect(() => {
@@ -144,43 +112,46 @@ export const SeedWalletProvider: React.FC<{
       return;
     }
 
+    lockWallet();
     setShowPasswordModal(false);
     setShowRequestModal(false);
     if (pendingCallback) {
-      window.seedConnector?.reject(pendingCallback.request);
+      window.seedConnector?.reject(pendingCallback.request.requestId);
       setPendingCallback(undefined);
     }
-  }, [isDisconnecting, pendingCallback]);
+  }, [isDisconnecting, lockWallet, pendingCallback]);
 
   useEffect(() => {
-    const handleDisconnect = () => {
-      lockWallet();
-    };
-
-    window.seedConnector?.onDisconnect(handleDisconnect);
-
-    return () => {
-      window.seedConnector?.offDisconnect(handleDisconnect);
-    };
+    return window.seedConnector?.onDisconnect(() => {
+      unlockRevisionRef.current++;
+      setUnlockedAddress(undefined);
+      setPendingCallback(undefined);
+    });
   }, []);
 
   useEffect(() => {
-    if (unlockedWallet) {
-      setIsUnlocked(true);
-      setIsFetched(true);
-    }
-  }, [unlockedWallet]);
+    return window.seedConnector?.onWalletInvalidated((address) => {
+      if (areEqualAddresses(address, connectedAddressRef.current)) {
+        unlockRevisionRef.current++;
+        setUnlockedAddress(undefined);
+      }
+    });
+  }, []);
 
   useEffect(() => {
-    if (isFetched && pendingCallback) {
-      if (unlockedWallet) {
-        pendingCallback.callback(unlockedWallet, pendingCallback.request);
-        setPendingCallback(undefined);
-      } else {
-        setShowPasswordModal(true);
-      }
+    return window.seedConnector?.onSettled((requestId) => {
+      setPendingCallback((pending) =>
+        pending?.request.requestId === requestId ? undefined : pending
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isFetched && pendingCallback && areEqualAddresses(unlockedAddress, pendingCallback.request.from)) {
+      pendingCallback.callback(pendingCallback.request);
+      setPendingCallback(undefined);
     }
-  }, [isFetched, unlockedWallet, pendingCallback]);
+  }, [isFetched, unlockedAddress, pendingCallback]);
 
   useEffect(() => {
     try {
@@ -251,7 +222,7 @@ export const SeedWalletProvider: React.FC<{
         if (
           !areEqualAddresses(connectedAddressRef.current, seedWallet.address)
         ) {
-          lockWallet(false);
+          if (connectedAddressRef.current) lockWallet(false);
           setIsFetched(false);
           setConnectedAddress(seedWallet.address);
         }
@@ -332,6 +303,8 @@ export const SeedWalletProvider: React.FC<{
 
   const isSeedWalletModalOpen =
     showPasswordModal || showRequestModal || !!pendingCallback;
+  const pendingNeedsUnlock = !isUnlocked &&
+    areEqualAddresses(connectedAddress, pendingCallback?.request.from);
 
   const value = {
     isSeedWallet,
@@ -349,29 +322,24 @@ export const SeedWalletProvider: React.FC<{
         <ConfirmSeedWalletLock
           name={lockedWallet.name}
           address={lockedWallet.address}
-          show={showPasswordModal && !isDisconnecting}
-          unlockedWallet={unlockedWallet}
+          show={(showPasswordModal || pendingNeedsUnlock) && !isDisconnecting}
+          isUnlocked={isUnlocked}
           pendingRequest={pendingCallback?.request}
           onHide={() => {
             setShowPasswordModal(false);
             if (pendingCallback) {
-              if (unlockedWallet) {
-                pendingCallback.callback(
-                  unlockedWallet,
-                  pendingCallback.request
-                );
-              } else {
-                window.seedConnector.reject(pendingCallback.request);
-              }
+              window.seedConnector.reject(pendingCallback.request.requestId);
               setPendingCallback(undefined);
             }
           }}
           onUnlock={async (password) => {
-            const success = await unlockWallet(lockedWallet, password);
-            if (success) {
-              setShowPasswordModal(false);
-            }
-            return success;
+            const revision = ++unlockRevisionRef.current;
+            const address = lockedWallet.address;
+            const result = await window.walletPasswords?.unlock(address, password);
+            if (!result?.ok || revision !== unlockRevisionRef.current) return false;
+            setUnlockedAddress(address);
+            setShowPasswordModal(false);
+            return true;
           }}
           onLock={lockWallet}
         />

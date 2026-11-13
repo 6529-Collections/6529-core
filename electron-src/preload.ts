@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import type { ElectronWalletPasswords } from "../shared/wallet-passwords";
 import type { DesktopProfileState } from "../shared/desktop-profile-state";
 import type { DesktopValidatorStatus } from "../shared/desktop-validator";
 import {
@@ -7,6 +8,7 @@ import {
   SeedWalletRequest,
 } from "../shared/types";
 import type {
+  ElectronSeedConnector as SeedConnectorBridge,
   NotificationNavigationContext,
   NotificationNavigatePayload,
   SanitizedProfilePicture,
@@ -54,6 +56,20 @@ const localIpfsFrameFailureListeners = new Set<(url: string) => void>();
 ipcRenderer.on("local-ipfs-frame-failed", (_event, url: string) => {
   for (const listener of localIpfsFrameFailureListeners) listener(url);
 });
+
+const walletPasswords: ElectronWalletPasswords = {
+  isAvailable: () => ipcRenderer.invoke("wallet-passwords:is-available"),
+  generate: () => ipcRenderer.invoke("wallet-passwords:generate"),
+  hasSavedPassword: (address) => ipcRenderer.invoke("wallet-passwords:has-saved", address),
+  unlock: (address, password) => ipcRenderer.invoke("wallet-passwords:unlock", address, password),
+  lock: () => ipcRenderer.invoke("wallet-passwords:lock"),
+  recover: (address, field, password) =>
+    ipcRenderer.invoke("wallet-passwords:recover", address, field, password),
+  offerSave: (address, password) =>
+    ipcRenderer.invoke("wallet-passwords:offer-save", address, password),
+  forget: (address) => ipcRenderer.invoke("wallet-passwords:forget", address),
+};
+contextBridge.exposeInMainWorld("walletPasswords", walletPasswords);
 
 export const api = {
   on: (channel: string, callback: Function) => {
@@ -228,6 +244,8 @@ contextBridge.exposeInMainWorld("store", store);
 
 export const nativeAuth = {
   profilesReady: (): Promise<void> => ipcRenderer.invoke("native-auth:profiles-ready"),
+  restartProfileRestore: (): Promise<void> =>
+    ipcRenderer.invoke("native-auth:restart-profile-restore"),
   restoreProfiles: (current: DesktopProfileState): Promise<DesktopProfileState> =>
     ipcRenderer.invoke("native-auth:restore-profiles", current),
   saveProfiles: (state: DesktopProfileState): Promise<void> =>
@@ -325,52 +343,25 @@ export const updater = {
 
 contextBridge.exposeInMainWorld("updater", updater);
 
-export const seedConnector = {
-  initRequest: (request: SeedWalletRequest) => {
-    ipcRenderer.send("seed-connector-init-request", request);
-  },
-  onInitRequest: (callback: any) => {
-    ipcRenderer.on("seed-connector-init-request", callback);
-  },
-  offInitRequest: (callback: any) => {
-    ipcRenderer.removeListener("seed-connector-init-request", callback);
-  },
-  showToast: (toast: { type: string; message: string }) => {
+function subscribeSeedConnector<T>(channel: string, callback: (value: T) => void): () => void {
+  const listener = (_event: IpcRendererEvent, value: T) => callback(value);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}
+
+export const seedConnector: SeedConnectorBridge = {
+  initRequest: (request: SeedWalletRequest) => ipcRenderer.invoke("seed-connector-init-request", request),
+  onInitRequest: (callback) => subscribeSeedConnector("seed-connector-init-request", callback),
+  onSettled: (callback) => subscribeSeedConnector("seed-connector-settled", callback),
+  onWalletInvalidated: (callback) => subscribeSeedConnector("seed-wallet-lock-changed", callback),
+  showToast: (toast) => {
     ipcRenderer.send("seed-connector-show-toast", toast);
   },
-  onShowToast: (callback: any) => {
-    ipcRenderer.on("seed-connector-show-toast", callback);
-  },
-  offShowToast: (callback: any) => {
-    ipcRenderer.removeListener("seed-connector-show-toast", callback);
-  },
-  confirm: (request: SeedWalletRequest) => {
-    ipcRenderer.send("seed-connector-confirm", request);
-  },
-  onConfirm: (callback: any) => {
-    ipcRenderer.on("seed-connector-confirm", callback);
-  },
-  offConfirm: (callback: any) => {
-    ipcRenderer.removeListener("seed-connector-confirm", callback);
-  },
-  reject: (request: SeedWalletRequest) => {
-    ipcRenderer.send("seed-connector-reject", request);
-  },
-  onReject: (callback: any) => {
-    ipcRenderer.on("seed-connector-reject", callback);
-  },
-  offReject: (callback: any) => {
-    ipcRenderer.removeListener("seed-connector-reject", callback);
-  },
-  disconnect: () => {
-    ipcRenderer.send("seed-connector-disconnect");
-  },
-  onDisconnect: (callback: any) => {
-    ipcRenderer.on("seed-connector-disconnect", callback);
-  },
-  offDisconnect: (callback: any) => {
-    ipcRenderer.removeListener("seed-connector-disconnect", callback);
-  },
+  onShowToast: (callback) => subscribeSeedConnector("seed-connector-show-toast", callback),
+  confirm: (requestId) => ipcRenderer.send("seed-connector-confirm", requestId),
+  reject: (requestId) => ipcRenderer.send("seed-connector-reject", requestId),
+  disconnect: () => ipcRenderer.invoke("seed-connector-disconnect"),
+  onDisconnect: (callback) => subscribeSeedConnector("seed-connector-disconnect", callback),
 };
 
 contextBridge.exposeInMainWorld("seedConnector", seedConnector);

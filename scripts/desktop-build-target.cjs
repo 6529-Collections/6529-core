@@ -20,6 +20,12 @@ const CORE_SCHEMES = {
   production: "core6529",
 };
 
+const PACKAGE_PLATFORMS = {
+  "--mac": "darwin",
+  "--win": "win32",
+  "--linux": "linux",
+};
+
 const COMMANDS = {
   // Windows builds stop at the unsigned app folder, zipped per
   // architecture; CI signs it and builds the installers
@@ -223,11 +229,16 @@ function getBuildEnvironment(commandConfig, backendTarget) {
           STAGING_API_KEY: "",
         };
 
+  const platformFlag = commandConfig.electronBuilder?.find((argument) =>
+    Object.hasOwn(PACKAGE_PLATFORMS, argument),
+  );
+
   return {
     ...process.env,
     ...commandConfig.env,
     ...endpointEnv,
     ...getDesktopFeatureFlags(backendTarget),
+    DESKTOP_BUILD_PLATFORM: PACKAGE_PLATFORMS[platformFlag] ?? process.platform,
     APP_ENVIRONMENT: commandConfig.appEnvironment,
     BACKEND_TARGET: backendTarget,
     CORE_SCHEME: getCoreScheme(commandConfig.appEnvironment),

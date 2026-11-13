@@ -2,7 +2,7 @@
 
 import { Capacitor } from "@capacitor/core";
 import { connect as connectWagmi } from "@wagmi/core";
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 import { mainnet, sepolia } from "viem/chains";
 import DeferredWagmiProvider from "./DeferredWagmiProvider";
 import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
@@ -31,6 +31,7 @@ import {
 } from "@/components/providers/walletChunkRecovery";
 import type { AppToastInput } from "@/components/utils/toast/AppToast";
 import { publicEnv } from "@/config/env";
+import { DesktopProfileRecoveryContext } from "@/contexts/DesktopProfileRecoveryContext";
 import { getSeedWallets } from "@/electron";
 import { isElectron } from "@/helpers";
 import { useAppWalletPasswordModal } from "@/hooks/useAppWalletPasswordModal";
@@ -535,6 +536,7 @@ export default function WagmiSetup({
 }: {
   readonly children: React.ReactNode;
 }) {
+  const recoveringDesktopProfiles = useContext(DesktopProfileRecoveryContext);
   const enableTestnet = publicEnv.DROP_FORGE_TESTNET === true;
 
   const { setToast } = useAuth();
@@ -771,7 +773,11 @@ export default function WagmiSetup({
   // after readiness settles, so that bootstrap cannot downgrade a restored
   // wallet from connected to authorized-only.
   useEffect(() => {
-    if (currentAdapter === null || !fastPathSnapshot.isCreated) {
+    if (
+      recoveringDesktopProfiles ||
+      currentAdapter === null ||
+      !fastPathSnapshot.isCreated
+    ) {
       return;
     }
 
@@ -787,7 +793,12 @@ export default function WagmiSetup({
       cancelled = true;
       clearTimeout(timeoutHandle);
     };
-  }, [currentAdapter, fastPathSnapshot.isCreated, fastPathSnapshot.status]);
+  }, [
+    currentAdapter,
+    fastPathSnapshot.isCreated,
+    fastPathSnapshot.status,
+    recoveringDesktopProfiles,
+  ]);
 
   useEffect(() => {
     const updateSeedWalletConnectors = async () => {
@@ -832,7 +843,7 @@ export default function WagmiSetup({
       {/* The temporary config must not compete for Wagmi's reconnect lock. */}
       <DeferredWagmiProvider
         config={currentAdapter?.wagmiConfig ?? publicWagmiConfig}
-        reconnectOnMount={currentAdapter !== null}
+        reconnectOnMount={!recoveringDesktopProfiles && currentAdapter !== null}
       >
         {children}
         {appWalletPasswordModal.modal}

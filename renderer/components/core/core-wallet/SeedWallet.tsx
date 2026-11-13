@@ -3,6 +3,10 @@
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
+import { confirmBtnSecondarySmall } from "@/components/shared/ConfirmModalShell";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { useSavedWalletPassword } from "@/hooks/useSavedWalletPassword";
+import { t } from "@/i18n/messages";
 import { deleteSeedWallet, getSeedWallet } from "@/electron";
 import { MNEMONIC_NA } from "@/electron-constants";
 import { getRandomKey, openInExternalBrowser } from "@/helpers";
@@ -11,7 +15,6 @@ import {
   fromGWEI,
   getAddressEtherscanLink,
 } from "@/helpers/Helpers";
-import { decryptData } from "@/shared/encrypt";
 import { ISeedWallet } from "@/shared/types";
 import {
   faCircleArrowLeft,
@@ -63,6 +66,30 @@ export default function SeedWallet(
   const [addressCopied, setAddressCopied] = useState(false);
   const [mnemonicCopied, setMnemonicCopied] = useState(false);
   const [privateKeyCopied, setPrivateKeyCopied] = useState(false);
+  const [forgettingPassword, setForgettingPassword] = useState(false);
+  const locale = useBrowserLocale();
+  const { hasSavedPassword, clearSavedPassword } = useSavedWalletPassword(
+    isRevealingPhrase || isRevealingPrivateKey || isDownloading
+      ? undefined
+      : seedWallet?.address
+  );
+
+  const forgetSavedPassword = async (address: string) => {
+    setForgettingPassword(true);
+    try {
+      const result = await window.walletPasswords?.forget(address);
+      if (result?.ok) {
+        clearSavedPassword();
+        showToast(t(locale, "desktop.walletPasswords.forgotten"), "success", true);
+        return;
+      }
+    } catch {
+      // Report the failure without exposing Keychain details.
+    } finally {
+      setForgettingPassword(false);
+    }
+    showToast(t(locale, "desktop.walletPasswords.forgetFailed"), "error", true);
+  };
 
   function setEncryptedPhrase() {
     setPhrase(Array(12).fill("x".repeat(8)));
@@ -122,14 +149,21 @@ export default function SeedWallet(
       }
       const data = await deleteSeedWallet(address);
       if (data.error) {
-        console.error(data.error);
-        showToast(`Error deleting wallet - ${data.error}`, "error");
+        showToast(
+          t(
+            locale,
+            data.code === "busy"
+              ? "desktop.walletPasswords.deleteBusy"
+              : "desktop.walletPasswords.deleteFailed"
+          ),
+          "error"
+        );
       } else {
         router.push("/core/core-wallets");
         showToast(`Wallet '${name}' deleted successfully`, "success");
       }
     },
-    [account.address]
+    [account.address, locale, router, showToast]
   );
 
   const deleteWallet = (name: string, address: string) => {
@@ -255,29 +289,13 @@ export default function SeedWallet(
             )}
             <UnlockSeedWalletModal
               address={seedWallet.address}
-              address_hashed={seedWallet.address_hashed}
+              field="both"
               show={isDownloading}
               onHide={() => setIsDownloading(false)}
-              onUnlock={(pass: string) => {
-                decryptData(
-                  seedWallet.address,
-                  seedWallet.private_key,
-                  pass
-                ).then(async (decryptedPrivateKey) => {
-                  let decryptedMnemonic = seedWallet.mnemonic;
-                  if (decryptedMnemonic !== MNEMONIC_NA) {
-                    decryptedMnemonic = await decryptData(
-                      seedWallet.address,
-                      seedWallet.mnemonic,
-                      pass
-                    );
-                  }
-                  doDownload(
-                    seedWallet,
-                    decryptedMnemonic,
-                    decryptedPrivateKey
-                  );
-                });
+              onUnlock={({ mnemonic, privateKey }) => {
+                if (mnemonic !== undefined && privateKey !== undefined) {
+                  doDownload(seedWallet, mnemonic, privateKey);
+                }
               }}
             />
 
@@ -324,18 +342,13 @@ export default function SeedWallet(
               )}
               <UnlockSeedWalletModal
                 address={seedWallet.address}
-                address_hashed={seedWallet.address_hashed}
+                field="mnemonic"
                 show={isRevealingPhrase}
                 onHide={() => setIsRevealingPhrase(false)}
-                onUnlock={(pass: string) => {
-                  decryptData(
-                    seedWallet.address,
-                    seedWallet.mnemonic,
-                    pass
-                  ).then((decryptedPhrase) => {
-                    setPhrase(decryptedPhrase.split(" "));
-                    setRevealPhrase(true);
-                  });
+                onUnlock={({ mnemonic }) => {
+                  if (mnemonic === undefined) return;
+                  setPhrase(mnemonic.split(" "));
+                  setRevealPhrase(true);
                 }}
               />
               {revealPhrase && (
@@ -401,18 +414,13 @@ export default function SeedWallet(
             )}
             <UnlockSeedWalletModal
               address={seedWallet.address}
-              address_hashed={seedWallet.address_hashed}
+              field="privateKey"
               show={isRevealingPrivateKey}
               onHide={() => setIsRevealingPrivateKey(false)}
-              onUnlock={(pass: string) => {
-                decryptData(
-                  seedWallet.address,
-                  seedWallet.private_key,
-                  pass
-                ).then((decryptedPrivateKey) => {
-                  setPrivateKey(decryptedPrivateKey);
-                  setRevealPrivateKey(true);
-                });
+              onUnlock={({ privateKey }) => {
+                if (privateKey === undefined) return;
+                setPrivateKey(privateKey);
+                setRevealPrivateKey(true);
               }}
             />
             {revealPrivateKey && (
@@ -445,6 +453,21 @@ export default function SeedWallet(
             full_width={true}
           />
         </div>
+        {hasSavedPassword && (
+          <details className="tw-mt-5 tw-text-sm">
+            <summary className="tw-w-fit tw-cursor-pointer tw-rounded focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400">
+              {t(locale, "desktop.walletPasswords.settings")}
+            </summary>
+            <button
+              type="button"
+              className={`${confirmBtnSecondarySmall} tw-mt-2 disabled:tw-opacity-50`}
+              disabled={forgettingPassword}
+              onClick={() => void forgetSavedPassword(seedWallet.address)}
+            >
+              {t(locale, "desktop.walletPasswords.forget")}
+            </button>
+          </details>
+        )}
         <div className="tw-mt-5 tw-flex tw-items-center tw-gap-2">
           <button
             type="button"

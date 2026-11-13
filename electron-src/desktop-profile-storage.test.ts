@@ -150,7 +150,10 @@ test("backend snapshots are isolated and a failed decrypt leaves saved state int
     },
   });
   await assert.rejects(broken.restore("live", EMPTY));
+  assert.equal(broken.hasRestoreFailure("live"), true);
+  await assert.rejects(broken.save("live", EMPTY), /Restore saved Desktop profiles/);
   assert.equal(JSON.stringify([...f.saved]), before);
+  assert.deepEqual(await f.storage.restore("live", EMPTY), snapshot([A]));
 });
 
 test("a migration failure preserves data and permits retry, and later saves keep their order", async () => {
@@ -238,7 +241,7 @@ test("profile IPC accepts only the owned renderer main frame at its confirmed or
   const mainFrame = { url: "http://localhost:3000/waves" };
   const webContents = { mainFrame };
   const context = vm.createContext({
-    mainWindow: { webContents },
+    mainWindow: { webContents, isDestroyed: () => false },
     PORT: 3000,
     URL,
     getApiEndpoint: () => "fixture-backend",

@@ -2103,9 +2103,9 @@ const seedConnectorFunction = findFunction(
   "seedWalletConnector",
 );
 assertContract(
-  seedConnectorFunction && callsIdentifier(seedConnectorFunction, "signSeedWalletTypedData"),
-  seedConnectorPath,
-  "Core seed wallets must support EIP-712 signing for app device grants",
+  callsIdentifier(findFunction(parseSource("electron-src/seed-wallet-signing.ts"), "signSeedWalletRequest"), "signSeedWalletTypedData"),
+  "electron-src/seed-wallet-signing.ts",
+  "Core seed wallets must support EIP-712 signing for app device grants in main",
 );
 assertContract(
   callsIdentifier(findFunction(parseSource("renderer/components/browser-connector/BrowserConnectorProvider.tsx"), "BrowserConnectorProvider"), "useSignTypedData"),
@@ -2121,10 +2121,9 @@ assertContract(
 assertContract(
   seedConnectorFunction &&
     callsIdentifier(seedConnectorFunction, "parseSeedWalletConnectionState") &&
-    callsIdentifier(seedConnectorFunction, "rejectAllPendingRequests") &&
     callsIdentifier(seedConnectorFunction, "requireSupportedSeedWalletChainId"),
   seedConnectorPath,
-  "Core wallet connectors must stay address-bound, chain-bound, and reject pending work on disconnect",
+  "Core wallet connectors must stay address-bound and chain-bound",
 );
 const seedConnectionStatePath =
   "renderer/wagmiConfig/seedWalletConnectionState.ts";

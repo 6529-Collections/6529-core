@@ -19,10 +19,13 @@ import {
   faLockOpen,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ethers } from "ethers";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
+import { useOfferWalletPasswordSave } from "@/hooks/useOfferWalletPasswordSave";
+import { useSavedWalletPassword } from "@/hooks/useSavedWalletPassword";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
 
 const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
 
@@ -31,20 +34,30 @@ export default function ConfirmSeedWalletLock(
     name: string;
     address: string;
     show: boolean;
-    unlockedWallet?: ethers.Wallet | undefined;
+    isUnlocked: boolean;
     pendingRequest?: SeedWalletRequest | undefined;
     onHide: () => void;
-    onUnlock: (password: string) => Promise<boolean>;
+    onUnlock: (password?: string) => Promise<boolean>;
     onLock: () => void;
   }>
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const locale = useBrowserLocale();
   const [unlocking, setUnlocking] = useState(false);
   const [walletPass, setWalletPass] = useState("");
   const [passHidden, setPassHidden] = useState(true);
   const { showToast } = useToast();
   const { isTopModal, addModal, removeModal } = useModalState();
   const isCurrentTopModal = isTopModal(SEED_WALLET_LOCK_MODAL);
+  const offerSave = useOfferWalletPasswordSave();
+  const { hasSavedPassword, clearSavedPassword } = useSavedWalletPassword(
+    props.show && isCurrentTopModal && !props.isUnlocked
+      ? props.address
+      : undefined
+  );
+  const canUnlock = walletPass
+    ? walletPass.length >= SEED_MIN_PASS_LENGTH
+    : hasSavedPassword;
 
   const focusPasswordInput = useCallback(() => {
     const input = inputRef.current;
@@ -71,7 +84,7 @@ export default function ConfirmSeedWalletLock(
   }, [props.show, addModal, removeModal]);
 
   useEffect(() => {
-    if (!props.show || props.unlockedWallet || !isCurrentTopModal) {
+    if (!props.show || props.isUnlocked || !isCurrentTopModal) {
       return;
     }
 
@@ -87,52 +100,41 @@ export default function ConfirmSeedWalletLock(
       clearTimeout(focusTimeout);
       clearTimeout(settledFocusTimeout);
     };
-  }, [
-    focusPasswordInput,
-    isCurrentTopModal,
-    props.show,
-    props.unlockedWallet,
-  ]);
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (
-      e.key === "Enter" &&
-      walletPass &&
-      !unlocking &&
-      walletPass.length >= SEED_MIN_PASS_LENGTH
-    ) {
-      handleUnlock(walletPass);
-    }
-  };
+  }, [focusPasswordInput, isCurrentTopModal, props.show, props.isUnlocked]);
 
   const handleLock = () => {
     props.onLock();
     props.onHide();
-    showToast("Wallet Locked!", "success", true);
+    showToast(t(locale, "desktop.walletPasswords.locked"), "success", true);
   };
 
-  const handleUnlock = useCallback(
-    async (pass: string) => {
-      setUnlocking(true);
-      const doUnlock = async () => {
-        try {
-          const isSuccess = await props.onUnlock(pass);
-          if (isSuccess) {
-            showToast("Wallet Unlocked!", "success", true);
-            setWalletPass("");
-          } else {
-            showToast("Failed to unlock wallet", "error", true);
-            inputRef.current?.focus();
-            inputRef.current?.select();
-          }
-        } finally {
-          setUnlocking(false);
-        }
-      };
-      setTimeout(doUnlock, 0);
-    },
-    [props, showToast]
-  );
+  const handleUnlock = async () => {
+    if (unlocking || !canUnlock) return;
+    setUnlocking(true);
+    try {
+      const success = await props.onUnlock(walletPass || undefined);
+      if (!success) {
+        if (!walletPass) clearSavedPassword();
+        const key = walletPass
+          ? "desktop.walletPasswords.unlockFailed"
+          : "desktop.walletPasswords.manualFallback";
+        showToast(t(locale, key), "error", true);
+        focusPasswordInput();
+        return;
+      }
+      showToast(t(locale, "desktop.walletPasswords.unlocked"), "success", true);
+      setWalletPass("");
+      if (walletPass && !hasSavedPassword) {
+        await offerSave(props.address, walletPass);
+      }
+    } catch {
+      if (!walletPass) clearSavedPassword();
+      showToast(t(locale, "desktop.walletPasswords.unlockFailed"), "error", true);
+      focusPasswordInput();
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   return (
     <ConfirmModalShell
@@ -140,7 +142,7 @@ export default function ConfirmSeedWalletLock(
       title={
         <>
           <FontAwesomeIcon
-            icon={props.unlockedWallet ? faLockOpen : faLock}
+            icon={props.isUnlocked ? faLockOpen : faLock}
             height={22}
           />
           {props.name}
@@ -148,15 +150,13 @@ export default function ConfirmSeedWalletLock(
       }
       titleClassName="tw-m-0 tw-flex tw-items-center tw-gap-3 tw-text-lg tw-font-semibold"
       footerClassName={confirmModalFooterBetween}
-      {...(props.unlockedWallet || !isCurrentTopModal
+      {...(props.isUnlocked || !isCurrentTopModal
         ? {}
         : {
             initialFocusRef:
               inputRef as unknown as RefObject<HTMLElement | null>,
           })}
-      dialogClassName={
-        !isCurrentTopModal ? "tw-blur-[5px]" : ""
-      }
+      dialogClassName={!isCurrentTopModal ? "tw-blur-[5px]" : ""}
       footer={
         <>
           <span>
@@ -172,31 +172,31 @@ export default function ConfirmSeedWalletLock(
           <span className="tw-flex tw-gap-2">
             <button
               type="button"
+              disabled={unlocking}
               onClick={props.onHide}
               className={confirmBtnSecondary}
             >
-              Close
+              {t(locale, "desktop.walletPasswords.close")}
             </button>
-            {props.unlockedWallet ? (
+            {props.isUnlocked ? (
               <button
                 type="button"
                 onClick={handleLock}
                 className={confirmBtnDanger}
               >
-                Lock
+                {t(locale, "desktop.walletPasswords.lock")}
               </button>
             ) : (
               <button
                 type="button"
-                disabled={
-                  !walletPass ||
-                  walletPass.length < SEED_MIN_PASS_LENGTH ||
-                  unlocking
-                }
-                onClick={() => handleUnlock(walletPass)}
+                disabled={unlocking || !canUnlock}
+                onClick={handleUnlock}
                 className={confirmBtnPrimary}
               >
-                {unlocking ? "Unlocking..." : "Unlock"}
+                {t(
+                  locale,
+                  unlocking ? "desktop.walletPasswords.unlocking" : "desktop.walletPasswords.unlock"
+                )}
               </button>
             )}
           </span>
@@ -206,7 +206,7 @@ export default function ConfirmSeedWalletLock(
       <div className="tw-pb-3 tw-text-sm tw-text-iron-400">
         Address: {props.address}
       </div>
-      {props.unlockedWallet ? (
+      {props.isUnlocked ? (
         <div className="tw-flex tw-items-center tw-gap-2">
           <FontAwesomeIcon
             icon={faCheckCircle}
@@ -217,16 +217,33 @@ export default function ConfirmSeedWalletLock(
         </div>
       ) : (
         <>
-          <label className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1">
-            <span>Wallet Password</span>
-            <FontAwesomeIcon
-              icon={passHidden ? faEyeSlash : faEye}
-              height={18}
+          <div className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1">
+            <label htmlFor="connected-wallet-password">
+              {t(locale, "desktop.walletPasswords.walletPassword")}
+            </label>
+            <button
+              type="button"
               onClick={() => setPassHidden(!passHidden)}
-              className="tw-cursor-pointer"
-            />
-          </label>
+              aria-label={t(
+                locale,
+                passHidden
+                  ? "desktop.walletPasswords.showPassword"
+                  : "desktop.walletPasswords.hidePassword"
+              )}
+              className="tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-1 tw-text-inherit focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
+            >
+              <FontAwesomeIcon
+                icon={passHidden ? faEyeSlash : faEye}
+                height={18}
+                aria-hidden="true"
+                className="tw-cursor-pointer"
+              />
+            </button>
+          </div>
           <input
+            id="connected-wallet-password"
+            readOnly={unlocking}
+            autoComplete="current-password"
             ref={inputRef}
             autoFocus
             type={passHidden ? "password" : "text"}
@@ -235,8 +252,17 @@ export default function ConfirmSeedWalletLock(
             className={confirmInputClass}
             onFocus={(event) => event.currentTarget.select()}
             onChange={(e) => setWalletPass(e.target.value)}
-            onKeyDown={handleKeyPress}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void handleUnlock();
+            }}
           />
+          <div aria-live="polite">
+            {hasSavedPassword && (
+              <p className="tw-mb-0 tw-mt-2 tw-text-sm tw-text-iron-400">
+                {t(locale, "desktop.walletPasswords.unlockHint")}
+              </p>
+            )}
+          </div>
         </>
       )}
     </ConfirmModalShell>

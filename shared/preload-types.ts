@@ -3,6 +3,7 @@ import type {
   PaginatedResponseLocal,
   ScheduledWorkerStatus,
   SeedWalletRequest,
+  SeedWalletRequestResult,
 } from "./types";
 import type { NativeAuthResult } from "./native-auth-result";
 import type { DesktopProfileState } from "./desktop-profile-state";
@@ -149,6 +150,7 @@ export interface ElectronNativeLegacyDesktopConnectionShareResponse {
 
 export interface ElectronNativeAuth {
   profilesReady: () => Promise<void>;
+  restartProfileRestore: () => Promise<void>;
   restoreProfiles: (current: DesktopProfileState) => Promise<DesktopProfileState>;
   saveProfiles: (state: DesktopProfileState) => Promise<void>;
   isAvailable: () => Promise<boolean>;
@@ -221,21 +223,16 @@ export interface ElectronUpdater {
 }
 
 export interface ElectronSeedConnector {
-  initRequest: (request: SeedWalletRequest) => void;
-  onInitRequest: (callback: any) => void;
-  offInitRequest: (callback: any) => void;
+  initRequest: (request: SeedWalletRequest) => Promise<SeedWalletRequestResult>;
+  onInitRequest: (callback: (request: SeedWalletRequest) => void) => () => void;
+  onSettled: (callback: (requestId: string) => void) => () => void;
+  onWalletInvalidated: (callback: (address: string) => void) => () => void;
   showToast: (toast: { type: string; message: string }) => void;
-  onShowToast: (callback: any) => void;
-  offShowToast: (callback: any) => void;
-  confirm: (request: SeedWalletRequest) => void;
-  onConfirm: (callback: any) => void;
-  offConfirm: (callback: any) => void;
-  reject: (request: SeedWalletRequest) => void;
-  onReject: (callback: any) => void;
-  offReject: (callback: any) => void;
-  disconnect: () => void;
-  onDisconnect: (callback: any) => void;
-  offDisconnect: (callback: any) => void;
+  onShowToast: (callback: (toast: { type: "success" | "error"; message: string }) => void) => () => void;
+  confirm: (requestId: string) => void;
+  reject: (requestId: string) => void;
+  disconnect: () => Promise<void>;
+  onDisconnect: (callback: () => void) => () => void;
 }
 
 export interface RawTransaction {

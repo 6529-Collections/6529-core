@@ -15,8 +15,10 @@ import contextMenu from "electron-context-menu";
 import localShortcut from "electron-localshortcut";
 import Logger from "electron-log";
 import { app, BrowserWindow, dialog, Menu, Notification } from "electron/main";
+import { getAddress, isAddress } from "ethers";
 import fs from "fs";
 import { getPort } from "get-port-please";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import open, { apps } from "open";
@@ -43,9 +45,12 @@ import {
 import { CORE_TITLEBAR_HEIGHT_PX } from "../shared/desktop-titlebar";
 import {
   ScheduledWorkerStatus,
-  SeedWalletRequest,
   TRANSACTIONS_START_BLOCK,
 } from "../shared/types";
+import { decryptData } from "../shared/encrypt";
+import { WalletKeychain, type MacWalletKeychainNative } from "./wallet-keychain";
+import { SeedWalletSession } from "./seed-wallet-session";
+import { SEED_WALLET_CONNECTION_STORE } from "../renderer/wagmiConfig/seedWalletConnectionState";
 import type { NotificationNavigationContext } from "../shared/preload-types";
 import {
   NativeAuthApiError,
@@ -1667,8 +1672,14 @@ async function openMainWindow() {
 
 function initListeners(mw: BrowserWindow) {
   mw.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
-    if (isMainFrame && !isInPlace) navigationReadyWindows.delete(mw);
+    if (isMainFrame && !isInPlace) {
+      navigationReadyWindows.delete(mw);
+      walletPasswordNavigation++;
+      walletSavePrompt?.abort();
+      seedWalletSession.lock();
+    }
   });
+  mw.webContents.on("render-process-gone", () => seedWalletSession.lock());
   mw.webContents.on("did-finish-load", () => pendingDeepLinks.flush());
 
   mw.webContents.setWindowOpenHandler(({ url }) => {
@@ -1799,6 +1810,8 @@ ipcMain.on(IMPORT_SEED_WALLET, (event, args) => {
   Logger.info(`Importing seed wallet: ${name}`);
   importSeedWallet(name, pass, address, mnemonic, privateKey)
     .then(() => {
+      seedWalletSession.invalidateWallet(address);
+      mainWindow?.webContents.send("seed-wallet-lock-changed", address);
       event.returnValue = {
         error: false,
       };
@@ -1853,8 +1866,14 @@ ipcMain.on(GET_SEED_WALLET, (event, args) => {
 ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
   const address = args[0];
   Logger.info(`Deleting seed wallet: ${address}`);
-  deleteSeedWallet(address)
-    .then(() => {
+  walletKeychain.deleteWallet(address, deleteSeedWallet)
+    .then((result) => {
+      if (!result.ok) {
+        event.returnValue = { error: true, code: result.code };
+        return;
+      }
+      seedWalletSession.invalidateWallet(address);
+      mainWindow?.webContents.send("seed-wallet-lock-changed", address);
       event.returnValue = {
         error: false,
       };
@@ -1865,7 +1884,6 @@ ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
       Logger.error(`Error deleting seed wallet: ${error}`);
       event.returnValue = {
         error: true,
-        data: error,
       };
     });
 });
@@ -1999,6 +2017,7 @@ function destroyMainWindow(): void {
 
   isMainWindowCloseAuthorized = true;
   try {
+    seedWalletSession.lock();
     windowToDestroy.webContents.removeAllListeners();
     windowToDestroy.destroy();
     if (mainWindow === windowToDestroy) {
@@ -2249,10 +2268,12 @@ ipcMain.handle("store:get", (_event, key) => {
 
 ipcMain.handle("store:set", (_event, key, value) => {
   setValue(key, value);
+  if (key === SEED_WALLET_CONNECTION_STORE) seedWalletSession.connectionChanged();
 });
 
 ipcMain.handle("store:remove", (_event, key) => {
   removeValue(key);
+  if (key === SEED_WALLET_CONNECTION_STORE) seedWalletSession.connectionChanged();
 });
 
 ipcMain.handle("native-auth:is-available", () => {
@@ -2260,14 +2281,179 @@ ipcMain.handle("native-auth:is-available", () => {
 });
 
 /** Restrict privileged desktop calls to the owned main frame at the bound origin. */
-function isMainRenderer(event: IpcMainInvokeEvent): boolean {
+function isMainRenderer(event: IpcMainInvokeEvent | IpcMainEvent): boolean {
   return Boolean(
     mainWindow &&
+      !mainWindow.isDestroyed() &&
+      event.senderFrame &&
       event.sender === mainWindow.webContents &&
       event.senderFrame === mainWindow.webContents.mainFrame &&
       new URL(event.senderFrame.url).origin === `http://localhost:${PORT}`
   );
 }
+
+let nativeWalletKeychain: MacWalletKeychainNative | null = null;
+if (process.platform === "darwin") {
+  try {
+    nativeWalletKeychain = createRequire(__filename)(
+      path.join(__dirname, "assets", "native", "macos-wallet-keychain.node"),
+    ) as MacWalletKeychainNative;
+  } catch {
+    Logger.warn("macOS wallet Keychain bridge is unavailable");
+  }
+}
+
+let walletPasswordNavigation = 0;
+let walletSavePrompt: AbortController | null = null;
+const walletKeychain = new WalletKeychain(
+  nativeWalletKeychain,
+  path.resolve(app.getPath("userData")),
+  async (address, password) => {
+    const wallet = await getSeedWallet(address);
+    if (!wallet) return false;
+    try {
+      const decrypted = await decryptData(
+        wallet.address,
+        wallet.address_hashed,
+        password,
+      );
+      return decrypted.toLowerCase() === wallet.address.toLowerCase();
+    } catch {
+      return false;
+    }
+  },
+);
+
+const seedWalletSession = new SeedWalletSession(
+  getSeedWallet,
+  (address) => walletKeychain.request(address),
+  () => getValue(SEED_WALLET_CONNECTION_STORE),
+  (requestId) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("seed-connector-settled", requestId);
+    }
+  },
+);
+
+function requireWalletPasswordRenderer(event: IpcMainInvokeEvent): void {
+  if (!isMainRenderer(event)) {
+    throw new Error("Wallet password request is not allowed");
+  }
+}
+
+ipcMain.handle("wallet-passwords:is-available", (event) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.isAvailable();
+});
+
+ipcMain.handle("wallet-passwords:generate", (event) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.generate();
+});
+
+ipcMain.handle("wallet-passwords:unlock", (event, address: unknown, password: unknown) => {
+  requireWalletPasswordRenderer(event);
+  const navigation = walletPasswordNavigation;
+  return seedWalletSession.unlock(address, password, () =>
+    navigation === walletPasswordNavigation && isMainRenderer(event),
+  );
+});
+
+ipcMain.handle("wallet-passwords:lock", (event) => {
+  requireWalletPasswordRenderer(event);
+  walletSavePrompt?.abort();
+  seedWalletSession.lock();
+});
+
+ipcMain.handle("wallet-passwords:recover", async (event, address: unknown, field: unknown, password: unknown) => {
+  requireWalletPasswordRenderer(event);
+  const owner = mainWindow;
+  if (!owner || !owner.isVisible() || walletSavePrompt) return { ok: false, code: "busy" };
+  if (
+    typeof address !== "string" ||
+    !isAddress(address) ||
+    (field !== "mnemonic" && field !== "privateKey" && field !== "both")
+  ) {
+    return { ok: false, code: "failed" };
+  }
+  const displayAddress = getAddress(address);
+  const navigation = walletPasswordNavigation;
+  const controller = new AbortController();
+  walletSavePrompt = controller;
+  const isCurrent = () => !controller.signal.aborted &&
+    navigation === walletPasswordNavigation && isMainRenderer(event);
+  try {
+    const result = await seedWalletSession.recover(address, field, password, async () => {
+      if (!isCurrent()) return false;
+      const { response } = await dialog.showMessageBox(owner, {
+        type: "warning",
+        message: "Show this wallet’s recovery information?",
+        detail: `Wallet address: ${displayAddress}\nAnyone with this information can control the wallet.`,
+        buttons: ["Cancel", "Continue"],
+        defaultId: 0,
+        cancelId: 0,
+        signal: controller.signal,
+      });
+      return response === 1 && isCurrent();
+    });
+    return isCurrent() ? result : { ok: false, code: "unavailable" };
+  } finally {
+    walletSavePrompt = null;
+  }
+});
+
+ipcMain.handle("wallet-passwords:has-saved", (event, address: unknown) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.hasSavedPassword(address);
+});
+
+ipcMain.handle(
+  "wallet-passwords:offer-save",
+  (event, address: unknown, password: unknown) => {
+    requireWalletPasswordRenderer(event);
+    const navigation = walletPasswordNavigation;
+    const owner = mainWindow;
+    return walletKeychain.offerSave(address, password, async () => {
+      if (
+        !owner?.isVisible() ||
+        navigation !== walletPasswordNavigation ||
+        !isMainRenderer(event)
+      ) {
+        return "cancelled";
+      }
+      // The owner can display one native sheet at a time.
+      if (walletSavePrompt) return "busy";
+      const controller = new AbortController();
+      walletSavePrompt = controller;
+      try {
+        const { response } = await dialog.showMessageBox(owner, {
+          type: "question",
+          message: "Save this wallet password on this Mac?",
+          detail: "The password stays in this Mac’s Keychain. You can remove it in the wallet’s settings.",
+          buttons: ["Save Password", "Not Now"],
+          defaultId: 0,
+          cancelId: 1,
+          signal: controller.signal,
+        });
+        if (
+          controller.signal.aborted ||
+          navigation !== walletPasswordNavigation ||
+          !isMainRenderer(event)
+        ) {
+          return "cancelled";
+        }
+        return response === 0 ? "save" : "skip";
+      } finally {
+        walletSavePrompt = null;
+      }
+    });
+  },
+);
+
+ipcMain.handle("wallet-passwords:forget", (event, address: unknown) => {
+  requireWalletPasswordRenderer(event);
+  return walletKeychain.forget(address);
+});
 
 const DESKTOP_VALIDATOR_VISIBLE_KEY = "desktop-validator-visible";
 
@@ -2328,6 +2514,15 @@ ipcMain.handle("native-auth:restore-profiles", (event, state: unknown) => {
 ipcMain.handle("native-auth:profiles-ready", (event) => {
   desktopProfileBackend(event);
   if (mainWindow) profileReadinessCallbacks.get(mainWindow)?.();
+});
+ipcMain.handle("native-auth:restart-profile-restore", (event) => {
+  const backend = desktopProfileBackend(event);
+  if (!desktopProfiles.hasRestoreFailure(backend)) {
+    throw new Error("No Desktop profile restore failure requires a restart");
+  }
+  // Chromium's synchronous macOS Safe Storage can cache a failed key lookup
+  // for the life of the process. A new renderer alone cannot retry it.
+  return requestApplicationQuit({ restart: true });
 });
 ipcMain.handle("native-auth:save-profiles", (event, state: unknown) =>
   desktopProfiles.save(desktopProfileBackend(event), state),
@@ -2453,34 +2648,37 @@ ipcMain.on("install-update", () => {
   installUpdate();
 });
 
-ipcMain.on(
+ipcMain.handle(
   "seed-connector-init-request",
-  (_event, request: SeedWalletRequest) => {
-    Logger.info(`Seed connector init request: ${request.requestId}`);
-    mainWindow?.webContents.send("seed-connector-init-request", request);
+  (event, request: unknown) => {
+    requireWalletPasswordRenderer(event);
+    return seedWalletSession.start(request, (pending) =>
+      event.sender.send("seed-connector-init-request", pending),
+    );
   },
 );
 
 ipcMain.on(
   "seed-connector-show-toast",
-  (_event, toast: { type: string; message: string }) => {
-    mainWindow?.webContents.send("seed-connector-show-toast", toast);
+  (event, toast: { type: string; message: string }) => {
+    if (isMainRenderer(event)) event.sender.send("seed-connector-show-toast", toast);
   },
 );
 
-ipcMain.on("seed-connector-confirm", (_event, request: SeedWalletRequest) => {
-  Logger.info(`Seed connector confirm: ${request.requestId}`);
-  mainWindow?.webContents.send("seed-connector-confirm", request);
+ipcMain.on("seed-connector-confirm", (event, requestId: unknown) => {
+  if (isMainRenderer(event)) void seedWalletSession.confirm(requestId);
 });
 
-ipcMain.on("seed-connector-reject", (_event, request: SeedWalletRequest) => {
-  Logger.info(`Seed connector reject: ${request.requestId}`);
-  mainWindow?.webContents.send("seed-connector-reject", request);
+ipcMain.on("seed-connector-reject", (event, requestId: unknown) => {
+  if (isMainRenderer(event)) seedWalletSession.reject(requestId);
 });
 
-ipcMain.on("seed-connector-disconnect", () => {
-  Logger.info(`Seed connector disconnect`);
-  mainWindow?.webContents.send("seed-connector-disconnect");
+ipcMain.handle("seed-connector-disconnect", (event) => {
+  requireWalletPasswordRenderer(event);
+  removeValue(SEED_WALLET_CONNECTION_STORE);
+  walletSavePrompt?.abort();
+  seedWalletSession.lock();
+  event.sender.send("seed-connector-disconnect");
 });
 
 ipcMain.on(ADD_RPC_PROVIDER, (event, args: [string, string]) => {
