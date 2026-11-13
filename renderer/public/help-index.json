@@ -10333,15 +10333,27 @@
     {
       "id": "desktop.validator-visibility",
       "kind": "workflow",
-      "title": "Show or hide 6529 Validator in Desktop",
+      "title": "Get, open, or show 6529 Validator in Desktop",
       "aliases": [
         "hide validator in desktop",
         "hide validator badge",
         "show validator in desktop",
-        "open validator from desktop"
+        "open validator from desktop",
+        "get validator from desktop",
+        "install validator from desktop",
+        "download validator from desktop"
       ],
-      "keywords": ["desktop", "validator", "title bar", "badge"],
+      "keywords": [
+        "desktop",
+        "validator",
+        "title bar",
+        "badge",
+        "local services",
+        "download"
+      ],
       "facts": [
+        "In 6529 Desktop > Local Services, choose Get 6529 Validator to open the official download page in your browser. If the standalone app is already installed, choose 6529 Validator to open or focus it even when the title bar badge is hidden.",
+        "When the standalone app is missing, 6529 Desktop > About also offers Get 6529 Validator. The title bar toggle becomes available after installation.",
         "When the standalone Validator is installed, the 6529 Desktop title bar badge shows its health. Open it to see the version, signing status and, when available, the next signing time and today's result.",
         "Choose Open 6529 Validator from the title bar badge to open or focus the standalone app. Use it to inspect an update or check why the service is stopped, not answering, or needs attention. If the popover reports a launch error, use the system app list.",
         "Use 6529 Desktop > About > Show 6529 Validator to hide or restore the title bar badge. The preference is on by default and survives restarts. The standalone Validator keeps running and signing when hidden."
@@ -10352,7 +10364,7 @@
       "related_paths": ["/about/6529-apps"],
       "tags": ["desktop-core"],
       "source_refs": ["ops/docs/desktop/feature-wallets-ipfs-and-about.md"],
-      "brief_answer": "In **6529 Desktop > About**, turn off **Show 6529 Validator** to hide the title bar badge. The Validator keeps running and signing, and Desktop remembers the choice after restarting."
+      "brief_answer": "In **6529 Desktop > Local Services**, choose **Get 6529 Validator** to open the download page in your browser, or **6529 Validator** if it is installed. In **6529 Desktop > About**, use **Show 6529 Validator** to control the title bar badge. Desktop remembers the choice after restarting, and the standalone Validator keeps running when hidden."
     },
     {
       "id": "desktop.wallet-backup",

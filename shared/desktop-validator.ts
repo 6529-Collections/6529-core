@@ -1,3 +1,5 @@
+export const DESKTOP_VALIDATOR_DOWNLOAD_URL = "https://6529.io/validator";
+
 export type DesktopValidatorHealth =
   | "all-good"
   | "getting-ready"

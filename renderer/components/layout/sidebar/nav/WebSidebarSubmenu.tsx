@@ -28,6 +28,7 @@ import { renderDesktopLocalServiceNavItem } from "./desktopLocalServiceNavItems"
 
 const FOCUSABLE_ELEMENT_SELECTOR =
   "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+const FLYOUT_PADDING_PX = 16;
 
 interface WebSidebarSubmenuProps {
   readonly section: SidebarSection;
@@ -64,7 +65,9 @@ function WebSidebarSubmenu({
     ? (globalThis.document as Document | undefined)
     : undefined;
 
-  const [computedTop, setComputedTop] = useState<number>(() => anchorTop ?? 16);
+  const topPadding =
+    FLYOUT_PADDING_PX + (isElectron() ? CORE_TITLEBAR_HEIGHT_PX : 0);
+  const [computedTop, setComputedTop] = useState(() => anchorTop ?? topPadding);
   const totalItemCount = useMemo(
     () =>
       section.items.length +
@@ -217,26 +220,39 @@ function WebSidebarSubmenu({
   }, [browserWindow, browserDocument, handleEscapeKeyDown, handleClickOutside]);
 
   useLayoutEffect(() => {
-    if (browserWindow && containerRef.current) {
-      const menuRect = containerRef.current.getBoundingClientRect();
-      const viewportHeight = browserWindow.innerHeight || 0;
-      const padding = 16;
-      const topPadding = padding + (isElectron() ? CORE_TITLEBAR_HEIGHT_PX : 0);
+    const menu = containerRef.current;
+    if (!browserWindow || !menu) return;
+
+    const updateTop = () => {
+      const { height } = menu.getBoundingClientRect();
+      const viewportHeight = browserWindow.innerHeight;
 
       const anchorCenter =
         anchorTop !== undefined && anchorHeight !== undefined
           ? anchorTop + anchorHeight / 2
-          : (anchorTop ?? padding) + menuRect.height / 2;
+          : (anchorTop ?? topPadding) + height / 2;
 
-      let top = anchorCenter - menuRect.height / 2;
-      top = Math.max(
+      const top = Math.max(
         topPadding,
-        Math.min(top, viewportHeight - menuRect.height - padding)
+        Math.min(
+          anchorCenter - height / 2,
+          viewportHeight - height - FLYOUT_PADDING_PX
+        )
       );
 
       setComputedTop((previous) => (previous === top ? previous : top));
-    }
-  }, [browserWindow, anchorTop, anchorHeight, section.key, totalItemCount]);
+    };
+    updateTop();
+    browserWindow.addEventListener("resize", updateTop);
+    return () => browserWindow.removeEventListener("resize", updateTop);
+  }, [
+    browserWindow,
+    anchorTop,
+    anchorHeight,
+    section.key,
+    totalItemCount,
+    topPadding,
+  ]);
 
   useEffect(() => {
     if (focusRequest === 0) {
@@ -257,7 +273,7 @@ function WebSidebarSubmenu({
       ? "calc(var(--layout-margin, 0px) + 80px)"
       : `${leftOffset}px`;
 
-  const topStyle = Number.isFinite(computedTop) ? `${computedTop}px` : "16px";
+  const topStyle = Number.isFinite(computedTop) ? computedTop : topPadding;
   const renderLink = (item: SidebarNavItem, nested: boolean = false) => {
     const localService = renderDesktopLocalServiceNavItem(item.id, {
       onNavigate: onClose,
@@ -306,10 +322,12 @@ function WebSidebarSubmenu({
       ref={containerRef}
       id={`sidebar-flyout-${section.key}`}
       data-sidebar-flyout="true"
-      className="tailwind-scope tw-fixed tw-z-[95] tw-flex tw-max-h-[65vh] tw-w-64 tw-flex-col tw-overflow-hidden tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-800 tw-shadow-[0_20px_45px_rgba(7,7,11,0.7)] motion-safe:tw-animate-sidebar-flyout-in motion-reduce:tw-animate-none"
+      className="tailwind-scope tw-fixed tw-z-[95] tw-w-64 tw-overflow-y-auto tw-overflow-x-hidden tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-800 tw-shadow-[0_20px_45px_rgba(7,7,11,0.7)] tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300 motion-safe:tw-animate-sidebar-flyout-in motion-reduce:tw-animate-none"
       style={{
         left: leftStyle,
         top: topStyle,
+        maxWidth: `max(0px, calc(100vw - ${leftStyle} - ${FLYOUT_PADDING_PX}px))`,
+        maxHeight: `min(65vh, calc(100dvh - ${topPadding + FLYOUT_PADDING_PX}px))`,
       }}
       role="navigation"
       aria-label={t(DEFAULT_LOCALE, "navigation.sidebar.submenuLabel", {
@@ -326,7 +344,7 @@ function WebSidebarSubmenu({
         </h3>
       </div>
 
-      <div className="tw-flex-1 tw-overflow-y-auto tw-p-3 tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300">
+      <div className="tw-p-3">
         {section.items.map((item) => renderLink(item))}
 
         {section.subsections?.map((subsection) => {

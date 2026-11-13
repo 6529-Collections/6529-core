@@ -56,6 +56,7 @@ export interface ElectronAPI {
   getDesktopValidatorVisible: () => Promise<boolean>;
   setDesktopValidatorVisible: (visible: boolean) => Promise<boolean>;
   getDesktopValidatorStatus: () => Promise<DesktopValidatorStatus>;
+  isDesktopValidatorInstalled: () => Promise<boolean>;
   openDesktopValidator: () => Promise<void>;
   sanitizeProfilePicture: (bytes: ArrayBuffer) => Promise<SanitizedProfilePicture>;
   getLocalIpfsPreferences: () => Promise<LocalIpfsPreferencesSnapshot>;

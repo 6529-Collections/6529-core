@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, type CSSProperties } from "react";
 import { useHeaderContext } from "@/contexts/HeaderContext";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import MobileAppBanner from "@/components/mobile-app/MobileAppBanner";
@@ -10,10 +10,12 @@ export default function SmallScreenLayoutHeader({
   active = true,
   onMenuToggle,
   isMenuOpen,
+  style,
 }: {
   readonly active?: boolean;
   readonly onMenuToggle: () => void;
   readonly isMenuOpen: boolean;
+  readonly style?: CSSProperties | undefined;
 }) {
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
@@ -36,7 +38,12 @@ export default function SmallScreenLayoutHeader({
   );
 
   return (
-    <div ref={headerWrapperRef} hidden={!active} data-web-small-header="true">
+    <div
+      ref={headerWrapperRef}
+      hidden={!active}
+      style={style}
+      data-web-small-header="true"
+    >
       {active && <MobileAppBanner />}
       <SmallScreenHeader
         interactive={active}

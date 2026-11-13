@@ -122,6 +122,8 @@ export const api = {
     ipcRenderer.invoke("desktop-validator:set-visible", visible),
   getDesktopValidatorStatus: (): Promise<DesktopValidatorStatus> =>
     ipcRenderer.invoke("desktop-validator:status"),
+  isDesktopValidatorInstalled: (): Promise<boolean> =>
+    ipcRenderer.invoke("desktop-validator:is-installed"),
   openDesktopValidator: (): Promise<void> =>
     ipcRenderer.invoke("desktop-validator:open"),
   sanitizeProfilePicture: (bytes: ArrayBuffer): Promise<SanitizedProfilePicture> =>

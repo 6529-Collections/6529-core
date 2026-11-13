@@ -2333,6 +2333,19 @@ assertContract(
   "profile drop overlays must remain below the native titlebar",
 );
 
+const searchBarPath = "renderer/components/core/search-bar/SearchBar.tsx";
+const searchBarFunction = findFunction(parseSource(searchBarPath), "SearchBar");
+assertContract(
+  searchBarFunction &&
+    objectPropertyReferencesIdentifier(
+      searchBarFunction,
+      "top",
+      "CORE_TITLEBAR_HEIGHT_PX",
+    ),
+  searchBarPath,
+  "Find in Page must use the native titlebar height as its top offset",
+);
+
 for (const headerPath of [
   "renderer/components/header/AppSidebarHeader.tsx",
   "renderer/components/layout/SmallScreenHeader.tsx",

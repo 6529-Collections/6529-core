@@ -2,13 +2,12 @@ import { execFile } from "node:child_process";
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
+import { DESKTOP_VALIDATOR_DOWNLOAD_URL } from "../shared/desktop-validator";
 import type {
   DesktopValidatorHealth,
   DesktopValidatorNetworkAgreement,
   DesktopValidatorStatus,
 } from "../shared/desktop-validator";
-
-const DOWNLOAD_URL = "https://6529.io/validator";
 
 interface ValidatorInstallation {
   readonly appPath: string;
@@ -66,6 +65,10 @@ async function findInstallation(): Promise<ValidatorInstallation | undefined> {
     }
   }
   return undefined;
+}
+
+export async function isDesktopValidatorInstalled(): Promise<boolean> {
+  return (await findInstallation()) !== undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -290,7 +293,7 @@ export async function openDesktopValidator(
 ): Promise<void> {
   const installation = await locateInstallation();
   if (!installation) {
-    await launcher.openExternal(DOWNLOAD_URL);
+    await launcher.openExternal(DESKTOP_VALIDATOR_DOWNLOAD_URL);
     return;
   }
 

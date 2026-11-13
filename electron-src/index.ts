@@ -41,6 +41,7 @@ import {
   SET_RPC_PROVIDER_ACTIVE,
   STOP_WORKER,
 } from "../electron-constants";
+import { CORE_TITLEBAR_HEIGHT_PX } from "../shared/desktop-titlebar";
 import {
   ScheduledWorkerStatus,
   SeedWalletRequest,
@@ -76,6 +77,7 @@ import {
 } from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
 import {
   getDesktopValidatorStatus,
+  isDesktopValidatorInstalled,
   openDesktopValidator,
 } from "./desktop-validator";
 import IPFSServer from "./ipfs/ipfs.server";
@@ -1567,7 +1569,7 @@ async function openMainWindow() {
     titleBarOverlay: {
       color: "#000",
       symbolColor: "#fff",
-      height: 30,
+      height: CORE_TITLEBAR_HEIGHT_PX,
     },
     webPreferences: {
       nodeIntegration: false,
@@ -2410,6 +2412,13 @@ ipcMain.handle("desktop-validator:status", (event) => {
     throw new Error("Validator status is only available in the main window");
   }
   return getDesktopValidatorStatus();
+});
+
+ipcMain.handle("desktop-validator:is-installed", (event) => {
+  if (!isMainRenderer(event)) {
+    throw new Error("Validator installation is only available in the main window");
+  }
+  return isDesktopValidatorInstalled();
 });
 
 ipcMain.handle("desktop-validator:open", (event) => {
