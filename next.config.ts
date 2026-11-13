@@ -75,6 +75,15 @@ const IPFS_FALLBACK_GATEWAY_HOSTS = [
   "*.ipfs.dweb.link",
   "*.ipfs.cf-ipfs.com",
 ];
+// Separate content domain for user media: a path gateway plus one host per
+// HTML artwork. Images keep using the wildcard img-src, and only the path
+// gateway serves images, so the per-artwork hosts stay out of remotePatterns.
+const USER_CONTENT_PATH_GATEWAY_HOST = "media.6529usercontent.com";
+const USER_CONTENT_ARTWORK_HOSTS = "*.ipfs.6529usercontent.com";
+const USER_CONTENT_MEDIA_SOURCES = [
+  `https://${USER_CONTENT_PATH_GATEWAY_HOST}`,
+  `https://${USER_CONTENT_ARTWORK_HOSTS}`,
+];
 const PUBLIC_REVIEW_TRACE_EXCLUDES = [
   "renderer/content/public-reviews/**/*",
   "renderer/public/review-data/**/*",
@@ -356,6 +365,7 @@ function createSecurityHeaders(
     configuredIpfsGatewaySource,
     arweaveGatewaySources,
     ...IPFS_FALLBACK_MEDIA_SOURCES,
+    ...USER_CONTENT_MEDIA_SOURCES,
     "https://*.twimg.com",
     "https://artblocks.io",
     "https://*.artblocks.io",
@@ -371,6 +381,7 @@ function createSecurityHeaders(
     "https://generator.seize.io",
     arweaveGatewaySources,
     ...IPFS_FALLBACK_FRAME_SOURCES,
+    ...USER_CONTENT_MEDIA_SOURCES,
     "https://verify.walletconnect.com",
     "https://verify.walletconnect.org",
     "https://secure.walletconnect.com",
@@ -534,6 +545,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
           protocol: "https" as const,
           hostname,
         })),
+        { protocol: "https", hostname: USER_CONTENT_PATH_GATEWAY_HOST },
         { protocol: "https", hostname: "127.0.0.1" },
         { protocol: "http", hostname: "127.0.0.1" },
       ],
