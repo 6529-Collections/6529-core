@@ -1,4 +1,5 @@
 import { getStagingVideoFixtures } from "./stagingVideoFixtures";
+import { mediaResolverUrlPattern } from "../support/mediaResolverHosts";
 import { defineMobileVideoBatteryTest } from "./mobileVideoBatteryCases";
 import { defineCollectorsLeaderboardTests } from "./collectorsLeaderboardCases";
 import { defineNftMarketActivityTests } from "./nftMarketActivityCases";
@@ -1384,7 +1385,11 @@ test.describe("Media, mint, and detail read-only coverage @surface @medium @larg
   }) => {
     const tx = "IFosq_ZN9_PrDSQmq65JTjeB2GnnfPSFoHxRazxC4PY";
     const primary = `https://arweave.net/${tx}/timeline-history.png`;
-    const fallback = `https://media.6529.io/arweave/${tx}/timeline-history.png`;
+    // The deployed build's media resolver: media.6529.io in production, the
+    // separate content domain on staging. The path stays exact.
+    const fallback = mediaResolverUrlPattern(
+      `/arweave/${tx}/timeline-history.png`
+    );
     const requests: string[] = [];
     await page.route("**/api/nft_history/**", async (route) => {
       await route.fulfill({
@@ -1433,7 +1438,9 @@ test.describe("Media, mint, and detail read-only coverage @surface @medium @larg
         preview.evaluate((image: HTMLImageElement) => image.naturalWidth)
       )
       .toBeGreaterThan(0);
-    expect(requests).toEqual([primary, fallback]);
+    expect(requests).toHaveLength(2);
+    expect(requests[0]).toBe(primary);
+    expect(requests[1]).toMatch(fallback);
     await expect(
       timeline.getByRole("link", { name: "Open metadata URI" })
     ).toHaveAttribute("href", `https://arweave.net/${tx}`);
@@ -1544,6 +1551,18 @@ test.describe("Media, mint, and detail read-only coverage @surface @medium @larg
     await expect(
       page.getByRole("tab", { name: "Card Activity" })
     ).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Card Activity" })).toHaveCSS(
+      "font-size",
+      "12px"
+    );
+    await expect(page.getByRole("tab", { name: "Card Activity" })).toHaveCSS(
+      "border-radius",
+      "9999px"
+    );
+    await expect(page.getByRole("tab", { name: "Card Activity" })).toHaveCSS(
+      "height",
+      "32px"
+    );
     await expect(page.getByRole("tab", { name: "Timeline" })).toBeVisible();
     await expect(
       page.getByRole("region", { name: "The Memes card activity" })
@@ -1646,6 +1665,14 @@ test.describe("Media, mint, and detail read-only coverage @surface @medium @larg
     ).toHaveAttribute("href", "/meme-lab?locale=de-DE");
     await expectNavigation(page, "Meme Lab page sections");
     await expectNavigation(page, "Meme Lab history sections");
+    await expect(page.getByRole("tab", { name: "Card Activity" })).toHaveCSS(
+      "font-size",
+      "14px"
+    );
+    await expect(page.getByRole("tab", { name: "Card Activity" })).toHaveCSS(
+      "height",
+      "32px"
+    );
     await expect(page.getByRole("button", { name: "History" })).toHaveAttribute(
       "aria-pressed",
       "true"

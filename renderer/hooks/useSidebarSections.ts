@@ -162,12 +162,10 @@ function getNftsSection(hideNftPurchasing: boolean): SidebarSection {
 
 function getAboutSection(
   appWalletsSupported: boolean,
-  hideSubscriptions: boolean,
-  hideSubscriptionReports: boolean
+  hideSubscriptions: boolean
 ): SidebarSection {
   const aboutGroups = getVisibleAboutNavGroups({
     hideSubscriptions,
-    hideSubscriptionReports,
     appWalletsSupported,
   });
 
@@ -189,7 +187,6 @@ function getAboutSection(
 function buildSidebarSections(
   appWalletsSupported: boolean,
   hideSubscriptions: boolean,
-  hideSubscriptionReports: boolean,
   ipfsWebuiUrl: string,
   locale: SupportedLocale
 ): SidebarSection[] {
@@ -197,11 +194,7 @@ function buildSidebarSections(
     getNftsSection(hideSubscriptions),
     getMuseumSection(),
     getWavesSection(),
-    getAboutSection(
-      appWalletsSupported,
-      hideSubscriptions,
-      hideSubscriptionReports
-    ),
+    getAboutSection(appWalletsSupported, hideSubscriptions),
     getDesktopSection(ipfsWebuiUrl, locale),
   ];
 }
@@ -209,7 +202,6 @@ function buildSidebarSections(
 export function useSidebarSections(
   appWalletsSupported: boolean,
   hideSubscriptions: boolean,
-  hideSubscriptionReports = hideSubscriptions,
   ipfsWebuiUrl = ""
 ): SidebarSection[] {
   const locale = useBrowserLocale();
@@ -218,17 +210,10 @@ export function useSidebarSections(
       buildSidebarSections(
         appWalletsSupported,
         hideSubscriptions,
-        hideSubscriptionReports,
         ipfsWebuiUrl,
         locale
       ),
-    [
-      appWalletsSupported,
-      hideSubscriptions,
-      hideSubscriptionReports,
-      ipfsWebuiUrl,
-      locale,
-    ]
+    [appWalletsSupported, hideSubscriptions, ipfsWebuiUrl, locale]
   );
 }
 

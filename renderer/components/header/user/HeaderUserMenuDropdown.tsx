@@ -22,7 +22,8 @@ import {
 import FontAwesomeSvgIcon from "@/components/common/icons/FontAwesomeSvgIcon";
 import Link from "next/link";
 import { useContext, useEffect, useState } from "react";
-import { signOutWithE2eeChoice } from "@/components/e2ee/signout/e2eeSignOut";
+import { signOutAndRemoveLocalData } from "@/components/auth/signOutLocalData";
+import { DisplayedProfileChangedError } from "@/services/auth/displayed-wallet-guard";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import DevicesIcon from "@/components/common/icons/DevicesIcon";
@@ -202,7 +203,13 @@ export default function HeaderUserMenuDropdown({
       onClose();
     } catch (error) {
       console.error(errorMessage, error);
-      setToast({ message: errorMessage, type: "error" });
+      setToast({
+        message:
+          error instanceof DisplayedProfileChangedError
+            ? error.message
+            : errorMessage,
+        type: "error",
+      });
     } finally {
       setPendingAction(null);
     }
@@ -269,13 +276,15 @@ export default function HeaderUserMenuDropdown({
                       onSignOutAll={() => {
                         void runMenuAction({
                           action: () =>
-                            signOutWithE2eeChoice(
+                            signOutAndRemoveLocalData(
                               "all",
                               seizeDisconnectAndLogoutAll
                             ),
                           pendingKey: "logout-all",
-                          errorMessage:
-                            "Failed to sign out all profiles. Please try again.",
+                          errorMessage: t(
+                            HEADER_USER_MENU_LOCALE,
+                            "auth.signOut.error.allProfilesRetry"
+                          ),
                         });
                       }}
                       actionsDisabled={pendingAction !== null}
@@ -577,12 +586,15 @@ export default function HeaderUserMenuDropdown({
                     onClick={() => {
                       void runMenuAction({
                         action: () =>
-                          signOutWithE2eeChoice(
+                          signOutAndRemoveLocalData(
                             "profile",
                             seizeDisconnectAndLogout
                           ),
                         pendingKey: "logout",
-                        errorMessage: "Failed to sign out. Please try again.",
+                        errorMessage: t(
+                          HEADER_USER_MENU_LOCALE,
+                          "auth.signOut.error.retry"
+                        ),
                       });
                     }}
                     disabled={pendingAction !== null}

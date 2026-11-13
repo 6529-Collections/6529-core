@@ -5,6 +5,7 @@ import WebSidebarNav from "@/components/layout/sidebar/WebSidebarNav";
 
 jest.mock("next/navigation", () => ({
   usePathname: jest.fn(),
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 jest.mock("@/components/app-wallets/AppWalletsContext", () => ({
@@ -12,7 +13,11 @@ jest.mock("@/components/app-wallets/AppWalletsContext", () => ({
 }));
 
 jest.mock("@/components/auth/Auth", () => ({
-  useAuth: () => ({ connectedProfile: null }),
+  useAuth: () => mockMembershipAuth,
+}));
+
+jest.mock("@/components/ipfs/IPFSContext", () => ({
+  useIpfsContext: () => ({ ipfsStatus: "disabled", ipfsUrls: undefined }),
 }));
 
 jest.mock("@/components/cookies/CookieConsentContext", () => ({
@@ -30,6 +35,17 @@ jest.mock("@/hooks/useDeviceInfo", () => ({
 }));
 
 let mockCanAccessDropForge = false;
+
+let mockMembershipAuth = {
+  connectedProfile: null,
+  isAuthenticated: false,
+  fetchingProfile: false,
+};
+let mockConnectionState = "disconnected";
+jest.mock("@/components/auth/SeizeConnectContext", () => ({
+  useSeizeConnectContext: () => ({ connectionState: mockConnectionState }),
+}));
+
 let mockModeratorAccess = {
   data: { moderator: false, has_open_reports: false, needs_review_count: 0 },
 };
@@ -69,6 +85,12 @@ function expectDocumentOrder(elements: HTMLElement[]) {
 
 describe("WebSidebarNav", () => {
   beforeEach(() => {
+    mockMembershipAuth = {
+      connectedProfile: null,
+      isAuthenticated: false,
+      fetchingProfile: false,
+    };
+    mockConnectionState = "disconnected";
     mockUsePathname.mockReturnValue("/waves");
     mockCanAccessDropForge = false;
     mockModeratorAccess = {
@@ -123,6 +145,7 @@ describe("WebSidebarNav", () => {
       screen.getByRole("link", { name: "DMs" }),
       screen.getByRole("link", { name: "Join 6529" }),
       screen.getByRole("button", { name: "About" }),
+      screen.getByRole("button", { name: "6529 Desktop" }),
       screen.getByRole("link", { name: "Drop Forge" }),
     ]);
   });
@@ -209,4 +232,54 @@ describe("WebSidebarNav", () => {
       screen.getByRole("link", { name: "WatchTower" }),
     ]);
   });
+  it.each([false, true])(
+    "keeps the member slot in place with active Validator (collapsed=%s)",
+    (collapsed) => {
+      mockMembershipAuth.isAuthenticated = true;
+      mockConnectionState = "connected";
+      mockUsePathname.mockReturnValue("/validator/status");
+      render(<WebSidebarNav isCollapsed={collapsed} />);
+      const validator = screen.getByRole("link", { name: "Validator" });
+      expect(validator).toHaveAttribute("href", "/validator");
+      expect(validator).toHaveAttribute("aria-current", "page");
+      expect(validator).toHaveAttribute("data-tooltip-content", "Validator");
+      expect(validator).toHaveClass("focus-visible:tw-ring-2");
+      expect(screen.queryByRole("link", { name: "Join 6529" })).toBeNull();
+      expectDocumentOrder([
+        screen.getByRole("link", { name: "DMs" }),
+        validator,
+        screen.getByRole("button", { name: "About" }),
+      ]);
+    }
+  );
+
+  it("reserves the same slot while wallet and profile restoration settle", () => {
+    mockConnectionState = "initializing";
+    const { rerender } = render(<WebSidebarNav isCollapsed />);
+    const join = screen.getByRole("link", { name: "Join 6529" });
+    expect(join.closest("li")).toHaveClass("tw-invisible");
+    expect(screen.queryByRole("link", { name: "Validator" })).toBeNull();
+    mockConnectionState = "connected";
+    mockMembershipAuth.fetchingProfile = true;
+    rerender(<WebSidebarNav isCollapsed />);
+    expect(join.closest("li")).toHaveClass("tw-invisible");
+    mockMembershipAuth.fetchingProfile = false;
+    mockMembershipAuth.isAuthenticated = true;
+    rerender(<WebSidebarNav isCollapsed />);
+    expect(
+      screen.getByRole("link", { name: "Validator" }).closest("li")
+    ).not.toHaveClass("tw-invisible");
+  });
+
+  it.each(["disconnected", "connected", "error"])(
+    "keeps Join active for a newcomer (%s)",
+    (state) => {
+      mockConnectionState = state;
+      mockUsePathname.mockReturnValue("/join-6529");
+      render(<WebSidebarNav isCollapsed={false} />);
+      const join = screen.getByRole("link", { name: "Join 6529" });
+      expect(join).toHaveAttribute("aria-current", "page");
+      expect(join.closest("li")).not.toHaveClass("tw-invisible");
+    }
+  );
 });

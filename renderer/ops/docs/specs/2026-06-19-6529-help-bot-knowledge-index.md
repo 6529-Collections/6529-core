@@ -50,6 +50,21 @@ Back returns one step; Cancel discards the unsaved draft and closes management.
 Received and Given lists fit their content, share a height cap and scroll when needed.
 Visitor inspection and existing proxy allocation permissions remain distinct.
 
+The `profiles.getting-started` record covers the first-profile welcome in the
+Identity tab: `Find a Wave` opens Discovery, Main Stage opens its configured
+Wave, and `Before you submit art` opens the existing `Unlock submissions`
+nomination popover on desktop, with hover, click and keyboard access. Touch-first
+devices and the native app keep the dialog or sheet. `How 6529 works` opens
+Join 6529. About statements are edited through the profile editor.
+Its facts keep creation-session visibility, owner/proxy restrictions, the
+`Getting started` header and visible `Dismiss` control, and the welcome's availability without Main Stage details
+explicit.
+It also explains the one-time arrival scroll after profile content becomes
+visible following successful setup on Identity, reduced-motion support, unchanged
+keyboard focus, and no
+repeated scroll on ordinary return or reload. Setup entered from Wave creation
+returns to that flow instead.
+
 The search record covers punctuation-tolerant Wave names across site search,
 sidebar search, composer mentions and the message-search Wave picker. It explains
 all-term matching, partial names, relevance ordering, literal wildcard characters,
@@ -353,11 +368,10 @@ system sharing, confirmed clipboard fallback, silent cancellation, temporary
 drop availability, and the existing Main Stage, Quorum, and direct-message URL
 rules. Sharing a direct-message URL does not grant conversation access.
 
-The direct-message record covers **New message**, its responsive web bottom sheet
-and desktop dialog, its **To** recipient field,
-search results that remain visible after keyboard dismissal, removable recipient
-chips, selection circles, and the **Message** action for one person or a group.
-It also describes retry behavior and the native screen's hidden tab bar.
+The direct-message record covers **New message** at `/messages/new`, its **To**
+field, and removable recipient chips. It also describes retry behavior and the
+native screen's hidden tab bar. Builds without encrypted chats use the web
+dialog and the **Message** action.
 
 The Memes submission profile and wallet signing record covers the EIP-712
 **Submit a Meme Card to The Memes** action, readable artwork and destination,
@@ -1068,3 +1082,7 @@ Gradient, Meme Lab and ReMemes browse records describe responsive card
 placeholders that match loaded results, with loading statuses for screen
 readers. Meme Lab includes its individual collection route; ReMemes preserves
 its existing filter visibility while fetching.
+
+Primary navigation knowledge includes the shared Join 6529 / Validator slot: newcomers
+see Join, signed-in profiles see Validator, and unresolved sessions reserve the
+slot across desktop, mobile web, native menus, and page search.

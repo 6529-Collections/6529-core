@@ -19,7 +19,12 @@ import {
   type LoginE2eeDevice,
 } from "@/lib/device-signing/login-e2ee";
 import { adoptLoginE2eeDevice } from "./authLoginE2eeDevice";
+import {
+  getSignInChallengeProblem,
+  type SignInChallengeProblem,
+} from "./authNonce";
 import { AUTH_SIGNATURE_FAILED_MESSAGE } from "@/services/auth/auth.messages";
+import { getStructuredApiErrorStatus } from "@/services/api/common-api";
 import { canStoreAnotherWalletAccount } from "@/services/auth/auth.utils";
 import {
   loginWithSessionV2,
@@ -32,6 +37,7 @@ import {
   DeviceGrantUnavailableError,
   InvalidSignerAddressError,
   NonceResponseValidationError,
+  SignInRateLimitedError,
 } from "./authErrors";
 import { isAuthRequestStale, type AuthRequestGuard } from "./authRequestGuard";
 import { AUTH_MODAL_LOCALE } from "./authSessionUpgrade";
@@ -107,6 +113,28 @@ interface SignInChallenge {
 
 type GetNonce = AuthRequestSignInDependencies["getNonce"];
 
+/**
+ * Records that a sign-in challenge was refused, by reason code only: never
+ * the challenge, the address or the nonce.
+ */
+const refuseChallenge = (problem: SignInChallengeProblem): never => {
+  const error = new NonceResponseValidationError(
+    `Sign-in challenge refused (${problem})`
+  );
+  logErrorSecurely(`requestSignIn:challenge-refused:${problem}`, error);
+  throw error;
+};
+
+/** Notes, by reason code only, a grant challenge this client did not accept. */
+const noteUnrecognisedGrantChallenge = (
+  problem: SignInChallengeProblem
+): null => {
+  console.warn(
+    `[requestSignIn] Device-grant challenge not recognised (${problem}).`
+  );
+  return null;
+};
+
 /** Classifies a grant challenge; null when it must not be signed. */
 const toGrantChallenge = (
   nonceResponse: ApiSessionNonceResponse,
@@ -114,19 +142,37 @@ const toGrantChallenge = (
   e2eeDevice: LoginE2eeDevice | null
 ): SignInChallenge | null => {
   const message = nonceResponse.signable_message;
-  if (e2eeDevice && isDeviceGrantChallenge(message, deviceGrant, e2eeDevice)) {
+  const grantProblem = getSignInChallengeProblem(
+    message,
+    deviceGrant.address,
+    "grant"
+  );
+  const isGrantForm = grantProblem === null;
+  if (
+    isGrantForm &&
+    e2eeDevice &&
+    isDeviceGrantChallenge(message, deviceGrant, e2eeDevice)
+  ) {
     return { nonceResponse, deviceGrant, e2eeDevice };
   }
   // A server with encrypted messages off (or on another ciphersuite) grants
   // the signing key alone; encrypted messages then keep their own prompt.
-  if (isDeviceGrantChallenge(message, deviceGrant)) {
+  if (isGrantForm && isDeviceGrantChallenge(message, deviceGrant)) {
     return { nonceResponse, deviceGrant, e2eeDevice: null };
   }
   // A challenge without any device grant is the ordinary one; never sign a
   // grant for a key other than this device's.
-  return carriesDeviceGrant(message)
-    ? null
-    : { nonceResponse, deviceGrant: null, e2eeDevice: null };
+  if (carriesDeviceGrant(message)) {
+    return noteUnrecognisedGrantChallenge(grantProblem ?? "resources");
+  }
+  const ordinaryProblem = getSignInChallengeProblem(
+    message,
+    deviceGrant.address,
+    "ordinary"
+  );
+  return ordinaryProblem === null
+    ? { nonceResponse, deviceGrant: null, e2eeDevice: null }
+    : noteUnrecognisedGrantChallenge(ordinaryProblem);
 };
 
 const getGrantChallenge = async ({
@@ -147,7 +193,12 @@ const getGrantChallenge = async ({
     });
     return toGrantChallenge(nonceResponse, deviceGrant, null);
   } catch (error) {
-    if (deviceGrantMode === "required") {
+    // Too many attempts: falling back to another challenge would be refused
+    // the same way.
+    if (
+      deviceGrantMode === "required" ||
+      error instanceof SignInRateLimitedError
+    ) {
       throw error;
     }
     return null;
@@ -181,7 +232,10 @@ const getCombinedGrantChallenge = async ({
     });
     const challenge = toGrantChallenge(nonceResponse, deviceGrant, e2eeDevice);
     return challenge?.deviceGrant ? challenge : null;
-  } catch {
+  } catch (error) {
+    if (error instanceof SignInRateLimitedError) {
+      throw error;
+    }
     return null;
   }
 };
@@ -209,6 +263,9 @@ const getDeviceGrantChallenge = async ({
         e2eeDevice,
         getNonce,
         signerAddress,
+      }).catch((error: unknown) => {
+        e2eeDevice.dispose();
+        throw error;
       })
     : null;
   if (e2eeDevice && !combined?.e2eeDevice) {
@@ -283,10 +340,15 @@ const getOrdinaryChallenge = async (
   signerAddress: string
 ): Promise<SignInChallenge> => {
   const nonceResponse = await getNonce({ signerAddress });
-  if (carriesDeviceGrant(nonceResponse.signable_message)) {
-    throw new NonceResponseValidationError(
-      "Unrequested device grant in the sign-in challenge"
-    );
+  const problem = carriesDeviceGrant(nonceResponse.signable_message)
+    ? "resources"
+    : getSignInChallengeProblem(
+        nonceResponse.signable_message,
+        signerAddress,
+        "ordinary"
+      );
+  if (problem !== null) {
+    refuseChallenge(problem);
   }
   return { nonceResponse, deviceGrant: null, e2eeDevice: null };
 };
@@ -437,7 +499,9 @@ const createSignInSession = async ({
     ...(deviceGrant ? { deviceLabel: deviceGrant.label } : {}),
   }).catch((error: unknown) => {
     skipGrantNextTime();
-    throw error;
+    throw getStructuredApiErrorStatus(error) === 429
+      ? new SignInRateLimitedError()
+      : error;
   });
   if (isAuthRequestStale(authRequestGuard)) {
     return { response: null, cancelled: true };
@@ -484,6 +548,11 @@ const showRequestSignInError = ({
   } else if (error instanceof NonceResponseValidationError) {
     setToast({
       message: "Couldn't verify the authentication response. Please try again.",
+      type: "error",
+    });
+  } else if (error instanceof SignInRateLimitedError) {
+    setToast({
+      message: t(AUTH_MODAL_LOCALE, "auth.signIn.rateLimited"),
       type: "error",
     });
   } else if (error instanceof AuthenticationNonceError) {

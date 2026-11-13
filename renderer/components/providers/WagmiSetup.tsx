@@ -35,6 +35,7 @@ import { getSeedWallets } from "@/electron";
 import { isElectron } from "@/helpers";
 import { useAppWalletPasswordModal } from "@/hooks/useAppWalletPasswordModal";
 import type { ISeedWallet } from "@/shared/types";
+import { useAppWalletSigningConfirmation } from "@/hooks/useAppWalletSigningConfirmation";
 import { AppKitValidationError } from "@/errors/appkit-initialization";
 import type {
   AppKitAdapterConfig,
@@ -539,6 +540,8 @@ export default function WagmiSetup({
   const { setToast } = useAuth();
   const { appWallets, migrateAppWallet } = useAppWallets();
   const appWalletPasswordModal = useAppWalletPasswordModal(migrateAppWallet);
+  // Every app-wallet signature or transaction waits for this dialog.
+  const appWalletSigningConfirmation = useAppWalletSigningConfirmation();
 
   const fastPathSnapshot = useSyncExternalStore(
     subscribeToWagmiAppKitFastPathStore,
@@ -833,6 +836,7 @@ export default function WagmiSetup({
       >
         {children}
         {appWalletPasswordModal.modal}
+        {appWalletSigningConfirmation}
       </DeferredWagmiProvider>
     </AppKitBootstrapContext.Provider>
   );
