@@ -37,6 +37,7 @@ import emmaSnapshotsMessages from "@/i18n/messages/emmaSnapshots.en-US.json";
 import aboutMessages from "@/i18n/messages/about.en-US.json";
 import homeNewcomerMessages from "@/i18n/messages/homeNewcomer.en-US.json";
 import join6529Messages from "@/i18n/messages/join6529.en-US.json";
+import identityGettingStartedMessages from "@/i18n/messages/identityGettingStarted.en-US.json";
 import safeCollectingMessages from "@/i18n/messages/safeCollecting.en-US.json";
 import delegationTapGuideMessages from "@/i18n/messages/delegationTapGuide.en-US.json";
 import pageMetadataMessages from "@/i18n/messages/pageMetadata.en-US.json";
@@ -3826,6 +3827,7 @@ export const EN_US_ROOT_MESSAGES = {
   ...DELEGATION_REGISTER_MESSAGES,
   ...DELEGATION_SUMMARY_MESSAGES,
   ...join6529Messages,
+  ...identityGettingStartedMessages,
   "nextgen.brand": "NextGen",
   "nextgen.navigation.featured": "Featured",
   "nextgen.navigation.collections": "Collections",
@@ -5299,6 +5301,12 @@ export const EN_US_ROOT_MESSAGES = {
   "navigation.nfts.activity": "NFT Activity",
   "navigation.nfts.memesCalendar": "Memes Calendar",
   ...EULA_MESSAGES,
+  "access.codeInput.label": "Team Login",
+  "access.codeInput.placeholder": "Enter password",
+  "access.denied": "Access Denied!",
+  "access.verifyFailed": "Could not verify access. Please try again.",
+  "access.verifying": "Verifying code…",
+  "access.openingPage": "Opening page…",
   ...GLOBAL_ERROR_MESSAGES,
   ...MAPPING_TOOL_MESSAGES,
   ...TITLE_CONTEXT_MESSAGES,
