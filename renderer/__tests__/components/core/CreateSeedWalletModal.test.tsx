@@ -18,14 +18,16 @@ afterEach(() => {
 });
 
 it("requires a fresh backup confirmation before creating a wallet with a generated password", async () => {
-  const password = "example-generated-password";
+  const generatedValue = "example-generated-password";
   const address = "0x123456789012345678901234567890123456abcd";
   const offerSave = jest.fn().mockResolvedValue({ ok: true, value: false });
   window.walletPasswords = {
     isAvailable: jest.fn().mockResolvedValue(true),
-    generate: jest.fn().mockResolvedValue({ ok: true, value: password }),
+    generate: jest.fn().mockResolvedValue({ ok: true, value: generatedValue }),
     hasSavedPassword: jest.fn(),
-    request: jest.fn(),
+    unlock: jest.fn(),
+    lock: jest.fn(),
+    recover: jest.fn(),
     offerSave,
     forget: jest.fn(),
   };
@@ -51,7 +53,7 @@ it("requires a fresh backup confirmation before creating a wallet with a generat
   await user.click(confirmation);
   await user.click(createButton);
 
-  expect(createSeedWallet).toHaveBeenCalledWith("My Wallet", `${password}x`);
-  expect(offerSave).toHaveBeenCalledWith(address, `${password}x`);
+  expect(createSeedWallet).toHaveBeenCalledWith("My Wallet", `${generatedValue}x`);
+  expect(offerSave).toHaveBeenCalledWith(address, `${generatedValue}x`);
   expect(onHide).toHaveBeenCalledWith(true);
 });

@@ -2,6 +2,7 @@ import { getAddress, isAddress } from "ethers";
 
 export const SEED_WALLET_MAINNET_CHAIN_ID = 1;
 export const SEED_WALLET_SEPOLIA_CHAIN_ID = 11_155_111;
+export const SEED_WALLET_CONNECTION_STORE = "seize-app-connection-seed-wallet";
 
 export interface SeedWalletConnectionState {
   readonly accounts: `0x${string}`[];

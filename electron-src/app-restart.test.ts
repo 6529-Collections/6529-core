@@ -54,6 +54,7 @@ function harness(
       destroy: () => calls.push("destroy"),
     },
     scheduledWorkers: [],
+    seedWalletSession: { lock() {} },
     stopSchedulers: async () => {
       calls.push("workers");
       await stop();

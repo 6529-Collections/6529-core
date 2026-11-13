@@ -11,12 +11,11 @@ import {
 import { useModalState } from "@/contexts/ModalStateContext";
 import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { useToast } from "@/contexts/ToastContext";
-import { hexToString } from "@/helpers";
-import { fromGWEI, isValidEthAddress } from "@/helpers/Helpers";
+import { fromGWEI } from "@/helpers/Helpers";
 import { SeedWalletRequest } from "@/shared/types";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ethers, formatUnits } from "ethers";
+import { formatUnits, toUtf8String } from "ethers";
 import {
   Fragment,
   useCallback,
@@ -101,7 +100,6 @@ export default function ConfirmSeedWalletRequest({
   const { showToast } = useToast();
   const [showParsed, setShowParsed] = useState(false);
   const [seedRequest, setSeedRequest] = useState<SeedWalletRequest>();
-  const hasMounted = useRef(false);
   const onShowChangeRef = useRef(onShowChange);
   const latestShowRef = useRef(show);
 
@@ -140,12 +138,12 @@ export default function ConfirmSeedWalletRequest({
   }, []);
 
   const onReject = (request: SeedWalletRequest) => {
-    window.seedConnector.reject(request);
+    window.seedConnector.reject(request.requestId);
     clear();
   };
 
   const onConfirm = (request: SeedWalletRequest) => {
-    window.seedConnector.confirm(request);
+    window.seedConnector.confirm(request.requestId);
     clear();
   };
 
@@ -154,47 +152,47 @@ export default function ConfirmSeedWalletRequest({
       return;
     }
 
-    window.seedConnector.reject(seedRequest);
+    window.seedConnector.reject(seedRequest.requestId);
     clear();
   }, [clear, seedRequest, suppress]);
 
-  const requestHandler = (
-    wallet: ethers.Wallet | null,
-    request: SeedWalletRequest
-  ) => {
-    setSeedRequest({
-      ...request,
-      privateKey: wallet?.privateKey ?? "",
-    });
-    balance.refetch();
-    setShow(true);
-  };
+  const handleRequestRef = useRef(seedWalletContext.handleRequest);
+  const refetchBalance = balance.refetch;
+  useEffect(() => {
+    handleRequestRef.current = seedWalletContext.handleRequest;
+  }, [seedWalletContext.handleRequest]);
 
   useEffect(() => {
-    if (hasMounted.current) return;
-    hasMounted.current = true;
-    const handleRequest = (_event: unknown, request: SeedWalletRequest) => {
-      seedWalletContext.handleRequest(requestHandler, request);
-    };
-    const handleToast = (
-      _event: unknown,
-      toast: { type: "success" | "error"; message: string }
-    ) => {
+    const stopRequests = window.seedConnector?.onInitRequest((request) => {
+      handleRequestRef.current((approvedForReview) => {
+        setSeedRequest(approvedForReview);
+        void refetchBalance();
+        setShow(true);
+      }, request);
+    });
+    const stopToasts = window.seedConnector?.onShowToast((toast) => {
       showToast(toast.message, toast.type, true);
-    };
-    window.seedConnector?.onInitRequest(handleRequest);
-    window.seedConnector?.onShowToast(handleToast);
+    });
     return () => {
-      window.seedConnector?.offInitRequest(handleRequest);
-      window.seedConnector?.offShowToast(handleToast);
+      stopRequests?.();
+      stopToasts?.();
     };
-  }, [seedWalletContext.isSeedWallet, showToast]);
+  }, [refetchBalance, showToast]);
 
-  function getPersonalSignParamLines(param: string): string[] {
-    if (isValidEthAddress(param)) {
+  useEffect(() => {
+    return window.seedConnector?.onSettled((requestId) => {
+      if (seedRequest?.requestId === requestId) clear();
+    });
+  }, [clear, seedRequest]);
+
+  function getPersonalSignParamLines(param: string, index: number): string[] {
+    if (index !== 0) return [param];
+    try {
+      const message = toUtf8String(param);
+      return /[\x00-\x08\x0b-\x1f\x7f]/.test(message) ? [param] : message.split("\n");
+    } catch {
       return [param];
     }
-    return hexToString(param).replace(/^\n+/, "").split("\n");
   }
 
   function printTypedData(request: SeedWalletRequest) {
@@ -253,7 +251,7 @@ export default function ConfirmSeedWalletRequest({
           <span>Parameters</span>
           {withStableKeys(request?.params ?? []).map(
             ({ item: param, key }, index) => {
-              const lines = getPersonalSignParamLines(param);
+              const lines = getPersonalSignParamLines(param, index);
               return (
                 <code
                   key={key}

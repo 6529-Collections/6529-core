@@ -67,6 +67,12 @@ export function notifyDesktopProfilesReady(): void {
   });
 }
 
+export async function restartDesktopProfileRestore(): Promise<void> {
+  const restart = globalThis.window?.nativeAuth?.restartProfileRestore;
+  if (!restart) throw new Error("Desktop profile restart is unavailable");
+  await restart();
+}
+
 export function initializeDesktopProfiles(
   current: DesktopProfileState,
   restore: (state: DesktopProfileState) => void

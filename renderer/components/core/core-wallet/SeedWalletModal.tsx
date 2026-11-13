@@ -7,8 +7,6 @@ import {
   confirmBtnSecondarySmall,
   confirmInputClass,
 } from "@/components/shared/ConfirmModalShell";
-import { areEqualAddresses } from "@/helpers/Helpers";
-import { decryptData } from "@/shared/encrypt";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
@@ -16,6 +14,7 @@ import { useToast } from "../../../contexts/ToastContext";
 import { createSeedWallet, importSeedWallet } from "../../../electron";
 import { useOfferWalletPasswordSave } from "@/hooks/useOfferWalletPasswordSave";
 import { useSavedWalletPassword } from "@/hooks/useSavedWalletPassword";
+import type { WalletRecoveryField, WalletRecoveryResult } from "@/shared/wallet-passwords";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
 
@@ -306,8 +305,8 @@ export function UnlockSeedWalletModal(
   props: Readonly<{
     show: boolean;
     address: string;
-    address_hashed: string;
-    onUnlock: (pass: string) => void;
+    field: WalletRecoveryField;
+    onUnlock: (result: WalletRecoveryResult) => void;
     onHide: () => void;
   }>
 ) {
@@ -349,27 +348,20 @@ export function UnlockSeedWalletModal(
     setError("");
     setUnlocking(true);
     try {
-      let password = walletPass;
-      if (!password) {
-        const saved = await window.walletPasswords?.request(props.address);
-        if (!saved?.ok) {
-          clearSavedPassword();
-          showUnlockError(t(locale, "desktop.walletPasswords.manualFallback"));
-          return;
-        }
-        password = saved.value;
-      }
-      const decryptedAddress = await decryptData(
-        props.address,
-        props.address_hashed,
-        password
+      const result = await window.walletPasswords?.recover(
+        props.address, props.field, walletPass || undefined
       );
-      if (!areEqualAddresses(props.address, decryptedAddress)) {
-        showUnlockError(t(locale, "desktop.walletPasswords.unlockFailed"));
+      if (!result?.ok) {
+        if (result?.code === "cancelled") return;
+        if (!walletPass) clearSavedPassword();
+        const key = walletPass
+          ? "desktop.walletPasswords.unlockFailed"
+          : "desktop.walletPasswords.manualFallback";
+        showUnlockError(t(locale, key));
         return;
       }
-      if (walletPass) await offerSave(props.address, password);
-      props.onUnlock(password);
+      if (walletPass) await offerSave(props.address, walletPass);
+      props.onUnlock(result.value);
       handleHide();
     } catch {
       if (!walletPass) clearSavedPassword();

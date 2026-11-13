@@ -16,10 +16,14 @@ export enum BROWSER_CONNECTOR {
 export interface SeedWalletRequest {
   requestId: string;
   from: string;
+  chainId: number;
   method: string;
   params: any[];
-  privateKey?: string;
 }
+
+export type SeedWalletRequestResult =
+  | { readonly ok: true; readonly value: string }
+  | { readonly ok: false; readonly code: "rejected" | "failed"; readonly message: string };
 
 export enum ScheduledWorkerStatus {
   IDLE,

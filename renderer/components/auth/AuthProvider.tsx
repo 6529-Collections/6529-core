@@ -81,14 +81,18 @@ import { useSeizeConnectContext } from "./SeizeConnectContext";
 import { useAuthChainGuard } from "./useAuthChainGuard";
 import { useAuthContextValue } from "./useAuthContextValue";
 import { useSessionRecovery } from "./useSessionRecovery";
+import { DesktopProfileRecoveryContext } from "@/contexts/DesktopProfileRecoveryContext";
 
 export default function Auth({
   children,
-  enableWalletAuthentication = true,
+  enableWalletAuthentication: walletAuthenticationEnabled = true,
 }: {
   readonly children: React.ReactNode;
   readonly enableWalletAuthentication?: boolean;
 }) {
+  const recoveringDesktopProfiles = useContext(DesktopProfileRecoveryContext);
+  const enableWalletAuthentication =
+    walletAuthenticationEnabled && !recoveringDesktopProfiles;
   const { invalidateAll, invalidateAuthSensitiveQueries } = useContext(
     ReactQueryWrapperContext
   );

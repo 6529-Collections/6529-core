@@ -15,6 +15,7 @@ interface ProfileStorageDependencies {
 
 export class DesktopProfileStorage {
   private pending: Promise<unknown> = Promise.resolve();
+  private readonly failedRestores = new Set<string>();
 
   constructor(private readonly deps: ProfileStorageDependencies) {}
 
@@ -59,63 +60,84 @@ export class DesktopProfileStorage {
   restore(backend: string, current: unknown): Promise<DesktopProfileState> {
     const candidate = parseDesktopProfileState(current);
     return this.serialize(async () => {
-      const stored = this.deps.get(this.key(backend));
-      let state: DesktopProfileState;
-      if (
-        stored &&
-        typeof stored === "object" &&
-        "version" in stored &&
-        stored.version === 1 &&
-        "empty" in stored &&
-        stored.empty === true
-      ) {
-        state = { version: 1, accounts: [], activeAddress: null };
-      } else if (stored !== undefined && stored !== null) {
-        if (
-          typeof stored !== "object" ||
-          !("cipherTextBase64" in stored) ||
-          typeof stored.cipherTextBase64 !== "string" ||
-          !("version" in stored) ||
-          stored.version !== 1
-        ) {
-          throw new Error("Invalid encrypted Desktop profile state");
-        }
-        try {
-          state = parseDesktopProfileState(
-            JSON.parse(this.deps.decrypt(stored.cipherTextBase64)),
-          );
-        } catch {
-          throw new Error("Could not decrypt saved Desktop profiles");
-        }
-      } else {
-        const legacy = this.retainSessions(await this.deps.readLegacy());
-        // Preserve the current origin's explicit selection when it already has
-        // profiles, while recovering the remaining pre-fallback accounts.
-        const current = this.retainSessions(candidate);
-        const accounts = [...current.accounts];
-        for (const account of legacy.accounts) {
-          if (accounts.length >= MAX_DESKTOP_PROFILES) break;
-          if (!accounts.some((saved) => saved.address === account.address))
-            accounts.push(account);
-        }
-        state = parseDesktopProfileState({
-          version: 1,
-          accounts,
-          activeAddress: current.accounts.length
-            ? current.activeAddress
-            : legacy.activeAddress,
-        });
+      try {
+        const state = await this.restoreSnapshot(backend, candidate);
+        this.failedRestores.delete(backend);
+        return state;
+      } catch (error) {
+        this.failedRestores.add(backend);
+        throw error;
       }
-      state = this.retainSessions(state);
-      this.write(backend, state);
-      return state;
     });
+  }
+
+  hasRestoreFailure(backend: string): boolean {
+    return this.failedRestores.has(backend);
+  }
+
+  private async restoreSnapshot(
+    backend: string,
+    candidate: DesktopProfileState,
+  ): Promise<DesktopProfileState> {
+    const stored = this.deps.get(this.key(backend));
+    let state: DesktopProfileState;
+    if (
+      stored &&
+      typeof stored === "object" &&
+      "version" in stored &&
+      stored.version === 1 &&
+      "empty" in stored &&
+      stored.empty === true
+    ) {
+      state = { version: 1, accounts: [], activeAddress: null };
+    } else if (stored !== undefined && stored !== null) {
+      if (
+        typeof stored !== "object" ||
+        !("cipherTextBase64" in stored) ||
+        typeof stored.cipherTextBase64 !== "string" ||
+        !("version" in stored) ||
+        stored.version !== 1
+      ) {
+        throw new Error("Invalid encrypted Desktop profile state");
+      }
+      try {
+        state = parseDesktopProfileState(
+          JSON.parse(this.deps.decrypt(stored.cipherTextBase64)),
+        );
+      } catch {
+        throw new Error("Could not decrypt saved Desktop profiles");
+      }
+    } else {
+      const legacy = this.retainSessions(await this.deps.readLegacy());
+      // Preserve the current origin's explicit selection when it already has
+      // profiles, while recovering the remaining pre-fallback accounts.
+      const current = this.retainSessions(candidate);
+      const accounts = [...current.accounts];
+      for (const account of legacy.accounts) {
+        if (accounts.length >= MAX_DESKTOP_PROFILES) break;
+        if (!accounts.some((saved) => saved.address === account.address))
+          accounts.push(account);
+      }
+      state = parseDesktopProfileState({
+        version: 1,
+        accounts,
+        activeAddress: current.accounts.length
+          ? current.activeAddress
+          : legacy.activeAddress,
+      });
+    }
+    state = this.retainSessions(state);
+    this.write(backend, state);
+    return state;
   }
 
   save(backend: string, value: unknown): Promise<void> {
     const state = parseDesktopProfileState(value);
-    return this.serialize(() =>
-      this.write(backend, this.retainSessions(state)),
-    );
+    return this.serialize(() => {
+      if (this.hasRestoreFailure(backend)) {
+        throw new Error("Restore saved Desktop profiles before saving changes");
+      }
+      this.write(backend, this.retainSessions(state));
+    });
   }
 }

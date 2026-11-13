@@ -15,7 +15,6 @@ import {
   fromGWEI,
   getAddressEtherscanLink,
 } from "@/helpers/Helpers";
-import { decryptData } from "@/shared/encrypt";
 import { ISeedWallet } from "@/shared/types";
 import {
   faCircleArrowLeft,
@@ -290,29 +289,13 @@ export default function SeedWallet(
             )}
             <UnlockSeedWalletModal
               address={seedWallet.address}
-              address_hashed={seedWallet.address_hashed}
+              field="both"
               show={isDownloading}
               onHide={() => setIsDownloading(false)}
-              onUnlock={(pass: string) => {
-                decryptData(
-                  seedWallet.address,
-                  seedWallet.private_key,
-                  pass
-                ).then(async (decryptedPrivateKey) => {
-                  let decryptedMnemonic = seedWallet.mnemonic;
-                  if (decryptedMnemonic !== MNEMONIC_NA) {
-                    decryptedMnemonic = await decryptData(
-                      seedWallet.address,
-                      seedWallet.mnemonic,
-                      pass
-                    );
-                  }
-                  doDownload(
-                    seedWallet,
-                    decryptedMnemonic,
-                    decryptedPrivateKey
-                  );
-                });
+              onUnlock={({ mnemonic, privateKey }) => {
+                if (mnemonic !== undefined && privateKey !== undefined) {
+                  doDownload(seedWallet, mnemonic, privateKey);
+                }
               }}
             />
 
@@ -359,18 +342,13 @@ export default function SeedWallet(
               )}
               <UnlockSeedWalletModal
                 address={seedWallet.address}
-                address_hashed={seedWallet.address_hashed}
+                field="mnemonic"
                 show={isRevealingPhrase}
                 onHide={() => setIsRevealingPhrase(false)}
-                onUnlock={(pass: string) => {
-                  decryptData(
-                    seedWallet.address,
-                    seedWallet.mnemonic,
-                    pass
-                  ).then((decryptedPhrase) => {
-                    setPhrase(decryptedPhrase.split(" "));
-                    setRevealPhrase(true);
-                  });
+                onUnlock={({ mnemonic }) => {
+                  if (mnemonic === undefined) return;
+                  setPhrase(mnemonic.split(" "));
+                  setRevealPhrase(true);
                 }}
               />
               {revealPhrase && (
@@ -436,18 +414,13 @@ export default function SeedWallet(
             )}
             <UnlockSeedWalletModal
               address={seedWallet.address}
-              address_hashed={seedWallet.address_hashed}
+              field="privateKey"
               show={isRevealingPrivateKey}
               onHide={() => setIsRevealingPrivateKey(false)}
-              onUnlock={(pass: string) => {
-                decryptData(
-                  seedWallet.address,
-                  seedWallet.private_key,
-                  pass
-                ).then((decryptedPrivateKey) => {
-                  setPrivateKey(decryptedPrivateKey);
-                  setRevealPrivateKey(true);
-                });
+              onUnlock={({ privateKey }) => {
+                if (privateKey === undefined) return;
+                setPrivateKey(privateKey);
+                setRevealPrivateKey(true);
               }}
             />
             {revealPrivateKey && (
