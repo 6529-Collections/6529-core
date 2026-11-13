@@ -1,0 +1,114 @@
+{
+  "$comment": [
+    "Cross-implementation vectors for device grants and signed writes.",
+    "app-grant.ts says a wording change 'must update the frontend, backend and",
+    "shared vectors together while preserving verification of existing grants'.",
+    "These are those vectors.",
+    "",
+    "Every value here was produced by this repository's own code and",
+    "independently reproduced by a separate implementation in another language.",
+    "A change that moves any id below changes what the backend will verify, so",
+    "if a test fails, the question is whether existing grants and signatures",
+    "still verify - not whether to update the expectation."
+  ],
+  "canonicalJson": [
+    { "name": "keys sort, no whitespace", "input": { "b": 1, "a": 2 }, "canonical": "{\"a\":2,\"b\":1}" },
+    { "name": "nested objects and arrays", "input": { "z": [1, { "y": null, "x": true }] }, "canonical": "{\"z\":[1,{\"x\":true,\"y\":null}]}" },
+    { "name": "sorts by UTF-16 code unit, not by locale", "input": { "é": 1, "z": 2 }, "canonical": "{\"z\":2,\"é\":1}" },
+    { "name": "non-ASCII is not escaped", "input": { "k": "é" }, "canonical": "{\"k\":\"é\"}" },
+    { "name": "empty object", "input": {}, "canonical": "{}" },
+    { "name": "empty array", "input": [], "canonical": "[]" }
+  ],
+  "body": [
+    {
+      "name": "a drop body",
+      "input": { "wave_id": "w1", "parts": [{ "content": "hello" }] },
+      "bodyHash": "0xcd8d6bb71906b28ce25a553f50cbe01db58d676102fd50426d31196ad6eecd57",
+      "bodySize": 46
+    },
+    {
+      "name": "device_signature is excluded, so a signature never covers itself",
+      "input": { "wave_id": "w1", "parts": [{ "content": "hello" }], "device_signature": { "seq": 1 } },
+      "bodyHash": "0xcd8d6bb71906b28ce25a553f50cbe01db58d676102fd50426d31196ad6eecd57",
+      "bodySize": 46
+    },
+    {
+      "name": "no body",
+      "input": null,
+      "bodyHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "bodySize": 0
+    }
+  ],
+  "event": [
+    {
+      "name": "POST, empty refs, anchor 0",
+      "fields": {
+        "kind": 1,
+        "kindVersion": 1,
+        "wave": "w1",
+        "author": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "keyType": 2,
+        "deviceKey": "0xabababababababababababababababababababababababababababababababab",
+        "authRef": "0xefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+        "seq": 1,
+        "anchor": 0,
+        "claimedTime": 1762819200000,
+        "refs": [],
+        "bodyHash": "0xcd8d6bb71906b28ce25a553f50cbe01db58d676102fd50426d31196ad6eecd57",
+        "bodySize": 46
+      },
+      "eventId": "0x77745f8d6b195bff93a0d28338d6c1f078ee02fc02e018dbff67ccd641751c1d"
+    }
+  ],
+  "grant": [
+    {
+      "name": "v2 signing-only grant, default scopes",
+      "fields": {
+        "wallet": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "deviceKeyHex": "0xabababababababababababababababababababababababababababababababab",
+        "scopes": ["post", "edit", "delete", "react"],
+        "mls": null,
+        "issuedAtSeconds": 1762819200,
+        "expiresAtSeconds": 1778371200,
+        "origin": "6529Agentic"
+      },
+      "statement": "Turn on signed messages on this device until 10 May 2026. This device will sign your posts, edits, deletes and reactions so anyone can verify they came from your wallet. It can't move funds, change your handle, add devices or act as an admin. No transaction, no gas, no token approvals. (Device key abababab...abababab)",
+      "domain": { "name": "6529 Device Grant", "version": "2", "salt": "0x4887f15a22b96f574a9f835b87e01e293dc7587acbfc13b5f224b89cd2d8c8aa" },
+      "grantId": "0x329e1ab3f8ead716acbe82b415f84c2cba9a1dc28b0e5d427ea7bc2b10cfec9b"
+    },
+    {
+      "name": "v1 of the same grant, uint16 ciphersuite",
+      "fields": {
+        "wallet": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "deviceKeyHex": "0xabababababababababababababababababababababababababababababababab",
+        "scopes": ["post", "edit", "delete", "react"],
+        "mls": null,
+        "issuedAtSeconds": 1762819200,
+        "expiresAtSeconds": 1778371200,
+        "origin": "6529Agentic",
+        "version": 1
+      },
+      "domain": { "name": "6529 Device Grant", "version": "1", "salt": "0x4887f15a22b96f574a9f835b87e01e293dc7587acbfc13b5f224b89cd2d8c8aa" },
+      "grantId": "0x61e4b16db9a48688c96cef9abf999923034cd7539c65b137061878aee443508b"
+    }
+  ],
+  "times": [
+    {
+      "name": "expiry is minute aligned, 180 days on",
+      "issuedAtMs": 1762819200000,
+      "issuedAtSeconds": 1762819200,
+      "expiresAtSeconds": 1778371200
+    },
+    {
+      "name": "a ragged issue time still aligns",
+      "issuedAtMs": 1762819233456,
+      "issuedAtSeconds": 1762819233,
+      "expiresAtSeconds": 1778371200
+    }
+  ],
+  "salt": {
+    "$comment": "The grant domain salt is not an arbitrary constant: it is the interim event salt. Deriving it independently and arriving at the same bytes is a useful check on an implementation.",
+    "preimage": "6529 Network pre-genesis interim 1",
+    "keccak256": "0x4887f15a22b96f574a9f835b87e01e293dc7587acbfc13b5f224b89cd2d8c8aa"
+  }
+}
