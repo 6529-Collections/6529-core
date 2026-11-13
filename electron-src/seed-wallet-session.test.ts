@@ -96,7 +96,7 @@ test("rejecting during signing settles only the cancelled request", async () => 
 });
 
 test("a mismatched transaction chain is rejected before the RPC call", async () => {
-  const wallet = Wallet.createRandom();
+  const wallet = new Wallet(Wallet.createRandom().privateKey);
   await assert.rejects(
     signSeedWalletRequest(
       wallet,
