@@ -1,3 +1,4 @@
+import { getMediaPlaybackUrl } from "./mediaPlaybackUrl";
 import { getSafeMediaSourceUrl } from "./safeMediaSourceUrl";
 
 export default function DropListItemContentMediaAudio({
@@ -5,7 +6,7 @@ export default function DropListItemContentMediaAudio({
 }: {
   readonly src: string;
 }) {
-  const safeSrc = getSafeMediaSourceUrl(src);
+  const safeSrc = getSafeMediaSourceUrl(getMediaPlaybackUrl(src));
 
   return (
     <div className="tw-w-full">

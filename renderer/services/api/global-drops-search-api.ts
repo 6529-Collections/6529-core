@@ -19,7 +19,7 @@ export async function fetchGlobalDropsSearchV2({
   readonly size: number;
   readonly signal?: AbortSignal | undefined;
 }): Promise<{
-  data: ApiDrop[];
+  data: Array<ApiDrop & { wave: ApiDrop["wave"] & { is_dm_wave: boolean } }>;
   page: number;
   next: boolean;
   cursor?: string | undefined;

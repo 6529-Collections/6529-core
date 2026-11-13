@@ -83,7 +83,7 @@ test.describe("Encrypted group alarms @medium @local-only @e2ee", () => {
     // nobody can commit her removal, which must happen before sending (8.3).
     await e2eeSandboxControls.addFault(baseURL, {
       method: "POST",
-      path: "^e2ee/groups/0x[0-9a-f]+/entries$",
+      target: "groupEntries",
       kind: "commit",
       status: 500,
     });

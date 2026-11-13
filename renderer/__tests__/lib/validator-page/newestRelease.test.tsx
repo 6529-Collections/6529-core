@@ -3,12 +3,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import type { BucketObject } from "@/lib/validator-page/releasesBucket";
 import { SAME_DAY_FEED } from "./fixtures";
+import { signFeed } from "./feedSigning";
 
 const mockRead = jest.fn<Promise<BucketObject>, [string]>();
 jest.mock("@/lib/validator-page/releasesBucket", () => ({
   FEED_OBJECT_KEY: "feed/releases.json",
   FEED_SIGNATURE_OBJECT_KEY: "feed/releases.json.sig",
   readReleaseObject: (key: string) => mockRead(key),
+}));
+jest.mock("@/lib/validator-page/feedSigningKeys", () => ({
+  FEED_SIGNING_KEYS: [
+    jest.requireActual("./feedSigning").TEST_FEED_SIGNING_KEY,
+  ],
 }));
 
 jest.mock("next/headers", () => ({
@@ -60,8 +66,29 @@ describe("a release and its candidate from the same day", () => {
     mockRead.mockImplementation(async (key) =>
       key === "feed/releases.json"
         ? { state: "found", body, etag: '"e"', lastModified: null }
-        : { state: "missing" }
+        : {
+            state: "found",
+            body: signFeed(body),
+            etag: '"s"',
+            lastModified: null,
+          }
     );
+  });
+
+  it("the download page offers nothing when the feed's signature doesn't verify", async () => {
+    const body = new TextEncoder().encode(JSON.stringify(SAME_DAY_FEED));
+    const other = signFeed(new TextEncoder().encode("{}"));
+    mockRead.mockImplementation(async (key) =>
+      key === "feed/releases.json"
+        ? { state: "found", body, etag: '"e"', lastModified: null }
+        : { state: "found", body: other, etag: '"s"', lastModified: null }
+    );
+    const html = renderToStaticMarkup(await ValidatorRoute());
+    expect(html).toContain(
+      "The release list could not be loaded. Reload the page in a minute."
+    );
+    expect(linkedVersions(html)).toEqual([]);
+    expect(mockPresign).not.toHaveBeenCalled();
   });
 
   it("the download page offers only the release", async () => {

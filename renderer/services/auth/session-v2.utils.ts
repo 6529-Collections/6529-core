@@ -349,6 +349,7 @@ export async function getSessionNonce({
       ...deviceGrantParams,
     },
     includeWalletAuth: includeWalletAuthHeaders,
+    errorMode: "structured",
   });
 }
 
@@ -398,6 +399,7 @@ export async function loginWithSessionV2({
       ...(deviceLabel ? { device_label: deviceLabel } : {}),
     },
     credentials: getSessionCredentialsMode(),
+    errorMode: "structured",
   });
   clearSessionRefreshFailureForSession(response);
   return response;

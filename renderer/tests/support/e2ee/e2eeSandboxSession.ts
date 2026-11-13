@@ -140,7 +140,7 @@ export const e2eeSandboxControls = {
     baseURL: string | undefined,
     fault: {
       readonly method: string;
-      readonly path: string;
+      readonly target: "groupEntries";
       readonly kind?: "commit" | "proposal";
       readonly status?: number;
     }

@@ -30,6 +30,7 @@ import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.de-DE.jso
 const RETRY_LABEL = "Erneut versuchen";
 
 export const DE_DE_MESSAGES = {
+  "waves.drops.searchModal.result.emoji": "Emoji {shortcode}",
   "waves.historyGap.load": "Verpasste Nachrichten laden",
   "waves.historyGap.loaded": "Verpasste Nachrichten geladen",
   "waves.historyGap.loading": "Verpasste Nachrichten werden geladen…",
@@ -1313,4 +1314,9 @@ export const DE_DE_MESSAGES = {
   "desktop.profiles.saveError": "Deine Profile konnten nicht gespeichert werden. Versuche es vor dem Beenden erneut, um deine Änderungen zu behalten.",
   "desktop.profiles.saveRetrying": "Profile werden erneut gespeichert…",
   "desktop.profiles.retry": "Erneut versuchen",
+  "e2ee.message.taskChecked": "Markierte Aufgabe",
+  "e2ee.message.taskUnchecked": "Nicht markierte Aufgabe",
+  "e2ee.message.imageLink": "Bildlink",
+  "e2ee.message.imageLinkFrom": "Bild von {host}",
+  "e2ee.message.markdownTable": "Nachrichtentabelle",
 } satisfies Partial<Record<MessageKey, string>>;

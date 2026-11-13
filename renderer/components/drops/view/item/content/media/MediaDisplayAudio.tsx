@@ -1,4 +1,5 @@
 import React from "react";
+import { getMediaPlaybackUrl } from "./mediaPlaybackUrl";
 import { getSafeMediaSourceUrl } from "./safeMediaSourceUrl";
 
 /**
@@ -12,7 +13,10 @@ function MediaDisplayAudio({
   readonly src: string;
   readonly showControls?: boolean | undefined;
 }) {
-  const safeSrc = React.useMemo(() => getSafeMediaSourceUrl(src), [src]);
+  const safeSrc = React.useMemo(
+    () => getSafeMediaSourceUrl(getMediaPlaybackUrl(src)),
+    [src]
+  );
 
   return (
     <div className="tw-h-full tw-w-full">

@@ -16,6 +16,8 @@ interface ProfileAvatarProps {
   readonly size?: ProfileBadgeSize | undefined;
   readonly alt?: string | undefined;
   readonly fallbackContent?: ReactNode | undefined;
+  /** Nullish values keep the existing default image. */
+  readonly imageContent?: ReactNode | undefined;
 }
 
 const AVATAR_SIZE_CLASSES: Record<ProfileBadgeSize, string> = {
@@ -30,11 +32,21 @@ export default function ProfileAvatar({
   size = ProfileBadgeSize.MEDIUM,
   alt = "Profile picture",
   fallbackContent = null,
+  imageContent,
 }: ProfileAvatarProps) {
   const { activeSrc, isPlaceholder, handleError } = useGatewayImageLoadState(
     pfpUrl ?? null,
     false
   );
+  const defaultImage = activeSrc && !isPlaceholder ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={getScaledResolvedImageUri(activeSrc, ImageScale.W_AUTO_H_50)}
+      onError={handleError}
+      alt={alt}
+      className="tw-h-full tw-w-full tw-bg-transparent tw-object-cover"
+    />
+  ) : fallbackContent;
   return (
     <div
       className={`${AVATAR_SIZE_CLASSES[size]} tw-relative tw-flex-shrink-0 tw-rounded-lg tw-bg-iron-900`}
@@ -42,17 +54,7 @@ export default function ProfileAvatar({
       <div className="tw-h-full tw-w-full tw-rounded-lg">
         <div className="tw-h-full tw-w-full tw-max-w-full tw-overflow-hidden tw-rounded-lg tw-bg-iron-900 tw-ring-1 tw-ring-white/10">
           <div className="tw-flex tw-h-full tw-items-center tw-justify-center tw-overflow-hidden tw-rounded-lg tw-text-center">
-            {activeSrc && !isPlaceholder ? (
-              // Profile avatars can come from arbitrary remote hosts, so this stays unoptimized.
-              <img
-                src={getScaledResolvedImageUri(activeSrc, ImageScale.W_AUTO_H_50)}
-                onError={handleError}
-                alt={alt}
-                className="tw-h-full tw-w-full tw-bg-transparent tw-object-cover"
-              />
-            ) : (
-              fallbackContent
-            )}
+            {pfpUrl ? (imageContent ?? defaultImage) : fallbackContent}
           </div>
         </div>
       </div>

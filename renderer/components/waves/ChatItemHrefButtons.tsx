@@ -19,6 +19,7 @@ import {
 } from "react";
 
 import CommonDropdownItemsDefaultWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsDefaultWrapper";
+import { getInternalLinkPath } from "@/helpers/internalLink";
 import useIsTouchDevice from "@/hooks/useIsTouchDevice";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 
@@ -167,6 +168,9 @@ export default function ChatItemHrefButtons({
   const isOverlay = layout === "overlay";
   const showPersistentOverlayTrigger =
     isOverlay && (isTouchDevice || isMobileDevice);
+  // Only a path that is provably on this site opens in the current tab.
+  const internalHref =
+    relativeHref === undefined ? null : getInternalLinkPath(relativeHref);
   const isPreviewToggleDisabled = Boolean(
     previewToggle && (previewToggle.isLoading || !previewToggle.canToggle)
   );
@@ -428,8 +432,9 @@ export default function ChatItemHrefButtons({
   const openLinkButton = hideLink ? null : (
     <Link
       ref={handleOpenLinkButtonRef}
-      href={relativeHref ?? href}
-      target={relativeHref ? undefined : "_blank"}
+      href={internalHref ?? href}
+      target={internalHref ? undefined : "_blank"}
+      rel={internalHref ? undefined : "noopener noreferrer nofollow"}
       className={isOverlay ? MENU_ITEM_CLASSES : RAIL_BUTTON_CLASSES}
       onClick={(event) => {
         handleAnchorClick(event);

@@ -82,6 +82,7 @@ import { useAuthChainGuard } from "./useAuthChainGuard";
 import { useAuthContextValue } from "./useAuthContextValue";
 import { useSessionRecovery } from "./useSessionRecovery";
 import { DesktopProfileRecoveryContext } from "@/contexts/DesktopProfileRecoveryContext";
+import { useShownWalletForWrites } from "./useShownWalletForWrites";
 
 export default function Auth({
   children,
@@ -325,6 +326,8 @@ export default function Auth({
   useEffect(() => {
     latestAddressRef.current = address;
   }, [address]);
+
+  useShownWalletForWrites(address, isAddressAuthorized);
 
   useEffect(() => {
     resetTrackedAuthImpactKeys();
