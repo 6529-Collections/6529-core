@@ -13,7 +13,6 @@ import { useEffect, useRef, useState } from "react";
 import { useToast } from "../../../contexts/ToastContext";
 import { createSeedWallet, importSeedWallet } from "../../../electron";
 import { useOfferWalletPasswordSave } from "@/hooks/useOfferWalletPasswordSave";
-import { useSavedWalletPassword } from "@/hooks/useSavedWalletPassword";
 import type { WalletRecoveryField, WalletRecoveryResult } from "@/shared/wallet-passwords";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
@@ -311,10 +310,6 @@ export function UnlockSeedWalletModal(
   }>
 ) {
   const [walletPass, setWalletPass] = useState("");
-  const offerSave = useOfferWalletPasswordSave();
-  const { hasSavedPassword, clearSavedPassword } = useSavedWalletPassword(
-    props.show ? props.address : undefined
-  );
   const locale = useBrowserLocale();
   const [passHidden, setPassHidden] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
@@ -333,9 +328,7 @@ export function UnlockSeedWalletModal(
     props.onHide();
   };
 
-  const canUnlock = walletPass
-    ? walletPass.length >= SEED_MIN_PASS_LENGTH
-    : hasSavedPassword;
+  const canUnlock = walletPass.length >= SEED_MIN_PASS_LENGTH;
 
   const showUnlockError = (message: string) => {
     showError(message);
@@ -349,22 +342,16 @@ export function UnlockSeedWalletModal(
     setUnlocking(true);
     try {
       const result = await window.walletPasswords?.recover(
-        props.address, props.field, walletPass || undefined
+        props.address, props.field, walletPass
       );
       if (!result?.ok) {
         if (result?.code === "cancelled") return;
-        if (!walletPass) clearSavedPassword();
-        const key = walletPass
-          ? "desktop.walletPasswords.unlockFailed"
-          : "desktop.walletPasswords.manualFallback";
-        showUnlockError(t(locale, key));
+        showUnlockError(t(locale, "desktop.walletPasswords.unlockFailed"));
         return;
       }
-      if (walletPass) await offerSave(props.address, walletPass);
       props.onUnlock(result.value);
       handleHide();
     } catch {
-      if (!walletPass) clearSavedPassword();
       showUnlockError(t(locale, "desktop.walletPasswords.unlockFailed"));
     } finally {
       setUnlocking(false);
@@ -447,8 +434,6 @@ export function UnlockSeedWalletModal(
       <p className="tw-mb-1 tw-mt-4" aria-live="polite">
         {error ? (
           <span className="tw-text-red-400">{error}</span>
-        ) : hasSavedPassword ? (
-          t(locale, "desktop.walletPasswords.unlockHint")
         ) : (
           t(locale, "desktop.walletPasswords.unlockPrompt")
         )}

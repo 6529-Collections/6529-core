@@ -124,7 +124,9 @@ export default function ConfirmSeedWalletLock(
       }
       showToast(t(locale, "desktop.walletPasswords.unlocked"), "success", true);
       setWalletPass("");
-      if (walletPass) await offerSave(props.address, walletPass);
+      if (walletPass && !hasSavedPassword) {
+        await offerSave(props.address, walletPass);
+      }
     } catch {
       if (!walletPass) clearSavedPassword();
       showToast(t(locale, "desktop.walletPasswords.unlockFailed"), "error", true);

@@ -101,21 +101,24 @@ test("a stale Keychain password is never returned", async () => {
   });
 });
 
-test("replaces a stale password only after fresh consent", async () => {
-  const { make, items } = fixture();
+test("leaves a stale password untouched until the user consents to replace it", async () => {
+  const { make, items, native } = fixture();
   const keychain = make("/test/profile");
   await keychain.offerSave(ADDRESS, PASSWORD, accept);
   for (const key of items.keys()) items.set(key, "stale");
+  const read = native.read;
+  native.read = async () => assert.fail("save must not read the Keychain password");
 
   assert.deepEqual(
     await keychain.offerSave(ADDRESS, PASSWORD, async () => "busy"),
     { ok: false, code: "busy" },
   );
-  assert.equal(items.size, 0);
+  assert.deepEqual([...items.values()], ["stale"]);
   assert.deepEqual(await keychain.offerSave(ADDRESS, PASSWORD, accept), {
     ok: true,
     value: true,
   });
+  native.read = read;
   assert.deepEqual(await keychain.request(ADDRESS), { ok: true, value: PASSWORD });
 });
 
@@ -138,6 +141,6 @@ test("saving requires consent and a declined offer is not repeated in the same s
   const nextSession = make("/test/profile");
   await nextSession.offerSave(ADDRESS, PASSWORD, accept);
   await nextSession.offerSave(ADDRESS, PASSWORD, decline);
-  assert.equal(offers, 1);
+  assert.equal(offers, 2);
   assert.equal(items.size, 1);
 });

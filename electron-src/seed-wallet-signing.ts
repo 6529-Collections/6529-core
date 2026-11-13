@@ -54,6 +54,13 @@ async function sendSeedWalletTransaction(
   assertActive: () => void,
 ): Promise<string> {
   if (
+    transaction.from != null &&
+    (typeof transaction.from !== "string" ||
+      getAddress(transaction.from) !== wallet.address)
+  ) {
+    throw new Error("Wallet transaction sender does not match the connected wallet");
+  }
+  if (
     transaction.chainId != null &&
     getBigInt(transaction.chainId) !== BigInt(chainId)
   ) {

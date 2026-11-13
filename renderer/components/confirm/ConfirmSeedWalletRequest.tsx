@@ -288,22 +288,24 @@ export default function ConfirmSeedWalletRequest({
             </>
           )}
           <span className="tw-block tw-pt-3">From</span>
-          <code className="tw-block tw-break-all tw-pb-3">{param?.from}</code>
+          <code className="tw-block tw-break-all tw-pb-3">{param?.from ?? request.from}</code>
           <span className="tw-block tw-pt-3">To</span>
           <code className="tw-block tw-break-all tw-pb-3">{param?.to}</code>
-          {parsedData && param?.data && (
+          {param?.data && (
             <>
               <span className="tw-flex tw-items-center tw-justify-between tw-pt-3">
                 <span>Data</span>
-                <button
-                  type="button"
-                  className={confirmBtnSecondarySmall}
-                  onClick={() => setShowParsed(!showParsed)}
-                >
-                  {showParsed ? "Hide" : "Show"} Parsed Data
-                </button>
+                {parsedData && (
+                  <button
+                    type="button"
+                    className={confirmBtnSecondarySmall}
+                    onClick={() => setShowParsed(!showParsed)}
+                  >
+                    {showParsed ? "Hide" : "Show"} Parsed Data
+                  </button>
+                )}
               </span>
-              {showParsed ? (
+              {showParsed && parsedData ? (
                 <>
                   <span className="tw-block tw-pt-3">Function Selector</span>
                   <code className="tw-block tw-break-all tw-pb-1">

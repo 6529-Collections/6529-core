@@ -30,7 +30,7 @@ export interface ElectronWalletPasswords {
   recover(
     address: string,
     field: WalletRecoveryField,
-    password?: string,
+    password: string,
   ): Promise<WalletPasswordResult<WalletRecoveryResult>>;
   offerSave(
     address: string,

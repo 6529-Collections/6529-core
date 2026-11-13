@@ -15,6 +15,7 @@ import contextMenu from "electron-context-menu";
 import localShortcut from "electron-localshortcut";
 import Logger from "electron-log";
 import { app, BrowserWindow, dialog, Menu, Notification } from "electron/main";
+import { getAddress, isAddress } from "ethers";
 import fs from "fs";
 import { getPort } from "get-port-please";
 import { createRequire } from "node:module";
@@ -2368,9 +2369,14 @@ ipcMain.handle("wallet-passwords:recover", async (event, address: unknown, field
   requireWalletPasswordRenderer(event);
   const owner = mainWindow;
   if (!owner || !owner.isVisible() || walletSavePrompt) return { ok: false, code: "busy" };
-  if (field !== "mnemonic" && field !== "privateKey" && field !== "both") {
+  if (
+    typeof address !== "string" ||
+    !isAddress(address) ||
+    (field !== "mnemonic" && field !== "privateKey" && field !== "both")
+  ) {
     return { ok: false, code: "failed" };
   }
+  const displayAddress = getAddress(address);
   const navigation = walletPasswordNavigation;
   const controller = new AbortController();
   walletSavePrompt = controller;
@@ -2382,7 +2388,7 @@ ipcMain.handle("wallet-passwords:recover", async (event, address: unknown, field
       const { response } = await dialog.showMessageBox(owner, {
         type: "warning",
         message: "Show this wallet’s recovery information?",
-        detail: `Wallet address: ${address}\nAnyone with this information can control the wallet.`,
+        detail: `Wallet address: ${displayAddress}\nAnyone with this information can control the wallet.`,
         buttons: ["Cancel", "Continue"],
         defaultId: 0,
         cancelId: 0,

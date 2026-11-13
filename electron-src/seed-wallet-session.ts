@@ -98,6 +98,9 @@ export class SeedWalletSession {
     password: unknown,
     approve: () => Promise<boolean>,
   ): Promise<WalletPasswordResult<WalletRecoveryResult>> {
+    if (typeof password !== "string" || password.length === 0) {
+      return { ok: false, code: "invalid-password" };
+    }
     try {
       const result = await this.readSecrets(address, password);
       if (!result.ok) return result;

@@ -41,6 +41,7 @@ async function fixture() {
     params: ["0x6100ff", record.address],
   };
   return {
+    pass,
     record,
     request,
     session,
@@ -113,6 +114,24 @@ test("a mismatched transaction chain is rejected before the RPC call", async () 
   );
 });
 
+test("a mismatched transaction sender is rejected before the RPC call", async () => {
+  const wallet = new Wallet(Wallet.createRandom().privateKey);
+  await assert.rejects(
+    signSeedWalletRequest(
+      wallet,
+      {
+        requestId: "wrong-sender",
+        from: wallet.address,
+        chainId: 1,
+        method: "eth_sendTransaction",
+        params: [{ from: "0x0000000000000000000000000000000000000001" }],
+      },
+      () => undefined,
+    ),
+    /Wallet transaction sender does not match the connected wallet/,
+  );
+});
+
 test("disconnect rejects pending signing and invalidates an in-flight unlock", async () => {
   const { disconnect, record, request, session } = await fixture();
   const pending = session.start(request, () => undefined);
@@ -127,13 +146,22 @@ test("disconnect rejects pending signing and invalidates an in-flight unlock", a
   });
 });
 
-test("recovery requires approval and returns only the requested field", async () => {
-  const { record, session } = await fixture();
+test("recovery requires a typed password and approval and returns only the requested field", async () => {
+  const { pass, record, session } = await fixture();
   assert.deepEqual(
     await session.recover(
       record.address,
       "mnemonic",
       undefined,
+      async () => assert.fail("recovery must require a typed password before showing the dialog"),
+    ),
+    { ok: false, code: "invalid-password" },
+  );
+  assert.deepEqual(
+    await session.recover(
+      record.address,
+      "mnemonic",
+      pass,
       async () => false,
     ),
     { ok: false, code: "cancelled" },
@@ -142,7 +170,7 @@ test("recovery requires approval and returns only the requested field", async ()
     await session.recover(
       record.address,
       "mnemonic",
-      undefined,
+      pass,
       async () => true,
     ),
     { ok: true, value: { mnemonic: MNEMONIC_NA } },

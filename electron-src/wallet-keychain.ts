@@ -70,15 +70,11 @@ export class WalletKeychain {
       ) {
         return { ok: false, code: "invalid-password" };
       }
-      const saved = await native.read(this.service, account);
-      if (saved === password) return { ok: true, value: false };
-      // A re-import can replace the wallet password. Remove the stale item
-      // and get fresh consent before saving the new one.
-      if (saved !== null) await native.forget(this.service, account);
       const decision = await confirm();
       if (decision === "busy") return { ok: false, code: "busy" };
       if (decision === "skip") this.declinedOffers.add(account);
       if (decision !== "save") return { ok: true, value: false };
+      // Saving updates an existing item after consent without reading it first.
       await native.save(this.service, account, password);
       return { ok: true, value: true };
     });
