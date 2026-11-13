@@ -33,7 +33,7 @@ On macOS, **Generate** fills the password field during setup. Reveal and securel
 
 Use the 6529 Desktop wallet connector in the wallet connection flow to select a saved wallet and unlock it when prompted. Review signature/transaction requests before approving; an unlocked wallet and an authenticated 6529 session are distinct states.
 
-Wallet details show the address and password-protected reveal/copy controls plus Download Recovery File. That download contains the decrypted private key and available mnemonic in a plaintext text file; keep it private and securely backed up, never send it to the bot. Private-key-only imports have no mnemonic.
+Wallet details show the address and password-protected reveal/copy controls plus Download Recovery File. After unlocking, confirm the desktop dialog to reveal or download recovery information. The download contains the decrypted private key and available mnemonic in a plaintext text file. Keep it private and securely backed up. Private-key-only imports have no mnemonic.
 
 Delete removes the saved local wallet record after confirmation; disconnect first if it is the currently connected wallet. It does not erase the Ethereum address or move on-chain funds. There is no documented bot/password-recovery service; the bot cannot decrypt or recover a forgotten wallet password.
 
@@ -55,11 +55,15 @@ The IPFS API and gateway are bound to loopback. Do not expose the local administ
 
 ## Common Scenarios
 
+### Restore saved profiles after denying Keychain access
+
+If you deny macOS Keychain access while Desktop is loading your saved profiles, the app opens for signed-out browsing and keeps the encrypted profiles on disk. To recover them, choose **Restart to restore profiles**, then allow access when macOS prompts you.
+
 ### Wallet backup and unlocking
 
 6529 Desktop wallets live in 6529 Desktop > Wallets on this device. The stored private key and, when present, mnemonic are encrypted with the wallet password; a connected website profile is not a backup.
 
-Open the saved wallet details and use Download Recovery File after unlocking, or use the password-protected reveal/copy controls. The recovery download is a plaintext text file containing the private key and available mnemonic, not an encrypted wallet backup. Keep it private and securely backed up; never upload it or paste any wallet password, key, or phrase into the bot. Private-key-only imports have no mnemonic.
+Open the saved wallet details and use **Download Recovery File** or the reveal controls. Unlock the wallet and confirm the desktop dialog to proceed. Keep the plaintext recovery file private and securely backed up. Private-key-only imports have no mnemonic.
 
 If you cannot unlock a wallet, verify that you selected the right saved wallet and are entering its wallet password. The bot cannot inspect the wallet, bypass encryption, reset its password, or recover missing secrets.
 
