@@ -5,6 +5,7 @@ import { MNEMONIC_NA } from "../electron-constants";
 import { encryptData } from "../shared/encrypt";
 import type { ISeedWallet, SeedWalletRequest } from "../shared/types";
 import { SeedWalletSession } from "./seed-wallet-session";
+import { signSeedWalletRequest } from "./seed-wallet-signing";
 
 async function fixture() {
   const wallet = Wallet.createRandom();
@@ -25,11 +26,12 @@ async function fixture() {
     accounts: [wallet.address],
     chainId: 1,
   });
+  const settled: string[] = [];
   const session = new SeedWalletSession(
     async (address) => (address === record.address ? record : null),
     async () => ({ ok: true, value: pass }),
     () => connection,
-    () => undefined,
+    (requestId) => settled.push(requestId),
   );
   const request: SeedWalletRequest = {
     requestId: "fixture-id",
@@ -42,6 +44,7 @@ async function fixture() {
     record,
     request,
     session,
+    settled,
     disconnect: () => {
       connection = undefined;
       session.connectionChanged();
@@ -65,6 +68,48 @@ test("saved unlock returns status and approval returns only the signature for th
   assert.equal(
     verifyMessage(getBytes(request.params[0]), result.value),
     record.address,
+  );
+});
+
+test("rejecting during signing settles only the cancelled request", async () => {
+  const { record, request, session, settled } = await fixture();
+  assert.deepEqual(await session.unlock(record.address, undefined, () => true), {
+    ok: true,
+    value: null,
+  });
+  const pending = session.start(request, () => undefined);
+  const signing = session.confirm(request.requestId);
+  session.reject(request.requestId);
+  const next = { ...request, requestId: "next-request" };
+  const nextPending = session.start(next, () => undefined);
+
+  assert.deepEqual(await pending, {
+    ok: false,
+    code: "rejected",
+    message: "Request rejected",
+  });
+  await signing;
+  assert.deepEqual(settled, [request.requestId]);
+  await session.confirm(next.requestId);
+  assert.equal((await nextPending).ok, true);
+  assert.deepEqual(settled, [request.requestId, next.requestId]);
+});
+
+test("a mismatched transaction chain is rejected before the RPC call", async () => {
+  const wallet = Wallet.createRandom();
+  await assert.rejects(
+    signSeedWalletRequest(
+      wallet,
+      {
+        requestId: "wrong-chain",
+        from: wallet.address,
+        chainId: 1,
+        method: "eth_sendTransaction",
+        params: [{ to: wallet.address, chainId: "0xaa36a7" }],
+      },
+      () => undefined,
+    ),
+    /Wallet transaction chain does not match the connected chain/,
   );
 });
 

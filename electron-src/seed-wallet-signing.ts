@@ -1,5 +1,6 @@
 import {
   getAddress,
+  getBigInt,
   getBytes,
   isHexString,
   JsonRpcProvider,
@@ -52,6 +53,12 @@ async function sendSeedWalletTransaction(
   transaction: TransactionRequest,
   assertActive: () => void,
 ): Promise<string> {
+  if (
+    transaction.chainId != null &&
+    getBigInt(transaction.chainId) !== BigInt(chainId)
+  ) {
+    throw new Error("Wallet transaction chain does not match the connected chain");
+  }
   const url =
     chainId === SEED_WALLET_SEPOLIA_CHAIN_ID
       ? "https://11155111.rpc.thirdweb.com"
