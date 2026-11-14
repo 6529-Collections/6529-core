@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  6529 Desktop: 6529 Core, Contents/Resources/engine/c6529 and
+  Contents/Resources/engine/client-signer. Used by
+  .github/workflows/sign-desktop.yml with the hardened runtime.
+
+  None. Both are Rust programs compiled ahead of time: no JIT, no
+  unsigned executable memory, no plug-ins from other teams, no sandbox.
+  The workflow refuses either binary if it ends up with any entitlement.
+-->
+<plist version="1.0">
+<dict/>
+</plist>

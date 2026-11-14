@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  6529 Desktop: the app's own executable (Contents/MacOS/<name>, the Tauri
+  host). Used by .github/workflows/sign-desktop.yml with the hardened
+  runtime.
+
+  None. The web view is WKWebView: WebKit runs JavaScript in its own
+  WebContent process, signed by Apple, so the host needs no JIT
+  entitlement. The app is not sandboxed (no com.apple.security.app-sandbox,
+  so no network or file entitlements), keeps its secrets in the login
+  keychain (no keychain-access-groups), and starts node and 6529 Core as
+  child processes, each signed with its own entitlements.
+-->
+<plist version="1.0">
+<dict/>
+</plist>
