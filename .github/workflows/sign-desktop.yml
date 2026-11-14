@@ -189,6 +189,7 @@ jobs:
           dmgs=$(grep -E '^macos/[A-Za-z0-9][A-Za-z0-9._-]*\.dmg$' entries.txt || true)
           [ "$(printf '%s' "$dmgs" | grep -c .)" = 1 ] || { echo "::error::the bundle holds exactly one macos/<name>.dmg"; exit 1; }
           name=${dmgs#macos/}
+          [[ "$name" != *..* ]] || { echo "::error::the disk image's name holds \"..\""; exit 1; }
           [ "$name" = "$(jq -r .macos.dmg.name facts.json)" ] || { echo "::error::build-info.json names another disk image than macos/$name"; exit 1; }
           mkdir -p in out/macos
           unzip -p bundle.zip "$dmgs" > "in/$name"
@@ -205,7 +206,9 @@ jobs:
           hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$m" "in/$name" > /dev/null
           diskutil info -plist "$m" > volume.plist
           vol=$(plutil -extract VolumeName raw -o - volume.plist)
-          [ -n "$vol" ] || { echo "::error::the disk image's volume has no name"; exit 1; }
+          # Names from the bundle reach GITHUB_ENV only when they are plain:
+          # a line break there would set other variables for later steps.
+          [[ "$vol" =~ ^[A-Za-z0-9][A-Za-z0-9\ ._-]{0,63}$ ]] || { echo "::error::the disk image's volume name is not letters, digits, spaces and . _ -"; exit 1; }
           echo "VOLUME_NAME=$vol" >> "$GITHUB_ENV"
           stage="$RUNNER_TEMP/app-stage"
           ditto "$m" "$stage"
@@ -217,6 +220,7 @@ jobs:
           apps=("$stage"/*.app)
           [ "${#apps[@]}" = 1 ] || { echo "::error::the disk image holds ${#apps[@]} apps at its top, not one"; exit 1; }
           app=${apps[0]}
+          [[ "$(basename "$app")" =~ ^[A-Za-z0-9][A-Za-z0-9\ ._-]{0,63}\.app$ ]] || { echo "::error::the app's name is not letters, digits, spaces and . _ -"; exit 1; }
           plist="$app/Contents/Info.plist"
           bid=$(plutil -extract CFBundleIdentifier raw -o - "$plist") || { echo "::error::the app's Info.plist has no CFBundleIdentifier"; exit 1; }
           case "$bid" in
@@ -260,6 +264,8 @@ jobs:
           echo "$ids"
           id=$(awk '/"Developer ID Application: / { print $2; exit }' <<< "$ids")
           [ -n "$id" ] || { echo "::error::the certificate holds no Developer ID Application identity"; exit 1; }
+          n=$(awk '/"Developer ID Application: / { print $2 }' <<< "$ids" | sort -u | grep -c .)
+          [ "$n" = 1 ] || { echo "::error::the certificate holds $n Developer ID Application identities, not one"; exit 1; }
           team=$(grep -F "$id" <<< "$ids" | sed -nE 's/.*"Developer ID Application: .* \(([A-Z0-9]{10})\)".*/\1/p' | head -n 1)
           [ -n "$team" ] || { echo "::error::no team identifier in the signing identity"; exit 1; }
           echo "SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
@@ -571,6 +577,7 @@ jobs:
                 if ([string]$f.sha256 -cnotmatch '^[0-9a-f]{64}$') { throw "build-info.json: $p has no SHA-256" }
                 if ($f.role -cne 'sign' -and $f.role -cne 'vendor') { throw "build-info.json: $p has role `"$($f.role)`" (sign or vendor)" }
                 if ($f.role -ceq 'vendor' -and $p -cne 'node/node.exe') { throw "build-info.json: only node/node.exe may be a vendor file, not $p" }
+                if ($p -ceq 'node/node.exe' -and $f.role -cne 'vendor') { throw "build-info.json: node/node.exe is the official Node.js build: role vendor, checked and left as it is" }
                 if ($listed.ContainsKey($p)) { throw "build-info.json lists $p twice" }
                 $listed[$p] = $f
               }
@@ -583,6 +590,7 @@ jobs:
               foreach ($need in @('engine/c6529.exe', 'engine/client-signer.exe')) {
                 if (-not $listed.ContainsKey($need) -or $listed[$need].role -cne 'sign') { throw "build-info.json does not list $need to sign" }
               }
+              if (-not $listed.ContainsKey('node/node.exe')) { throw 'build-info.json does not list node/node.exe (vendor)' }
               foreach ($e in $zip.Entries) {
                 $n = $e.FullName
                 if ($n.EndsWith('/')) { continue }
@@ -711,12 +719,14 @@ jobs:
             $factsFile = Join-Path $temp 'windows-facts.json'
             if (Test-Path -LiteralPath $factsFile) {
               $facts = Get-Content -Raw -LiteralPath $factsFile | ConvertFrom-Json
+              if (@($facts.files).Count -lt 1) { throw 'build-info.json lists no Windows files (windows.files): nothing to check the installers against' }
+              # Facts given: the check is required, so a missing or failing 7-Zip fails the run.
               $seven = Join-Path $env:ProgramFiles '7-Zip\7z.exe'
+              if (-not (Test-Path -LiteralPath $seven)) { throw '7-Zip is not on this runner: the installers cannot be checked against build-info.json' }
               foreach ($setup in @(Get-ChildItem -LiteralPath (Join-Path $temp 'out\windows') -Filter '*-setup.exe')) {
                 $x = Join-Path $temp ("x-" + $setup.BaseName)
-                if (-not (Test-Path -LiteralPath $seven)) { Write-Output "::warning::7-Zip is not on this runner: the contents of $($setup.Name) are not checked here"; break }
                 & $seven x -y "-o$x" $setup.FullName | Out-Null
-                if ($LASTEXITCODE -ne 0) { Write-Output "::warning::7-Zip could not read $($setup.Name) (exit $LASTEXITCODE): its contents are not checked here"; continue }
+                if ($LASTEXITCODE -ne 0) { throw "7-Zip could not read $($setup.Name) (exit $LASTEXITCODE): its contents cannot be checked against build-info.json" }
                 $inside = @{}
                 foreach ($g in @(Get-ChildItem -LiteralPath $x -Recurse -File)) { $inside[(Get-FileHash -Algorithm SHA256 -LiteralPath $g.FullName).Hash.ToLowerInvariant()] = $g.FullName }
                 foreach ($f in @($facts.files)) {
