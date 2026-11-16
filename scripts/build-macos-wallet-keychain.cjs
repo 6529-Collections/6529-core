@@ -39,6 +39,8 @@ const result = spawnSync(
     "-framework",
     "Foundation",
     "-framework",
+    "LocalAuthentication",
+    "-framework",
     "Security",
     path.join(root, "native/macos-wallet-keychain.mm"),
     "-o",

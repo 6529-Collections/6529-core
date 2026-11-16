@@ -4,6 +4,7 @@ export type WalletPasswordError =
   | "cancelled"
   | "not-saved"
   | "invalid-password"
+  | "wallet-setup-failed"
   | "failed";
 
 export type WalletPasswordResult<T> =
@@ -17,14 +18,23 @@ export interface WalletRecoveryResult {
   readonly privateKey?: string;
 }
 
+export interface SeedWalletImport {
+  readonly address: string;
+  readonly mnemonic: string;
+  readonly privateKey: string;
+}
+
 /** Saved passwords stay in main. A password typed by the user may be sent to main. */
 export interface ElectronWalletPasswords {
   isAvailable(): Promise<boolean>;
   generate(): Promise<WalletPasswordResult<string>>;
   hasSavedPassword(address: string): Promise<boolean>;
+  prepareUnlock(address: string, attempt: string): Promise<WalletPasswordResult<null>>;
+  cancelUnlock(attempt: string): Promise<void>;
   unlock(
     address: string,
     password?: string,
+    savedPasswordAttempt?: string,
   ): Promise<WalletPasswordResult<null>>;
   lock(): Promise<void>;
   recover(
@@ -36,5 +46,10 @@ export interface ElectronWalletPasswords {
     address: string,
     password: string,
   ): Promise<WalletPasswordResult<boolean>>;
+  setupWithKeychain(
+    name: string,
+    password: string,
+    source?: SeedWalletImport,
+  ): Promise<WalletPasswordResult<null>>;
   forget(address: string): Promise<WalletPasswordResult<null>>;
 }

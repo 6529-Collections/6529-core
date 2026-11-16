@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { Wallet, getBytes, verifyMessage } from "ethers";
 import { MNEMONIC_NA } from "../electron-constants";
@@ -27,9 +28,13 @@ async function fixture() {
     chainId: 1,
   });
   const settled: string[] = [];
+  let savedReads = 0;
   const session = new SeedWalletSession(
     async (address) => (address === record.address ? record : null),
-    async () => ({ ok: true, value: pass }),
+    async () => {
+      savedReads++;
+      return { ok: true, value: pass };
+    },
     () => connection,
     (requestId) => settled.push(requestId),
   );
@@ -46,6 +51,7 @@ async function fixture() {
     request,
     session,
     settled,
+    savedReads: () => savedReads,
     disconnect: () => {
       connection = undefined;
       session.connectionChanged();
@@ -53,15 +59,33 @@ async function fixture() {
   };
 }
 
-test("saved unlock returns status and approval returns only the signature for the pending request", async () => {
-  const { record, request, session } = await fixture();
+test("saved unlock requires device authentication and a separate Unlock action", async () => {
+  const { record, request, session, savedReads } = await fixture();
+  const attempt = randomUUID();
+  assert.deepEqual(await session.unlock(record.address, undefined, () => true, attempt), {
+    ok: false,
+    code: "unavailable",
+  });
+  assert.deepEqual(await session.prepareSavedUnlock(
+    record.address, attempt, async () => ({ ok: true, value: null }), () => true,
+  ), { ok: true, value: null });
+  assert.equal(savedReads(), 0);
+  assert.deepEqual(await session.unlock(record.address, undefined, () => true, randomUUID()), {
+    ok: false,
+    code: "unavailable",
+  });
   const pending = session.start(request, (display) =>
     assert.deepEqual(display, request),
   );
   assert.deepEqual(
-    await session.unlock(record.address, undefined, () => true),
+    await session.unlock(record.address, undefined, () => true, attempt),
     { ok: true, value: null },
   );
+  assert.equal(savedReads(), 1);
+  assert.deepEqual(await session.unlock(record.address, undefined, () => true, attempt), {
+    ok: false,
+    code: "unavailable",
+  });
   await session.confirm("another-id");
   await session.confirm(request.requestId);
   const result = await pending;
@@ -72,9 +96,32 @@ test("saved unlock returns status and approval returns only the signature for th
   );
 });
 
+test("closing the modal invalidates an in-flight authentication and manual entry still works", async () => {
+  const { pass, record, session, savedReads } = await fixture();
+  const attempt = randomUUID();
+  let finishAuthentication!: () => void;
+  const prepared = session.prepareSavedUnlock(record.address, attempt, async (signal) => {
+    await new Promise<void>((resolve) => { finishAuthentication = resolve; });
+    assert.equal(signal.aborted, true);
+    return { ok: true, value: null };
+  }, () => true);
+  session.cancelSavedUnlock(attempt);
+  finishAuthentication();
+  assert.deepEqual(await prepared, { ok: false, code: "cancelled" });
+  assert.deepEqual(await session.unlock(record.address, undefined, () => true, attempt), {
+    ok: false,
+    code: "unavailable",
+  });
+  assert.equal(savedReads(), 0);
+  assert.deepEqual(await session.unlock(record.address, pass, () => true), {
+    ok: true,
+    value: null,
+  });
+});
+
 test("rejecting during signing settles only the cancelled request", async () => {
-  const { record, request, session, settled } = await fixture();
-  assert.deepEqual(await session.unlock(record.address, undefined, () => true), {
+  const { pass, record, request, session, settled } = await fixture();
+  assert.deepEqual(await session.unlock(record.address, pass, () => true), {
     ok: true,
     value: null,
   });
@@ -133,9 +180,9 @@ test("a mismatched transaction sender is rejected before the RPC call", async ()
 });
 
 test("disconnect rejects pending signing and invalidates an in-flight unlock", async () => {
-  const { disconnect, record, request, session } = await fixture();
+  const { disconnect, pass, record, request, session } = await fixture();
   const pending = session.start(request, () => undefined);
-  const unlocking = session.unlock(record.address, undefined, () => true);
+  const unlocking = session.unlock(record.address, pass, () => true);
   disconnect();
   assert.deepEqual(await unlocking, { ok: false, code: "unavailable" });
   await session.confirm(request.requestId);

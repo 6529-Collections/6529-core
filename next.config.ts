@@ -585,6 +585,11 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
           destination: "/waves/:wave/decisions/:path*",
           permanent: true,
         },
+        {
+          source: "/network/prenodes",
+          destination: "/validator",
+          permanent: true,
+        },
       ]);
     },
     logging: {

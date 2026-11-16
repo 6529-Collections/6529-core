@@ -23,6 +23,7 @@ const mockOpen = jest.fn();
 const mockClose = jest.fn();
 const mockDisconnect = jest.fn();
 const mockLogError = jest.fn();
+const mockWagmiConnectors: readonly unknown[] = [];
 const mockLogSecurityEvent = jest.fn();
 const mockClearBrowserConnectorConnectIntent = jest.fn();
 const mockSetBrowserConnectorConnectIntent = jest.fn();
@@ -65,6 +66,7 @@ jest.mock("@reown/appkit/react", () => ({
 
 jest.mock("wagmi", () => ({
   useAccount: () => mockWagmiAccount,
+  useConnectors: () => mockWagmiConnectors,
 }));
 
 jest.mock("@/wagmiConfig/browserConnector", () => ({
@@ -128,6 +130,15 @@ jest.mock("@/services/auth/auth.utils", () => ({
   ),
   removeAuthJwt: jest.fn(),
   setActiveWalletAccount: jest.fn(() => true),
+}));
+
+const mockForgetBrowserWalletProfile = jest.fn((_address: string) =>
+  Promise.resolve()
+);
+jest.mock("@/services/desktop/desktopBrowserWallet", () => ({
+  forgetBrowserWalletProfile: (address: string) =>
+    mockForgetBrowserWalletProfile(address),
+  forgetAllBrowserWalletProfiles: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock("@/services/auth/session-v2.utils", () => ({
@@ -691,6 +702,33 @@ describe("SeizeConnectProvider add-account flow", () => {
     });
   });
 
+  it("forgets the signed-out profile's 6529 Desktop browser-wallet marker", async () => {
+    const authUtils = require("@/services/auth/auth.utils");
+    const onError = jest.fn();
+    mockForgetBrowserWalletProfile.mockClear();
+
+    render(
+      <SeizeConnectProvider>
+        <LogoutButton onError={onError} />
+      </SeizeConnectProvider>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+    });
+
+    await waitFor(() =>
+      expect(mockForgetBrowserWalletProfile).toHaveBeenCalledWith(
+        ACTIVE_ADDRESS
+      )
+    );
+    // Only after the session itself is gone.
+    expect(
+      jest.mocked(authUtils.removeAuthJwt).mock.invocationCallOrder[0]
+    ).toBeLessThan(mockForgetBrowserWalletProfile.mock.invocationCallOrder[0]!);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
   it("continues web single logout cleanup when session revocation fails", async () => {
     const authUtils = require("@/services/auth/auth.utils");
     const sessionV2 = require("@/services/auth/session-v2.utils");
@@ -715,6 +753,45 @@ describe("SeizeConnectProvider add-account flow", () => {
       revokeError
     );
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("disconnects a saved Desktop wallet that AppKit leaves behind during logout", async () => {
+    const authUtils = require("@/services/auth/auth.utils");
+    const nativeDisconnect = jest.fn().mockResolvedValue(undefined);
+    const readStore = jest.fn().mockResolvedValue(
+      JSON.stringify({ accounts: [ACTIVE_ADDRESS], chainId: 1 })
+    );
+    const properties = ["api", "store", "seedConnector"] as const;
+    const previous = properties.map((key) =>
+      Object.getOwnPropertyDescriptor(window, key)
+    );
+    Object.defineProperties(window, {
+      api: { value: {}, configurable: true },
+      store: { value: { get: readStore }, configurable: true },
+      seedConnector: { value: { disconnect: nativeDisconnect }, configurable: true },
+    });
+    try {
+      render(
+        <SeizeConnectProvider>
+          <LogoutButton onError={jest.fn()} />
+        </SeizeConnectProvider>
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+      });
+
+      expect(readStore).toHaveBeenCalledWith("seize-app-connection-seed-wallet");
+      expect(nativeDisconnect).toHaveBeenCalledTimes(1);
+      expect(nativeDisconnect.mock.invocationCallOrder[0]).toBeLessThan(
+        authUtils.removeAuthJwt.mock.invocationCallOrder[0]
+      );
+    } finally {
+      properties.forEach((key, index) => {
+        const descriptor = previous[index];
+        if (descriptor) Object.defineProperty(window, key, descriptor);
+        else Reflect.deleteProperty(window, key);
+      });
+    }
   });
 
   describe("native logout before the UI reports native hydration", () => {

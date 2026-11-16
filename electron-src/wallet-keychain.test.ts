@@ -9,6 +9,8 @@ const accept = async () => "save" as const;
 function fixture() {
   const items = new Map<string, string>();
   const native: MacWalletKeychainNative = {
+    authenticate: async () => true,
+    cancelAuthentication: () => undefined,
     contains: async (service, account) => items.has(`${service}:${account}`),
     read: async (service, account) => items.get(`${service}:${account}`) ?? null,
     save: async (service, account, password) => {
@@ -66,6 +68,53 @@ test("wallet deletion forgets its password and excludes concurrent saves", async
     deleted = true;
   });
   assert.equal(deleted, true);
+});
+
+test("sets up a new wallet only after consent and a successful Keychain save", async () => {
+  const { make, items, native } = fixture();
+  const keychain = make("/test/profile");
+  let persisted = false;
+  const persist = async () => {
+    assert.equal(items.size, 1);
+    persisted = true;
+  };
+  assert.deepEqual(await keychain.saveForSetup(ADDRESS, PASSWORD, async () => "skip", persist), {
+    ok: false,
+    code: "cancelled",
+  });
+  assert.equal(persisted, false);
+  assert.equal(items.size, 0);
+
+  const save = native.save;
+  native.save = async () => { throw new Error("Keychain denied access"); };
+  assert.deepEqual(await keychain.saveForSetup(ADDRESS, PASSWORD, accept, persist), {
+    ok: false,
+    code: "failed",
+  });
+  assert.equal(persisted, false);
+
+  native.save = save;
+  assert.deepEqual(await keychain.saveForSetup(ADDRESS, PASSWORD, accept, persist), {
+    ok: true,
+    value: null,
+  });
+  assert.equal(persisted, true);
+});
+
+test("wallet setup rolls back a new Keychain entry and protects existing entries", async () => {
+  const { make, items } = fixture();
+  const keychain = make("/test/profile");
+  const failToPersist = async () => { throw new Error("Duplicate wallet name"); };
+  assert.deepEqual(await keychain.saveForSetup(ADDRESS, PASSWORD, accept, failToPersist), {
+    ok: false,
+    code: "wallet-setup-failed",
+  });
+  assert.equal(items.size, 0);
+  await keychain.offerSave(ADDRESS, PASSWORD, accept);
+  assert.deepEqual(await keychain.saveForSetup(ADDRESS, "replacement", accept, async () => {
+    assert.fail("An existing wallet must not be replaced during setup");
+  }), { ok: false, code: "failed" });
+  assert.deepEqual([...items.values()], [PASSWORD]);
 });
 
 test("a busy or failed Keychain leaves the wallet record available for retry", async () => {

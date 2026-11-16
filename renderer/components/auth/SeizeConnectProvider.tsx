@@ -41,6 +41,8 @@ import {
 } from "@/utils/security-logger";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
 import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
+import { SEED_WALLET_CONNECTION_STORE } from "@/wagmiConfig/seedWalletConnectionState";
+import { forgetBrowserWalletProfile } from "@/services/desktop/desktopBrowserWallet";
 import {
   BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
   clearBrowserConnectorConnectIntent,
@@ -102,18 +104,31 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const isConnectModalOpen = appKitModalState.isOpen || showConnectModal;
   const appKitAccount = useAppKitAccountBridgeState(appKitModalBridgeStore);
   const disconnect = useCallback(async (): Promise<void> => {
-    if (hasWalletChunkLoadFailed()) {
-      // AppKit could not load in this page, so it cannot disconnect.
-      return disconnectWithoutAppKit();
-    }
-    if (isAppKitReady) {
-      return appKitModalBridgeStore
-        .waitForOpen()
+    const disconnectProvider = () => {
+      if (hasWalletChunkLoadFailed()) {
+        // AppKit could not load in this page, so it cannot disconnect.
+        return disconnectWithoutAppKit();
+      }
+      if (isAppKitReady) {
+        return appKitModalBridgeStore
+          .waitForOpen()
+          .then(() => appKitModalBridgeStore.disconnect());
+      }
+      return waitForAppKitReady()
+        .then(() => appKitModalBridgeStore.waitForOpen())
         .then(() => appKitModalBridgeStore.disconnect());
+    };
+
+    // AppKit only disconnects the connectors it tracks. A seed-wallet
+    // connection can still be present in Electron after AppKit is done.
+    if (!isElectron()) return disconnectProvider();
+    await disconnectProvider();
+    if (
+      window.seedConnector &&
+      (await window.store?.get(SEED_WALLET_CONNECTION_STORE))
+    ) {
+      await window.seedConnector.disconnect();
     }
-    return waitForAppKitReady()
-      .then(() => appKitModalBridgeStore.waitForOpen())
-      .then(() => appKitModalBridgeStore.disconnect());
   }, [appKitModalBridgeStore, isAppKitReady, waitForAppKitReady]);
   const [storedConnectedAccounts, setStoredConnectedAccounts] = useState<
     ConnectedWalletAccount[]
@@ -125,6 +140,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     setBrowserConnectorConnectedAddress,
   ] = useState<string | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [walletSelectionRevision, setWalletSelectionRevision] = useState(0);
   const [isConnectIntentWaitingForAppKit, setIsConnectIntentWaitingForAppKit] =
     useState(false);
   const [capacitorConnectView, setCapacitorConnectView] =
@@ -736,8 +752,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       try {
+        const signedOutAddress = getWalletAddress();
         try {
-          await logoutSessionV2({ address: getWalletAddress() });
+          await logoutSessionV2({ address: signedOutAddress });
         } catch (error: unknown) {
           const revokeError =
             error instanceof Error
@@ -747,6 +764,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           if (getSessionClientType() === "native") throw revokeError;
         }
         await removeAuthJwt();
+        if (signedOutAddress) await forgetBrowserWalletProfile(signedOutAddress);
         refreshStoredConnectedAccounts();
 
         const nextActiveAddress = getWalletAddress();
@@ -812,6 +830,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       const checksummedAddress = getAddress(address);
       clearAgentLoginActiveAddress();
       setConnected(checksummedAddress);
+      if (isElectron()) setWalletSelectionRevision((revision) => revision + 1);
       refreshStoredConnectedAccounts();
     },
     [isSigningOutAllRef, refreshStoredConnectedAccounts, setConnected]
@@ -1222,6 +1241,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      walletSelectionRevision: isElectron() ? walletSelectionRevision : undefined,
       seizeBeginBrowserConnectorHandoff,
       seizeEndBrowserConnectorHandoff,
       seizeSwitchConnectedAccount,
@@ -1269,6 +1289,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      walletSelectionRevision,
       seizeBeginBrowserConnectorHandoff,
       seizeEndBrowserConnectorHandoff,
       seizeSwitchConnectedAccount,

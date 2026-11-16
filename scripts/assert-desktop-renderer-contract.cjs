@@ -1194,7 +1194,8 @@ assertContract(
         (node) => ts.isIdentifier(node) && node.text === "isDisconnecting",
       ),
     ) &&
-    callsIdentifier(authFunction, "setDismissedAuthPromptAddress"),
+    cancelSignRequest &&
+    callsIdentifier(cancelSignRequest, "setDismissedAuthPrompt"),
   authProviderPath,
   "Auth must preserve explicit dismissal while disconnect settles",
 );

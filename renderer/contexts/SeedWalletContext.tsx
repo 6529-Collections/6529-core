@@ -48,6 +48,7 @@ export const SeedWalletProvider: React.FC<{
   const {
     address: activeAddress,
     connectionState,
+    hasValidWalletAuth,
     isAddingConnectedAccount,
     isDisconnecting,
     seizeConnectOpen,
@@ -255,6 +256,9 @@ export const SeedWalletProvider: React.FC<{
     if (
       !isSeedWallet ||
       !activeAddress ||
+      // Restore a connector only for a signed-in profile. An explicit new
+      // connection is already established by the desktop connector chooser.
+      !hasValidWalletAuth ||
       seizeConnectOpen ||
       isAddingConnectedAccount ||
       isDisconnecting
@@ -295,6 +299,7 @@ export const SeedWalletProvider: React.FC<{
     chainId,
     connect,
     connectors,
+    hasValidWalletAuth,
     isAddingConnectedAccount,
     isDisconnecting,
     isSeedWallet,
@@ -332,10 +337,14 @@ export const SeedWalletProvider: React.FC<{
               setPendingCallback(undefined);
             }
           }}
-          onUnlock={async (password) => {
+          onUnlock={async (password, savedPasswordAttempt) => {
             const revision = ++unlockRevisionRef.current;
             const address = lockedWallet.address;
-            const result = await window.walletPasswords?.unlock(address, password);
+            const result = await window.walletPasswords?.unlock(
+              address,
+              password,
+              savedPasswordAttempt
+            );
             if (!result?.ok || revision !== unlockRevisionRef.current) return false;
             setUnlockedAddress(address);
             setShowPasswordModal(false);

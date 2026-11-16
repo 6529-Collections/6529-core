@@ -1,0 +1,985 @@
+# Signs 6529 AI's macOS and Windows release files with 6529's signing
+# identities: the Developer ID certificate and Apple notarization of
+# build-mac.yml, and the Azure Key Vault certificate of sign-windows.yml. It is
+# sign-desktop.yml's pattern for 6529 AI (the 6529-ai repository, which builds
+# its packages with deploy/release/ there); only the signing happens here,
+# because those identities live only in this repository's secrets.
+#
+# Started by hand only (workflow_dispatch):
+#   version         6529 AI's version, for example 0.1.0 (names the results;
+#                   the files must carry it)
+#   bundle_url      an HTTPS link (a pre-signed URL) to a zip of the unsigned
+#                   files. The link is masked in the logs.
+#   bundle_sha256   the zip's SHA-256, checked before anything else
+#   recipient_cert  a PEM X.509 certificate with an RSA key. The signed files
+#                   are encrypted to it, because this repository is public, and
+#                   so are its logs and run artifacts
+#   notarize        false to codesign without notarizing (default true)
+#   kind            programs (default) or installer
+#   systems         both (default), windows or macos: which half of a
+#                   programs bundle to sign. The macOS and Windows packages
+#                   are built on different computers, at different times.
+#
+# Every bundle holds build-info.json, written by 6529-ai's
+# `deploy/release/release.py bundle`: {name "6529 AI", version, kind, commit,
+# and the files below with their SHA-256 and size}. A file the bundle holds
+# under windows/ or macos/ that build-info.json does not list is refused, so
+# nothing is signed unseen and nothing is left unsigned unseen.
+#
+# kind programs, Windows: what the installer carries. build-info.json's
+#   "windows.files" lists {path, sha256, size} for each of
+#     windows/bin/6529-ai.exe, windows/bin/6529-ai-cli.exe
+#                         the service and the command line (Rust)
+#     windows/engines/cpu/<name>.exe|.dll, windows/engines/vulkan/<name>.exe|.dll
+#                         llama-server, whisper-server and sd-server, built
+#                         from the commits 6529-ai's pins/engines.tsv names,
+#                         for the CPU and for Vulkan (C++, static)
+#     windows/kubo/ipfs.exe
+#                         Kubo, IPFS's program, as IPFS publishes it (checked
+#                         against 6529-ai's pins/binaries.tsv). IPFS does not
+#                         sign it; 6529's signature says 6529 ships it
+#     windows/uninstaller/uninst-<inno version>-<hash>.e32
+#                         the uninstaller Inno Setup made for this installer
+#                         (32-bit). Inno Setup keeps the signed copy and puts
+#                         it into the installer it builds next
+#   each signed with AzureSignTool as sign-windows.yml signs. The installer is
+#   then built around them in 6529-ai (deploy/release/sign-remote.sh windows),
+#   and signed with kind installer.
+# kind programs, macOS: build-info.json's "macos.pkg" names
+#     macos/6529-ai-<version>-macos-arm64.pkg
+#                         the installer package as package-macos.sh builds
+#                         it, unsigned: a product archive of three component
+#                         packages, io.6529.ai (the payload and a preinstall
+#                         script) and io.6529.ai.alone and io.6529.ai.validator
+#                         (a postinstall script each, no payload)
+#   It is expanded, and every program in the payload is codesigned with the
+#   hardened runtime and a secure timestamp, each under its own identifier:
+#     usr/local/6529-ai/bin/6529-ai              io.6529.ai.6529-ai
+#     usr/local/6529-ai/bin/6529-ai-cli          io.6529.ai.6529-ai-cli
+#     usr/local/6529-ai/engines/llama-server     io.6529.ai.llama-server
+#     usr/local/6529-ai/engines/whisper-server   io.6529.ai.whisper-server
+#     usr/local/6529-ai/engines/sd-server        io.6529.ai.sd-server
+#     usr/local/6529-ai/kubo/ipfs                io.6529.ai.ipfs
+#     Applications/6529 AI.app                   io.6529.ai.open, the app that
+#                                                opens the page (its executable
+#                                                is a shell script)
+#   None gets an entitlement: the five 6529 AI programs are compiled ahead of
+#   time (Rust, and C++ with Metal shaders that Apple's own compiler service
+#   builds for the GPU), Kubo is Go, and nothing loads another team's
+#   library. Any other program, library or bundle in the payload is refused.
+#   The programs and the app are notarized in one zip and the app's ticket is
+#   stapled. The io.6529.ai component is built again with pkgbuild around
+#   the signed payload, with its identifier, version, install location,
+#   scripts and bundle settings, checked against the original; the other
+#   components, the Distribution file and the resources stay byte for byte,
+#   and the product archive is flattened again.
+#   The package itself: when the keychain holds a "Developer ID Installer"
+#   identity (from CERTIFICATE_P12, or from the optional secrets
+#   INSTALLER_CERTIFICATE_P12 and INSTALLER_CERT_PASSWORD), it is signed with
+#   productsign, notarized and stapled, and checked with spctl -t install and
+#   pkgutil --check-signature. Without one, the rebuilt package comes back
+#   unsigned, and the run's summary says so and what to add: macOS then
+#   refuses to open the package until the person allows it in System
+#   Settings, though everything it installs is signed and notarized.
+# kind installer (Windows only): build-info.json's "windows.installer" names
+#     windows/6529-ai-<version>-windows-x64-setup.exe
+#                         the Inno Setup installer, built around programs and
+#                         an uninstaller a kind programs run signed
+#   signed and checked. This workflow cannot look inside an Inno Setup
+#   installer without running it; 6529-ai's sign-remote.sh checks each
+#   program's signature before it builds the installer.
+#
+# Results, kept 14 days as this run's artifacts:
+#   6529-ai-<version>-<kind>-macos-signed    a .tar of the signed files,
+#                                            encrypted to recipient_cert (.tar.p7m)
+#   6529-ai-<version>-<kind>-windows-signed  the same for Windows
+#   6529-ai-<version>-<kind>-SHA256SUMS      the SHA-256 of every signed file
+# To decrypt:
+#   openssl smime -decrypt -binary -inform DER -in <file>.tar.p7m -inkey <key> -out <file>.tar
+#
+# It publishes nothing: no release, no tag, no upload, no update feed and no
+# notifications. Secrets reach only the steps that use them and are never
+# printed. The files it signs are never run here: a compromised build must
+# not run where the signing secrets are. 6529-ai's operator runs the signed
+# packages' install tests after this run.
+#
+# Trust: whoever starts it chooses what 6529's identities sign. That takes
+# write access to this repository, which already reaches these secrets
+# through the other workflows. bundle_sha256 protects the transfer, not the
+# provenance: the operator builds the bundle from a clean commit of 6529-ai
+# (release.py bundle refuses a build with changes not committed) and checks
+# the signed files after this run.
+
+name: Sign 6529 AI
+
+run-name: Sign 6529 AI ${{ inputs.version }} (${{ inputs.kind || 'programs' }}, ${{ inputs.systems || 'both' }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "6529 AI version, for example 0.1.0"
+        required: true
+        type: string
+      bundle_url:
+        description: "HTTPS link to the zip of unsigned files (masked in the logs)"
+        required: true
+        type: string
+      bundle_sha256:
+        description: "SHA-256 of the zip"
+        required: true
+        type: string
+      recipient_cert:
+        description: "PEM certificate (RSA) the signed files are encrypted to"
+        required: true
+        type: string
+      notarize:
+        description: "Notarize the macOS programs and package, and staple them"
+        required: false
+        type: boolean
+        default: true
+      kind:
+        description: "programs: the Windows programs and uninstaller, and the macOS .pkg; installer: the Windows installer built around them"
+        required: false
+        type: choice
+        options:
+          - programs
+          - installer
+        default: programs
+      systems:
+        description: "Which half of a programs bundle to sign (kind installer is Windows only)"
+        required: false
+        type: choice
+        options:
+          - both
+          - windows
+          - macos
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sign-6529-ai
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version }}
+  BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
+  KIND: ${{ inputs.kind || 'programs' }}
+  SYSTEMS: ${{ inputs.systems || 'both' }}
+
+jobs:
+  macos:
+    name: macOS (codesign, rebuild the package, productsign, notarize, staple)
+    # kind installer is Windows only.
+    if: inputs.kind != 'installer' && inputs.systems != 'windows'
+    runs-on: macos-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      sums: ${{ steps.encrypt.outputs.sums }}
+      notary: ${{ steps.verify.outputs.notary }}
+      package: ${{ steps.verify.outputs.package }}
+      programs: ${{ steps.verify.outputs.programs }}
+    steps:
+      - name: Fetch the bundle and check its SHA-256 (before anything else)
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::version is not like 1.2.3 or 1.2.3-rc.1"; exit 1; }
+          [[ "$KIND" = programs ]] || { echo "::error::kind is programs (installer has no macOS job)"; exit 1; }
+          [[ "$SYSTEMS" =~ ^(both|macos)$ ]] || { echo "::error::systems is both or macos for the macOS job"; exit 1; }
+          want=$(printf '%s' "$BUNDLE_SHA256" | tr 'A-F' 'a-f')
+          [[ "$want" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bundle_sha256 is not 64 hex digits"; exit 1; }
+          url=$(jq -r '.inputs.bundle_url' "$GITHUB_EVENT_PATH")
+          echo "::add-mask::$(printf '%s' "$url" | sed 's/%/%25/g')"
+          [[ "$url" == https://* ]] || { echo "::error::bundle_url is not an https:// link"; exit 1; }
+          curl --proto '=https' --tlsv1.2 -fsS --retry 3 --retry-all-errors -o "$RUNNER_TEMP/bundle.zip" "$url"
+          got=$(shasum -a 256 "$RUNNER_TEMP/bundle.zip" | cut -d' ' -f1)
+          if [ "$got" != "$want" ]; then
+            echo "::error::the bundle's SHA-256 is $got, expected $want"
+            exit 1
+          fi
+          echo "bundle: $(stat -f %z "$RUNNER_TEMP/bundle.zip") bytes, SHA-256 $got, as expected"
+
+      - name: Check recipient_cert
+        env:
+          RECIPIENT_CERT: ${{ inputs.recipient_cert }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          printf '%s\n' "$RECIPIENT_CERT" > recipient.pem
+          openssl version
+          openssl x509 -in recipient.pem -noout -subject -enddate
+          text=$(openssl x509 -in recipient.pem -noout -text)
+          grep -q rsaEncryption <<< "$text" || { echo "::error::recipient_cert does not hold an RSA key"; exit 1; }
+          openssl x509 -in recipient.pem -noout -checkend 3600 > /dev/null || { echo "::error::recipient_cert expires within the hour"; exit 1; }
+
+      - name: Take the package out of the bundle, and expand it
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          unzip -Z1 bundle.zip > entries.txt
+          grep -qxF build-info.json entries.txt || { echo "::error::the bundle has no build-info.json"; exit 1; }
+          unzip -p bundle.zip build-info.json > facts.json
+          name="6529-ai-$VERSION-macos-arm64.pkg"
+          jq -e --arg v "$VERSION" --arg n "$name" '.name == "6529 AI" and .version == $v and .kind == "programs"
+                 and (.commit | type == "string" and test("^[0-9a-f]{40}$"))
+                 and .macos.pkg.name == $n and (.macos.pkg.sha256 | type == "string") and (.macos.pkg.size | type == "number")' \
+            facts.json > /dev/null \
+            || { echo "::error::build-info.json is not 6529 AI $VERSION's programs: name, version, kind, commit, macos.pkg {name $name, sha256, size}"; exit 1; }
+          echo "6529 AI $VERSION, commit $(jq -r .commit facts.json)"
+          others=$(grep '^macos/' entries.txt | grep -v '/$' | grep -vxF "macos/$name" || true)
+          [ -z "$others" ] || { echo "::error::the bundle holds macOS files build-info.json does not list: $others"; exit 1; }
+          grep -qxF "macos/$name" entries.txt || { echo "::error::the bundle has no macos/$name"; exit 1; }
+          mkdir -p in out/macos
+          unzip -p bundle.zip "macos/$name" > "in/$name"
+          sha=$(shasum -a 256 "in/$name" | cut -d' ' -f1)
+          size=$(stat -f %z "in/$name")
+          if [ "$sha" != "$(jq -r .macos.pkg.sha256 facts.json)" ] || [ "$size" != "$(jq -r .macos.pkg.size facts.json)" ]; then
+            echo "::error::macos/$name does not match build-info.json"; exit 1
+          fi
+          echo "PKG_NAME=$name" >> "$GITHUB_ENV"
+          echo "to sign: the programs in macos/$name ($size bytes, SHA-256 $sha), and the package"
+          grep -vxF -e "macos/$name" -e build-info.json entries.txt | grep -v '^windows/' | grep -v '/$' | sed 's/^/ignored here: /' || true
+          echo "== the package as built"
+          pkgutil --check-signature "in/$name" || true
+          # flat/: the archive's parts as stored (payload and scripts as
+          # archives), for flattening again. full/: the same, unpacked.
+          pkgutil --expand "in/$name" flat
+          pkgutil --expand-full "in/$name" full
+          ls -la flat
+          # PackageInfo, as lines to compare: the attributes but the tool's
+          # version, every element but the payload's sizes.
+          cat > pkginfo.py <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          root = ET.parse(sys.argv[1]).getroot()
+          if root.tag != "pkg-info":
+              sys.exit(f"{sys.argv[1]} is not a PackageInfo")
+          for k in sorted(root.attrib):
+              if k != "generator-version":
+                  print(f"pkg-info {k}={root.attrib[k]}")
+          def walk(e, path):
+              for c in e:
+                  p = f"{path}/{c.tag}"
+                  if c.tag == "payload":
+                      print(p)
+                      continue
+                  print(p, " ".join(f"{k}={c.attrib[k]}" for k in sorted(c.attrib)), (c.text or "").strip())
+                  walk(c, p)
+          walk(root, "")
+          PY
+          # Exactly the three component packages, each of this version: the
+          # payload in io.6529.ai alone.
+          : > components.txt
+          for d in flat/*.pkg; do
+            c=$(basename "$d")
+            [[ "$c" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.pkg$ ]] || { echo "::error::a component is named \"$c\""; exit 1; }
+            id=$(xmllint --xpath 'string(/pkg-info/@identifier)' "$d/PackageInfo")
+            v=$(xmllint --xpath 'string(/pkg-info/@version)' "$d/PackageInfo")
+            [ "$v" = "$VERSION" ] || { echo "::error::$c ($id) is version $v, not $VERSION"; exit 1; }
+            printf '%s\t%s\n' "$id" "$c" >> components.txt
+          done
+          ids=$(cut -f1 components.txt | LC_ALL=C sort | paste -sd' ' -)
+          [ "$ids" = "io.6529.ai io.6529.ai.alone io.6529.ai.validator" ] \
+            || { echo "::error::the package's components are [$ids], not io.6529.ai, io.6529.ai.alone and io.6529.ai.validator"; exit 1; }
+          main=$(awk -F'\t' '$1 == "io.6529.ai" { print $2 }' components.txt)
+          while IFS=$'\t' read -r id c; do
+            if [ "$id" = io.6529.ai ]; then
+              [ -d "full/$c/Payload" ] || { echo "::error::io.6529.ai has no payload"; exit 1; }
+            else
+              [ ! -e "flat/$c/Payload" ] || { echo "::error::$id has a payload; only io.6529.ai has one"; exit 1; }
+            fi
+            for s in "full/$c/Scripts"/*; do
+              if [ ! -f "$s" ] || [ ! -x "$s" ]; then echo "::error::$id: script $(basename "$s") is not an executable file"; exit 1; fi
+            done
+            echo "component $c: $id, scripts: $(find "full/$c/Scripts" -mindepth 1 -maxdepth 1 -exec basename {} \; | LC_ALL=C sort | paste -sd' ' -)"
+          done < components.txt
+          parts=$(find "flat/$main" -mindepth 1 -maxdepth 1 -exec basename {} \; | LC_ALL=C sort | paste -sd' ' -)
+          [ "$parts" = "Bom PackageInfo Payload Scripts" ] || { echo "::error::io.6529.ai holds [$parts], not Bom, PackageInfo, Payload and Scripts"; exit 1; }
+          # pkgbuild always writes a <relocate> element; it lists a bundle only
+          # when that bundle may be installed where the person moved it.
+          if tr -d '\n' < "flat/$main/PackageInfo" | grep -qE '<relocate>[[:space:]]*<bundle'; then
+            echo "::error::io.6529.ai lets bundles relocate; package-macos.sh builds it with BundleIsRelocatable false"; exit 1
+          fi
+          root="$RUNNER_TEMP/full/$main/Payload"
+          app="$root/Applications/6529 AI.app"
+          [ -d "$app" ] || { echo "::error::the payload has no Applications/6529 AI.app"; exit 1; }
+          bid=$(plutil -extract CFBundleIdentifier raw -o - "$app/Contents/Info.plist") || { echo "::error::the app's Info.plist has no CFBundleIdentifier"; exit 1; }
+          [ "$bid" = io.6529.ai.open ] || { echo "::error::the app's identifier is $bid, not io.6529.ai.open"; exit 1; }
+          exe=$(plutil -extract CFBundleExecutable raw -o - "$app/Contents/Info.plist") || { echo "::error::the app's Info.plist names no CFBundleExecutable"; exit 1; }
+          [[ "$exe" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "::error::the app's executable is named \"$exe\""; exit 1; }
+          [ -f "$app/Contents/MacOS/$exe" ] || { echo "::error::the app has no Contents/MacOS/$exe"; exit 1; }
+          # One bundle in the payload: the app.
+          bundles=$(cd "$root" && find . \( -name '*.app' -o -name '*.framework' -o -name '*.bundle' -o -name '*.plugin' \
+            -o -name '*.kext' -o -name '*.xpc' -o -name '*.appex' \) | sed 's|^\./||' | LC_ALL=C sort)
+          [ "$bundles" = "Applications/6529 AI.app" ] || { echo "::error::the payload holds these bundles, not the app alone: $bundles"; exit 1; }
+          {
+            echo "MAIN_PKG=$main"
+            echo "ROOT=$root"
+            echo "APP=$app"
+            echo "APP_EXE=Applications/6529 AI.app/Contents/MacOS/$exe"
+          } >> "$GITHUB_ENV"
+          echo "payload: $(du -sm "$root" | cut -f1) MB, $(find "$root" -type f | wc -l | tr -d ' ') files"
+
+      - name: Import the Developer ID certificates into a throwaway keychain (as build-mac.yml)
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          INSTALLER_CERTIFICATE_P12: ${{ secrets.INSTALLER_CERTIFICATE_P12 }}
+          INSTALLER_CERT_PASSWORD: ${{ secrets.INSTALLER_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/sign-6529-ai.keychain-db"
+          p12="$RUNNER_TEMP/signing_certificate.p12"
+          p12i="$RUNNER_TEMP/installer_certificate.p12"
+          trap 'rm -f "$p12" "$p12i"' EXIT
+          kpass=$(openssl rand -hex 24)
+          echo "::add-mask::$kpass"
+          printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$p12"
+          security create-keychain -p "$kpass" "$keychain"
+          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          security set-keychain-settings -lut 7200 "$keychain"
+          security default-keychain -s "$keychain"
+          security unlock-keychain -p "$kpass" "$keychain"
+          security import "$p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+          # A Developer ID Installer identity kept apart from the
+          # application one, when the repository holds it.
+          if [ -n "$INSTALLER_CERTIFICATE_P12" ]; then
+            printf '%s' "$INSTALLER_CERTIFICATE_P12" | base64 --decode > "$p12i"
+            security import "$p12i" -k "$keychain" -P "$INSTALLER_CERT_PASSWORD" -T /usr/bin/productsign
+            echo "imported INSTALLER_CERTIFICATE_P12 too"
+          fi
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kpass" "$keychain" > /dev/null
+          # shellcheck disable=SC2046 # the search list, one keychain per word
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          ids=$(security find-identity -v -p codesigning "$keychain")
+          echo "$ids"
+          id=$(awk '/"Developer ID Application: / { print $2; exit }' <<< "$ids")
+          [ -n "$id" ] || { echo "::error::the certificate holds no Developer ID Application identity"; exit 1; }
+          n=$(awk '/"Developer ID Application: / { print $2 }' <<< "$ids" | sort -u | grep -c .)
+          [ "$n" = 1 ] || { echo "::error::the certificate holds $n Developer ID Application identities, not one"; exit 1; }
+          team=$(grep -F "$id" <<< "$ids" | sed -nE 's/.*"Developer ID Application: .* \(([A-Z0-9]{10})\)".*/\1/p' | head -n 1)
+          [ -n "$team" ] || { echo "::error::no team identifier in the signing identity"; exit 1; }
+          echo "SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
+          echo "TEAM_ID=$team" >> "$GITHUB_ENV"
+          # A Developer ID Installer identity, which productsign needs, is
+          # not a code-signing identity: only the list without -p shows it.
+          all=$(security find-identity -v "$keychain")
+          echo "$all"
+          inst=$(grep -F '"Developer ID Installer: ' <<< "$all" || true)
+          if [ -z "$inst" ]; then
+            echo "installer identity: none. The package will come back unsigned."
+            echo "INSTALLER_IDENTITY=" >> "$GITHUB_ENV"
+          else
+            n=$(awk '{ print $2 }' <<< "$inst" | sort -u | grep -c .)
+            [ "$n" = 1 ] || { echo "::error::the keychain holds $n Developer ID Installer identities, not one"; exit 1; }
+            iname=$(sed -nE 's/.*"(Developer ID Installer: [^"]*)".*/\1/p' <<< "$inst" | head -n 1)
+            [[ "$iname" == *"($team)" ]] || { echo "::error::the Developer ID Installer identity belongs to another team than the application identity"; exit 1; }
+            echo "installer identity: found, $iname"
+            echo "INSTALLER_IDENTITY=$iname" >> "$GITHUB_ENV"
+          fi
+
+      - name: Codesign the programs and the app (hardened runtime, secure timestamp, io.6529.ai.<name>)
+        run: |
+          set -euo pipefail
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
+          xattr -cr "$ROOT"
+          # The package as built carries no signature; every one is made here.
+          rm -rf "$APP/Contents/_CodeSignature"
+          known=(usr/local/6529-ai/bin/6529-ai usr/local/6529-ai/bin/6529-ai-cli usr/local/6529-ai/engines/llama-server
+            usr/local/6529-ai/engines/whisper-server usr/local/6529-ai/engines/sd-server usr/local/6529-ai/kubo/ipfs)
+          is_known() { local k; for k in "${known[@]}"; do [ "$k" = "$1" ] && return 0; done; return 1; }
+          : > "$RUNNER_TEMP/programs.txt"
+          while IFS= read -r -d '' f; do
+            desc=$(file -b "$f")
+            case "$desc" in Mach-O*) ;; *) continue ;; esac
+            rel=${f#"$ROOT"/}
+            # The app's executable, if it is a program, is signed with the app.
+            [ "$rel" = "$APP_EXE" ] && continue
+            is_known "$rel" || { echo "::error::$rel is a program this workflow does not know ($desc); refusing to sign it"; exit 1; }
+            [ "$(lipo -archs "$f")" = arm64 ] || { echo "::error::$rel is not an arm64 program ($(lipo -archs "$f"))"; exit 1; }
+            printf '%s\tio.6529.ai.%s\n' "$rel" "$(basename "$rel")" >> "$RUNNER_TEMP/programs.txt"
+          done < <(find "$ROOT" -type f -print0)
+          for p in "${known[@]}"; do
+            cut -f1 "$RUNNER_TEMP/programs.txt" | grep -qxF "$p" || { echo "::error::the payload has no $p"; exit 1; }
+          done
+          echo "== programs"
+          while IFS=$'\t' read -r rel id; do
+            echo "-- $rel ($id)"
+            retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --identifier "$id" \
+              --sign "$SIGN_IDENTITY" "$ROOT/$rel"
+          done < "$RUNNER_TEMP/programs.txt"
+          echo "== Applications/6529 AI.app (io.6529.ai.open)"
+          retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --sign "$SIGN_IDENTITY" "$APP"
+
+      - name: Check every signature (codesign --verify --strict, team, runtime, timestamp, identifier, no entitlements)
+        run: |
+          set -euo pipefail
+          check() { # FILE NAME IDENTIFIER
+            local f=$1 rel=$2 want=$3 info
+            codesign --verify --strict "$f" || { echo "::error::$rel: not validly signed"; exit 1; }
+            info=$(codesign --display --verbose=2 "$f" 2>&1)
+            grep -qx "TeamIdentifier=$TEAM_ID" <<< "$info" || { echo "::error::$rel: not signed with this Developer ID"; exit 1; }
+            grep -qx "Identifier=$want" <<< "$info" || { echo "::error::$rel: the identifier is not $want"; exit 1; }
+            grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$rel: no hardened runtime"; exit 1; }
+            grep -q '^Timestamp=' <<< "$info" || { echo "::error::$rel: no secure timestamp"; exit 1; }
+            if codesign --display --entitlements - --xml "$f" 2> /dev/null | grep -q '<key>'; then
+              echo "::error::$rel: signed with entitlements"; exit 1
+            fi
+            echo "$rel: $want, runtime, timestamped, no entitlements"
+          }
+          while IFS=$'\t' read -r rel id; do check "$ROOT/$rel" "$rel" "$id"; done < "$RUNNER_TEMP/programs.txt"
+          check "$APP" "Applications/6529 AI.app" io.6529.ai.open
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          # Every Mach-O in the payload was signed here.
+          while IFS= read -r -d '' f; do
+            file -b "$f" | grep -q '^Mach-O' || continue
+            codesign --display --verbose=2 "$f" 2>&1 | grep -qx "TeamIdentifier=$TEAM_ID" \
+              || { echo "::error::${f#"$ROOT"/}: not signed with this Developer ID"; exit 1; }
+          done < <(find "$ROOT" -type f -print0)
+
+      - name: Notary helper (fails clearly while Apple refuses the team)
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/notary.sh" <<'NOTARY'
+          # notarize FILE: submit, wait, print Apple's log, fail with the reason.
+          notarize() {
+            local f=$1 name rc=0 id status
+            name=$(basename "$f")
+            echo "== notarizing $name"
+            xcrun notarytool submit "$f" --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" --wait --timeout 1h --output-format json \
+              > "$RUNNER_TEMP/notary.json" 2> "$RUNNER_TEMP/notary.err" || rc=$?
+            cat "$RUNNER_TEMP/notary.err" >&2 || true
+            cat "$RUNNER_TEMP/notary.json" || true
+            echo
+            if grep -qi 'required agreement is missing or has expired' "$RUNNER_TEMP/notary.err" "$RUNNER_TEMP/notary.json" 2> /dev/null; then
+              echo "::error::Apple refused notarization of $name: the developer team's agreement is missing or has expired (HTTP 403). Every app of the team is refused until the team's Account Holder accepts the current agreement at developer.apple.com (Account, Agreements) or renews the membership. Nothing is wrong with the files. Run again once Apple accepts submissions; notarize=false gives codesigned files for tests only."
+              exit 1
+            fi
+            id=$(jq -r '.id // empty' "$RUNNER_TEMP/notary.json" 2> /dev/null || true)
+            status=$(jq -r '.status // empty' "$RUNNER_TEMP/notary.json" 2> /dev/null || true)
+            if [ -n "$id" ]; then
+              if xcrun notarytool log "$id" --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+                --team-id "$APPLE_TEAM_ID" "$RUNNER_TEMP/notary-log-$name.json" > /dev/null; then
+                jq '{status, statusSummary, statusCode, issues}' "$RUNNER_TEMP/notary-log-$name.json"
+              fi
+            fi
+            if [ "$rc" != 0 ] || [ "$status" != Accepted ]; then
+              echo "::error::notarization of $name: ${status:-no result} (notarytool exit $rc). The messages above say why."
+              exit 1
+            fi
+            echo "$name: Accepted by the notary service (submission $id)"
+            echo "$name: notarized (submission $id)" >> "$RUNNER_TEMP/notary-summary.txt"
+          }
+          NOTARY
+          : > "$RUNNER_TEMP/notary-summary.txt"
+
+      - name: Notarize the programs and the app in one zip, and staple the app
+        if: inputs.notarize
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
+          # shellcheck source=/dev/null
+          . "$RUNNER_TEMP/notary.sh"
+          # Apple records each program's signature, so Gatekeeper finds it
+          # online even when the package around them is not signed. A bare
+          # program cannot carry a ticket; the app can.
+          stage="$RUNNER_TEMP/notary-programs/6529-ai-$VERSION-programs"
+          mkdir -p "$stage/Applications"
+          while IFS=$'\t' read -r rel _; do
+            mkdir -p "$stage/$(dirname "$rel")"
+            ditto "$ROOT/$rel" "$stage/$rel"
+          done < "$RUNNER_TEMP/programs.txt"
+          ditto "$APP" "$stage/Applications/6529 AI.app"
+          zip="$RUNNER_TEMP/6529-ai-$VERSION-programs.zip"
+          ditto -c -k --keepParent "$stage" "$zip"
+          notarize "$zip"
+          rm -rf "$zip" "$RUNNER_TEMP/notary-programs"
+          retry xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          echo "Applications/6529 AI.app: ticket stapled" >> "$RUNNER_TEMP/notary-summary.txt"
+
+      - name: Build the package again around the signed payload (same identifiers, version, scripts and settings)
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          pkgbuild --analyze --root "$ROOT" components.plist > /dev/null
+          i=0
+          while /usr/libexec/PlistBuddy -c "Print :$i" components.plist > /dev/null 2>&1; do
+            /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" components.plist
+            i=$((i + 1))
+          done
+          loc=$(xmllint --xpath 'string(/pkg-info/@install-location)' "full/$MAIN_PKG/PackageInfo")
+          [ -n "$loc" ] || { echo "::error::io.6529.ai names no install location"; exit 1; }
+          pkgbuild --root "$ROOT" --component-plist components.plist --identifier io.6529.ai --version "$VERSION" \
+            --install-location "$loc" --scripts "full/$MAIN_PKG/Scripts" main-rebuilt.pkg
+          pkgutil --expand main-rebuilt.pkg main-rebuilt
+          for part in Bom PackageInfo Payload Scripts; do
+            rm -rf "flat/$MAIN_PKG/$part"
+            cp -R "main-rebuilt/$part" "flat/$MAIN_PKG/$part"
+          done
+          python3 -I pkginfo.py "full/$MAIN_PKG/PackageInfo" > packageinfo-before.txt
+          python3 -I pkginfo.py "flat/$MAIN_PKG/PackageInfo" > packageinfo-after.txt
+          if ! diff packageinfo-before.txt packageinfo-after.txt; then
+            echo "::error::io.6529.ai's PackageInfo differs from the original beyond its sizes (the lines above)"; exit 1
+          fi
+          pkgutil --flatten flat rebuilt.pkg
+          # The rebuilt package, unpacked again: the payload is the signed
+          # tree, and everything else is as built.
+          pkgutil --expand-full rebuilt.pkg check
+          listing() { # DIR: each entry's type, and a file's mode and SHA-256 or a link's target
+            (cd "$1" && find . ! -name . -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' p; do
+              if [ -L "$p" ]; then printf 'link %s -> %s\n' "$p" "$(readlink "$p")"
+              elif [ -d "$p" ]; then printf 'dir %s\n' "$p"
+              else printf 'file %s %s %s\n' "$p" "$(stat -f %Lp "$p")" "$(shasum -a 256 < "$p" | cut -d' ' -f1)"; fi
+            done)
+          }
+          diff <(listing "$ROOT") <(listing "check/$MAIN_PKG/Payload") || { echo "::error::the rebuilt payload differs from the signed tree"; exit 1; }
+          while IFS=$'\t' read -r id c; do
+            diff <(listing "full/$c/Scripts") <(listing "check/$c/Scripts") || { echo "::error::$id's scripts changed"; exit 1; }
+            if [ "$id" != io.6529.ai ]; then
+              python3 -I pkginfo.py "full/$c/PackageInfo" > a.txt
+              python3 -I pkginfo.py "check/$c/PackageInfo" > b.txt
+              diff a.txt b.txt || { echo "::error::$id's PackageInfo changed"; exit 1; }
+            fi
+          done < components.txt
+          cmp full/Distribution check/Distribution || { echo "::error::the Distribution file changed"; exit 1; }
+          diff <(listing full/Resources) <(listing check/Resources) || { echo "::error::the resources changed"; exit 1; }
+          echo "rebuilt: $(stat -f %z rebuilt.pkg) bytes; the payload is the signed tree, the rest as built"
+
+      - name: Sign the package with productsign, when the keychain holds a Developer ID Installer identity
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          out="out/macos/$PKG_NAME"
+          if [ -n "$INSTALLER_IDENTITY" ]; then
+            ok=""
+            for n in 1 2 3; do
+              rm -f "$out"
+              if productsign --timestamp --keychain "$KEYCHAIN" --sign "$INSTALLER_IDENTITY" rebuilt.pkg "$out"; then ok=1; break; fi
+              echo "attempt $n failed: productsign"
+              [ "$n" = 3 ] || sleep $((n * 15))
+            done
+            [ -n "$ok" ] || { echo "::error::productsign failed"; exit 1; }
+          else
+            cp rebuilt.pkg "$out"
+            echo "::warning::$PKG_NAME is NOT signed: the keychain holds no Developer ID Installer identity. The programs and the app in it are signed."
+          fi
+
+      - name: Notarize the package and staple it
+        if: inputs.notarize && env.INSTALLER_IDENTITY != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
+          # shellcheck source=/dev/null
+          . "$RUNNER_TEMP/notary.sh"
+          pkg="$RUNNER_TEMP/out/macos/$PKG_NAME"
+          notarize "$pkg"
+          retry xcrun stapler staple "$pkg"
+          echo "$PKG_NAME: ticket stapled" >> "$RUNNER_TEMP/notary-summary.txt"
+
+      - name: Verify (pkgutil --check-signature, spctl -t install, stapler; every program in the package as returned)
+        id: verify
+        env:
+          NOTARIZE: ${{ inputs.notarize }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          pkg="out/macos/$PKG_NAME"
+          echo "== $PKG_NAME"
+          sig=$(pkgutil --check-signature "$pkg" 2>&1 || true)
+          echo "$sig"
+          if [ -n "$INSTALLER_IDENTITY" ]; then
+            grep -q 'Status: signed by a developer certificate issued by Apple for distribution' <<< "$sig" \
+              || { echo "::error::$PKG_NAME is not signed with a Developer ID Installer certificate"; exit 1; }
+            grep -qF "$INSTALLER_IDENTITY" <<< "$sig" || { echo "::error::$PKG_NAME is not signed by $INSTALLER_IDENTITY"; exit 1; }
+            if [ "$NOTARIZE" = true ]; then
+              grep -q 'Notarization: trusted by the Apple notary service' <<< "$sig" || { echo "::error::$PKG_NAME is not notarized"; exit 1; }
+              out=$(spctl -a -vv -t install "$pkg" 2>&1) || { echo "$out"; echo "::error::spctl rejected $PKG_NAME"; exit 1; }
+              echo "$out"
+              grep -q 'source=Notarized Developer ID' <<< "$out" || { echo "::error::$PKG_NAME is not accepted as notarized"; exit 1; }
+              xcrun stapler validate "$pkg"
+              # No identity's name here: it holds the team ID, a secret, and
+              # GitHub drops a job output that holds a secret.
+              state="package: signed with productsign (Developer ID Installer), notarized, ticket stapled"
+            else
+              state="package: signed with productsign (Developer ID Installer), NOT notarized (notarize=false): for tests only"
+              echo "::warning::$PKG_NAME is signed but not notarized (notarize=false): for tests only, never for a release"
+            fi
+          else
+            grep -q 'Status: no signature' <<< "$sig" || { echo "::error::$PKG_NAME carries a signature this run did not make"; exit 1; }
+            state="package: NOT signed: 6529's Apple certificate holds no Developer ID Installer identity, so productsign could not sign it. macOS refuses to open it until the person allows it in System Settings"
+          fi
+          echo "$state"
+          echo "== the programs in the package as returned"
+          pkgutil --expand-full "$pkg" final
+          main="final/$MAIN_PKG/Payload"
+          while IFS=$'\t' read -r rel id; do
+            codesign --verify --strict "$main/$rel" || { echo "::error::$rel: not validly signed in the returned package"; exit 1; }
+            codesign --display --verbose=2 "$main/$rel" 2>&1 | grep -qx "Identifier=$id" || { echo "::error::$rel: not $id in the returned package"; exit 1; }
+            echo "$rel: signed, $id"
+          done < programs.txt
+          app="$main/Applications/6529 AI.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          n=$(wc -l < programs.txt | tr -d ' ')
+          if [ "$NOTARIZE" = true ]; then
+            xcrun stapler validate "$app"
+            ok=""
+            for n2 in 1 2 3 4 5; do
+              if out=$(spctl -a -vv -t exec "$app" 2>&1) && grep -q 'source=Notarized Developer ID' <<< "$out"; then ok=1; break; fi
+              echo "attempt $n2: $out"
+              sleep 20
+            done
+            echo "$out"
+            [ -n "$ok" ] || { echo "::error::Gatekeeper does not accept 6529 AI.app as notarized"; exit 1; }
+            while IFS=$'\t' read -r rel _; do
+              # Informational: Apple's online record of a bare program.
+              codesign --verify --verbose=2 -R='notarized' --check-notarization "$main/$rel" 2>&1 || echo "(no online notarization record found for $rel)"
+            done < programs.txt
+            programs="programs: the $n programs and 6529 AI.app codesigned (hardened runtime, timestamp, no entitlements) and notarized; the app's ticket stapled"
+          else
+            programs="programs: the $n programs and 6529 AI.app codesigned (hardened runtime, timestamp, no entitlements), NOT notarized (notarize=false): for tests only"
+          fi
+          echo "$programs"
+          {
+            echo "package=$state"
+            echo "programs=$programs"
+            echo "notary<<NOTARY_EOF"; cat notary-summary.txt; echo "NOTARY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: SHA-256 of the signed files, and encrypt them to recipient_cert
+        id: encrypt
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/out"
+          find . -type f | sed 's|^\./||' | LC_ALL=C sort | while IFS= read -r f; do shasum -a 256 "$f"; done > ../macos.sums
+          cat ../macos.sums
+          { echo "sums<<SUMS_EOF"; cat ../macos.sums; echo "SUMS_EOF"; } >> "$GITHUB_OUTPUT"
+          tarball="../6529-ai-$VERSION-$KIND-macos-signed.tar"
+          COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -cf "$tarball" ./*
+          mkdir -p ../upload
+          openssl smime -encrypt -binary -aes256 -outform DER -in "$tarball" \
+            -out "../upload/6529-ai-$VERSION-$KIND-macos-signed.tar.p7m" ../recipient.pem
+          rm -f "$tarball"
+          ls -l ../upload
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: 6529-ai-${{ inputs.version }}-${{ inputs.kind || 'programs' }}-macos-signed
+          path: ${{ runner.temp }}/upload/6529-ai-${{ inputs.version }}-${{ inputs.kind || 'programs' }}-macos-signed.tar.p7m
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Delete the keychain
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN:-}" ]; then security delete-keychain "$KEYCHAIN" || true; fi
+          security default-keychain -s login.keychain || true
+          rm -f "$RUNNER_TEMP/signing_certificate.p12" "$RUNNER_TEMP/installer_certificate.p12"
+
+  windows:
+    name: Windows (AzureSignTool)
+    if: inputs.kind == 'installer' || inputs.systems != 'macos'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      sums: ${{ steps.encrypt.outputs.sums }}
+      authenticode: ${{ steps.verify.outputs.authenticode }}
+    steps:
+      - name: Fetch the bundle and check its SHA-256 (before anything else)
+        run: |
+          if ($env:VERSION -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') { throw 'version is not like 1.2.3 or 1.2.3-rc.1' }
+          if ($env:KIND -cnotmatch '^(programs|installer)$') { throw 'kind is programs or installer' }
+          if ($env:SYSTEMS -cnotmatch '^(both|windows)$') { throw 'systems is both or windows for the Windows job (kind installer is Windows only)' }
+          $want = $env:BUNDLE_SHA256.ToLowerInvariant()
+          if ($want -cnotmatch '^[0-9a-f]{64}$') { throw 'bundle_sha256 is not 64 hex digits' }
+          $url = (Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH | ConvertFrom-Json).inputs.bundle_url
+          Write-Output "::add-mask::$($url.Replace('%', '%25'))"
+          if (-not $url.StartsWith('https://')) { throw 'bundle_url is not an https:// link' }
+          $zip = Join-Path $env:RUNNER_TEMP 'bundle.zip'
+          & curl.exe --proto '=https' --tlsv1.2 -fsS --retry 3 --retry-all-errors -o $zip $url
+          if ($LASTEXITCODE -ne 0) { throw "the download failed (curl exit $LASTEXITCODE)" }
+          $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+          if ($got -ne $want) { throw "the bundle's SHA-256 is $got, expected $want" }
+          Write-Output "bundle: $((Get-Item -LiteralPath $zip).Length) bytes, SHA-256 $got, as expected"
+
+      - name: Check recipient_cert
+        shell: bash
+        env:
+          RECIPIENT_CERT: ${{ inputs.recipient_cert }}
+        run: |
+          set -euo pipefail
+          cd "$(cygpath -u "$RUNNER_TEMP")"
+          printf '%s\n' "$RECIPIENT_CERT" > recipient.pem
+          openssl version
+          openssl x509 -in recipient.pem -noout -subject -enddate
+          text=$(openssl x509 -in recipient.pem -noout -text)
+          grep -q rsaEncryption <<< "$text" || { echo "::error::recipient_cert does not hold an RSA key"; exit 1; }
+          openssl x509 -in recipient.pem -noout -checkend 3600 > /dev/null || { echo "::error::recipient_cert expires within the hour"; exit 1; }
+
+      - name: Take the Windows files out of the bundle
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $temp = $env:RUNNER_TEMP
+          $out = Join-Path $temp 'out'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          # A program file (PE) by its headers, and its machine: 0x8664 x86-64, 0x14c x86.
+          function Get-PeMachine([string]$path) {
+            $h = New-Object byte[] 4096
+            $fs = [System.IO.File]::OpenRead($path)
+            try { [void]$fs.Read($h, 0, $h.Length) } finally { $fs.Dispose() }
+            $pe = [BitConverter]::ToInt32($h, 0x3C)
+            if (-not ($h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090 -and [BitConverter]::ToUInt32($h, $pe) -eq 0x00004550)) { return -1 }
+            return [int][BitConverter]::ToUInt16($h, $pe + 4)
+          }
+          $required = @('bin/6529-ai.exe', 'bin/6529-ai-cli.exe', 'kubo/ipfs.exe')
+          foreach ($b in @('cpu', 'vulkan')) { foreach ($e in @('llama', 'whisper', 'sd')) { $required += "engines/$b/$e-server.exe" } }
+          $zip = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $temp 'bundle.zip'))
+          try {
+            $info = $zip.GetEntry('build-info.json')
+            if ($null -eq $info) { throw 'the bundle has no build-info.json' }
+            $r = New-Object System.IO.StreamReader($info.Open())
+            try { $facts = $r.ReadToEnd() | ConvertFrom-Json } finally { $r.Dispose() }
+            if ($facts.name -cne '6529 AI' -or $facts.version -cne $env:VERSION -or $facts.kind -cne $env:KIND -or [string]$facts.commit -cnotmatch '^[0-9a-f]{40}$') {
+              throw "build-info.json is not 6529 AI $($env:VERSION)'s $($env:KIND): name, version, kind and commit"
+            }
+            Write-Output "6529 AI $($facts.version), commit $($facts.commit)"
+            $listed = @{}
+            if ($env:KIND -eq 'programs') {
+              foreach ($f in @($facts.windows.files)) {
+                if ($null -eq $f) { continue }
+                $p = [string]$f.path
+                # The installer's programs by their place in it, and Inno Setup's uninstaller.
+                if ($p -cnotmatch '^(bin/6529-ai(-cli)?\.exe|kubo/ipfs\.exe|engines/(cpu|vulkan)/[a-z0-9][a-z0-9._-]*\.(exe|dll)|uninstaller/uninst-[0-9]+\.[0-9]+\.[0-9]+-[0-9a-f]{10}\.e32)$' -or $p.Contains('..')) {
+                  throw "build-info.json lists a file named `"$p`", which this workflow does not sign"
+                }
+                if ([string]$f.sha256 -cnotmatch '^[0-9a-f]{64}$') { throw "build-info.json: $p has no SHA-256" }
+                if ($listed.ContainsKey($p)) { throw "build-info.json lists $p twice" }
+                $listed[$p] = $f
+              }
+              foreach ($need in $required) { if (-not $listed.ContainsKey($need)) { throw "build-info.json does not list $need" } }
+              if (@($listed.Keys | Where-Object { $_.StartsWith('uninstaller/') }).Count -ne 1) { throw 'build-info.json lists not exactly one uninstaller/uninst-*.e32' }
+            } else {
+              $i = $facts.windows.installer
+              $name = "6529-ai-$($env:VERSION)-windows-x64-setup.exe"
+              if ($null -eq $i -or [string]$i.name -cne $name -or [string]$i.sha256 -cnotmatch '^[0-9a-f]{64}$') { throw "build-info.json has no windows.installer {name $name, sha256, size}" }
+              $listed[$name] = [pscustomobject]@{ path = $name; sha256 = [string]$i.sha256; size = $i.size }
+            }
+            foreach ($e in $zip.Entries) {
+              $n = $e.FullName
+              if ($n.EndsWith('/')) { continue }
+              if (-not $n.StartsWith('windows/')) { if ($n -cne 'build-info.json' -and -not $n.StartsWith('macos/')) { Write-Output "ignored here: $n" }; continue }
+              $p = $n.Substring(8)
+              if (-not $listed.ContainsKey($p)) { throw "the bundle holds windows/$p, which build-info.json does not list" }
+              $f = $listed[$p]
+              $dest = Join-Path $out (Join-Path 'windows' $p)
+              New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
+              [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, $dest, $false)
+              $sha = (Get-FileHash -Algorithm SHA256 -LiteralPath $dest).Hash.ToLowerInvariant()
+              if ($sha -ne $f.sha256 -or (Get-Item -LiteralPath $dest).Length -ne [long]$f.size) { throw "windows/$p does not match build-info.json" }
+              $m = Get-PeMachine $dest
+              # Inno Setup's uninstaller and installer are 32-bit programs; everything else is x86-64.
+              $want = if ($p.StartsWith('uninstaller/') -or $env:KIND -eq 'installer') { @(0x14c, 0x8664) } else { @(0x8664) }
+              if ($want -notcontains $m) { throw "windows/$p is not a Windows program of the expected machine (machine $m)" }
+              Write-Output "to sign: windows/$p"
+              $f | Add-Member -NotePropertyName found -NotePropertyValue $true -Force
+            }
+            foreach ($f in $listed.Values) { if (-not $f.found) { throw "build-info.json lists $($f.path), and the bundle has no windows/$($f.path)" } }
+          } finally { $zip.Dispose() }
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install AzureSignTool 6.0.1 (as sign-windows.yml)
+        run: |
+          dotnet tool install --global AzureSignTool --version 6.0.1
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+
+      - name: Sign each file (Azure Key Vault certificate, sha256, RFC 3161 timestamp)
+        env:
+          AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          CERT_NAME: ${{ secrets.CERT_NAME }}
+        run: |
+          # The flags of scripts/windows-sign-hook.cjs, passed as a list.
+          $common = @(
+            'sign',
+            '--azure-key-vault-url', $env:AZURE_KEY_VAULT_URL,
+            '--azure-key-vault-client-id', $env:AZURE_CLIENT_ID,
+            '--azure-key-vault-client-secret', $env:AZURE_CLIENT_SECRET,
+            '--azure-key-vault-tenant-id', $env:AZURE_TENANT_ID,
+            '--azure-key-vault-certificate', $env:CERT_NAME,
+            '--file-digest', 'sha256',
+            '--timestamp-rfc3161', 'http://timestamp.digicert.com',
+            '--timestamp-digest', 'sha256'
+          )
+          $files = @(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'out') -Recurse -File | Sort-Object FullName)
+          foreach ($f in $files) {
+            $before = Get-AuthenticodeSignature -LiteralPath $f.FullName
+            if ($before.Status -ne 'NotSigned') { Write-Output "::warning::$($f.Name) already carries a signature ($($before.Status), $($before.SignerCertificate.Subject)); it is replaced" }
+            Write-Output "== $($f.FullName.Substring($env:RUNNER_TEMP.Length + 5))"
+            & azuresigntool @common $f.FullName
+            if ($LASTEXITCODE -ne 0) { throw "AzureSignTool failed on $($f.Name) (exit $LASTEXITCODE)" }
+          }
+
+      - name: Verify (signtool verify /pa /all, Get-AuthenticodeSignature, one certificate)
+        id: verify
+        run: |
+          $temp = $env:RUNNER_TEMP
+          $signtool = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Directory.Parent.Name -match '^[0-9]+([.][0-9]+)+$' } |
+            Sort-Object { [version]($_.Directory.Parent.Name) } | Select-Object -Last 1
+          if ($null -eq $signtool) { throw 'signtool.exe was not found in the Windows SDK' }
+          Write-Output "signtool: $($signtool.FullName)"
+          $lines = @()
+          $thumbs = @{}
+          $files = @(Get-ChildItem -LiteralPath (Join-Path $temp 'out') -Recurse -File | Sort-Object FullName)
+          foreach ($f in $files) {
+            $rel = $f.FullName.Substring($temp.Length + 5).Replace('\', '/')
+            & $signtool.FullName verify /pa /all $f.FullName | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "${rel}: signtool verify /pa /all failed (exit $LASTEXITCODE)" }
+            $s = Get-AuthenticodeSignature -LiteralPath $f.FullName
+            Write-Output ('{0}: {1} ({2})' -f $rel, $s.Status, $s.StatusMessage)
+            Write-Output ('  signer:     {0}' -f $s.SignerCertificate.Subject)
+            Write-Output ('  issuer:     {0}' -f $s.SignerCertificate.Issuer)
+            Write-Output ('  thumbprint: {0}' -f $s.SignerCertificate.Thumbprint)
+            Write-Output ('  timestamp:  {0}' -f $s.TimeStamperCertificate.Subject)
+            if ($s.Status -ne 'Valid') { throw "${rel}: the signature is $($s.Status)" }
+            if ($null -eq $s.TimeStamperCertificate) { throw "${rel}: the signature has no timestamp" }
+            $thumbs[$s.SignerCertificate.Thumbprint] = $true
+            $lines += "${rel}: Authenticode Valid, timestamped, signer $($s.SignerCertificate.Subject)"
+          }
+          if ($thumbs.Count -ne 1) { throw "the signed files carry $($thumbs.Count) different certificates, not one" }
+          "authenticode<<AUTH_EOF`n$($lines -join "`n")`nAUTH_EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
+      - name: SHA-256 of the signed files, and encrypt them to recipient_cert
+        id: encrypt
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$(cygpath -u "$RUNNER_TEMP")/out"
+          find . -type f | sed 's|^\./||' | LC_ALL=C sort | while IFS= read -r f; do
+            printf '%s  %s\n' "$(sha256sum -b "$f" | cut -d' ' -f1)" "$f"
+          done > ../windows.sums
+          cat ../windows.sums
+          { echo "sums<<SUMS_EOF"; cat ../windows.sums; echo "SUMS_EOF"; } >> "$GITHUB_OUTPUT"
+          tarball="../6529-ai-$VERSION-$KIND-windows-signed.tar"
+          tar -cf "$tarball" ./*
+          mkdir -p ../upload
+          openssl smime -encrypt -binary -aes256 -outform DER -in "$tarball" \
+            -out "../upload/6529-ai-$VERSION-$KIND-windows-signed.tar.p7m" ../recipient.pem
+          rm -f "$tarball"
+          ls -l ../upload
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: 6529-ai-${{ inputs.version }}-${{ inputs.kind || 'programs' }}-windows-signed
+          path: ${{ runner.temp }}/upload/6529-ai-${{ inputs.version }}-${{ inputs.kind || 'programs' }}-windows-signed.tar.p7m
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+
+  sums:
+    name: SHA256SUMS
+    needs: [macos, windows]
+    # Each job runs only for its system, so the other may be skipped; one
+    # that failed stops this one.
+    if: >-
+      always()
+      && (needs.macos.result == 'success' || needs.macos.result == 'skipped')
+      && (needs.windows.result == 'success' || needs.windows.result == 'skipped')
+      && (needs.macos.result == 'success' || needs.windows.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: SHA256SUMS of every signed file
+        env:
+          MACOS_SUMS: ${{ needs.macos.outputs.sums }}
+          WINDOWS_SUMS: ${{ needs.windows.outputs.sums }}
+          NOTARY: ${{ needs.macos.outputs.notary }}
+          PACKAGE: ${{ needs.macos.outputs.package }}
+          PROGRAMS: ${{ needs.macos.outputs.programs }}
+          AUTHENTICODE: ${{ needs.windows.outputs.authenticode }}
+          MACOS_RESULT: ${{ needs.macos.result }}
+          WINDOWS_RESULT: ${{ needs.windows.result }}
+          # Also set for the whole workflow; named here because the checks below depend on them.
+          VERSION: ${{ inputs.version }}
+          KIND: ${{ inputs.kind || 'programs' }}
+          SYSTEMS: ${{ inputs.systems || 'both' }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sums"
+          s="$RUNNER_TEMP/sums/SHA256SUMS"
+          printf '%s\n%s\n' "$MACOS_SUMS" "$WINDOWS_SUMS" | sed '/^$/d' | LC_ALL=C sort -k2 > "$s"
+          if grep -vE '^[0-9a-f]{64}  [A-Za-z0-9][A-Za-z0-9._+/-]*$' "$s"; then
+            echo "::error::a malformed line in SHA256SUMS (above)"
+            exit 1
+          fi
+          names=$(cut -c67- "$s")
+          has() { grep -qxF "$1" <<< "$names" || { echo "::error::SHA256SUMS does not list $1"; exit 1; }; }
+          if [ "$KIND" = installer ]; then
+            [ "$WINDOWS_RESULT" = success ] || { echo "::error::kind installer needs the Windows job"; exit 1; }
+            [ "$names" = "windows/6529-ai-$VERSION-windows-x64-setup.exe" ] || { echo "::error::SHA256SUMS lists more or less than the installer"; exit 1; }
+          else
+            if [ "$SYSTEMS" != macos ]; then
+              [ "$WINDOWS_RESULT" = success ] || { echo "::error::the Windows job did not run"; exit 1; }
+              for f in bin/6529-ai.exe bin/6529-ai-cli.exe kubo/ipfs.exe; do has "windows/$f"; done
+              for b in cpu vulkan; do for e in llama whisper sd; do has "windows/engines/$b/$e-server.exe"; done; done
+              [ "$(grep -cE '^windows/uninstaller/uninst-[^/]+\.e32$' <<< "$names" || true)" = 1 ] || { echo "::error::SHA256SUMS does not list one uninstaller"; exit 1; }
+            fi
+            if [ "$SYSTEMS" != windows ]; then
+              [ "$MACOS_RESULT" = success ] || { echo "::error::the macOS job did not run"; exit 1; }
+              has "macos/6529-ai-$VERSION-macos-arm64.pkg"
+            fi
+          fi
+          cat "$s"
+          {
+            echo "### 6529 AI $VERSION, signed ($KIND, $SYSTEMS)"
+            echo
+            if [ -n "$PACKAGE" ]; then
+              echo "**macOS $PACKAGE.**"
+              echo
+              echo "- $PROGRAMS"
+              case "$PACKAGE" in
+                "package: NOT signed"*)
+                  echo
+                  echo "To sign the package too, the Apple Developer team's Account Holder creates a Developer ID Installer certificate (developer.apple.com, Certificates). Export it with its private key as a .p12, and add it to this repository as the secrets INSTALLER_CERTIFICATE_P12 (the .p12 in base64) and INSTALLER_CERT_PASSWORD, or put it into CERTIFICATE_P12 beside the Developer ID Application identity. The next run finds it and signs, notarizes and staples the package."
+                  ;;
+              esac
+              echo
+            fi
+            echo '```'
+            cat "$s"
+            echo '```'
+            echo
+            printf '%s\n%s\n' "$NOTARY" "$AUTHENTICODE" | sed '/^$/d; s/^/- /'
+            echo
+            echo "The signed files are this run's artifacts, encrypted to recipient_cert."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: 6529-ai-${{ inputs.version }}-${{ inputs.kind || 'programs' }}-SHA256SUMS
+          path: ${{ runner.temp }}/sums/SHA256SUMS
+          retention-days: 14
+          if-no-files-found: error
