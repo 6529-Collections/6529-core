@@ -1,4 +1,5 @@
 import "server-only";
+import { getAddress, isAddress } from "viem";
 import { serverEnvSchema, type ServerEnv } from "./serverEnv.schema";
 
 if (globalThis.window !== undefined) {
@@ -55,6 +56,16 @@ export const getStagingApiKey = (): string | undefined =>
 
 export const getFarcasterWarpcastApiKey = (): string | undefined =>
   getOptionalServerValue(process.env["FARCASTER_WARPCAST_API_KEY"]);
+
+/** Address of the desktop shell's per-run wallet request signer. */
+export function getDesktopWalletRequestSigner(
+  env: NodeJS.ProcessEnv = process.env
+): `0x${string}` | null {
+  const value = env["DESKTOP_WALLET_REQUEST_SIGNER"]?.trim();
+  return value && isAddress(value, { strict: false })
+    ? getAddress(value)
+    : null;
+}
 
 /**
  * Settings of the validator download page under `/validator`. The deploy
