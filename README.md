@@ -257,6 +257,10 @@ uploads artifacts with the AWS CLI (multipart for large files), and conditionall
 writes `latest-mac.yml` last. The previous manifest is retained under
 `mac/manifest-backups/`; a concurrently changed feed is never overwritten.
 The AWS CLI and the normal S3 credentials are required for publishing.
+In GitHub Actions the release workflows sign in through the GitHub OIDC role in
+the repository variable `AWS_RELEASE_ROLE_ARN` (release paths in `6529bucket`
+and the release CloudFront invalidation only; no stored access keys). The role
+accepts runs from `main` and `v*` release branches.
 These staging/production commands always publish, as before; use the Local
 or architecture-specific production targets for packaging without publication.
 Run only one Mac publisher per environment at a time. The ETag protects the
