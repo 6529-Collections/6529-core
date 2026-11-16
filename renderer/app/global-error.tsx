@@ -13,8 +13,8 @@ import {
 import { publicEnv } from "@/config/env";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t, tRich } from "@/i18n/messages";
-import { extractErrorDetails } from "@/utils/error-extractor";
 import { notifyDesktopProfilesReady } from "@/services/auth/desktop-profile-storage";
+import { extractErrorDetails } from "@/utils/error-extractor";
 import * as Sentry from "@sentry/nextjs";
 import { useEffect, useMemo } from "react";
 
@@ -54,7 +54,11 @@ export default function GlobalError({
   const locale = useBrowserLocale();
 
   useEffect(() => {
+    // The Electron desktop app shows its window once the page reports ready.
     notifyDesktopProfilesReady();
+  }, []);
+
+  useEffect(() => {
     if (!publicEnv.SENTRY_DSN) return;
     Sentry.captureException(error);
   }, [error]);

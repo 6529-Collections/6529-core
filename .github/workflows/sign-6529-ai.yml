@@ -300,7 +300,9 @@ jobs:
           done < components.txt
           parts=$(find "flat/$main" -mindepth 1 -maxdepth 1 -exec basename {} \; | LC_ALL=C sort | paste -sd' ' -)
           [ "$parts" = "Bom PackageInfo Payload Scripts" ] || { echo "::error::io.6529.ai holds [$parts], not Bom, PackageInfo, Payload and Scripts"; exit 1; }
-          if grep -q '<relocate' "flat/$main/PackageInfo"; then
+          # pkgbuild always writes a <relocate> element; it lists a bundle only
+          # when that bundle may be installed where the person moved it.
+          if tr -d '\n' < "flat/$main/PackageInfo" | grep -qE '<relocate>[[:space:]]*<bundle'; then
             echo "::error::io.6529.ai lets bundles relocate; package-macos.sh builds it with BundleIsRelocatable false"; exit 1
           fi
           root="$RUNNER_TEMP/full/$main/Payload"

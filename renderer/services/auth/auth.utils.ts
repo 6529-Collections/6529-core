@@ -380,7 +380,7 @@ const getStoredAccounts = (): ConnectedWalletAccount[] => {
   return readAccountsFromStorage();
 };
 
-const persistAccountsWithActive = (
+export const persistAccountsWithActive = (
   accounts: readonly ConnectedWalletAccount[],
   activeAddress: string | null
 ): void => {
