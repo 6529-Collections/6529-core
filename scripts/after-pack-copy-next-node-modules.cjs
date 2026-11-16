@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const { createRequire } = require("node:module");
 const os = require("node:os");
@@ -364,6 +365,18 @@ module.exports = async function afterPack(context) {
   }
   // Last, once the app folder is final and before any installer is made.
   checkPackedAppSizeBudget(context);
+  if (context.electronPlatformName === "darwin" && process.env.LOG_MAC_SIGNING_KEYCHAIN === "1") {
+    // CI selects its temporary signing keychain as the default during setup.
+    const probe = path.join(__dirname, "../.github/scripts/macos-signing/keychain-status.swift");
+    const result = spawnSync("/usr/bin/swift", ["-suppress-warnings", probe], {
+      stdio: "inherit",
+      timeout: 30_000,
+      killSignal: "SIGKILL",
+    });
+    if (result.error || result.status !== 0) {
+      console.warn(`[mac signing] Keychain status probe failed: ${result.error?.code ?? result.signal ?? result.status}`);
+    }
+  }
 };
 
 async function copyRendererNodeModules(context) {

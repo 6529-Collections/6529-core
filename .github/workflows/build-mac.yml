@@ -122,6 +122,7 @@ jobs:
         if: ${{ inputs.should_run }}
         env:
           DEBUG: "electron-osx-sign*"
+          LOG_MAC_SIGNING_KEYCHAIN: "1"
           # The renderer's ESLint pass runs out of the default heap on the
           # 7 GB macOS runner (exit 134).
           NODE_OPTIONS: --max-old-space-size=6144
@@ -250,6 +251,7 @@ jobs:
       - name: Build for x64
         env:
           DEBUG: "electron-osx-sign*"
+          LOG_MAC_SIGNING_KEYCHAIN: "1"
           # The renderer's ESLint pass runs out of the default heap on the
           # 7 GB macOS runner (exit 134).
           NODE_OPTIONS: --max-old-space-size=6144
