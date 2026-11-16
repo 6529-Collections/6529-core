@@ -168,6 +168,8 @@ describe("desktop profile storage", () => {
     );
 
     persistDesktopProfileAccounts([pageAccount], ADDRESS);
+    await flush();
+    expect(nativeAuth.saveProfiles).toHaveBeenCalledTimes(1);
     persistDesktopProfileAccounts([], null);
     finishFirstSave();
     await flush();

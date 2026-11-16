@@ -4152,15 +4152,6 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.menu.app": "App",
   "headerShare.menu.mobile": "6529 Mobile",
   "headerShare.menu.desktop": "6529 Desktop",
-  "desktop.profiles.restoreError":
-    "Your saved profiles could not be opened. You can browse signed out, or restart 6529 Desktop and allow access to the system keychain to restore them.",
-  "desktop.profiles.restart": "Restart to restore profiles",
-  "desktop.profiles.restartError":
-    "Could not restart 6529 Desktop. Quit and reopen it to try again.",
-  "desktop.profiles.saveError":
-    "Could not save your profiles. Retry before quitting to keep your changes.",
-  "desktop.profiles.saveRetrying": "Retrying profile save…",
-  "desktop.profiles.retry": "Retry",
   "desktopNotifications.someone": "Someone",
   "desktopNotifications.followed": "{handle} is now following you",
   "desktopNotifications.viewProfile": "View profile",

@@ -79,7 +79,7 @@ export function initializeDesktopProfiles(
   restore: (state: DesktopProfileState) => DesktopProfileState | void
 ): Promise<DesktopProfileState | undefined> {
   const bridge = globalThis.window?.nativeAuth;
-  if (!bridge?.restoreProfiles) return Promise.resolve();
+  if (!bridge?.restoreProfiles) return Promise.resolve(undefined);
   initialization ??= bridge
     .restoreProfiles(current)
     .then((state) => {
