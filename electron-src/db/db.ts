@@ -1,5 +1,6 @@
 import databasePath from "../utils/databasePath";
 import { encryptSeedWalletSecrets } from "./seed-wallet-secrets";
+import type { SeedWalletImport } from "../../shared/wallet-passwords";
 
 import { ethers } from "ethers";
 import { SeedWallet } from "./entities/ISeedWallet";
@@ -25,23 +26,9 @@ export async function addSeedWallet(
   name: string,
   pass: string
 ): Promise<string | undefined> {
-  const wallet = ethers.Wallet.createRandom();
-  const secrets = await encryptSeedWalletSecrets(
-    wallet.address,
-    wallet.mnemonic!.phrase,
-    wallet.privateKey,
-    pass
-  );
-
-  const seedWallet = new SeedWallet();
-  seedWallet.address = wallet.address;
-  seedWallet.address_hashed = secrets.address_hashed;
-  seedWallet.name = name;
-  seedWallet.mnemonic = secrets.mnemonic;
-  seedWallet.private_key = secrets.private_key;
-
+  const seedWallet = await prepareSeedWallet(name, pass);
   await AppDataSource.manager.save(seedWallet);
-  return wallet.address;
+  return seedWallet.address;
 }
 
 export async function importSeedWallet(
@@ -51,6 +38,25 @@ export async function importSeedWallet(
   mnemonic: string,
   privateKey: string
 ): Promise<void> {
+  const seedWallet = await prepareSeedWallet(name, pass, { address, mnemonic, privateKey });
+  await AppDataSource.manager.save(seedWallet);
+}
+
+export async function prepareSeedWallet(
+  name: string,
+  pass: string,
+  source?: SeedWalletImport,
+): Promise<SeedWallet> {
+  let details = source;
+  if (!details) {
+    const wallet = ethers.Wallet.createRandom();
+    details = {
+      address: wallet.address,
+      mnemonic: wallet.mnemonic!.phrase,
+      privateKey: wallet.privateKey,
+    };
+  }
+  const { address, mnemonic, privateKey } = details;
   const secrets = await encryptSeedWalletSecrets(
     address,
     mnemonic,
@@ -64,9 +70,13 @@ export async function importSeedWallet(
   seedWallet.name = name;
   seedWallet.mnemonic = secrets.mnemonic;
   seedWallet.private_key = secrets.private_key;
-  seedWallet.imported = true;
+  seedWallet.imported = Boolean(source);
+  return seedWallet;
+}
 
-  await AppDataSource.manager.save(seedWallet);
+export async function insertSeedWallet(wallet: SeedWallet): Promise<void> {
+  // Setup with Keychain provisions a new local wallet and must not replace a row.
+  await AppDataSource.manager.insert(SeedWallet, wallet);
 }
 
 export async function getSeedWallets(): Promise<SeedWallet[]> {

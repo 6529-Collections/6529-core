@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { useToast } from "../../../contexts/ToastContext";
 import { createSeedWallet, importSeedWallet } from "../../../electron";
 import { useOfferWalletPasswordSave } from "@/hooks/useOfferWalletPasswordSave";
-import type { WalletRecoveryField, WalletRecoveryResult } from "@/shared/wallet-passwords";
+import type { SeedWalletImport, WalletRecoveryField, WalletRecoveryResult } from "@/shared/wallet-passwords";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
 
@@ -35,11 +35,7 @@ const showTimedError = (
 export function CreateSeedWalletModal(
   props: Readonly<{
     show: boolean;
-    import?: {
-      address: string;
-      mnemonic: string;
-      privateKey: string;
-    };
+    import?: SeedWalletImport;
     onHide: (refresh: boolean) => void;
   }>
 ) {
@@ -50,12 +46,13 @@ export function CreateSeedWalletModal(
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [canGenerate, setCanGenerate] = useState(false);
-  const [generatedPasswordNeedsBackup, setGeneratedPasswordNeedsBackup] =
-    useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState(false);
+  const [savePasswordMyself, setSavePasswordMyself] = useState(false);
   const [confirmedPasswordBackup, setConfirmedPasswordBackup] = useState(false);
   const offerSave = useOfferWalletPasswordSave();
   const locale = useBrowserLocale();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!props.show) return;
@@ -82,7 +79,8 @@ export function CreateSeedWalletModal(
   const handleHide = (refresh: boolean) => {
     setWalletName("");
     setWalletPass("");
-    setGeneratedPasswordNeedsBackup(false);
+    setGeneratedPassword(false);
+    setSavePasswordMyself(false);
     setConfirmedPasswordBackup(false);
     setError("");
     setPassHidden(true);
@@ -95,7 +93,8 @@ export function CreateSeedWalletModal(
       const generated = await window.walletPasswords?.generate();
       if (generated?.ok) {
         setWalletPass(generated.value);
-        setGeneratedPasswordNeedsBackup(true);
+        setGeneratedPassword(true);
+        setSavePasswordMyself(false);
         setConfirmedPasswordBackup(false);
         setPassHidden(true);
         setError("");
@@ -109,10 +108,30 @@ export function CreateSeedWalletModal(
     showError(t(locale, "desktop.walletPasswords.generateFailed"));
   };
 
+  const saveInKeychain = generatedPassword && !savePasswordMyself;
   const canSubmit =
     !saving &&
     Boolean(walletName && walletPass) &&
-    (!generatedPasswordNeedsBackup || confirmedPasswordBackup);
+    (!savePasswordMyself || confirmedPasswordBackup);
+
+  const useOwnPassword = () => {
+    setWalletPass("");
+    setGeneratedPassword(false);
+    setSavePasswordMyself(false);
+    setConfirmedPasswordBackup(false);
+    setPassHidden(true);
+    setError("");
+    passwordInputRef.current?.focus();
+  };
+
+  const copyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(walletPass);
+      showToast(t(locale, "desktop.walletPasswords.passwordCopied"), "success");
+    } catch {
+      showError(t(locale, "desktop.walletPasswords.copyFailed"));
+    }
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -128,25 +147,32 @@ export function CreateSeedWalletModal(
     setSaving(true);
     try {
       const imported = props.import;
-      const data = imported
-        ? await importSeedWallet(
-            walletName, walletPass, imported.address, imported.mnemonic, imported.privateKey
-          )
-        : await createSeedWallet(walletName, walletPass);
-      if (data.error) {
-        showToast(
-          t(
-            locale,
-            imported
-              ? "desktop.walletPasswords.importFailed"
-              : "desktop.walletPasswords.createFailed"
-          ),
-          "error"
-        );
-        return;
+      const setupError = imported
+        ? "desktop.walletPasswords.importFailed"
+        : "desktop.walletPasswords.createFailed";
+      if (saveInKeychain) {
+        const result = await window.walletPasswords?.setupWithKeychain(walletName, walletPass, imported);
+        if (!result?.ok) {
+          setError(t(locale, result?.code === "wallet-setup-failed"
+            ? setupError
+            : "desktop.walletPasswords.finishKeychainSetup"));
+          return;
+        }
+      } else {
+        const data = imported
+          ? await importSeedWallet(
+              walletName, walletPass, imported.address, imported.mnemonic, imported.privateKey
+            )
+          : await createSeedWallet(walletName, walletPass);
+        if (data.error) {
+          showError(t(locale, setupError));
+          return;
+        }
+        const address = imported?.address ?? data.data;
+        if (!generatedPassword && typeof address === "string") {
+          await offerSave(address, walletPass);
+        }
       }
-      const address = imported?.address ?? data.data;
-      if (typeof address === "string") await offerSave(address, walletPass);
       showToast(
         imported
           ? t(locale, "desktop.walletPasswords.imported")
@@ -154,6 +180,10 @@ export function CreateSeedWalletModal(
         "success"
       );
       handleHide(true);
+    } catch {
+      setError(t(locale, saveInKeychain
+        ? "desktop.walletPasswords.finishKeychainSetup"
+        : props.import ? "desktop.walletPasswords.importFailed" : "desktop.walletPasswords.createFailed"));
     } finally {
       setSaving(false);
     }
@@ -189,7 +219,9 @@ export function CreateSeedWalletModal(
           >
             {t(
               locale,
-              props.import ? "desktop.walletPasswords.import" : "desktop.walletPasswords.create"
+              saveInKeychain
+                ? props.import ? "desktop.walletPasswords.importAndSave" : "desktop.walletPasswords.createAndSave"
+                : props.import ? "desktop.walletPasswords.import" : "desktop.walletPasswords.create"
             )}
           </button>
         </>
@@ -219,8 +251,9 @@ export function CreateSeedWalletModal(
         <label htmlFor="new-wallet-password">
           {t(locale, "desktop.walletPasswords.walletPassword")}
         </label>
-        <button
+        {!saveInKeychain && <button
           type="button"
+          disabled={saving}
           onClick={() => setPassHidden(!passHidden)}
           aria-label={t(
             locale,
@@ -236,16 +269,18 @@ export function CreateSeedWalletModal(
             aria-hidden="true"
             className="tw-cursor-pointer"
           />
-        </button>
+        </button>}
       </div>
       <div className="tw-flex tw-items-center tw-gap-2">
         <input
           id="new-wallet-password"
+          ref={passwordInputRef}
           aria-describedby={
-            generatedPasswordNeedsBackup ? "wallet-password-backup-hint" : undefined
+            generatedPassword ? "wallet-password-backup-hint" : undefined
           }
           autoComplete="new-password"
           disabled={saving}
+          readOnly={generatedPassword}
           type={passHidden ? "password" : "text"}
           placeholder="******"
           value={walletPass}
@@ -254,8 +289,6 @@ export function CreateSeedWalletModal(
             const value = e.target.value;
             if (/^\S*$/.test(value)) {
               setWalletPass(value);
-              setConfirmedPasswordBackup(false);
-              if (!value) setGeneratedPasswordNeedsBackup(false);
             } else {
               showError(t(locale, "desktop.walletPasswords.passwordWhitespace"));
             }
@@ -272,27 +305,56 @@ export function CreateSeedWalletModal(
           </button>
         )}
       </div>
-      {generatedPasswordNeedsBackup && (
+      {generatedPassword && (
         <div className="tw-mt-3 tw-text-sm">
           <p id="wallet-password-backup-hint" className="tw-mb-2">
-            {t(locale, "desktop.walletPasswords.backupHint")}
+            {t(locale, saveInKeychain
+              ? "desktop.walletPasswords.generatedKeychainHint"
+              : "desktop.walletPasswords.backupHint")}
           </p>
-          <label className="tw-flex tw-items-start tw-gap-2">
-            <input
-              type="checkbox"
-              className="tw-mt-0.5 tw-size-4 tw-shrink-0"
-              checked={confirmedPasswordBackup}
-              disabled={saving || (passHidden && !confirmedPasswordBackup)}
-              onChange={(event) => setConfirmedPasswordBackup(event.target.checked)}
-            />
-            {t(locale, "desktop.walletPasswords.confirmBackup")}
-          </label>
+          <div className="tw-flex tw-flex-wrap tw-gap-2">
+            {savePasswordMyself && (
+              <button type="button" className={confirmBtnSecondarySmall} disabled={saving} onClick={() => void copyPassword()}>
+                {t(locale, "desktop.walletPasswords.copyPassword")}
+              </button>
+            )}
+            <button
+              type="button"
+              className={confirmBtnSecondarySmall}
+              disabled={saving}
+              onClick={() => {
+                setSavePasswordMyself(!savePasswordMyself);
+                setConfirmedPasswordBackup(false);
+                setPassHidden(true);
+                setError("");
+              }}
+            >
+              {t(locale, savePasswordMyself
+                ? "desktop.walletPasswords.saveInKeychainInstead"
+                : "desktop.walletPasswords.savePasswordMyself")}
+            </button>
+            <button type="button" className={confirmBtnSecondarySmall} disabled={saving} onClick={useOwnPassword}>
+              {t(locale, "desktop.walletPasswords.useOwnPassword")}
+            </button>
+          </div>
+          {savePasswordMyself && (
+            <label className="tw-mt-3 tw-flex tw-items-start tw-gap-2">
+              <input
+                type="checkbox"
+                className="tw-mt-0.5 tw-size-4 tw-shrink-0"
+                checked={confirmedPasswordBackup}
+                disabled={saving}
+                onChange={(event) => setConfirmedPasswordBackup(event.target.checked)}
+              />
+              {t(locale, "desktop.walletPasswords.confirmBackup")}
+            </label>
+          )}
         </div>
       )}
       <p className="tw-mb-1 tw-mt-4" aria-live="polite">
         {error ? (
           <span className="tw-text-red-400">{error}</span>
-        ) : (
+        ) : !generatedPassword && (
           t(locale, "desktop.walletPasswords.setupPrompt")
         )}
       </p>

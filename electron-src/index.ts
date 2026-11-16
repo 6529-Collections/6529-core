@@ -15,7 +15,7 @@ import contextMenu from "electron-context-menu";
 import localShortcut from "electron-localshortcut";
 import Logger from "electron-log";
 import { app, BrowserWindow, dialog, Menu, Notification } from "electron/main";
-import { getAddress, isAddress } from "ethers";
+import { computeAddress, getAddress, isAddress } from "ethers";
 import fs from "fs";
 import { getPort } from "get-port-please";
 import { createRequire } from "node:module";
@@ -50,6 +50,7 @@ import {
 import { decryptData } from "../shared/encrypt";
 import { WalletKeychain, type MacWalletKeychainNative } from "./wallet-keychain";
 import { SeedWalletSession } from "./seed-wallet-session";
+import type { SeedWalletImport, WalletPasswordResult } from "../shared/wallet-passwords";
 import { SEED_WALLET_CONNECTION_STORE } from "../renderer/wagmiConfig/seedWalletConnectionState";
 import type { NotificationNavigationContext } from "../shared/preload-types";
 import {
@@ -68,6 +69,8 @@ import {
   getSeedWallets,
   importSeedWallet,
   initDb,
+  insertSeedWallet,
+  prepareSeedWallet,
   setRpcProviderActive,
 } from "./db/db";
 import { runCoreMigrations } from "./db/db.migrations";
@@ -2305,6 +2308,7 @@ if (process.platform === "darwin") {
 
 let walletPasswordNavigation = 0;
 let walletSavePrompt: AbortController | null = null;
+let walletAuthenticationSignal: AbortSignal | undefined;
 const walletKeychain = new WalletKeychain(
   nativeWalletKeychain,
   path.resolve(app.getPath("userData")),
@@ -2351,11 +2355,44 @@ ipcMain.handle("wallet-passwords:generate", (event) => {
   return walletKeychain.generate();
 });
 
-ipcMain.handle("wallet-passwords:unlock", (event, address: unknown, password: unknown) => {
+ipcMain.handle("wallet-passwords:prepare-unlock", (event, address: unknown, attempt: unknown) => {
+  requireWalletPasswordRenderer(event);
+  const owner = mainWindow;
+  const navigation = walletPasswordNavigation;
+  const isCurrent = () =>
+    Boolean(owner?.isVisible()) &&
+    navigation === walletPasswordNavigation && isMainRenderer(event);
+  return seedWalletSession.prepareSavedUnlock(address, attempt, async (signal) => {
+    if (!isCurrent()) return { ok: false, code: "unavailable" };
+    if (walletSavePrompt) return { ok: false, code: "busy" };
+    walletAuthenticationSignal = signal;
+    try {
+      if (!(await walletKeychain.hasSavedPassword(address))) {
+        return { ok: false, code: "not-saved" };
+      }
+      if (!isCurrent() || signal.aborted || !(await walletKeychain.authenticate(signal))) {
+        return { ok: false, code: "cancelled" };
+      }
+      return { ok: true, value: null };
+    } finally {
+      if (walletAuthenticationSignal === signal) walletAuthenticationSignal = undefined;
+    }
+  }, isCurrent);
+});
+
+ipcMain.handle("wallet-passwords:cancel-unlock", (event, attempt: unknown) => {
+  requireWalletPasswordRenderer(event);
+  seedWalletSession.cancelSavedUnlock(attempt);
+});
+
+ipcMain.handle("wallet-passwords:unlock", (event, address: unknown, password: unknown, attempt: unknown) => {
   requireWalletPasswordRenderer(event);
   const navigation = walletPasswordNavigation;
-  return seedWalletSession.unlock(address, password, () =>
-    navigation === walletPasswordNavigation && isMainRenderer(event),
+  return seedWalletSession.unlock(
+    address,
+    password,
+    () => navigation === walletPasswordNavigation && isMainRenderer(event),
+    attempt,
   );
 });
 
@@ -2368,7 +2405,9 @@ ipcMain.handle("wallet-passwords:lock", (event) => {
 ipcMain.handle("wallet-passwords:recover", async (event, address: unknown, field: unknown, password: unknown) => {
   requireWalletPasswordRenderer(event);
   const owner = mainWindow;
-  if (!owner || !owner.isVisible() || walletSavePrompt) return { ok: false, code: "busy" };
+  if (!owner || !owner.isVisible() || walletSavePrompt || walletAuthenticationSignal) {
+    return { ok: false, code: "busy" };
+  }
   if (
     typeof address !== "string" ||
     !isAddress(address) ||
@@ -2407,52 +2446,89 @@ ipcMain.handle("wallet-passwords:has-saved", (event, address: unknown) => {
   return walletKeychain.hasSavedPassword(address);
 });
 
+function walletSaveConfirmation(event: IpcMainInvokeEvent, settingUp = false) {
+  const owner = mainWindow;
+  const navigation = walletPasswordNavigation;
+  const isCurrent = () => navigation === walletPasswordNavigation && isMainRenderer(event);
+  const confirm = async () => {
+    if (!owner?.isVisible() || !isCurrent()) return "cancelled" as const;
+    // The owner can display one native sheet at a time.
+    if (walletSavePrompt || walletAuthenticationSignal) return "busy" as const;
+    const controller = new AbortController();
+    walletSavePrompt = controller;
+    try {
+      const { response } = await dialog.showMessageBox(owner, {
+        type: "question",
+        message: "Save this wallet password on this Mac?",
+        detail: "The password stays in this Mac’s Keychain. You can remove it in the wallet’s settings.",
+        buttons: ["Save Password", settingUp ? "Cancel" : "Not Now"],
+        defaultId: 0,
+        cancelId: 1,
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted || !isCurrent()) return "cancelled" as const;
+      return response === 0 ? ("save" as const) : ("skip" as const);
+    } finally {
+      walletSavePrompt = null;
+    }
+  };
+  return { confirm, isCurrent };
+}
+
 ipcMain.handle(
   "wallet-passwords:offer-save",
   (event, address: unknown, password: unknown) => {
     requireWalletPasswordRenderer(event);
-    const navigation = walletPasswordNavigation;
-    const owner = mainWindow;
-    return walletKeychain.offerSave(address, password, async () => {
-      if (
-        !owner?.isVisible() ||
-        navigation !== walletPasswordNavigation ||
-        !isMainRenderer(event)
-      ) {
-        return "cancelled";
-      }
-      // The owner can display one native sheet at a time.
-      if (walletSavePrompt) return "busy";
-      const controller = new AbortController();
-      walletSavePrompt = controller;
-      try {
-        const { response } = await dialog.showMessageBox(owner, {
-          type: "question",
-          message: "Save this wallet password on this Mac?",
-          detail: "The password stays in this Mac’s Keychain. You can remove it in the wallet’s settings.",
-          buttons: ["Save Password", "Not Now"],
-          defaultId: 0,
-          cancelId: 1,
-          signal: controller.signal,
-        });
-        if (
-          controller.signal.aborted ||
-          navigation !== walletPasswordNavigation ||
-          !isMainRenderer(event)
-        ) {
-          return "cancelled";
-        }
-        return response === 0 ? "save" : "skip";
-      } finally {
-        walletSavePrompt = null;
-      }
-    });
+    return walletKeychain.offerSave(address, password, walletSaveConfirmation(event).confirm);
   },
 );
 
-ipcMain.handle("wallet-passwords:forget", (event, address: unknown) => {
+ipcMain.handle(
+  "wallet-passwords:setup-with-keychain",
+  async (event, name: unknown, password: unknown, source: unknown): Promise<WalletPasswordResult<null>> => {
+    requireWalletPasswordRenderer(event);
+    if (!walletKeychain.isAvailable()) return { ok: false, code: "unavailable" };
+    if (
+      typeof name !== "string" || !/^[a-zA-Z0-9 ]+$/.test(name) ||
+      typeof password !== "string" || password.length < 6 || password.length > 4096 ||
+      /\s/.test(password)
+    ) return { ok: false, code: "wallet-setup-failed" };
+
+    const { confirm, isCurrent } = walletSaveConfirmation(event, true);
+    try {
+      let imported: SeedWalletImport | undefined;
+      if (source !== undefined) {
+        if (!source || typeof source !== "object") return { ok: false, code: "wallet-setup-failed" };
+        const { address, mnemonic, privateKey } = source as Record<string, unknown>;
+        if (
+          typeof address !== "string" || !isAddress(address) ||
+          typeof mnemonic !== "string" || typeof privateKey !== "string" ||
+          computeAddress(privateKey) !== getAddress(address)
+        ) return { ok: false, code: "wallet-setup-failed" };
+        imported = { address: getAddress(address), mnemonic, privateKey };
+        if (await getSeedWallet(imported.address)) return { ok: false, code: "wallet-setup-failed" };
+      }
+
+      const wallet = await prepareSeedWallet(name, password, imported);
+      const result = await walletKeychain.saveForSetup(wallet.address, password, confirm, async () => {
+        if (!isCurrent()) throw new Error("Wallet setup was cancelled");
+        await insertSeedWallet(wallet);
+      });
+      if (result.ok && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("seed-wallets-change");
+      }
+      return result;
+    } catch {
+      return { ok: false, code: "wallet-setup-failed" };
+    }
+  },
+);
+
+ipcMain.handle("wallet-passwords:forget", async (event, address: unknown) => {
   requireWalletPasswordRenderer(event);
-  return walletKeychain.forget(address);
+  const result = await walletKeychain.forget(address);
+  if (result.ok) seedWalletSession.invalidateSavedUnlock(address);
+  return result;
 });
 
 const DESKTOP_VALIDATOR_VISIBLE_KEY = "desktop-validator-visible";

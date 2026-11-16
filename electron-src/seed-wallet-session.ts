@@ -22,6 +22,16 @@ interface PendingRequest {
   confirmed: boolean;
 }
 
+interface SavedUnlock {
+  readonly address: string;
+  readonly attempt: string;
+  readonly chainId: number;
+  readonly controller: AbortController;
+  expiresAt: number;
+}
+
+const SAVED_UNLOCK_TTL_MS = 60_000;
+
 function isWalletRequest(value: unknown): value is SeedWalletRequest {
   if (!value || typeof value !== "object") return false;
   const { requestId, from, chainId, method, params } =
@@ -44,6 +54,7 @@ export class SeedWalletSession {
   private signer: Wallet | undefined;
   private unlockingAddress: string | undefined;
   private pending: PendingRequest | undefined;
+  private savedUnlock: SavedUnlock | undefined;
   private revision = 0;
 
   constructor(
@@ -57,14 +68,93 @@ export class SeedWalletSession {
     private readonly onSettled: (requestId: string) => void,
   ) {}
 
+  async prepareSavedUnlock(
+    address: unknown,
+    attempt: unknown,
+    authenticate: (signal: AbortSignal) => Promise<WalletPasswordResult<null>>,
+    isCurrent: () => boolean,
+  ): Promise<WalletPasswordResult<null>> {
+    if (
+      typeof address !== "string" ||
+      !isAddress(address) ||
+      typeof attempt !== "string" ||
+      !/^[0-9a-f-]{36}$/i.test(attempt)
+    ) {
+      return { ok: false, code: "unavailable" };
+    }
+    const connection = this.getConnection(address);
+    if (!connection || this.signer) return { ok: false, code: "unavailable" };
+    this.clearSavedUnlock();
+    const savedUnlock: SavedUnlock = {
+      address: getAddress(address),
+      attempt,
+      chainId: connection.chainId,
+      controller: new AbortController(),
+      expiresAt: 0,
+    };
+    this.savedUnlock = savedUnlock;
+    try {
+      const result = await authenticate(savedUnlock.controller.signal);
+      if (!result.ok) return result;
+      if (
+        this.savedUnlock !== savedUnlock ||
+        !isCurrent() ||
+        this.getConnection(address)?.chainId !== savedUnlock.chainId
+      ) {
+        return { ok: false, code: "cancelled" };
+      }
+      savedUnlock.expiresAt = Date.now() + SAVED_UNLOCK_TTL_MS;
+      return result;
+    } catch {
+      return { ok: false, code: "failed" };
+    } finally {
+      if (!savedUnlock.expiresAt && this.savedUnlock === savedUnlock) {
+        this.clearSavedUnlock();
+      }
+    }
+  }
+
+  cancelSavedUnlock(attempt: unknown): void {
+    if (this.savedUnlock && this.savedUnlock.attempt === attempt) {
+      this.clearSavedUnlock();
+    }
+  }
+
+  invalidateSavedUnlock(address: unknown): void {
+    if (typeof address === "string" && this.savedUnlock &&
+        this.savedUnlock.address.toLowerCase() === address.toLowerCase()) {
+      this.clearSavedUnlock();
+    }
+  }
+
+  private clearSavedUnlock(): void {
+    const savedUnlock = this.savedUnlock;
+    this.savedUnlock = undefined;
+    savedUnlock?.controller.abort();
+  }
+
   async unlock(
     address: unknown,
     password: unknown,
     isCurrent: () => boolean,
+    attempt?: unknown,
   ): Promise<WalletPasswordResult<null>> {
-    if (typeof address !== "string" || !this.getConnection(address)) {
+    if (typeof address !== "string" || !isAddress(address)) {
       return { ok: false, code: "unavailable" };
     }
+    const connection = this.getConnection(address);
+    if (!connection || !isCurrent()) return { ok: false, code: "unavailable" };
+    const savedUnlock = this.savedUnlock;
+    if (password === undefined && (
+      !savedUnlock ||
+      savedUnlock.attempt !== attempt ||
+      savedUnlock.address !== getAddress(address) ||
+      savedUnlock.chainId !== connection.chainId ||
+      savedUnlock.expiresAt <= Date.now()
+    )) {
+      return { ok: false, code: "unavailable" };
+    }
+    this.clearSavedUnlock();
     const revision = ++this.revision;
     this.signer = undefined;
     this.unlockingAddress = address;
@@ -127,6 +217,7 @@ export class SeedWalletSession {
   }
 
   lock(): void {
+    this.clearSavedUnlock();
     this.revision++;
     this.signer = undefined;
     this.unlockingAddress = undefined;
@@ -134,6 +225,7 @@ export class SeedWalletSession {
   }
 
   invalidateWallet(address: string): void {
+    this.invalidateSavedUnlock(address);
     const normalized = address.toLowerCase();
     if (
       this.signer?.address.toLowerCase() === normalized ||
@@ -144,6 +236,10 @@ export class SeedWalletSession {
   }
 
   connectionChanged(): void {
+    if (this.savedUnlock &&
+        this.getConnection(this.savedUnlock.address)?.chainId !== this.savedUnlock.chainId) {
+      this.clearSavedUnlock();
+    }
     const address = this.signer?.address ?? this.unlockingAddress;
     if (address && !this.getConnection(address)) this.lock();
     if (this.pending && !this.isConnected(this.pending.request)) {

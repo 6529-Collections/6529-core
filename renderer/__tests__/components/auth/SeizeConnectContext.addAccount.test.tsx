@@ -26,6 +26,7 @@ const mockLogError = jest.fn();
 const mockLogSecurityEvent = jest.fn();
 const mockClearBrowserConnectorConnectIntent = jest.fn();
 const mockSetBrowserConnectorConnectIntent = jest.fn();
+const mockWagmiConnectors: readonly unknown[] = [];
 
 let mockAppKitAccount: {
   address?: string;
@@ -65,6 +66,7 @@ jest.mock("@reown/appkit/react", () => ({
 
 jest.mock("wagmi", () => ({
   useAccount: () => mockWagmiAccount,
+  useConnectors: () => mockWagmiConnectors,
 }));
 
 jest.mock("@/wagmiConfig/browserConnector", () => ({
@@ -715,6 +717,45 @@ describe("SeizeConnectProvider add-account flow", () => {
       revokeError
     );
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("disconnects a saved Desktop wallet that AppKit leaves behind during logout", async () => {
+    const authUtils = require("@/services/auth/auth.utils");
+    const nativeDisconnect = jest.fn().mockResolvedValue(undefined);
+    const readStore = jest.fn().mockResolvedValue(
+      JSON.stringify({ accounts: [ACTIVE_ADDRESS], chainId: 1 })
+    );
+    const properties = ["api", "store", "seedConnector"] as const;
+    const previous = properties.map((key) =>
+      Object.getOwnPropertyDescriptor(window, key)
+    );
+    Object.defineProperties(window, {
+      api: { value: {}, configurable: true },
+      store: { value: { get: readStore }, configurable: true },
+      seedConnector: { value: { disconnect: nativeDisconnect }, configurable: true },
+    });
+    try {
+      render(
+        <SeizeConnectProvider>
+          <LogoutButton onError={jest.fn()} />
+        </SeizeConnectProvider>
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+      });
+
+      expect(readStore).toHaveBeenCalledWith("seize-app-connection-seed-wallet");
+      expect(nativeDisconnect).toHaveBeenCalledTimes(1);
+      expect(nativeDisconnect.mock.invocationCallOrder[0]).toBeLessThan(
+        authUtils.removeAuthJwt.mock.invocationCallOrder[0]
+      );
+    } finally {
+      properties.forEach((key, index) => {
+        const descriptor = previous[index];
+        if (descriptor) Object.defineProperty(window, key, descriptor);
+        else Reflect.deleteProperty(window, key);
+      });
+    }
   });
 
   describe("native logout before the UI reports native hydration", () => {

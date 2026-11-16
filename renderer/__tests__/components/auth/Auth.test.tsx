@@ -305,6 +305,7 @@ let walletAddress: string | null = "0x1";
 let connectionState: string = "connected";
 let canSignActiveWallet: boolean = true;
 let isDisconnecting: boolean = false;
+let walletSelectionRevision: number | undefined;
 let connectedAccountsOverride:
   | readonly {
       readonly address: string;
@@ -347,6 +348,7 @@ jest.mock("@/components/auth/SeizeConnectContext", () => ({
       hasActiveWalletAddress: !!walletAddress,
       canSignActiveWallet,
       seizeConnect: mockSeizeConnect,
+      walletSelectionRevision,
       seizeDisconnect: mockSeizeDisconnect,
       seizeDisconnectAndLogout: mockSeizeDisconnectAndLogout,
       isSafeWallet: false,
@@ -476,6 +478,7 @@ describe("Auth component", () => {
     connectionState = "connected";
     canSignActiveWallet = true;
     isDisconnecting = false;
+    walletSelectionRevision = undefined;
     mockActiveChainId = 1;
     mockWagmiIsConnected = true;
     mockIsSigningPending = false;
@@ -3787,6 +3790,40 @@ describe("Auth component", () => {
         screen.queryByText("Sign Authentication Request")
       ).not.toBeInTheDocument();
     });
+
+    it.each(["Cancel", "Sign out"] as const)(
+      "keeps sign-in closed after %s when the wallet connector reports the same account again",
+      async (action) => {
+        const address = "0x1111111111111111111111111111111111111111";
+        walletAddress = address;
+        connectedAccountsOverride = [];
+        walletSelectionRevision = 0;
+        const view = renderAuthModalHarness();
+        const signIn = () => screen.queryByRole("dialog", { name: "Sign in to 6529" });
+
+        await waitFor(() => expect(signIn()).toBeVisible());
+        if (action === "Cancel") {
+          await userEvent.click(within(signIn()!).getByRole("button", { name: "Cancel" }));
+        } else {
+          isDisconnecting = true;
+          view.rerender(getAuthModalHarnessElement());
+        }
+        expect(signIn()).not.toBeInTheDocument();
+
+        walletAddress = null;
+        connectionState = "disconnected";
+        isDisconnecting = false;
+        view.rerender(getAuthModalHarnessElement());
+        walletAddress = address;
+        connectionState = "connected";
+        view.rerender(getAuthModalHarnessElement());
+        expect(signIn()).not.toBeInTheDocument();
+
+        walletSelectionRevision++;
+        view.rerender(getAuthModalHarnessElement());
+        await waitFor(() => expect(signIn()).toBeVisible());
+      }
+    );
 
     it("handles Escape cancellation without using a top-layer dialog", async () => {
       walletAddress = "0x1111111111111111111111111111111111111111";

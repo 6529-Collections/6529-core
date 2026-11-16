@@ -1,10 +1,15 @@
 #import <Foundation/Foundation.h>
+#import <LocalAuthentication/LocalAuthentication.h>
 #import <Security/Security.h>
 #include <node_api.h>
 #include <memory>
 #include <string>
 
-enum class Action { Contains, Read, Save, Forget };
+enum class Action { Authenticate, Contains, Read, Save, Forget };
+
+// Only the Electron main process loads this module. These references are
+// assigned and cleared on its JavaScript thread.
+static LAContext *activeAuthentication = nil;
 
 struct Job {
   napi_deferred deferred = nullptr;
@@ -15,6 +20,7 @@ struct Job {
   std::string password;
   OSStatus status = errSecInternalComponent;
   bool found = false;
+  LAContext *authentication = nil;
 
   ~Job() {
     volatile char *bytes = password.data();
@@ -87,6 +93,20 @@ static OSStatus SavePassword(const Job &job, NSDictionary *identity,
 static void Execute(napi_env, void *context) {
   Job &job = *static_cast<Job *>(context);
   @autoreleasepool {
+    if (job.action == Action::Authenticate) {
+      dispatch_semaphore_t finished = dispatch_semaphore_create(0);
+      Job *authJob = &job;
+      [job.authentication
+        evaluatePolicy:LAPolicyDeviceOwnerAuthentication
+        localizedReason:@"Fill the saved password for your 6529 Core wallet"
+        reply:^(BOOL success, NSError *) {
+          authJob->found = success;
+          dispatch_semaphore_signal(finished);
+        }];
+      dispatch_semaphore_wait(finished, DISPATCH_TIME_FOREVER);
+      job.status = errSecSuccess;
+      return;
+    }
     // Use the default file-based user keychain. This item never opts into iCloud.
     SecKeychainRef keychain = nullptr;
     job.status = SecKeychainCopyDomainDefault(kSecPreferencesDomainUser, &keychain);
@@ -95,6 +115,8 @@ static void Execute(napi_env, void *context) {
     NSMutableDictionary *query = [identity mutableCopy];
     query[(__bridge id)kSecMatchSearchList] = @[(__bridge id)keychain];
     switch (job.action) {
+      case Action::Authenticate:
+        break;
       case Action::Contains:
         FindItem(job, query);
         break;
@@ -123,11 +145,13 @@ static void Reject(napi_env env, napi_deferred deferred) {
 
 static void Complete(napi_env env, napi_status status, void *context) {
   std::unique_ptr<Job> job(static_cast<Job *>(context));
+  if (job->authentication && activeAuthentication == job->authentication)
+    activeAuthentication = nil;
   if (status != napi_ok || job->status != errSecSuccess) {
     Reject(env, job->deferred);
   } else {
     napi_value result;
-    if (job->action == Action::Contains) {
+    if (job->action == Action::Contains || job->action == Action::Authenticate) {
       napi_get_boolean(env, job->found, &result);
     } else if (job->found) {
       napi_create_string_utf8(env, job->password.data(), job->password.size(), &result);
@@ -148,10 +172,16 @@ static napi_value Start(napi_env env, napi_callback_info info, Action action) {
   napi_value promise;
   napi_create_promise(env, &job->deferred, &promise);
   const bool hasPassword = action == Action::Save;
-  if (argc != (hasPassword ? 3u : 2u) ||
-      !ReadString(env, args[0], job->service, 200) ||
-      !ReadString(env, args[1], job->account, 42) ||
-      (hasPassword && !ReadString(env, args[2], job->password, 16384))) {
+  if (action == Action::Authenticate) {
+    if (argc != 0 || activeAuthentication) {
+      Reject(env, job->deferred);
+      return promise;
+    }
+    job->authentication = [[LAContext alloc] init];
+  } else if (argc != (hasPassword ? 3u : 2u) ||
+             !ReadString(env, args[0], job->service, 200) ||
+             !ReadString(env, args[1], job->account, 42) ||
+             (hasPassword && !ReadString(env, args[2], job->password, 16384))) {
     Reject(env, job->deferred);
     return promise;
   }
@@ -168,8 +198,22 @@ static napi_value Start(napi_env env, napi_callback_info info, Action action) {
     Reject(env, job->deferred);
     return promise;
   }
+  if (job->authentication) activeAuthentication = job->authentication;
   job.release();
   return promise;
+}
+
+static napi_value Authenticate(napi_env env, napi_callback_info info) {
+  return Start(env, info, Action::Authenticate);
+}
+
+static napi_value CancelAuthentication(napi_env env, napi_callback_info) {
+  LAContext *context = activeAuthentication;
+  activeAuthentication = nil;
+  [context invalidate];
+  napi_value result;
+  napi_get_undefined(env, &result);
+  return result;
 }
 
 static napi_value Contains(napi_env env, napi_callback_info info) {
@@ -188,6 +232,8 @@ static napi_value Forget(napi_env env, napi_callback_info info) {
 
 NAPI_MODULE_INIT() {
   napi_property_descriptor methods[] = {
+    {"authenticate", nullptr, Authenticate, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"cancelAuthentication", nullptr, CancelAuthentication, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"contains", nullptr, Contains, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"read", nullptr, Read, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"save", nullptr, Save, nullptr, nullptr, nullptr, napi_default, nullptr},

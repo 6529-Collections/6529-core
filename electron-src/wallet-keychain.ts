@@ -2,11 +2,15 @@ import { createHash, randomBytes } from "node:crypto";
 import type { WalletPasswordResult } from "../shared/wallet-passwords";
 
 export interface MacWalletKeychainNative {
+  authenticate(): Promise<boolean>;
+  cancelAuthentication(): void;
   contains(service: string, account: string): Promise<boolean>;
   read(service: string, account: string): Promise<string | null>;
   save(service: string, account: string, password: string): Promise<null>;
   forget(service: string, account: string): Promise<null>;
 }
+
+type SaveDecision = "save" | "skip" | "cancelled" | "busy";
 
 export class WalletKeychain {
   private readonly service: string;
@@ -27,6 +31,18 @@ export class WalletKeychain {
 
   isAvailable(): boolean {
     return this.native !== null;
+  }
+
+  async authenticate(signal: AbortSignal): Promise<boolean> {
+    const native = this.native;
+    if (!native || signal.aborted) return false;
+    const cancel = () => native.cancelAuthentication();
+    signal.addEventListener("abort", cancel, { once: true });
+    try {
+      return await native.authenticate();
+    } finally {
+      signal.removeEventListener("abort", cancel);
+    }
   }
 
   generate(): WalletPasswordResult<string> {
@@ -56,7 +72,7 @@ export class WalletKeychain {
   offerSave(
     address: unknown,
     password: unknown,
-    confirm: () => Promise<"save" | "skip" | "cancelled" | "busy">,
+    confirm: () => Promise<SaveDecision>,
   ): Promise<WalletPasswordResult<boolean>> {
     return this.run<boolean>(address, async (native, address, account) => {
       if (this.declinedOffers.has(account)) {
@@ -77,6 +93,30 @@ export class WalletKeychain {
       // Saving updates an existing item after consent without reading it first.
       await native.save(this.service, account, password);
       return { ok: true, value: true };
+    });
+  }
+
+  saveForSetup(
+    address: string,
+    password: string,
+    confirm: () => Promise<SaveDecision>,
+    persist: () => Promise<void>,
+  ): Promise<WalletPasswordResult<null>> {
+    return this.run<null>(address, async (native, _address, account) => {
+      const decision = await confirm();
+      if (decision === "busy") return { ok: false, code: "busy" };
+      if (decision !== "save") return { ok: false, code: "cancelled" };
+
+      // Rollback must only remove the item provisioned by this setup.
+      if (await native.contains(this.service, account)) return { ok: false, code: "failed" };
+      await native.save(this.service, account, password);
+      try {
+        await persist();
+      } catch {
+        await native.forget(this.service, account);
+        return { ok: false, code: "wallet-setup-failed" };
+      }
+      return { ok: true, value: null };
     });
   }
 

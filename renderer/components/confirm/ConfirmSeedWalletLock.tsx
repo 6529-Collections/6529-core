@@ -23,7 +23,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
 import { useOfferWalletPasswordSave } from "@/hooks/useOfferWalletPasswordSave";
-import { useSavedWalletPassword } from "@/hooks/useSavedWalletPassword";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
 
@@ -37,7 +36,7 @@ export default function ConfirmSeedWalletLock(
     isUnlocked: boolean;
     pendingRequest?: SeedWalletRequest | undefined;
     onHide: () => void;
-    onUnlock: (password?: string) => Promise<boolean>;
+    onUnlock: (password?: string, savedPasswordAttempt?: string) => Promise<boolean>;
     onLock: () => void;
   }>
 ) {
@@ -46,18 +45,52 @@ export default function ConfirmSeedWalletLock(
   const [unlocking, setUnlocking] = useState(false);
   const [walletPass, setWalletPass] = useState("");
   const [passHidden, setPassHidden] = useState(true);
+  const authenticationAttempt = useRef<string>(undefined);
+  const [savedUnlock, setSavedUnlock] = useState<{ address: string; attempt: string }>();
   const { showToast } = useToast();
   const { isTopModal, addModal, removeModal } = useModalState();
   const isCurrentTopModal = isTopModal(SEED_WALLET_LOCK_MODAL);
   const offerSave = useOfferWalletPasswordSave();
-  const { hasSavedPassword, clearSavedPassword } = useSavedWalletPassword(
-    props.show && isCurrentTopModal && !props.isUnlocked
-      ? props.address
-      : undefined
-  );
-  const canUnlock = walletPass
-    ? walletPass.length >= SEED_MIN_PASS_LENGTH
-    : hasSavedPassword;
+  const shouldAutofill = props.show && isCurrentTopModal && !props.isUnlocked;
+  if (savedUnlock && (!shouldAutofill || savedUnlock.address !== props.address)) {
+    setSavedUnlock(undefined);
+  }
+  const savedPasswordAttempt = shouldAutofill && savedUnlock?.address === props.address
+    ? savedUnlock.attempt
+    : undefined;
+  const canUnlock = Boolean(savedPasswordAttempt) ||
+    walletPass.length >= SEED_MIN_PASS_LENGTH;
+
+  useEffect(() => {
+    const bridge = window.walletPasswords;
+    if (!shouldAutofill || !bridge) return;
+    const attempt = crypto.randomUUID();
+    authenticationAttempt.current = attempt;
+    // Give the modal a chance to paint and avoid duplicate prompts on remount.
+    const start = setTimeout(() => {
+      if (authenticationAttempt.current !== attempt) return;
+      void bridge.prepareUnlock(props.address, attempt).then((result) => {
+        if (result.ok && authenticationAttempt.current === attempt) {
+          setSavedUnlock({ address: props.address, attempt });
+        }
+      }).catch(() => {});
+    }, 0);
+    return () => {
+      clearTimeout(start);
+      if (authenticationAttempt.current === attempt) {
+        authenticationAttempt.current = undefined;
+      }
+      void bridge.cancelUnlock(attempt).catch(() => {});
+    };
+  }, [props.address, shouldAutofill]);
+
+  const handlePasswordChange = (password: string) => {
+    const attempt = authenticationAttempt.current;
+    authenticationAttempt.current = undefined;
+    setSavedUnlock(undefined);
+    if (attempt) void window.walletPasswords?.cancelUnlock(attempt).catch(() => {});
+    setWalletPass(password);
+  };
 
   const focusPasswordInput = useCallback(() => {
     const input = inputRef.current;
@@ -88,10 +121,13 @@ export default function ConfirmSeedWalletLock(
       return;
     }
 
+    const focusEmptyInput = () => {
+      if (!inputRef.current?.value) focusPasswordInput();
+    };
     const animationFrameId =
-      globalThis.requestAnimationFrame?.(focusPasswordInput) ?? null;
-    const focusTimeout = setTimeout(focusPasswordInput, 75);
-    const settledFocusTimeout = setTimeout(focusPasswordInput, 175);
+      globalThis.requestAnimationFrame?.(focusEmptyInput) ?? null;
+    const focusTimeout = setTimeout(focusEmptyInput, 75);
+    const settledFocusTimeout = setTimeout(focusEmptyInput, 175);
 
     return () => {
       if (animationFrameId !== null) {
@@ -112,9 +148,9 @@ export default function ConfirmSeedWalletLock(
     if (unlocking || !canUnlock) return;
     setUnlocking(true);
     try {
-      const success = await props.onUnlock(walletPass || undefined);
+      const success = await props.onUnlock(walletPass || undefined, savedPasswordAttempt);
       if (!success) {
-        if (!walletPass) clearSavedPassword();
+        setSavedUnlock(undefined);
         const key = walletPass
           ? "desktop.walletPasswords.unlockFailed"
           : "desktop.walletPasswords.manualFallback";
@@ -124,11 +160,12 @@ export default function ConfirmSeedWalletLock(
       }
       showToast(t(locale, "desktop.walletPasswords.unlocked"), "success", true);
       setWalletPass("");
-      if (walletPass && !hasSavedPassword) {
+      if (walletPass &&
+          !(await window.walletPasswords?.hasSavedPassword(props.address).catch(() => false))) {
         await offerSave(props.address, walletPass);
       }
     } catch {
-      if (!walletPass) clearSavedPassword();
+      setSavedUnlock(undefined);
       showToast(t(locale, "desktop.walletPasswords.unlockFailed"), "error", true);
       focusPasswordInput();
     } finally {
@@ -221,24 +258,26 @@ export default function ConfirmSeedWalletLock(
             <label htmlFor="connected-wallet-password">
               {t(locale, "desktop.walletPasswords.walletPassword")}
             </label>
-            <button
-              type="button"
-              onClick={() => setPassHidden(!passHidden)}
-              aria-label={t(
-                locale,
-                passHidden
-                  ? "desktop.walletPasswords.showPassword"
-                  : "desktop.walletPasswords.hidePassword"
-              )}
-              className="tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-1 tw-text-inherit focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
-            >
-              <FontAwesomeIcon
-                icon={passHidden ? faEyeSlash : faEye}
-                height={18}
-                aria-hidden="true"
-                className="tw-cursor-pointer"
-              />
-            </button>
+            {!savedPasswordAttempt && (
+              <button
+                type="button"
+                onClick={() => setPassHidden(!passHidden)}
+                aria-label={t(
+                  locale,
+                  passHidden
+                    ? "desktop.walletPasswords.showPassword"
+                    : "desktop.walletPasswords.hidePassword"
+                )}
+                className="tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-1 tw-text-inherit focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
+              >
+                <FontAwesomeIcon
+                  icon={passHidden ? faEyeSlash : faEye}
+                  height={18}
+                  aria-hidden="true"
+                  className="tw-cursor-pointer"
+                />
+              </button>
+            )}
           </div>
           <input
             id="connected-wallet-password"
@@ -246,20 +285,21 @@ export default function ConfirmSeedWalletLock(
             autoComplete="current-password"
             ref={inputRef}
             autoFocus
-            type={passHidden ? "password" : "text"}
-            placeholder="******"
+            type={passHidden || savedPasswordAttempt ? "password" : "text"}
+            placeholder={savedPasswordAttempt ? "••••••••••••" : undefined}
+            aria-describedby={savedPasswordAttempt ? "saved-wallet-password-status" : undefined}
             value={walletPass}
-            className={confirmInputClass}
+            className={`${confirmInputClass}${savedPasswordAttempt ? " placeholder:!tw-text-iron-100" : ""}`}
             onFocus={(event) => event.currentTarget.select()}
-            onChange={(e) => setWalletPass(e.target.value)}
+            onChange={(e) => handlePasswordChange(e.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") void handleUnlock();
             }}
           />
-          <div aria-live="polite">
-            {hasSavedPassword && (
+          <div id="saved-wallet-password-status" aria-live="polite">
+            {savedPasswordAttempt && (
               <p className="tw-mb-0 tw-mt-2 tw-text-sm tw-text-iron-400">
-                {t(locale, "desktop.walletPasswords.unlockHint")}
+                {t(locale, "desktop.walletPasswords.autofilled")}
               </p>
             )}
           </div>
