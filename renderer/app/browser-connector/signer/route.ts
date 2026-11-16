@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDesktopWalletRequestSigner } from "@/config/desktopWalletEnv";
+import { getDesktopWalletRequestSigner } from "@/config/serverEnv";
 
 // Read at request time: the desktop shell sets the signer when it starts
 // the local server, long after the build.

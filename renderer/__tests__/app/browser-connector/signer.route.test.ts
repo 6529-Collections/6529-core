@@ -4,7 +4,7 @@
 jest.mock("next/dist/compiled/server-only", () => ({}), { virtual: true });
 
 import { GET, dynamic } from "@/app/browser-connector/signer/route";
-import { getDesktopWalletRequestSigner } from "@/config/desktopWalletEnv";
+import { getDesktopWalletRequestSigner } from "@/config/serverEnv";
 
 const SIGNER = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
 
