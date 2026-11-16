@@ -121,10 +121,12 @@ jobs:
       - name: Build for arm64
         if: ${{ inputs.should_run }}
         env:
+          DEBUG: "electron-osx-sign*"
           # The renderer's ESLint pass runs out of the default heap on the
           # 7 GB macOS runner (exit 134).
           NODE_OPTIONS: --max-old-space-size=6144
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/scripts/macos-signing:$PATH"
           if [ "${{ inputs.env }}" = "Staging" ]; then
             echo "Building for Staging..."
             pnpm run dist-mac-staging
@@ -247,11 +249,14 @@ jobs:
 
       - name: Build for x64
         env:
+          DEBUG: "electron-osx-sign*"
           # The renderer's ESLint pass runs out of the default heap on the
           # 7 GB macOS runner (exit 134).
           NODE_OPTIONS: --max-old-space-size=6144
         if: ${{ inputs.should_run }}
-        run: pnpm run dist-mac-production-x64
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/scripts/macos-signing:$PATH"
+          pnpm run dist-mac-production-x64
 
       - name: Upload x64 artifact
         if: ${{ inputs.should_run && inputs.env == 'Production' }}
