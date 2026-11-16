@@ -51,20 +51,20 @@
 #                         it, unsigned: a volume named "6529 AI" that holds
 #                         6529 AI.app and a link to /Applications, nothing else
 #   The app is copied out of the disk image and checked: its identifier is
-#   io.6529.ai.app, its program (Contents/MacOS/6529-ai-app) is a script that
-#   sets the service up as the person's LaunchAgent, it holds no link and no
-#   other bundle. Every program in it is codesigned first, inside out, with
-#   the hardened runtime and a secure timestamp, each under its own
-#   identifier:
+#   io.6529.ai.app, its program is Contents/MacOS/6529-ai-app, which runs
+#   the script Contents/Resources/6529-ai-app.sh that sets the service up as
+#   the person's LaunchAgent, and it holds no link and no other bundle.
+#   Every other program in it is codesigned first, inside out, with the
+#   hardened runtime and a secure timestamp, each under its own identifier:
 #     Contents/Resources/6529-ai/bin/6529-ai             io.6529.ai.6529-ai
 #     Contents/Resources/6529-ai/bin/6529-ai-cli         io.6529.ai.6529-ai-cli
 #     Contents/Resources/6529-ai/engines/llama-server    io.6529.ai.llama-server
 #     Contents/Resources/6529-ai/engines/whisper-server  io.6529.ai.whisper-server
 #     Contents/Resources/6529-ai/engines/sd-server       io.6529.ai.sd-server
 #     Contents/Resources/6529-ai/kubo/ipfs               io.6529.ai.ipfs
-#   then the app itself, io.6529.ai.app, which seals its script and every
-#   file beside the programs. None gets an entitlement: the five 6529 AI
-#   programs are compiled ahead of time (Rust, and C++ with Metal shaders
+#   then the app itself, io.6529.ai.app, which signs its program with it and
+#   seals the script and every other file. None gets an entitlement: the 6529
+#   AI programs are compiled ahead of time (Rust, and C++ with Metal shaders
 #   that Apple's own compiler service builds for the GPU), Kubo is Go, and
 #   nothing loads another team's library. Any other program or library in
 #   the app is refused. The app is notarized and its ticket stapled. The disk
@@ -260,11 +260,12 @@ jobs:
           bid=$(plutil -extract CFBundleIdentifier raw -o - "$app/Contents/Info.plist") || { echo "::error::the app's Info.plist has no CFBundleIdentifier"; exit 1; }
           [ "$bid" = io.6529.ai.app ] || { echo "::error::the app's identifier is $bid, not io.6529.ai.app"; exit 1; }
           exe=$(plutil -extract CFBundleExecutable raw -o - "$app/Contents/Info.plist") || { echo "::error::the app's Info.plist names no CFBundleExecutable"; exit 1; }
-          [[ "$exe" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "::error::the app's executable is named \"$exe\""; exit 1; }
-          [ -f "$app/Contents/MacOS/$exe" ] || { echo "::error::the app has no Contents/MacOS/$exe"; exit 1; }
-          # The app's program is package-macos.sh's script; a program there
-          # would be one this workflow does not know.
-          [ "$(head -c 2 "$app/Contents/MacOS/$exe")" = '#!' ] || { echo "::error::Contents/MacOS/$exe is not a script ($(file -b "$app/Contents/MacOS/$exe"))"; exit 1; }
+          # The app's program is 6529-ai-app (6529-ai's crates/ai-mac-app),
+          # which runs the app's script with /bin/bash; it is signed with the
+          # app. An app whose program is a script makes macOS ask for Rosetta.
+          [ "$exe" = 6529-ai-app ] || { echo "::error::the app's program is \"$exe\", not 6529-ai-app"; exit 1; }
+          [[ "$(file -b "$app/Contents/MacOS/$exe")" == Mach-O* ]] || { echo "::error::Contents/MacOS/$exe is not a program"; exit 1; }
+          [ -f "$app/Contents/Resources/6529-ai-app.sh" ] || { echo "::error::the app has no Contents/Resources/6529-ai-app.sh, the script its program runs"; exit 1; }
           # One bundle on the disk image: the app.
           bundles=$(cd "$stage" && find . \( -name '*.app' -o -name '*.framework' -o -name '*.bundle' -o -name '*.plugin' \
             -o -name '*.kext' -o -name '*.xpc' -o -name '*.appex' \) | sed 's|^\./||' | LC_ALL=C sort)
@@ -272,6 +273,7 @@ jobs:
           {
             echo "STAGE=$stage"
             echo "APP=$app"
+            echo "APP_EXE=Contents/MacOS/$exe"
             echo "VOLUME=$vol"
           } >> "$GITHUB_ENV"
           echo "the app: $(du -sm "$app" | cut -f1) MB, $(find "$app" -type f | wc -l | tr -d ' ') files, program Contents/MacOS/$exe"
@@ -325,12 +327,15 @@ jobs:
             desc=$(file -b "$f")
             case "$desc" in Mach-O*) ;; *) continue ;; esac
             rel=${f#"$APP"/}
-            is_known "$rel" || { echo "::error::$rel is a program this workflow does not know ($desc); refusing to sign it"; exit 1; }
             [ "$(lipo -archs "$f")" = arm64 ] || { echo "::error::$rel is not an arm64 program ($(lipo -archs "$f"))"; exit 1; }
+            # The app's program is signed with the app, below.
+            [ "$rel" = "$APP_EXE" ] && continue
+            is_known "$rel" || { echo "::error::$rel is a program this workflow does not know ($desc); refusing to sign it"; exit 1; }
             printf '%s\tio.6529.ai.%s\n' "$rel" "$(basename "$rel")" >> "$RUNNER_TEMP/programs.txt"
           done < <(find "$APP" -type f -print0)
+          listed=$(cut -f1 "$RUNNER_TEMP/programs.txt")
           for p in "${known[@]}"; do
-            cut -f1 "$RUNNER_TEMP/programs.txt" | grep -qxF "$p" || { echo "::error::the app has no $p"; exit 1; }
+            grep -qxF "$p" <<< "$listed" || { echo "::error::the app has no $p"; exit 1; }
           done
           echo "== the programs, inside out"
           while IFS=$'\t' read -r rel id; do
@@ -338,7 +343,7 @@ jobs:
             retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --identifier "$id" \
               --sign "$SIGN_IDENTITY" "$APP/$rel"
           done < "$RUNNER_TEMP/programs.txt"
-          echo "== 6529 AI.app (io.6529.ai.app): its script and every other file sealed"
+          echo "== 6529 AI.app (io.6529.ai.app), with its program $APP_EXE; the script and every other file sealed"
           retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --sign "$SIGN_IDENTITY" "$APP"
 
       - name: Check every signature (codesign --verify --strict --deep, team, runtime, timestamp, identifier, no entitlements)
