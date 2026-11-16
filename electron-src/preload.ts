@@ -61,12 +61,16 @@ const walletPasswords: ElectronWalletPasswords = {
   isAvailable: () => ipcRenderer.invoke("wallet-passwords:is-available"),
   generate: () => ipcRenderer.invoke("wallet-passwords:generate"),
   hasSavedPassword: (address) => ipcRenderer.invoke("wallet-passwords:has-saved", address),
-  unlock: (address, password) => ipcRenderer.invoke("wallet-passwords:unlock", address, password),
+  prepareUnlock: (address, attempt) => ipcRenderer.invoke("wallet-passwords:prepare-unlock", address, attempt),
+  cancelUnlock: (attempt) => ipcRenderer.invoke("wallet-passwords:cancel-unlock", attempt),
+  unlock: (address, password, attempt) => ipcRenderer.invoke("wallet-passwords:unlock", address, password, attempt),
   lock: () => ipcRenderer.invoke("wallet-passwords:lock"),
   recover: (address, field, password) =>
     ipcRenderer.invoke("wallet-passwords:recover", address, field, password),
   offerSave: (address, password) =>
     ipcRenderer.invoke("wallet-passwords:offer-save", address, password),
+  setupWithKeychain: (name, password, source) =>
+    ipcRenderer.invoke("wallet-passwords:setup-with-keychain", name, password, source),
   forget: (address) => ipcRenderer.invoke("wallet-passwords:forget", address),
 };
 contextBridge.exposeInMainWorld("walletPasswords", walletPasswords);

@@ -3502,7 +3502,17 @@ export const EN_US_ROOT_MESSAGES = {
   "desktop.walletPasswords.confirmBackup":
     "I’ve saved this password somewhere I can access if I lose access to this Mac.",
   "desktop.walletPasswords.backupHint":
-    "Choose Show wallet password and back it up securely before continuing.",
+    "Reveal or copy the password and keep it somewhere you can access from another device.",
+  "desktop.walletPasswords.generatedKeychainHint":
+    "Save this generated password in Keychain to unlock the wallet on this Mac.",
+  "desktop.walletPasswords.savePasswordMyself": "Save it myself",
+  "desktop.walletPasswords.saveInKeychainInstead": "Save to Keychain instead",
+  "desktop.walletPasswords.useOwnPassword": "Use my own password",
+  "desktop.walletPasswords.copyPassword": "Copy password",
+  "desktop.walletPasswords.passwordCopied": "Wallet password copied.",
+  "desktop.walletPasswords.copyFailed": "Could not copy the password. You can reveal it and save it yourself.",
+  "desktop.walletPasswords.finishKeychainSetup":
+    "The password wasn’t saved in Keychain. Retry, save it yourself, or choose your own password.",
   "desktop.walletPasswords.walletName": "Wallet Name",
   "desktop.walletPasswords.walletNamePlaceholder": "My Wallet…",
   "desktop.walletPasswords.walletPassword": "Wallet Password",
@@ -3511,11 +3521,13 @@ export const EN_US_ROOT_MESSAGES = {
   "desktop.walletPasswords.createTitle": "Create New Wallet",
   "desktop.walletPasswords.importTitle": "Import Wallet",
   "desktop.walletPasswords.create": "Create",
+  "desktop.walletPasswords.createAndSave": "Create & Save to Keychain",
   "desktop.walletPasswords.import": "Import",
+  "desktop.walletPasswords.importAndSave": "Import & Save to Keychain",
   "desktop.walletPasswords.createFailed": "Could not create the wallet.",
   "desktop.walletPasswords.importFailed": "Could not import the wallet.",
   "desktop.walletPasswords.created":
-    "Wallet “{name}” created. Download its recovery file now.",
+    "Wallet “{name}” created. Back up its recovery phrase so you can restore it on another device.",
   "desktop.walletPasswords.imported": "Wallet imported successfully.",
   "desktop.walletPasswords.setupPrompt": "Enter a name and password for the wallet.",
   "desktop.walletPasswords.invalidName": "Use only letters, numbers, and spaces in the wallet name.",
@@ -3533,7 +3545,7 @@ export const EN_US_ROOT_MESSAGES = {
     "A Keychain request is already in progress. You can try saving the next time you unlock manually.",
   "desktop.walletPasswords.deleteBusy": "Wait for the current Keychain request and try deleting the wallet again.",
   "desktop.walletPasswords.deleteFailed": "Could not delete the wallet. Try again.",
-  "desktop.walletPasswords.unlockHint": "Leave the field blank to unlock with the password saved on this Mac.",
+  "desktop.walletPasswords.autofilled": "Password filled from Keychain.",
   "desktop.walletPasswords.manualFallback": "Could not use the saved password. Enter your wallet password.",
   "desktop.walletPasswords.settings": "Wallet settings",
   "desktop.walletPasswords.forget": "Forget saved password",

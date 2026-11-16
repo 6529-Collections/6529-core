@@ -54,6 +54,9 @@ export interface SeizeConnectContextType {
    */
   seizeAcceptConnection: (address: string) => void;
 
+  /** Advances when the desktop accepts a wallet selection. */
+  walletSelectionRevision?: number | undefined;
+
   /** Prevents temporary connector fallback from changing the active profile. */
   seizeBeginBrowserConnectorHandoff: () => void;
 

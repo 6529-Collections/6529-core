@@ -110,6 +110,7 @@ export default function Auth({
     hasActiveWalletAddress,
     canSignActiveWallet,
     seizeConnect,
+    walletSelectionRevision,
     seizeDisconnect,
     seizeDisconnectAndLogout,
     isSafeWallet,
@@ -126,9 +127,14 @@ export default function Auth({
     signatureType: isSafeWallet ? "contract" : "eoa",
   });
   const [showSignModal, setShowSignModal] = useState(false);
-  const [dismissedAuthPromptAddress, setDismissedAuthPromptAddress] = useState<
-    string | null
-  >(null);
+  const [dismissedAuthPrompt, setDismissedAuthPrompt] = useState<{
+    address: string;
+    walletSelectionRevision: number | undefined;
+  } | null>(null);
+  const dismissedAuthPromptAddress =
+    dismissedAuthPrompt && dismissedAuthPrompt.walletSelectionRevision === walletSelectionRevision
+      ? dismissedAuthPrompt.address
+      : null;
   const [signModalReason, setSignModalReason] =
     useState<SignModalReason>("auth");
   const [sessionUpgradePromptMode, setSessionUpgradePromptMode] =
@@ -536,17 +542,25 @@ export default function Auth({
   ]);
 
   useEffect(() => {
-    if (connectionState !== "connected" || !normalizedAddress) {
-      setDismissedAuthPromptAddress(null);
+    if (walletSelectionRevision !== undefined) {
+      // Keep the dismissal when the desktop connector briefly goes offline.
+      if (isDisconnecting && normalizedAddress) {
+        setDismissedAuthPrompt({ address: normalizedAddress, walletSelectionRevision });
+      }
       return;
     }
 
-    setDismissedAuthPromptAddress((dismissedAddress) =>
-      dismissedAddress && dismissedAddress !== normalizedAddress
+    if (connectionState !== "connected" || !normalizedAddress) {
+      setDismissedAuthPrompt(null);
+      return;
+    }
+
+    setDismissedAuthPrompt((dismissed) =>
+      dismissed && dismissed.address !== normalizedAddress
         ? null
-        : dismissedAddress
+        : dismissed
     );
-  }, [connectionState, normalizedAddress]);
+  }, [connectionState, isDisconnecting, normalizedAddress, walletSelectionRevision]);
 
   const setToast = useCallback((toast: AppToastInput) => {
     showAppToast(toast);
@@ -717,7 +731,9 @@ export default function Auth({
       return;
     }
 
-    setDismissedAuthPromptAddress(normalizedAddress);
+    setDismissedAuthPrompt(
+      normalizedAddress ? { address: normalizedAddress, walletSelectionRevision } : null
+    );
     setShowSignModal(false);
 
     if (!isAddressAuthorized) {
@@ -741,6 +757,7 @@ export default function Auth({
     resetSigning,
     sessionUpgradeCanDismiss,
     signModalReason,
+    walletSelectionRevision,
   ]);
   const isSignRequestInProgress =
     isSigningPending || authLoadingState === "signing";
