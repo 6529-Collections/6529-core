@@ -27,7 +27,6 @@ const mockWagmiConnectors: readonly unknown[] = [];
 const mockLogSecurityEvent = jest.fn();
 const mockClearBrowserConnectorConnectIntent = jest.fn();
 const mockSetBrowserConnectorConnectIntent = jest.fn();
-const mockWagmiConnectors: readonly unknown[] = [];
 
 let mockAppKitAccount: {
   address?: string;
