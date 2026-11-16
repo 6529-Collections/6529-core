@@ -1,6 +1,7 @@
 import type { DesktopProfileState } from "@/shared/desktop-profile-state";
+import { getDesktopProfileMigrationState } from "./desktop-profile-state";
 
-let initialization: Promise<void> | null = null;
+let initialization: Promise<DesktopProfileState | undefined> | null = null;
 let initialized = false;
 let unsavedState: DesktopProfileState | null = null;
 let saveAttempt: Promise<void> | null = null;
@@ -75,8 +76,8 @@ export async function restartDesktopProfileRestore(): Promise<void> {
 
 export function initializeDesktopProfiles(
   current: DesktopProfileState,
-  restore: (state: DesktopProfileState) => void
-): Promise<void> {
+  restore: (state: DesktopProfileState) => DesktopProfileState | void
+): Promise<DesktopProfileState | undefined> {
   const bridge = globalThis.window?.nativeAuth;
   if (!bridge?.restoreProfiles) return Promise.resolve();
   initialization ??= bridge
@@ -85,9 +86,9 @@ export function initializeDesktopProfiles(
       // Main has durably saved this exact state before returning it. Auth and
       // wallet providers mount only after this callback restores local storage.
       // Avoid a redundant IPC save while bootstrap itself applies that state.
-      restore(state);
+      const restored = restore(state);
       initialized = true;
-      return undefined;
+      return restored ?? state;
     })
     .catch((error: unknown) => {
       initialization = null;
@@ -103,4 +104,19 @@ export function persistDesktopProfiles(state: DesktopProfileState): void {
   void retryDesktopProfileSave().catch(() =>
     console.error("Could not persist Desktop profiles")
   );
+}
+
+export function persistDesktopProfileAccounts(
+  accounts: readonly Omit<DesktopProfileState["accounts"][number], "refreshToken" | "authSessionVersion">[],
+  activeAddress: string | null
+): void {
+  persistDesktopProfiles(getDesktopProfileMigrationState({ accounts, activeAddress }));
+}
+
+export function __resetDesktopProfileStorageForTests(): void {
+  initialization = null;
+  initialized = false;
+  unsavedState = null;
+  saveAttempt = null;
+  setSaveStatus("idle");
 }

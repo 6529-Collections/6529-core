@@ -7,10 +7,12 @@ import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { getMediaGatewayFallbackUrls } from "@/components/nft-image/utils/gateway-fallback";
 import { parseDecentralizedMediaRef } from "@/lib/media/decentralized-media";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import { IMAGE_RESIZE_CDN_ORIGIN } from "@/helpers/image-resize-cdn";
 import {
   getAnimatedImagePreviewUri,
   isGifImageUrl,
   getLegacyGifPreviewUri,
+  isUploadedDropGif,
 } from "@/helpers/gif-preview.helpers";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
@@ -79,7 +81,10 @@ export function getGiphyVideoPreviewSources(
 export function getDropImagePreviewSources(
   src: string,
   scale: ImageScale,
-  preferAnimation = false
+  {
+    preferAnimation = false,
+    allowOriginalGif = true,
+  }: { preferAnimation?: boolean; allowOriginalGif?: boolean } = {}
 ) {
   const original = resolveIpfsUrlSync(src, { preferLocal: false });
   // An IPFS gateway URL is still an original, even when resolving it changes
@@ -89,12 +94,20 @@ export function getDropImagePreviewSources(
       ? getAnimatedImagePreviewUri(original, size)
       : getScaledImageUri(original, size)
   );
-  const ordered = preferAnimation
-    ? [...previews, ...previews.map(getLegacyGifPreviewUri)]
-    : previews.flatMap((url) => [url, getLegacyGifPreviewUri(url)]);
-  const sources = ordered.filter(
-    (url, index, all) => url !== original && all.indexOf(url) === index
-  );
+  // Keep the original as a fallback only for uploads whose preview can be
+  // attempted on the first-party resize route.
+  const fallbackToOriginal =
+    allowOriginalGif && isUploadedDropGif(original) && previews[0] !== original;
+  const resizedPreviews = previews.filter((url) => url !== original);
+  const ordered =
+    preferAnimation || fallbackToOriginal
+      ? [
+          ...resizedPreviews,
+          ...(fallbackToOriginal ? [original] : []),
+          ...resizedPreviews.map(getLegacyGifPreviewUri),
+        ]
+      : resizedPreviews.flatMap((url) => [url, getLegacyGifPreviewUri(url)]);
+  const sources = [...new Set(ordered)];
   if (sources.length || !isAllowedOgImageSourceUrl(original)) return sources;
 
   // External embeds have no CDN scale path. The existing guarded image proxy
@@ -115,7 +128,7 @@ function getHighQualityArtworkImageSrc(src: string): string | null {
   try {
     const url = new URL(original);
     if (
-      url.origin === "https://d3lqz0a4bldqgf.cloudfront.net" &&
+      url.origin === IMAGE_RESIZE_CDN_ORIGIN &&
       url.pathname.startsWith("/drops/") &&
       /\.(jpe?g|png|webp|avif)$/i.test(url.pathname)
     )
@@ -132,6 +145,8 @@ type Props = Omit<ImageProps, "src" | "unoptimized" | "onError"> & {
   readonly imageScale: ImageScale;
   readonly onError?: (() => void) | undefined;
   readonly preferHighQuality?: boolean | undefined;
+  /** Disable the direct fallback when the HD control manages the original. */
+  readonly allowOriginalGif?: boolean | undefined;
   // Reports unavailable guaranteed-animated previews once per mount. A legacy
   // or external preview can still animate, but does not guarantee animation.
   readonly onAnimatedPreviewUnavailable?: (() => void) | undefined;
@@ -146,6 +161,7 @@ const PreviewAttempt = forwardRef<HTMLImageElement, Props>(
       alt,
       fallback,
       preferHighQuality = false,
+      allowOriginalGif = true,
       onAnimatedPreviewUnavailable,
       onLoad,
       ...props
@@ -161,11 +177,10 @@ const PreviewAttempt = forwardRef<HTMLImageElement, Props>(
       : null;
     const previewSources = localSource
       ? [localSource]
-      : getDropImagePreviewSources(
-          originalSrc,
-          imageScale,
-          Boolean(onAnimatedPreviewUnavailable)
-        );
+      : getDropImagePreviewSources(originalSrc, imageScale, {
+          preferAnimation: Boolean(onAnimatedPreviewUnavailable),
+          allowOriginalGif: allowOriginalGif && !onAnimatedPreviewUnavailable,
+        });
     const sources = highQualitySrc
       ? [highQualitySrc, ...previewSources]
       : previewSources;
@@ -241,7 +256,7 @@ PreviewAttempt.displayName = "PreviewAttempt";
 export const DropImagePreview = forwardRef<HTMLImageElement, Props>(
   (props, ref) => (
     <PreviewAttempt
-      key={`${props.originalSrc}:${props.imageScale}:${props.preferHighQuality ?? false}:${Boolean(props.onAnimatedPreviewUnavailable)}`}
+      key={`${props.originalSrc}:${props.imageScale}:${props.preferHighQuality ?? false}:${props.allowOriginalGif ?? true}:${Boolean(props.onAnimatedPreviewUnavailable)}`}
       {...props}
       ref={ref}
     />

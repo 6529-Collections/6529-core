@@ -11,7 +11,10 @@ import Button from "@/components/utils/button/Button";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { ImageScale } from "@/helpers/image.helpers";
-import { isGifImageUrl } from "@/helpers/gif-preview.helpers";
+import {
+  isGifImageUrl,
+  isUploadedDropGif,
+} from "@/helpers/gif-preview.helpers";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import React, { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -231,6 +234,11 @@ export function ImageMediaModal({
   const originalRequested = quality.requested;
   const playingOriginal = quality.showingOriginal;
   const isGif = isGifImageUrl(src);
+  const requestGifOriginal =
+    onAnimatedPreviewUnavailable ??
+    (!originalQuality && isUploadedDropGif(src)
+      ? quality.requestAutomatically
+      : undefined);
   const loadingOriginalLabel = t(
     DEFAULT_LOCALE,
     isGif ? "drop.media.loadingOriginalGif" : "drop.media.loadingOriginalImage"
@@ -409,9 +417,8 @@ export function ImageMediaModal({
                             originalSrc={src}
                             imageScale={ImageScale.AUTOx1080}
                             preferHighQuality={preferHighQualityPreview}
-                            onAnimatedPreviewUnavailable={
-                              onAnimatedPreviewUnavailable
-                            }
+                            allowOriginalGif={false}
+                            onAnimatedPreviewUnavailable={requestGifOriginal}
                             alt={t(DEFAULT_LOCALE, "drop.media.previewAlt")}
                             fill
                             sizes="95vw"
@@ -438,7 +445,7 @@ export function ImageMediaModal({
             />
           </output>
         )}
-        {!playingOriginal && previewUnavailable && (
+        {!playingOriginal && !quality.loading && previewUnavailable && (
           <div className="tw-fixed tw-bottom-20 tw-left-1/2 tw-z-[1102] -tw-translate-x-1/2">
             <Button
               type="button"
