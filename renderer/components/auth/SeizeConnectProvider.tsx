@@ -41,6 +41,7 @@ import {
 } from "@/utils/security-logger";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
 import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
+import { forgetBrowserWalletProfile } from "@/services/desktop/desktopBrowserWallet";
 import {
   BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
   clearBrowserConnectorConnectIntent,
@@ -736,8 +737,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       try {
+        const signedOutAddress = getWalletAddress();
         try {
-          await logoutSessionV2({ address: getWalletAddress() });
+          await logoutSessionV2({ address: signedOutAddress });
         } catch (error: unknown) {
           const revokeError =
             error instanceof Error
@@ -747,6 +749,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           if (getSessionClientType() === "native") throw revokeError;
         }
         await removeAuthJwt();
+        if (signedOutAddress) await forgetBrowserWalletProfile(signedOutAddress);
         refreshStoredConnectedAccounts();
 
         const nextActiveAddress = getWalletAddress();

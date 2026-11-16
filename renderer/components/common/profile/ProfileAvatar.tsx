@@ -14,6 +14,7 @@ export enum ProfileBadgeSize {
 interface ProfileAvatarProps {
   readonly pfpUrl: string | null | undefined;
   readonly size?: ProfileBadgeSize | undefined;
+  readonly shape?: "rounded" | "circle" | undefined;
   readonly alt?: string | undefined;
   readonly fallbackContent?: ReactNode | undefined;
   /** Nullish values keep the existing default image. */
@@ -30,10 +31,12 @@ const AVATAR_SIZE_CLASSES: Record<ProfileBadgeSize, string> = {
 export default function ProfileAvatar({
   pfpUrl,
   size = ProfileBadgeSize.MEDIUM,
+  shape = "rounded",
   alt = "Profile picture",
   fallbackContent = null,
   imageContent,
 }: ProfileAvatarProps) {
+  const radiusClass = shape === "circle" ? "tw-rounded-full" : "tw-rounded-lg";
   const { activeSrc, isPlaceholder, handleError } = useGatewayImageLoadState(
     pfpUrl ?? null,
     false
@@ -49,11 +52,15 @@ export default function ProfileAvatar({
   ) : fallbackContent;
   return (
     <div
-      className={`${AVATAR_SIZE_CLASSES[size]} tw-relative tw-flex-shrink-0 tw-rounded-lg tw-bg-iron-900`}
+      className={`${AVATAR_SIZE_CLASSES[size]} ${radiusClass} tw-relative tw-flex-shrink-0 tw-bg-iron-900`}
     >
-      <div className="tw-h-full tw-w-full tw-rounded-lg">
-        <div className="tw-h-full tw-w-full tw-max-w-full tw-overflow-hidden tw-rounded-lg tw-bg-iron-900 tw-ring-1 tw-ring-white/10">
-          <div className="tw-flex tw-h-full tw-items-center tw-justify-center tw-overflow-hidden tw-rounded-lg tw-text-center">
+      <div className={`${radiusClass} tw-h-full tw-w-full`}>
+        <div
+          className={`${radiusClass} tw-h-full tw-w-full tw-max-w-full tw-overflow-hidden tw-bg-iron-900 tw-ring-1 tw-ring-white/10`}
+        >
+          <div
+            className={`${radiusClass} tw-flex tw-h-full tw-items-center tw-justify-center tw-overflow-hidden tw-text-center`}
+          >
             {pfpUrl ? (imageContent ?? defaultImage) : fallbackContent}
           </div>
         </div>

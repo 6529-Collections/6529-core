@@ -15,7 +15,11 @@ type ErrorProps = {
 
 export default function ErrorPage({ error, reset }: ErrorProps) {
   useEffect(() => {
+    // The Electron desktop app shows its window once the page reports ready.
     notifyDesktopProfilesReady();
+  }, []);
+
+  useEffect(() => {
     if (!publicEnv.SENTRY_DSN) return;
     Sentry.captureException(error);
   }, [error]);
