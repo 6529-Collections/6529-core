@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
@@ -10,8 +11,13 @@ function fixture(
   save?: (state: unknown) => Promise<void>,
 ) {
   const saved: unknown[] = [];
+  const sourcePath = path.join(
+    process.cwd(),
+    "renderer/services/auth/desktop-profile-storage.ts",
+  );
   const context = vm.createContext({
     exports: {},
+    require: createRequire(sourcePath),
     window: {
       nativeAuth: {
         restoreProfiles,
@@ -23,13 +29,7 @@ function fixture(
     },
     console: { error: () => undefined },
   });
-  const source = fs.readFileSync(
-    path.join(
-      process.cwd(),
-      "renderer/services/auth/desktop-profile-storage.ts",
-    ),
-    "utf8",
-  );
+  const source = fs.readFileSync(sourcePath, "utf8");
   vm.runInContext(
     ts.transpileModule(source, {
       compilerOptions: {
