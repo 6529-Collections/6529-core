@@ -1,0 +1,13 @@
+{
+  "displayName": "6529 Desktop Classic",
+  "schemes": {
+    "local": "localclassiccore6529",
+    "staging": "stagingclassiccore6529",
+    "production": "classiccore6529"
+  },
+  "legacySchemes": {
+    "local": "localcore6529",
+    "staging": "stagingcore6529",
+    "production": "core6529"
+  }
+}

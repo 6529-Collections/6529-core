@@ -812,7 +812,7 @@ export function browserConnector(parameters: {
     new Map();
 
   let initialized = false;
-  let scheme = "core6529";
+  let scheme = "classiccore6529";
   let port = 6529;
 
   let connectionObject: ConnectionObject = {

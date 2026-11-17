@@ -3,7 +3,7 @@ import type { BrowserWalletClaim } from "./browser-wallet-requests";
 
 /**
  * The app server endpoint the browser connector page uses to read the
- * request 6529 Desktop issued, by its one-time id. Only the page itself can
+ * request 6529 Desktop Classic issued, by its one-time id. Only the page itself can
  * call it: same-origin POST (Sec-Fetch-Site required; the supported browsers
  * send it) with a custom header, the app's own Host, no CORS headers. It
  * never lists requests; it answers only for a known id.

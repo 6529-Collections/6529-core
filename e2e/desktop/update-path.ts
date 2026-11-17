@@ -138,7 +138,11 @@ function registeredInstallFolders(productName: string): string[] {
     const file = entry.icon?.replace(/,-?\d+$/, "") ?? entry.uninstall?.match(/^"([^"]+)"/)?.[1];
     return file ? path.dirname(file) : "(no install folder)";
   };
-  return entries.filter((entry) => sameProduct.test(entry.name)).map(folderOf);
+  return entries
+    .filter((entry) =>
+      sameProduct.test(entry.name.replace(/^6529 Desktop Classic(?= |$)/, "6529 Desktop")),
+    )
+    .map(folderOf);
 }
 
 const samePath = (a: string, b: string) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();

@@ -1,6 +1,6 @@
 {
   "appId": "com.6529.6529localcore",
-  "productName": "6529 Desktop Local",
+  "productName": "6529 Desktop Classic Local",
   "directories": {
     "output": "dist-local"
   },
@@ -15,7 +15,7 @@
   "protocols": [
     {
       "name": "6529localcore",
-      "schemes": ["localcore6529"]
+      "schemes": ["localclassiccore6529"]
     }
   ],
   "files": [
@@ -70,13 +70,14 @@
       "CFBundleURLTypes": [
         {
           "CFBundleURLName": "com.6529.6529localcore",
-          "CFBundleURLSchemes": ["localcore6529"]
+          "CFBundleURLSchemes": ["localclassiccore6529"]
         }
       ]
     }
   },
   "win": {
     "icon": "assets/icon.ico",
+    "executableName": "6529 Desktop Local",
     "target": [
       {
         "target": "nsis",
@@ -95,7 +96,7 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "6529 Desktop Local"
+    "shortcutName": "6529 Desktop Classic Local"
   },
   "linux": {
     "icon": "assets",
@@ -115,18 +116,18 @@
     "artifactName": "6529-DESKTOP-LOCAL-linux-${arch}-${version}.${ext}",
     "desktop": {
       "entry": {
-        "Name": "6529 Desktop Local",
+        "Name": "6529 Desktop Classic Local",
         "Type": "Application",
         "Terminal": "false",
-        "MimeType": "x-scheme-handler/localcore6529;",
+        "MimeType": "x-scheme-handler/localclassiccore6529;",
         "Categories": "Utility;Network;",
-        "Comment": "6529 Desktop Local Application"
+        "Comment": "6529 Desktop Classic Local Application"
       }
     },
     "protocols": [
       {
-        "name": "6529 Desktop Local Protocol",
-        "schemes": ["localcore6529"]
+        "name": "6529 Desktop Classic Local Protocol",
+        "schemes": ["localclassiccore6529"]
       }
     ]
   }

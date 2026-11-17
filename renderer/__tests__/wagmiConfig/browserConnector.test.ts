@@ -136,7 +136,7 @@ describe("browserConnector", () => {
           }
         ),
         getInfo: jest.fn(() =>
-          Promise.resolve({ scheme: "core6529", port: 6529 })
+          Promise.resolve({ scheme: "classiccore6529", port: 6529 })
         ),
       },
     });

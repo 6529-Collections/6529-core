@@ -115,7 +115,7 @@ describe("DesktopTitleStrip", () => {
     render(<DesktopTitleStrip />);
 
     const toolbar = screen.getByRole("toolbar", {
-      name: "6529 Desktop window title",
+      name: "6529 Desktop Classic window title",
     });
     expect(toolbar).toHaveAttribute("data-desktop-drag-region", "");
     expect(toolbar).toHaveAttribute("aria-orientation", "horizontal");
@@ -320,7 +320,7 @@ describe("DesktopTitleStrip", () => {
       screen.getByRole("button", { name: "App info (update available)" })
     );
 
-    expect(await screen.findByText("About 6529 Desktop")).toBeInTheDocument();
+    expect(await screen.findByText("About 6529 Desktop Classic")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Check for updates" }));
     expect(bridges.updater.checkUpdates).toHaveBeenCalledTimes(1);
   });

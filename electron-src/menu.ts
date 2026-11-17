@@ -1,13 +1,14 @@
 import { MenuItem, MenuItemConstructorOptions } from "electron";
 import { platform } from "os";
+import classicDesktop from "../config/classic-desktop.json";
 
 export const menuTemplate: Array<MenuItemConstructorOptions | MenuItem> = [
   {
     label: "File",
     submenu: [
-      { role: "about" },
+      { role: "about", label: `About ${classicDesktop.displayName}` },
       { type: "separator" },
-      { role: "quit" },
+      { role: "quit", label: `Quit ${classicDesktop.displayName}` },
     ],
   },
   {

@@ -84,7 +84,7 @@ async function makeMacBundle(root, { enabled = true, integrity = true } = {}) {
   const info = {
     CFBundleIdentifier: "com.6529.integrity-test",
     CFBundleVersion: "0.3.16",
-    CFBundleURLTypes: [{ CFBundleURLSchemes: ["stagingcore6529"] }],
+    CFBundleURLTypes: [{ CFBundleURLSchemes: ["stagingclassiccore6529"] }],
     NSHighResolutionCapable: true,
     ...(integrity ? { ElectronAsarIntegrity: {
       "Resources/app.asar": { algorithm: "SHA256", hash: asarHeaderHash(archive) },

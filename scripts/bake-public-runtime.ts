@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import { execSync } from "node:child_process";
 import dotenv from "dotenv";
+import classicDesktop from "../config/classic-desktop.json";
 import fs from "node:fs";
 import path from "node:path";
 import { getDesktopFeatureFlags } from "./helpers/desktop-feature-flags.cjs";
@@ -20,11 +21,7 @@ const LIVE_WS_ENDPOINT = "wss://ws.6529.io";
 const TEST_BASE_ENDPOINT = "https://staging.6529.io";
 const TEST_API_ENDPOINT = "https://api.staging.6529.io";
 const TEST_WS_ENDPOINT = "wss://ws.staging.6529.io";
-const CORE_SCHEMES = {
-  local: "localcore6529",
-  staging: "stagingcore6529",
-  production: "core6529",
-} as const;
+const CORE_SCHEMES = classicDesktop.schemes;
 const CORE_SCHEME_VALUES = Object.values(CORE_SCHEMES);
 const PUBLIC_RUNTIME_ENV_OVERRIDES = ["GIPHY_API_KEY"] as const;
 

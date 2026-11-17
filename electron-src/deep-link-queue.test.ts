@@ -73,7 +73,7 @@ test("cold-start links retain private fragments until the current renderer is re
     (url) => delivered.push(url),
   );
   const first =
-    "localcore6529://navigate?path=/connection/accept?code=one#unlock=private";
+    "localclassiccore6529://navigate?path=/connection/accept?code=one#unlock=private";
   queue.enqueue(first);
   queue.flush(); // did-finish-load alone is insufficient.
   assert.deepEqual(delivered, []);
@@ -90,7 +90,7 @@ test("cold-start links retain private fragments until the current renderer is re
   assert.deepEqual(delivered, [first, "second#secret", "third#secret"]);
 });
 
-test("macOS open-url and second-instance queue links without opening a window before startup", async () => {
+test("OS deep links queue through cold startup and reopen an initialized window", async () => {
   const source = ts.createSourceFile(
     "index.ts",
     fs.readFileSync("electron-src/index.ts", "utf8"),
@@ -99,6 +99,7 @@ test("macOS open-url and second-instance queue links without opening a window be
   );
   const events = new Map<string, Function>();
   const declarations: string[] = [];
+  const coldLink = "localclassiccore6529://navigate?path=/connection/accept#cold";
   const visit = (node: ts.Node) => {
     if (ts.isFunctionDeclaration(node) && node.name?.text === "receiveDeepLink")
       declarations.push(node.getText(source));
@@ -111,10 +112,17 @@ test("macOS open-url and second-instance queue links without opening a window be
       )
     )
       declarations.push(node.getText(source));
+    if (
+      ts.isExpressionStatement(node) &&
+      ts.isCallExpression(node.expression) &&
+      node.expression.expression.getText(source) === "receiveDeepLink" &&
+      node.expression.arguments[0]?.getText(source).startsWith("process.argv.find")
+    )
+      declarations.push(node.getText(source));
     ts.forEachChild(node, visit);
   };
   visit(source);
-  assert.equal(declarations.length, 3);
+  assert.equal(declarations.length, 4);
   const links: string[] = [];
   let reopened = 0;
   const context = vm.createContext({
@@ -126,7 +134,8 @@ test("macOS open-url and second-instance queue links without opening a window be
       enqueue: (url: string) => links.push(url),
       flush: () => {},
     },
-    getScheme: () => "localcore6529",
+    getScheme: () => "localclassiccore6529",
+    process: { argv: ["app", "localcore6529://other/", coldLink] },
     mainWindow: null,
     restoreFromBackground: async () => {
       reopened++;
@@ -139,6 +148,7 @@ test("macOS open-url and second-instance queue links without opening a window be
     }).outputText,
     context,
   );
+  assert.deepEqual(links, [coldLink]);
   let prevented = false;
   events.get("open-url")!(
     {
@@ -146,19 +156,19 @@ test("macOS open-url and second-instance queue links without opening a window be
         prevented = true;
       },
     },
-    "localcore6529://navigate?path=/connection/accept#secret",
+    "localclassiccore6529://navigate?path=/connection/accept#secret",
   );
   assert.equal(prevented, true);
-  assert.equal(links.length, 1);
+  assert.equal(links.length, 2);
   assert.equal(reopened, 0);
   context.mainWindowStartupComplete = true;
   events.get("second-instance")!({}, [
     "app",
-    "localcore6529://navigate?path=/connection/accept#second",
+    "localclassiccore6529://navigate?path=/connection/accept#second",
   ]);
   await Promise.resolve();
   assert.equal(reopened, 1);
-  assert.equal(links.length, 2);
+  assert.equal(links.length, 3);
 });
 
 test("only the owned main frame can release private links, after listener registration", () => {

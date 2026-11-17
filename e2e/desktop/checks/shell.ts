@@ -256,7 +256,7 @@ export async function runLifecycleChecks(ctx: SuiteContext): Promise<void> {
   // and numbers the others from 100 in order.
   const CLOSE_DIALOG_BUTTONS: Record<string, number> = { Quit: 100, "Run in Background": 101, Cancel: 2 };
   const clickDialog = (button: string) => {
-    const result = powershell("dialog.ps1", "-ProcessId", String(ctx.app.pid), "-Title", "Close 6529 Desktop", "-ButtonId", String(CLOSE_DIALOG_BUTTONS[button]));
+    const result = powershell("dialog.ps1", "-ProcessId", String(ctx.app.pid), "-Title", "Close 6529 Desktop Classic", "-ButtonId", String(CLOSE_DIALOG_BUTTONS[button]));
     if (result.status !== 0) throw new Error(`dialog button "${button}": ${(result.stdout + result.stderr).trim()}`);
   };
   // window.close() from the page does not reach the BrowserWindow; post the

@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import classicDesktop from "../../config/classic-desktop.json";
 import { app } from "electron";
 import databasePath from "./databasePath";
 import path, { dirname } from "path";
@@ -7,11 +8,7 @@ import os from "os";
 
 type BackendTarget = "live" | "test";
 
-const CORE_SCHEMES = {
-  local: "localcore6529",
-  staging: "stagingcore6529",
-  production: "core6529",
-} as const;
+const CORE_SCHEMES = classicDesktop.schemes;
 
 function normalizeCoreScheme(value: unknown): string | null {
   if (typeof value !== "string") {

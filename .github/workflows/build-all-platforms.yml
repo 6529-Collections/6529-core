@@ -364,7 +364,7 @@ jobs:
         with:
           script: |
             core.summary
-              .addHeading("6529 Desktop Build Complete ✅")
+              .addHeading("6529 Desktop Classic Build Complete ✅")
               .addTable([
                 ["FLOW", "${{ github.event.inputs.flow }}"],
                 ["Env", "${{ github.event.inputs.env }}"],

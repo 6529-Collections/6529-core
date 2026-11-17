@@ -122,7 +122,7 @@ function getFileName(url: string) {
 }
 
 function getTitle(platform: string, version: string) {
-  const appName = isStaging ? "6529 Desktop Staging" : "6529 Desktop";
+  const appName = isStaging ? "6529 Desktop Classic Staging" : "6529 Desktop Classic";
   if (platform === "mac") {
     return `${appName} v${version} for macOS`;
   } else if (platform === "win") {
@@ -194,7 +194,7 @@ async function processNewVersion(
 
   let htmlContent = `
     <div style="display: flex; align-items: center; gap: 1rem;">
-      <img src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x1000/0x0c58ef43ff3032005e472cb5709f8908acb00205/0.WEBP" alt="6529 Desktop" width="75" height="75">
+      <img src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x1000/0x0c58ef43ff3032005e472cb5709f8908acb00205/0.WEBP" alt="6529 Desktop Classic" width="75" height="75">
       <h1>${title}</h1>
     </div>
   `;

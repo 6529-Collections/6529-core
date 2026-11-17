@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import classicDesktop from "./config/classic-desktop.json";
 import { PRODUCTION_ASSET_PREFIX } from "./renderer/config/assetPrefix";
 import {
   FIRST_PARTY_MEDIA_RESOLVER_HOSTS,
@@ -437,11 +438,7 @@ interface PublicEnv {
   NEXT_PUBLIC_E2EE_DM_ENABLED?: string;
 }
 
-const CORE_SCHEMES = {
-  local: "localcore6529",
-  staging: "stagingcore6529",
-  production: "core6529",
-} as const;
+const CORE_SCHEMES = classicDesktop.schemes;
 
 type AppEnvironment = keyof typeof CORE_SCHEMES;
 

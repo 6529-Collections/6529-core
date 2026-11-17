@@ -335,7 +335,7 @@ export default function BrowserConnectorConnect(
       }
 
       if (!nativeAuthKey || !normalizedLiveAddress) {
-        setAuthError("Connect your wallet before returning to 6529 Desktop.");
+        setAuthError("Connect your wallet before returning to 6529 Desktop Classic.");
         return null;
       }
 
@@ -407,7 +407,7 @@ export default function BrowserConnectorConnect(
   const openApp = useCallback(async () => {
     setAuthError(null);
     if (!normalizedLiveAddress) {
-      setAuthError("Connect your wallet before returning to 6529 Desktop.");
+      setAuthError("Connect your wallet before returning to 6529 Desktop Classic.");
       return;
     }
 
@@ -647,7 +647,7 @@ export default function BrowserConnectorConnect(
         >
           <Col xs={12}>
             <span className={styles["circledNumber"]}>3</span>
-            <span>Transfer Connection to 6529 Desktop</span>
+            <span>Transfer Connection to 6529 Desktop Classic</span>
           </Col>
           <Col xs={12} className="pt-4">
             <Container>
@@ -658,7 +658,7 @@ export default function BrowserConnectorConnect(
                     onClick={openApp}
                     className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                   >
-                    Open 6529 Desktop
+                    Open 6529 Desktop Classic
                   </button>
                   {authError && (
                     <p className="tw-pt-3 tw-text-red" role="alert">
@@ -683,7 +683,7 @@ export default function BrowserConnectorConnect(
             </div>
             <div className={authModalStyles["signModalBody"]}>
               <p className={authModalStyles["signModalLead"]}>
-                6529 Desktop needs a desktop authentication signature for this
+                6529 Desktop Classic needs a desktop authentication signature for this
                 browser wallet connection.
               </p>
               <ul className={authModalStyles["signModalList"]}>

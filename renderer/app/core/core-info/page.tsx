@@ -13,5 +13,5 @@ export default function AppInfoPage() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return getAppMetadata({ title: "6529 Desktop Info" });
+  return getAppMetadata({ title: "6529 Desktop Classic Info" });
 }

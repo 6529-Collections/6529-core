@@ -81,9 +81,9 @@ test("Desktop heading markup reuses FE Network tokens inside a narrowly scoped w
 for (const [file, title] of [
   ["eth-scanner/ETHScanner", "ETH Transactions"],
   ["tdh-calculation/TDHCalculation", "TDH Calculation"],
-  ["core-wallet/SeedWallets", "6529 Desktop Wallets"],
+  ["core-wallet/SeedWallets", "6529 Desktop Classic Wallets"],
   ["core-wallet/SeedWalletImport", "Import Seed Wallet"],
-  ["app-info/AppInfo", "6529 Desktop About"],
+  ["app-info/AppInfo", "6529 Desktop Classic About"],
 ]) {
   test(`${file} keeps its title as one uniform Desktop page heading`, () => {
     const source = ts.createSourceFile(

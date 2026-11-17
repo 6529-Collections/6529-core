@@ -1,6 +1,6 @@
 {
   "appId": "com.6529.6529core",
-  "productName": "6529 Desktop",
+  "productName": "6529 Desktop Classic",
   "asar": true,
   "npmRebuild": false,
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
@@ -13,7 +13,7 @@
   "protocols": [
     {
       "name": "6529core",
-      "schemes": ["core6529"]
+      "schemes": ["classiccore6529"]
     }
   ],
   "files": [
@@ -88,13 +88,14 @@
       "CFBundleURLTypes": [
         {
           "CFBundleURLName": "com.6529.6529core",
-          "CFBundleURLSchemes": ["core6529"]
+          "CFBundleURLSchemes": ["classiccore6529"]
         }
       ]
     }
   },
   "win": {
     "icon": "assets/icon.ico",
+    "executableName": "6529 Desktop",
     "target": [
       {
         "target": "nsis",
@@ -120,7 +121,7 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "6529 Desktop"
+    "shortcutName": "6529 Desktop Classic"
   },
   "linux": {
     "icon": "assets",
@@ -148,18 +149,18 @@
     "artifactName": "6529-DESKTOP-linux-${arch}-${version}.${ext}",
     "desktop": {
       "entry": {
-        "Name": "6529 Desktop",
+        "Name": "6529 Desktop Classic",
         "Type": "Application",
         "Terminal": "false",
-        "MimeType": "x-scheme-handler/core6529;",
+        "MimeType": "x-scheme-handler/classiccore6529;",
         "Categories": "Utility;Network;",
-        "Comment": "6529 Desktop Application"
+        "Comment": "6529 Desktop Classic Application"
       }
     },
     "protocols": [
       {
-        "name": "6529 Desktop Protocol",
-        "schemes": ["core6529"]
+        "name": "6529 Desktop Classic Protocol",
+        "schemes": ["classiccore6529"]
       }
     ]
   }

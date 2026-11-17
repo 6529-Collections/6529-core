@@ -42,7 +42,7 @@ let updater: ReturnType<typeof createUpdater>;
 const openExternal = jest.fn();
 
 /**
- * The older 6529 Desktop reports no `supportsInAppUpdates` (it downloads
+ * The older 6529 Desktop Classic reports no `supportsInAppUpdates` (it downloads
  * and installs updates itself); the new app reports it as false.
  */
 const installDesktopShell = (info: Record<string, unknown> = {}) => {
@@ -97,7 +97,7 @@ describe("DesktopUpdateNotice", () => {
 
     updater.emit("available", { version: "2.1.0" });
     expect(
-      screen.getByText("6529 Desktop 2.1.0 is available.")
+      screen.getByText("6529 Desktop Classic 2.1.0 is available.")
     ).toBeInTheDocument();
 
     await user.click(
@@ -221,7 +221,7 @@ describe("DesktopUpdateNotice", () => {
           await screen.findByRole("button", { name: "Open download page" })
         );
 
-        expect(openExternal).toHaveBeenCalledWith("https://6529.io/desktop");
+        expect(openExternal).toHaveBeenCalledWith("https://6529.io/about/6529-apps");
         expect(updater.downloadUpdate).not.toHaveBeenCalled();
       }
     );
@@ -240,7 +240,7 @@ describe("DesktopUpdateNotice", () => {
       );
 
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "The download page did not open. Open https://6529.io/desktop in your browser."
+        "The download page did not open. Open https://6529.io/about/6529-apps in your browser."
       );
       expect(updater.downloadUpdate).not.toHaveBeenCalled();
     });
@@ -261,7 +261,7 @@ describe("DesktopUpdateNotice", () => {
       await user.click(
         await screen.findByRole("button", { name: "Open download page" })
       );
-      expect(openExternal).toHaveBeenCalledWith("https://6529.io/desktop");
+      expect(openExternal).toHaveBeenCalledWith("https://6529.io/about/6529-apps");
       expect(updater.downloadUpdate).not.toHaveBeenCalled();
     });
   });
@@ -273,7 +273,7 @@ describe("DesktopUpdateNotice", () => {
 
     updater.emit("available", { version: "<script>" });
     expect(
-      screen.getByText("A new version of 6529 Desktop is available.")
+      screen.getByText("A new version of 6529 Desktop Classic is available.")
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Not now" }));

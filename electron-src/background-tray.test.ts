@@ -11,7 +11,7 @@ describe("background tray menu", () => {
     });
     assert.deepEqual(
       menu.map((item) => ("label" in item ? item.label : item.type)),
-      ["Open 6529 Desktop", "separator", "Quit 6529 Desktop"],
+      ["Open 6529 Desktop Classic", "separator", "Quit 6529 Desktop Classic"],
     );
     for (const item of menu) {
       if ("click" in item) item.click?.();

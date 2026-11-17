@@ -14,7 +14,7 @@ import {
 import { assertTypedDataRoot } from "../renderer/wagmiConfig/typedDataRoot";
 
 /**
- * Wallet requests that 6529 Desktop hands to a browser wallet through the
+ * Wallet requests that 6529 Desktop Classic hands to a browser wallet through the
  * browser connector page. The main process is the only place a request can
  * be created: it validates the request, binds it to the signed-in address and
  * chain, gives it a one-time random id with an expiry on its own clock, and

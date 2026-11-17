@@ -12,7 +12,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { AppSession, detectEnvironment, freePort, ProtocolHandlerGuard, scratchDir, sleep, waitFor } from "./lib/app";
+import { AppSession, detectEnvironment, freePort, ProtocolHandlerGuard, scratchDir, schemeFor, sleep, waitFor } from "./lib/app";
 import { sampleTree, totals } from "./lib/process-tree";
 import { readPackagedFile } from "./checks/pages";
 
@@ -137,7 +137,7 @@ async function main(): Promise<number> {
   const publicRuntime = JSON.parse((await readPackagedFile(exe, "main/config/__PUBLIC_RUNTIME.json")) ?? "{}");
   const packageJson = JSON.parse((await readPackagedFile(exe, "package.json")) ?? "{}");
   const label = typeof args.label === "string" ? args.label : `${packageJson.version ?? "unknown"}-${detectEnvironment(exe)}`;
-  const guard = new ProtocolHandlerGuard(publicRuntime.CORE_SCHEME ?? "stagingcore6529", work);
+  const guard = new ProtocolHandlerGuard(publicRuntime.CORE_SCHEME ?? schemeFor(detectEnvironment(exe)), work);
   guard.save();
   const runs: RunResult[] = [];
   try {

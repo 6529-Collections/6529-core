@@ -27,6 +27,6 @@ describe("readDesktopDownloadPage", () => {
     [{ downloadPage: `https://6529.io/${"a".repeat(2100)}` }],
     [{ downloadPage: "file:///C:/x.exe" }],
   ])("falls back to the 6529.io download page for %j", (info) => {
-    expect(readDesktopDownloadPage(info)).toBe("https://6529.io/desktop");
+    expect(readDesktopDownloadPage(info)).toBe("https://6529.io/about/6529-apps");
   });
 });

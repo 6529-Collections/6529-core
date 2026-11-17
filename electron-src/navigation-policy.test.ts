@@ -38,7 +38,7 @@ describe("desktop navigation policy", () => {
     assert.equal(
       shouldOpenInExternalBrowser(
         "http://localhost:6529/waves",
-        "localcore6529://navigate/the-memes",
+        "localclassiccore6529://navigate/the-memes",
       ),
       false,
     );
@@ -63,7 +63,7 @@ describe("IPFS window navigation", () => {
 
   it("drops other schemes and malformed addresses", () => {
     assert.equal(pinnedWindowNavigation(webui, "file:///C:/Windows/win.ini"), "block");
-    assert.equal(pinnedWindowNavigation(webui, "stagingcore6529://navigate/waves"), "block");
+    assert.equal(pinnedWindowNavigation(webui, "stagingclassiccore6529://navigate/waves"), "block");
     assert.equal(pinnedWindowNavigation(webui, "not a url"), "block");
   });
 });

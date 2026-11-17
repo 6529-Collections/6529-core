@@ -1,6 +1,8 @@
 // Must stay the first import: sets the working folder before other modules load.
 import "./startup-cwd-apply";
 import { DeepLinkQueue } from "./deep-link-queue";
+import classicDesktop from "../config/classic-desktop.json";
+import { registerClassicDesktopProtocol } from "./classic-desktop-protocol";
 import {
   crashReporter,
   ipcMain,
@@ -1259,6 +1261,9 @@ if (!gotTheLock) {
     receiveDeepLink(url);
   });
 
+  // Windows and Linux pass the URL as a command-line argument on cold start.
+  receiveDeepLink(process.argv.find((arg) => arg.startsWith(`${getScheme()}://`)));
+
   app.on("window-all-closed", () => {
     Logger.info("All windows closed");
   });
@@ -1272,7 +1277,9 @@ if (!gotTheLock) {
   Menu.setApplicationMenu(menu);
 
   app.whenReady().then(async () => {
+    // Preserve the previous runtime name for existing Electron storage.
     app.setName("6529 Desktop");
+    app.setAboutPanelOptions({ applicationName: classicDesktop.displayName });
     const scheme = getScheme();
     protocol.handle(scheme, (_request) => {
       if (mainWindow) {
@@ -1282,8 +1289,8 @@ if (!gotTheLock) {
       return new Response("App focused");
     });
 
-    if (!app.isDefaultProtocolClient(scheme)) {
-      app.setAsDefaultProtocolClient(scheme);
+    if (!registerClassicDesktopProtocol(app, scheme, process.platform)) {
+      Logger.warn("Unable to complete Classic protocol registration", scheme);
     }
 
     if (isMac() && isDev) {
@@ -1306,7 +1313,7 @@ if (!gotTheLock) {
     } catch (error) {
       Logger.error("Failed to start the Desktop renderer server", error);
       dialog.showErrorBox(
-        "Unable to start 6529 Desktop",
+        `Unable to start ${classicDesktop.displayName}`,
         "The local Desktop interface could not start. Fully quit and reopen the app. If the problem continues, check the application logs.",
       );
       app.exit(1);
@@ -1598,6 +1605,7 @@ async function openMainWindow() {
     y: windowState?.y ?? undefined,
     width: windowState?.width ?? 500,
     height: windowState?.height ?? 500,
+    title: classicDesktop.displayName,
     icon: iconPath,
     backgroundColor: "#222",
     titleBarStyle: "hidden",
@@ -2301,7 +2309,7 @@ ipcMain.handle("restart-for-local-ipfs", (event) => {
 ipcMain.handle("get-main-worker", () => {
   const mainTask = {
     namespace: "6529 Desktop",
-    display: "6529 Desktop",
+    display: classicDesktop.displayName,
     logFile: getMainLogsPath(),
     cronExpression: null,
   };
