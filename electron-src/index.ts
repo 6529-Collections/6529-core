@@ -4,6 +4,7 @@ import { DeepLinkQueue } from "./deep-link-queue";
 import {
   crashReporter,
   ipcMain,
+  type Event as ElectronEvent,
   IpcMainEvent,
   IpcMainInvokeEvent,
   protocol,
@@ -1738,7 +1739,11 @@ function initListeners(mw: BrowserWindow) {
     return { action: "allow" };
   });
 
-  mw.webContents.on("will-navigate", (event, url) => {
+  const handleExternalNavigation = (
+    event: ElectronEvent<{ url: string; isMainFrame: boolean }>
+  ) => {
+    if (!event.isMainFrame) return;
+    const { url } = event;
     if (isLocalIpfsApiUrl(url)) {
       Logger.info(
         "Preventing main window IPFS navigation and opening dedicated BrowserWindow:",
@@ -1759,7 +1764,9 @@ function initListeners(mw: BrowserWindow) {
         Logger.error("Failed to open external web URL:", getNavigationLogUrl(url));
       });
     }
-  });
+  };
+  mw.webContents.on("will-navigate", handleExternalNavigation);
+  mw.webContents.on("will-redirect", handleExternalNavigation);
 
   mw.webContents.on("did-navigate", updateNavigationState);
   mw.webContents.on("did-navigate-in-page", updateNavigationState);
