@@ -10,6 +10,10 @@ import { useAuth } from "@/components/auth/Auth";
 import ChatBubbleIcon from "@/components/common/icons/ChatBubbleIcon";
 import DropForgeIcon from "@/components/common/icons/DropForgeIcon";
 import { useMembershipNavigation } from "@/hooks/useMembershipNavigation";
+import {
+  AI_NAVIGATION,
+  isAiNavigationActive,
+} from "@/components/navigation/aiNavigation";
 import WatchTowerIcon from "@/components/common/icons/WatchTowerIcon";
 import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import {
@@ -460,6 +464,15 @@ const WebSidebarNav = React.forwardRef<
             }
             collapsed={isCollapsed}
             label={membershipNavigation.label}
+          />
+        </li>
+        <li>
+          <WebSidebarNavItem
+            href={AI_NAVIGATION.href}
+            icon={AI_NAVIGATION.icon}
+            active={isAiNavigationActive(safePathname)}
+            collapsed={isCollapsed}
+            label={AI_NAVIGATION.label}
           />
         </li>
 

@@ -553,6 +553,17 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     redirects() {
       return Promise.resolve([
+        // The installed app has no access to the website's private release buckets.
+        {
+          source: "/desktop/:path*",
+          destination: "https://6529.io/desktop/:path*",
+          permanent: false,
+        },
+        {
+          source: "/ai/:path*",
+          destination: "https://6529.io/ai/:path*",
+          permanent: false,
+        },
         {
           source: "/delegation/delegation-center",
           destination: "/safe-collecting",
