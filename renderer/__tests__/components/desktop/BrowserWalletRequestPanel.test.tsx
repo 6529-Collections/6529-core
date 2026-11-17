@@ -351,7 +351,7 @@ describe("BrowserWalletRequestPanel", () => {
       screen.queryByRole("button", { name: "Sign in wallet" })
     ).not.toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "Tell 6529 Desktop and close" })
+      screen.getByRole("button", { name: "Tell 6529 Desktop Classic and close" })
     );
     expect(returnedData()).toEqual({
       v: 1,

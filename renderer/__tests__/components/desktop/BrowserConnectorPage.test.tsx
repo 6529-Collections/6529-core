@@ -88,7 +88,7 @@ describe("BrowserConnectorPage", () => {
     if (label) {
       expect(screen.getByText(label)).toBeInTheDocument();
     } else {
-      expect(screen.queryByText(/returns to 6529 Desktop/)).toBeNull();
+      expect(screen.queryByText(/returns to 6529 Desktop Classic/)).toBeNull();
     }
   });
 
@@ -120,7 +120,7 @@ describe("BrowserConnectorPage", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Sign and return to 6529 Desktop",
+        name: "Sign and return to 6529 Desktop Classic",
       })
     );
 
@@ -185,7 +185,7 @@ describe("BrowserConnectorPage", () => {
         render(<BrowserConnectorPage />);
         await user.click(
           await screen.findByRole("button", {
-            name: "Sign and return to 6529 Desktop",
+            name: "Sign and return to 6529 Desktop Classic",
           })
         );
 
@@ -206,7 +206,7 @@ describe("BrowserConnectorPage", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Sign and return to 6529 Desktop",
+        name: "Sign and return to 6529 Desktop Classic",
       })
     );
 
