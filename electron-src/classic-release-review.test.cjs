@@ -30,19 +30,25 @@ function loadRenderer(file, globals, dependencies) {
   return exports;
 }
 
-function connectorHarness(getInfo) {
+function connectorHarness(getInfo, storedConnection = null) {
   const opened = [];
   const listeners = [];
+  const removed = [];
   const connectorModule = loadRenderer(
     "renderer/wagmiConfig/browserConnector.ts",
     {
       window: {
-        store: { get: async () => null },
+        store: {
+          get: async () => storedConnection,
+          remove: async (key) => removed.push(key),
+        },
+        dispatchEvent: () => {},
         api: {
           getInfo,
           onWalletConnection: (listener) => listeners.push(listener),
         },
       },
+      CustomEvent,
     },
     {
       wagmi: { createConnector: (factory) => factory({}) },
@@ -69,6 +75,7 @@ function connectorHarness(getInfo) {
     }),
     opened,
     listeners,
+    removed,
   };
 }
 
@@ -128,6 +135,38 @@ test("desktop-info failure rejects connection and permits a clean retry", async 
   });
   await rejected;
 });
+
+for (const infoFails of [false, true]) {
+  test(`disconnect clears stored accounts after pending initialization ${infoFails ? "fails" : "succeeds"}`, async () => {
+    let finishInfo;
+    let failInfo;
+    const info = new Promise((resolve, reject) => {
+      finishInfo = resolve;
+      failInfo = reject;
+    });
+    const storedConnection = JSON.stringify({
+      accounts: ["0x00000000000000000000000000000000000000aa"],
+      chainId: 1,
+    });
+    const { connector, removed } = connectorHarness(() => info, storedConnection);
+    const initialization = connector.getProvider();
+    const initialized = infoFails
+      ? assert.rejects(initialization, /Desktop info unavailable/)
+      : initialization;
+    let disconnected = false;
+    const disconnection = connector.disconnect().then(() => {
+      disconnected = true;
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(disconnected, false);
+    assert.equal(removed.length, 0);
+    if (infoFails) failInfo(new Error("Desktop info unavailable"));
+    else finishInfo({ scheme: "stagingclassiccore6529", port: 6530 });
+    await Promise.all([initialized, disconnection]);
+    assert.equal((await connector.getAccounts()).length, 0);
+    assert.deepEqual(removed, ["seize-app-connection-browser"]);
+  });
+}
 
 function hostedFeed(fetch) {
   return loadRenderer(

@@ -1184,6 +1184,7 @@ export function browserConnector(parameters: {
       });
     },
     async disconnect() {
+      await initialization?.catch(() => undefined);
       deepLinkCallbacks.clear();
       clearAllPendingDeepLinkResponses();
       connectionObject = {
