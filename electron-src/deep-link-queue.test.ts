@@ -99,7 +99,8 @@ test("OS deep links queue through cold startup and reopen an initialized window"
   );
   const events = new Map<string, Function>();
   const declarations: string[] = [];
-  const coldLink = "LOCALCLASSICCORE6529://navigate?path=/connection/accept#cold";
+  const coldLink =
+    "LOCALCLASSICCORE6529://navigate?path=/connection/accept#cold";
   const visit = (node: ts.Node) => {
     if (
       ts.isFunctionDeclaration(node) &&
@@ -119,7 +120,9 @@ test("OS deep links queue through cold startup and reopen an initialized window"
       ts.isExpressionStatement(node) &&
       ts.isCallExpression(node.expression) &&
       node.expression.expression.getText(source) === "receiveDeepLink" &&
-      node.expression.arguments[0]?.getText(source).startsWith("process.argv.find")
+      node.expression.arguments[0]
+        ?.getText(source)
+        .startsWith("process.argv.find")
     )
       declarations.push(node.getText(source));
     ts.forEachChild(node, visit);
@@ -166,8 +169,20 @@ test("OS deep links queue through cold startup and reopen an initialized window"
   assert.equal(reopened, 0);
   context.mainWindowStartupComplete = true;
   const openUrl = events.get("open-url")!;
-  for (const scheme of ["core6529", "localcore6529", "stagingclassiccore6529", "https"]) {
-    openUrl({ preventDefault() {} }, `${scheme}://navigate/connection/accept#wrong-app`);
+  for (const scheme of [
+    "core6529",
+    "localcore6529",
+    "stagingclassiccore6529",
+    "https",
+  ]) {
+    openUrl(
+      {
+        preventDefault() {
+          assert.fail("another app's URL must keep its default handling");
+        },
+      },
+      `${scheme}://navigate/connection/accept#wrong-app`,
+    );
   }
   assert.equal(links.length, 2);
   assert.equal(reopened, 0);

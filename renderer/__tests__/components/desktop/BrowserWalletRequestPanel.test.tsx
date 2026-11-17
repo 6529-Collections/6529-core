@@ -175,7 +175,7 @@ describe("BrowserWalletRequestPanel", () => {
       value: SIGNATURE,
     });
     expect(
-      screen.getByRole("link", { name: "Open 6529 Desktop" })
+      screen.getByRole("link", { name: "Open 6529 Desktop Classic" })
     ).toHaveAttribute("href", assign.mock.calls[0][0]);
   });
 

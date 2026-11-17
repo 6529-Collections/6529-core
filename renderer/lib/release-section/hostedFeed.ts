@@ -39,14 +39,28 @@ async function readPart(url: string, maxBytes: number): Promise<Part> {
       discardResponse(response);
       return { state: "error", reason: "hosted feed object is too large" };
     }
-    const body = new Uint8Array(await response.arrayBuffer());
-    if (body.byteLength > maxBytes) {
-      return { state: "error", reason: "hosted feed object is too large" };
+    // Preserve signed bytes and cap allocation even for chunked responses.
+    const body = new Uint8Array(maxBytes);
+    let length = 0;
+    const reader = response.body?.getReader();
+    try {
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value.byteLength > maxBytes - length) {
+          void reader.cancel().catch(() => undefined);
+          return { state: "error", reason: "hosted feed object is too large" };
+        }
+        body.set(value, length);
+        length += value.byteLength;
+      }
+    } finally {
+      reader?.releaseLock();
     }
     return {
       state: "ok",
       object: {
-        body,
+        body: body.subarray(0, length),
         etag: response.headers.get("etag"),
         lastModified: response.headers.get("last-modified"),
       },
