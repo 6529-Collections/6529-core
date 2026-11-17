@@ -528,6 +528,9 @@ jobs:
     name: Windows (AzureSignTool)
     runs-on: windows-latest
     timeout-minutes: 45
+    env:
+      # The NSIS uninstaller: the one x86 program taken, under exactly this name.
+      UNINSTALLER: nsis/uninstall.exe
     defaults:
       run:
         shell: pwsh
@@ -581,8 +584,7 @@ jobs:
             if ($h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090 -and [BitConverter]::ToUInt32($h, $pe) -eq 0x00004550) { return [int][BitConverter]::ToUInt16($h, $pe + 4) }
             return -1
           }
-          # The NSIS uninstaller is the one x86 program taken, under exactly this name.
-          $uninstaller = 'nsis/uninstall.exe'
+          $uninstaller = $env:UNINSTALLER
           $zip = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $temp 'bundle.zip'))
           try {
             $facts = $null
@@ -759,7 +761,7 @@ jobs:
                 $checked = 0
                 foreach ($f in @($facts.files)) {
                   # makensis stores the uninstaller in a form 7-Zip does not extract (header comment).
-                  if ([string]$f.path -ceq 'nsis/uninstall.exe') { Write-Output "$($setup.Name): nsis/uninstall.exe (signed, SHA-256 $($f.sha256)) is not extractable with 7-Zip; not checked here"; continue }
+                  if ([string]$f.path -ceq $env:UNINSTALLER) { Write-Output "$($setup.Name): $($env:UNINSTALLER) (signed, SHA-256 $($f.sha256)) is not extractable with 7-Zip; not checked here"; continue }
                   $checked++
                   if (-not $inside.ContainsKey([string]$f.sha256)) { throw "$($setup.Name) does not hold $($f.path) as signed (SHA-256 $($f.sha256))" }
                   if ($f.role -ceq 'sign') {
