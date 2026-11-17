@@ -15,6 +15,11 @@ const HOSTED_FEED_URLS: Readonly<Record<string, string>> = {
   [FEED_SIGNATURE_OBJECT_KEY]: "https://6529.io/validator/releases.json.sig",
 };
 
+export type BucketLocation = {
+  readonly bucket: string;
+  readonly region: string;
+};
+
 export type BucketObject =
   | {
       readonly state: "found";
