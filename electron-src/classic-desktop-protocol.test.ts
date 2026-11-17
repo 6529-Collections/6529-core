@@ -155,6 +155,9 @@ test("all packaged builds declare their Classic name and scheme under their exis
       ),
       [scheme],
     );
+    if (environment !== "local") {
+      assert.equal(config.mac.extendInfo.CFBundleExecutable, name.replace(" Classic", ""));
+    }
     if (config.win) {
       assert.equal(config.win.executableName, name.replace(" Classic", ""));
       assert.equal(config.nsis.shortcutName, name);

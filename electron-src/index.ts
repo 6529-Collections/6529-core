@@ -2,6 +2,7 @@
 import "./startup-cwd-apply";
 import { DeepLinkQueue } from "./deep-link-queue";
 import classicDesktop from "../config/classic-desktop.json";
+import { startClassicMacBundleMove } from "./classic-mac-bundle";
 import { registerClassicDesktopProtocol } from "./classic-desktop-protocol";
 import {
   crashReporter,
@@ -1285,6 +1286,22 @@ if (!gotTheLock) {
   Menu.setApplicationMenu(menu);
 
   app.whenReady().then(async () => {
+    if (isMac() && app.isPackaged && !pendingDeepLinks.hasPending) {
+      try {
+        const completeMove = await startClassicMacBundleMove(getEnvironment());
+        if (completeMove) {
+          // Keep private links in this process if one arrived during startup.
+          const shouldMove = !pendingDeepLinks.hasPending;
+          await completeMove(shouldMove);
+          if (shouldMove) {
+            app.exit(0);
+            return;
+          }
+        }
+      } catch (error) {
+        Logger.warn("Could not start the Classic app bundle move", error);
+      }
+    }
     // The packaged manifest keeps the initial name 6529-core, which Electron
     // uses for userData and the instance lock. Keep the previous ready-time
     // name as well, so backends that use the runtime name still find their keys.

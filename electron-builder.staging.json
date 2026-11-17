@@ -86,6 +86,7 @@
     ],
     "artifactName": "6529-DESKTOP-STAGING-mac-${arch}-${version}.${ext}",
     "extendInfo": {
+      "CFBundleExecutable": "6529 Desktop Staging",
       "CFBundleURLTypes": [
         {
           "CFBundleURLName": "com.6529.6529stagingcore",

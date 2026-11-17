@@ -78,6 +78,7 @@
     ],
     "artifactName": "6529-DESKTOP-mac-${arch}-${version}.${ext}",
     "extendInfo": {
+      "CFBundleExecutable": "6529 Desktop",
       "CFBundleURLTypes": [
         {
           "CFBundleURLName": "com.6529.6529core",
