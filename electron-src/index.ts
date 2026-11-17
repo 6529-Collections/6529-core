@@ -1264,6 +1264,7 @@ if (!gotTheLock) {
 
   app.on("before-quit", () => {
     Logger.info("Before quitting app");
+    browserWalletRequests.cancelAll();
   });
 
   const menu = Menu.buildFromTemplate(menuTemplate);
@@ -2083,6 +2084,7 @@ function destroyMainWindow(): void {
   isMainWindowCloseAuthorized = true;
   try {
     seedWalletSession.lock();
+    browserWalletRequests.cancelAll();
     windowToDestroy.webContents.removeAllListeners();
     windowToDestroy.destroy();
     if (mainWindow === windowToDestroy) {

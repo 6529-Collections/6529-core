@@ -145,7 +145,7 @@ function RefusedRequest({ message }: { readonly message: string }) {
     <Container>
       <Row>
         <Col>
-          <p role="alert">{message}</p>
+          <p role="status">{message}</p>
           <p>
             Nothing will be signed. Close this window and retry from 6529
             Desktop.
@@ -375,7 +375,7 @@ export default function BrowserConnectorProvider(
       <Container>
         <Row>
           <Col>
-            <p>Loading the wallet request…</p>
+            <p role="status">Loading the wallet request…</p>
           </Col>
         </Row>
       </Container>
@@ -445,10 +445,21 @@ export default function BrowserConnectorProvider(
             {description?.warnings.map((warning) => (
               <Row className="pt-3" key={warning}>
                 <Col xs={12} className="text-danger">
-                  <span role="alert">{warning}</span>
+                  <span>
+                    <strong>Warning:</strong> {warning}
+                  </span>
                 </Col>
               </Row>
             ))}
+            <span role="status" className="tw-sr-only">
+              {isSigning
+                ? "Waiting for your wallet…"
+                : isSwitching
+                  ? "Switching network…"
+                  : isSuccess
+                    ? "Signed. Returning to 6529 Desktop."
+                    : ""}
+            </span>
             <Row>
               <Col>
                 {canSignProviderRequest ? (
@@ -483,7 +494,7 @@ export default function BrowserConnectorProvider(
                         notice={walletIntentNotice}
                       />
                     ) : isWrongChain && requiredChainId !== null ? (
-                      <p role="alert">
+                      <p role="status">
                         Your wallet is on another network. Switch it to{" "}
                         {browserWalletChainName(requiredChainId)} to continue.
                       </p>

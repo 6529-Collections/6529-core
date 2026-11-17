@@ -4,8 +4,9 @@ import type { BrowserWalletClaim } from "./browser-wallet-requests";
 /**
  * The app server endpoint the browser connector page uses to read the
  * request 6529 Desktop issued, by its one-time id. Only the page itself can
- * call it: same-origin POST with a custom header, the app's own Host, no
- * CORS headers. It never lists requests; it answers only for a known id.
+ * call it: same-origin POST (Sec-Fetch-Site required; the supported browsers
+ * send it) with a custom header, the app's own Host, no CORS headers. It
+ * never lists requests; it answers only for a known id.
  */
 export const BROWSER_WALLET_REQUEST_PATH = "/_desktop/browser-wallet-request";
 export const BROWSER_WALLET_REQUEST_HEADER = "x-6529-browser-connector";
@@ -54,7 +55,7 @@ export function isSameOriginPageRequest(req: IncomingMessage): boolean {
     !!origin &&
     hosts.some((allowed) => origin === `http://${allowed}`) &&
     origin === `http://${host}` &&
-    (fetchSite === undefined || fetchSite === "same-origin") &&
+    fetchSite === "same-origin" &&
     header(req, BROWSER_WALLET_REQUEST_HEADER) === "1" &&
     contentType.split(";")[0].trim() === "application/json"
   );

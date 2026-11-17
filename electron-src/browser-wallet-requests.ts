@@ -28,6 +28,7 @@ export const BROWSER_WALLET_CHAIN_IDS: readonly number[] = [1, 11155111];
 
 const MAX_MESSAGE_BYTES = 16 * 1024;
 const MAX_TYPED_DATA_CHARS = 64 * 1024;
+const MAX_TX_DATA_BYTES = 64 * 1024;
 const MAX_ERROR_MESSAGE_CHARS = 200;
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const HEX_DATA_PATTERN = /^0x(?:[0-9a-fA-F]{2})*$/;
@@ -179,7 +180,7 @@ function readTransaction(
   if (typeof callData !== "string" || !HEX_DATA_PATTERN.test(callData)) {
     return refuse("invalid", "The transaction data is malformed.");
   }
-  if ((callData.length - 2) / 2 > MAX_TYPED_DATA_CHARS) {
+  if ((callData.length - 2) / 2 > MAX_TX_DATA_BYTES) {
     return refuse("invalid", "The transaction data is too large.");
   }
   return {
@@ -496,6 +497,8 @@ function verifyResult(view: BrowserWalletRequestView, result: string): boolean {
         );
       }
       case "eth_sendTransaction":
+        // A hash cannot be tied to the issued recipient, value and data
+        // without reading the chain; the page sends exactly the issued fields.
         return TX_HASH_PATTERN.test(result) && isHexString(result, 32);
     }
   } catch {

@@ -300,3 +300,16 @@ describe("browser wallet request store", () => {
     assert.equal(isBrowserWalletReturnFormat({ requestId: "x", data: {} }), false);
   });
 });
+
+describe("browser wallet request lifecycle", () => {
+  it("settles open requests as cancelled when the app window goes away", async () => {
+    const { store } = createStore();
+    const created = store.create(personalSign());
+    assert.ok(created.ok);
+    if (!created.ok) return;
+    store.cancelAll();
+    assert.equal(store.size, 0);
+    assert.equal(((await created.done) as { code?: string }).code, "cancelled");
+    assert.deepEqual(store.claim(created.id), { ok: false, code: "unknown" });
+  });
+});

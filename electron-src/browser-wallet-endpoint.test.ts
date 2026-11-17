@@ -97,6 +97,7 @@ describe("browser wallet request endpoint", () => {
       { Origin: undefined },
       { "Sec-Fetch-Site": "cross-site" },
       { "Sec-Fetch-Site": "same-site" },
+      { "Sec-Fetch-Site": undefined },
       { [BROWSER_WALLET_REQUEST_HEADER]: undefined },
       { "Content-Type": "text/plain" },
       { Host: `example.com:${port}`, Origin: `http://example.com:${port}` },
