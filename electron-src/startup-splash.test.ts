@@ -5,8 +5,10 @@ import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import classicDesktop from "../config/classic-desktop.json";
 import { CORE_TITLEBAR_HEIGHT_PX } from "../shared/desktop-titlebar";
 import { observeLocalGatewayFrameFailures } from "./ipfs/local-gateway-frame-failures";
+import { shouldOpenInExternalBrowser } from "./navigation-policy";
 
 const source = ts.createSourceFile(
   "index.ts",
@@ -19,6 +21,7 @@ const functions = [
   "initCoreOnce",
   "createWindow",
   "openMainWindow",
+  "initListeners",
   "createSplash",
   "updateSplashMessage",
   "sendSplashCardIfReady",
@@ -43,20 +46,25 @@ function createHarness(
   savedArtwork = false,
   createScheduledTasks: () => Promise<void> = async () => undefined,
   initializeDatabase: () => Promise<void> = async () => undefined,
+  startupRedirect?: string,
 ) {
   const timerDelays: number[] = [];
   const calls = { initDb: 0, migrations: 0, scheduledTasks: 0 };
   const sent: Array<{ channel: string; payload: unknown }> = [];
   const errors: unknown[][] = [];
+  const externalUrls: string[] = [];
   const windows: FakeWindow[] = [];
   class FakeWindow extends EventEmitter {
     destroyed = false;
     visible = false;
+    startupRedirectCanceled = false;
     webContents = Object.assign(new EventEmitter(), {
+      getURL: () => "",
+      setWindowOpenHandler: () => undefined,
       send: (channel: string, payload: unknown) =>
         sent.push({ channel, payload }),
     });
-    constructor(readonly options: { show?: boolean; frame?: boolean }) {
+    constructor(readonly options: { show?: boolean; frame?: boolean; title?: string }) {
       super();
       this.visible = options.show !== false;
       windows.push(this);
@@ -65,6 +73,16 @@ function createHarness(
       return this.destroyed;
     }
     loadURL() {
+      if (startupRedirect && this.options.frame !== false) {
+        const handled = this.webContents.emit("will-redirect", {
+          url: startupRedirect,
+          isMainFrame: true,
+          preventDefault: () => {
+            this.startupRedirectCanceled = true;
+          },
+        });
+        assert.equal(handled, true, "the redirect handler is ready for the first load");
+      }
       return Promise.resolve();
     }
     show() {
@@ -87,6 +105,7 @@ function createHarness(
     latestSplashMessage: "Loading",
     BrowserWindow: FakeWindow,
     CORE_TITLEBAR_HEIGHT_PX,
+    classicDesktop,
     path,
     __dirname: "/FAKE",
     PORT: 3000,
@@ -125,7 +144,15 @@ function createHarness(
       return createScheduledTasks();
     },
     process: { on: noop },
-    initListeners: noop,
+    isLocalIpfsApiUrl: () => false,
+    shouldOpenInExternalBrowser,
+    getNavigationLogUrl: (url: string) => url,
+    shell: {
+      openExternal: async (url: string) => {
+        externalUrls.push(url);
+      },
+    },
+    updateNavigationState: noop,
     screen: {
       getPrimaryDisplay: () => ({ workAreaSize: { width: 1200, height: 800 } }),
     },
@@ -154,6 +181,7 @@ function createHarness(
     windows,
     timerDelays,
     errors,
+    externalUrls,
     get main() {
       return windows.filter((window) => window.options.frame !== false).at(-1)!;
     },
@@ -183,6 +211,7 @@ test("startup shows the splash immediately while database initialization is pend
   finishDatabase();
   await launch;
   assert.equal(h.main.visible, false);
+  assert.equal(h.main.options.title, "6529 Desktop Classic");
 });
 
 test("even fast startup shows a splash and switches to the ready main window without a delay", async () => {
@@ -194,6 +223,25 @@ test("even fast startup shows a splash and switches to the ready main window wit
   assert.equal(h.windows.length, 2);
   assert.equal(h.main.visible, true);
   assert.equal(h.splash.destroyed, true);
+});
+
+test("startup keeps the staging access redirect in the renderer at its bound port", async () => {
+  const url = "http://localhost:3000/access?returnTo=%2F";
+  const h = createHarness(false, undefined, undefined, url);
+  await h.launch();
+  assert.equal(h.main.startupRedirectCanceled, false);
+  assert.deepEqual(h.externalUrls, []);
+  await h.ready();
+  assert.equal(h.main.visible, true);
+  assert.equal(h.splash.destroyed, true);
+});
+
+test("startup opens a hosted release redirect in the system browser", async () => {
+  const url = "https://6529.io/desktop/releases";
+  const h = createHarness(false, undefined, undefined, url);
+  await h.launch();
+  assert.equal(h.main.startupRedirectCanceled, true);
+  assert.deepEqual(h.externalUrls, [url]);
 });
 
 test("profile restoration stays behind the splash until the renderer commits its ready or failure screen", async () => {

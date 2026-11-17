@@ -57,6 +57,10 @@ export const getStagingApiKey = (): string | undefined =>
 export const getFarcasterWarpcastApiKey = (): string | undefined =>
   getOptionalServerValue(process.env["FARCASTER_WARPCAST_API_KEY"]);
 
+// The Electron main process sets this before preparing the embedded server.
+export const isDesktopRendererServer = (): boolean =>
+  Boolean(process.env["DESKTOP_RENDERER_DIR"]);
+
 /** Address of the desktop shell's per-run wallet request signer. */
 export function getDesktopWalletRequestSigner(
   env: NodeJS.ProcessEnv = process.env

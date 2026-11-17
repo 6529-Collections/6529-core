@@ -13,28 +13,28 @@ interface ElectronBuilderConfig {
 
 const EXPECTED_DESKTOP_ENTRIES = {
   "electron-builder.local.json": {
-    Name: "6529 Desktop Local",
+    Name: "6529 Desktop Classic Local",
     Type: "Application",
     Terminal: "false",
-    MimeType: "x-scheme-handler/localcore6529;",
+    MimeType: "x-scheme-handler/localclassiccore6529;",
     Categories: "Utility;Network;",
-    Comment: "6529 Desktop Local Application",
+    Comment: "6529 Desktop Classic Local Application",
   },
   "electron-builder.staging.json": {
-    Name: "6529 Desktop Staging",
+    Name: "6529 Desktop Classic Staging",
     Type: "Application",
     Terminal: "false",
-    MimeType: "x-scheme-handler/stagingcore6529;",
+    MimeType: "x-scheme-handler/stagingclassiccore6529;",
     Categories: "Utility;Network;",
-    Comment: "6529 Desktop Staging Application",
+    Comment: "6529 Desktop Classic Staging Application",
   },
   "electron-builder.production.json": {
-    Name: "6529 Desktop",
+    Name: "6529 Desktop Classic",
     Type: "Application",
     Terminal: "false",
-    MimeType: "x-scheme-handler/core6529;",
+    MimeType: "x-scheme-handler/classiccore6529;",
     Categories: "Utility;Network;",
-    Comment: "6529 Desktop Application",
+    Comment: "6529 Desktop Classic Application",
   },
 } as const;
 

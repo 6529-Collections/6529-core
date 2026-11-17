@@ -8,7 +8,7 @@ const origin = "http://localhost:6529";
 test("receiving a second setup link on the same page retains the new code and secret", () => {
   const path = getConnectionDeepLinkNavigation(
     new URL(
-      "core6529://share-connection?connection_share_code=new-code#setup=new-secret",
+      "classiccore6529://share-connection?connection_share_code=new-code#setup=new-secret",
     ),
   );
   assert.ok(path);

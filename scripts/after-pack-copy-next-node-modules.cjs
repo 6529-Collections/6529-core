@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const { createRequire } = require("node:module");
 const os = require("node:os");
@@ -17,6 +18,7 @@ const { refreshPackedAsarIntegrity } = require("./helpers/asar-integrity.cjs");
 const { pruneInactiveReviewVersions } = require("./helpers/review-data.cjs");
 const { pruneSqliteModule } = require("./helpers/sqlite-binary.cjs");
 const { assertWindowsInstallPaths } = require("./helpers/windows-install-paths.cjs");
+const { buildClassicMacBundleMove } = require("./helpers/classic-mac-bundle.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -359,11 +361,26 @@ module.exports = async function afterPack(context) {
   await writeWindowsAppUpdateConfig(context);
   // app.asar is final now: embed its hash for the integrity fuse.
   refreshPackedAsarIntegrity(context);
+  buildClassicMacBundleMove(context);
   if (context.electronPlatformName === "win32") {
     assertWindowsInstallPaths(context.appOutDir);
   }
   // Last, once the app folder is final and before any installer is made.
   checkPackedAppSizeBudget(context);
+  if (context.electronPlatformName === "darwin" && process.env.CHECK_MAC_SIGNING_KEYCHAIN === "1") {
+    // CI selects its temporary signing keychain as the default during setup.
+    const probe = path.join(__dirname, "../.github/scripts/macos-signing/keychain-status.swift");
+    const result = spawnSync("/usr/bin/swift", ["-suppress-warnings", probe], {
+      stdio: "inherit",
+      timeout: 30_000,
+      killSignal: "SIGKILL",
+    });
+    if (result.error || result.status !== 0) {
+      throw new Error(
+        `[mac signing] Signing keychain check failed: ${result.error?.code ?? result.signal ?? result.status}`,
+      );
+    }
+  }
 };
 
 async function copyRendererNodeModules(context) {

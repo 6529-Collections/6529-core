@@ -20,7 +20,7 @@ export function openLogs(
 ): void {
   Logger.info("Opening logs at:", logFile);
   logsWindow.loadFile(logsPagePath);
-  logsWindow.setTitle(`${name} | Logs | 6529 Desktop`);
+  logsWindow.setTitle(`${name} | Logs | 6529 Desktop Classic`);
 
   const loadLogs = () => {
     fs.readFile(logFile, "utf8", (err, logs) => {

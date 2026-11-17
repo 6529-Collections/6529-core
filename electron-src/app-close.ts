@@ -4,8 +4,8 @@ export type AppCloseAction = "quit" | "run-background" | "cancel";
 
 export const APP_CLOSE_DIALOG_OPTIONS = {
   type: "question",
-  title: "Close 6529 Desktop",
-  message: "Close 6529 Desktop?",
+  title: "Close 6529 Desktop Classic",
+  message: "Close 6529 Desktop Classic?",
   detail: "Quit completely or keep desktop services running in the background.",
   buttons: ["Quit", "Run in Background", "Cancel"],
   defaultId: 0,

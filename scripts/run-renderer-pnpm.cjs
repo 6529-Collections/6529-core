@@ -29,6 +29,12 @@ const env = {
   SEIZE_6529_COMMAND: "1",
 };
 
+if (args[0] === "run" && args[1] === "lint:quiet") {
+  // Full renderer lint needs more than Node's default heap. Node uses the
+  // last heap option, so a caller can still set a different limit.
+  env.NODE_OPTIONS = `--max-old-space-size=6144 ${env.NODE_OPTIONS ?? ""}`.trim();
+}
+
 const secureInstallCommands = new Map([
   ["secure-install", "ci"],
   ["secure-install:frozen", "ci"],

@@ -1,13 +1,22 @@
 import { createHash } from "node:crypto";
-import { getDesktopReleasesServerEnv } from "@/config/serverEnv";
+import {
+  getDesktopReleasesServerEnv,
+  isDesktopRendererServer,
+} from "@/config/serverEnv";
+import { readHostedReleasePair } from "@/lib/release-section/hostedFeed";
 import {
   serveSignedFeedObject,
   type SignedFeedSnapshot,
   type SignedFeedText,
 } from "@/lib/validator-page/feedResponse";
+import { isFeedSignatureValid } from "@/lib/validator-page/feedSignature";
 import type { BucketObject } from "@/lib/validator-page/releasesBucket";
 
 import { readBucketObject, type BucketLocation } from "./releasesBucket";
+import {
+  DESKTOP_RELEASE_LIST_DOMAIN,
+  DESKTOP_RELEASE_LIST_KEYS,
+} from "./signingKeys";
 
 /**
  * 6529 Desktop's signed release list, served at `/desktop/releases.json` and
@@ -160,6 +169,19 @@ export function getDesktopReleasesLocation(): BucketLocation {
 }
 
 async function readPair(location: BucketLocation): Promise<SignedFeedSnapshot> {
+  if (isDesktopRendererServer()) {
+    const hosted = await readHostedReleasePair("desktop");
+    if (hosted.state === "error") return failed(hosted.reason);
+    if (hosted.state === "missing") return MISSING;
+    return isFeedSignatureValid(
+      hosted.feed.body,
+      hosted.signature.body,
+      DESKTOP_RELEASE_LIST_KEYS,
+      DESKTOP_RELEASE_LIST_DOMAIN
+    )
+      ? hosted
+      : failed("the hosted list's signature does not verify");
+  }
   const stored = await readBucketObject(location, DESKTOP_BUNDLE_OBJECT_KEY);
   if (stored.state === "error") {
     return failed(stored.reason);

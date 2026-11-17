@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import classicDesktop from "../../config/classic-desktop.json";
 import { app } from "electron";
 import databasePath from "./databasePath";
 import path, { dirname } from "path";
@@ -7,23 +8,7 @@ import os from "os";
 
 type BackendTarget = "live" | "test";
 
-const CORE_SCHEMES = {
-  local: "localcore6529",
-  staging: "stagingcore6529",
-  production: "core6529",
-} as const;
-
-function normalizeCoreScheme(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const normalized = value.trim().toLowerCase().replace(/:\/\/$/, "");
-  return Object.values(CORE_SCHEMES).includes(
-    normalized as (typeof CORE_SCHEMES)[keyof typeof CORE_SCHEMES]
-  )
-    ? normalized
-    : null;
-}
+const CORE_SCHEMES = classicDesktop.schemes;
 
 function getPublicRuntimeConfig(): Record<string, unknown> | null {
   const runtimeConfigPath = path.join(
@@ -42,25 +27,20 @@ function getPublicRuntimeConfig(): Record<string, unknown> | null {
   }
 }
 
-export function getScheme() {
-  const configuredScheme = normalizeCoreScheme(
-    process.env.CORE_SCHEME ?? getPublicRuntimeConfig()?.CORE_SCHEME
-  );
-  if (configuredScheme) {
-    return configuredScheme;
+export function getScheme(): string {
+  // Match the scheme declared by this package. Shell overrides must not make a
+  // local or staging binary claim another build's links.
+  switch (getEnvironment()) {
+    case "dev":
+    case "local":
+      return CORE_SCHEMES.local;
+    case "staging":
+      return CORE_SCHEMES.staging;
+    case "production":
+      return CORE_SCHEMES.production;
+    default:
+      return "";
   }
-
-  let scheme = "";
-  const environment = getEnvironment();
-
-  if (environment === "dev" || environment === "local") {
-    scheme = CORE_SCHEMES.local;
-  } else if (environment === "staging") {
-    scheme = CORE_SCHEMES.staging;
-  } else if (environment === "production") {
-    scheme = CORE_SCHEMES.production;
-  }
-  return scheme;
 }
 
 export function getEnvironment(): string {

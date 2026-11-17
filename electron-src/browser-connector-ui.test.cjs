@@ -186,7 +186,7 @@ async function withConnector(
     await React.act(async () =>
       root.render(
         React.createElement(exports.default, {
-          returnScheme: "localcore6529",
+          returnScheme: "localclassiccore6529",
           setCompleted: () => {},
         }),
       ),
@@ -225,7 +225,7 @@ const plain = (value) =>
   );
 
 const returned = (link) => {
-  assert.match(link, /^localcore6529:\/\/connector\?data=/);
+  assert.match(link, /^localclassiccore6529:\/\/connector\?data=/);
   return JSON.parse(new URL(link).searchParams.get("data"));
 };
 
@@ -290,7 +290,7 @@ test("a page without an app-issued request id offers nothing to sign", async () 
       async ({ button, fetched, text }) => {
         assert.equal(fetched.length, 0);
         assert.equal(button("Sign"), undefined);
-        assert.match(text(), /not issued by 6529 Desktop/);
+        assert.match(text(), /not issued by 6529 Desktop Classic/);
       },
       "personal_sign",
       undefined,
@@ -301,7 +301,7 @@ test("a page without an app-issued request id offers nothing to sign", async () 
 
 test("a request the app did not issue, or one that expired, is refused", async () => {
   for (const [error, copy] of [
-    ["unknown", /not issued by 6529 Desktop/],
+    ["unknown", /not issued by 6529 Desktop Classic/],
     ["expired", /has expired/],
   ]) {
     await withConnector(
@@ -322,7 +322,7 @@ test("a malformed app answer is refused", async () => {
   await withConnector(
     async ({ button, text }) => {
       assert.equal(button("Sign"), undefined);
-      assert.match(text(), /not issued by 6529 Desktop/);
+      assert.match(text(), /not issued by 6529 Desktop Classic/);
     },
     "personal_sign",
     undefined,

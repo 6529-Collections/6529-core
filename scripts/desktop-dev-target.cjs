@@ -16,7 +16,7 @@ const TEST_API_ENDPOINT = "https://api.staging.6529.io";
 const TEST_WS_ENDPOINT = "wss://ws.staging.6529.io";
 const DEV_ENVIRONMENT = "dev";
 const DEV_APP_ENVIRONMENT = "local";
-const DEV_CORE_SCHEME = "localcore6529";
+const DEV_CORE_SCHEME = require("../config/classic-desktop.json").schemes.local;
 
 const COMMANDS = {
   dev: {

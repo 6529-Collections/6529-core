@@ -1,7 +1,7 @@
 import { publicEnv } from "@/config/env";
 
-/** Where 6529 Desktop releases are published. */
-export const DEFAULT_DESKTOP_DOWNLOAD_PAGE = "https://6529.io/desktop";
+/** Where 6529 Desktop Classic releases are published. */
+export const DEFAULT_DESKTOP_DOWNLOAD_PAGE = "https://6529.io/about/6529-apps";
 const RELEASE_SITE_ORIGIN = "https://6529.io";
 const MAX_URL_LENGTH = 2048;
 

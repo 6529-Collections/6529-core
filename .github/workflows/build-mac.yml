@@ -41,6 +41,7 @@ jobs:
         if: ${{ inputs.should_run }}
         run: |
           security create-keychain -p "" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
@@ -121,10 +122,13 @@ jobs:
       - name: Build for arm64
         if: ${{ inputs.should_run }}
         env:
+          DEBUG: "electron-osx-sign*"
+          CHECK_MAC_SIGNING_KEYCHAIN: "1"
           # The renderer's ESLint pass runs out of the default heap on the
           # 7 GB macOS runner (exit 134).
           NODE_OPTIONS: --max-old-space-size=6144
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/scripts/macos-signing:$PATH"
           if [ "${{ inputs.env }}" = "Staging" ]; then
             echo "Building for Staging..."
             pnpm run dist-mac-staging
@@ -168,6 +172,7 @@ jobs:
         if: ${{ inputs.should_run }}
         run: |
           security create-keychain -p "" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
@@ -247,11 +252,15 @@ jobs:
 
       - name: Build for x64
         env:
+          DEBUG: "electron-osx-sign*"
+          CHECK_MAC_SIGNING_KEYCHAIN: "1"
           # The renderer's ESLint pass runs out of the default heap on the
           # 7 GB macOS runner (exit 134).
           NODE_OPTIONS: --max-old-space-size=6144
         if: ${{ inputs.should_run }}
-        run: pnpm run dist-mac-production-x64
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/scripts/macos-signing:$PATH"
+          pnpm run dist-mac-production-x64
 
       - name: Upload x64 artifact
         if: ${{ inputs.should_run && inputs.env == 'Production' }}

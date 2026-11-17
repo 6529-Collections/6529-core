@@ -7,8 +7,8 @@ import {
 
 test("private setup fragments survive both receiving-app deep link forms", () => {
   for (const link of [
-    "core6529://share-connection?connection_share_code=fixture#setup=private-secret",
-    "core6529://navigate/accept-connection-sharing?connection_share_code=fixture#setup=private-secret",
+    "classiccore6529://share-connection?connection_share_code=fixture#setup=private-secret",
+    "classiccore6529://navigate/accept-connection-sharing?connection_share_code=fixture#setup=private-secret",
   ]) {
     assert.equal(
       getConnectionDeepLinkNavigation(new URL(link)),
@@ -22,8 +22,8 @@ test("private setup fragments survive both receiving-app deep link forms", () =>
 
 test("unsupported hosts and off-origin paths are not forwarded", () => {
   for (const link of [
-    "core6529://other/path",
-    "core6529://navigate//other.example/path",
+    "classiccore6529://other/path",
+    "classiccore6529://navigate//other.example/path",
   ]) {
     assert.equal(getConnectionDeepLinkNavigation(new URL(link)), null);
   }
@@ -57,7 +57,7 @@ test("encoded traversal, foreign paths and malformed encodings are rejected", ()
   ]) {
     assert.equal(
       getConnectionDeepLinkNavigation(
-        new URL(`core6529://navigate${pathname}`),
+        new URL(`classiccore6529://navigate${pathname}`),
       ),
       null,
       pathname,
@@ -68,7 +68,7 @@ test("encoded traversal, foreign paths and malformed encodings are rejected", ()
 test("ordinary encoded routes keep their encoding, query and private fragment", () => {
   const path = "/waves/%E6%97%A5%E6%9C%AC?filter=a%2Fb#setup=private-secret";
   assert.equal(
-    getConnectionDeepLinkNavigation(new URL(`core6529://navigate${path}`)),
+    getConnectionDeepLinkNavigation(new URL(`classiccore6529://navigate${path}`)),
     path,
   );
 });

@@ -478,7 +478,7 @@ const NEW_VERSION_TOAST_MESSAGES = objectMessages("newVersionToast", {
 } as const);
 
 const NAVIGATION_MESSAGES = objectMessages("navigation", {
-  "desktop.title": "6529 Desktop",
+  "desktop.title": "6529 Desktop Classic",
   "desktop.wallets": "Wallets",
   "desktop.ethTransactions": "ETH Transactions",
   "desktop.tdhCalculation": "TDH Calculation",
@@ -3507,9 +3507,9 @@ export const EN_US_ROOT_MESSAGES = {
   "desktop.about.portPending": "Pending…",
   "desktop.about.portNotApplicable": "N/A",
   "desktop.about.portUnavailable": "Unavailable",
-  "desktop.profiles.restoreError": "Your saved profiles could not be opened. You can browse signed out, or restart 6529 Desktop and allow Keychain access to restore them.",
+  "desktop.profiles.restoreError": "Your saved profiles could not be opened. You can browse signed out, or restart 6529 Desktop Classic and allow Keychain access to restore them.",
   "desktop.profiles.restart": "Restart to restore profiles",
-  "desktop.profiles.restartError": "Could not restart 6529 Desktop. Quit and reopen it to try again.",
+  "desktop.profiles.restartError": "Could not restart 6529 Desktop Classic. Quit and reopen it to try again.",
   "desktop.profiles.saveError": "Could not save your profiles. Retry before quitting to keep your changes.",
   "desktop.profiles.saveRetrying": "Retrying profile save…",
   "desktop.profiles.retry": "Retry",
@@ -4050,7 +4050,7 @@ export const EN_US_ROOT_MESSAGES = {
   "acceptConnection.unsupportedWeb":
     "Open this connection link in the 6529 mobile app.",
   "acceptConnection.unsupportedLegacyDesktop":
-    "This connection link can only be accepted in the 6529 Desktop app.",
+    "This connection link can only be accepted in the 6529 Desktop Classic app.",
   "acceptConnection.missingParameters": "Missing required parameters",
   "acceptConnection.toast.maxProfiles": "Maximum connected profiles reached",
   "acceptConnection.toast.invalidResponse": "Invalid connection response",
@@ -4208,12 +4208,12 @@ export const EN_US_ROOT_MESSAGES = {
   "desktopNotifications.generic": "You have a new notification from {handle}",
   "desktopNotifications.viewNotification": "View notification",
   "desktopNotifications.mediaAttachment": "Media attachment",
-  "desktopUpdate.available": "A new version of 6529 Desktop is available.",
-  "desktopUpdate.availableVersion": "6529 Desktop {version} is available.",
+  "desktopUpdate.available": "A new version of 6529 Desktop Classic is available.",
+  "desktopUpdate.availableVersion": "6529 Desktop Classic {version} is available.",
   "desktopUpdate.download": "Download update",
   "desktopUpdate.downloading": "Downloading the update…",
   "desktopUpdate.downloadingPercent": "Downloading the update… {percent}",
-  "desktopUpdate.ready": "The update is ready. Restart 6529 Desktop to finish.",
+  "desktopUpdate.ready": "The update is ready. Restart 6529 Desktop Classic to finish.",
   "desktopUpdate.restart": "Restart to update",
   "desktopUpdate.failed": "The update could not be downloaded.",
   "desktopUpdate.retry": "Try again",
@@ -4223,7 +4223,7 @@ export const EN_US_ROOT_MESSAGES = {
     "The download page is open in your browser. Download and install the new version from there.",
   "desktopUpdate.pageFailed":
     "The download page did not open. Open {url} in your browser.",
-  "desktop.titleStrip.label": "6529 Desktop window title",
+  "desktop.titleStrip.label": "6529 Desktop Classic window title",
   "desktop.titleStrip.back": "Back",
   "desktop.titleStrip.forward": "Forward",
   "desktop.titleStrip.refresh": "Refresh",
@@ -4232,13 +4232,13 @@ export const EN_US_ROOT_MESSAGES = {
   "desktop.titleStrip.copyFailed": "Could not copy the link",
   "desktop.titleStrip.appInfo": "App info",
   "desktop.titleStrip.appInfoUpdate": "App info (update available)",
-  "desktop.appInfo.title": "About 6529 Desktop",
+  "desktop.appInfo.title": "About 6529 Desktop Classic",
   "desktop.appInfo.version": "Version",
   "desktop.appInfo.environment": "Environment",
   "desktop.appInfo.checkUpdates": "Check for updates",
   "desktopConnect.title": "Connect a wallet",
   "desktopConnect.intro":
-    "6529 Desktop cannot use browser extensions directly. Choose how to connect:",
+    "6529 Desktop Classic cannot use browser extensions directly. Choose how to connect:",
   "desktopConnect.walletConnect": "Scan with a phone wallet",
   "desktopConnect.walletConnectDescription":
     "WalletConnect: scan a QR code with the wallet app on your phone.",
@@ -4280,9 +4280,9 @@ export const EN_US_ROOT_MESSAGES = {
   "desktopWalletRequest.reopenWait": "You can open it again in a few seconds.",
   "desktopWalletRequest.continueInBrowser": "Continue in your browser",
   "desktopWalletRequest.tradeOnWebsite":
-    "Trading is not available in 6529 Desktop with a browser wallet. Continue on {site} in your browser.",
+    "Trading is not available in 6529 Desktop Classic with a browser wallet. Continue on {site} in your browser.",
   "desktopWalletRequest.notForwarded":
-    "6529 Desktop does not send this kind of signature to your browser wallet. Continue on {site} in your browser, where your wallet signs it directly.",
+    "6529 Desktop Classic does not send this kind of signature to your browser wallet. Continue on {site} in your browser, where your wallet signs it directly.",
   "browserConnector.title": "Sign in to 6529 Desktop",
   "browserConnector.description":
     "Sign in to 6529 Desktop with a browser wallet.",

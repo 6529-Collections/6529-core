@@ -1,4 +1,4 @@
-// Launches a packaged 6529 Desktop build with a scratch profile and a CDP
+// Launches a packaged 6529 Desktop Classic build with a scratch profile and a CDP
 // port, and leaves the machine as it found it: the protocol handler that
 // every launch rewrites is restored, processes are stopped, and the crashpad
 // debug.log a forced stop leaves beside the executable is removed. Never
@@ -9,14 +9,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import classicDesktop from "../../../config/classic-desktop.json";
 
 export type AppEnvironment = "local" | "staging" | "production";
 
-const SCHEMES: Record<AppEnvironment, string> = {
-  local: "localcore6529",
-  staging: "stagingcore6529",
-  production: "core6529",
-};
+const SCHEMES = classicDesktop.schemes;
 
 export function detectEnvironment(exe: string): AppEnvironment {
   const name = path.basename(exe).toLowerCase();
@@ -55,34 +52,43 @@ export async function waitFor<T>(
   );
 }
 
-/** Saves HKCU\Software\Classes\<scheme> and restores it exactly (Windows only). */
+/** Saves the Windows protocol keys touched by this Classic launch. */
 export class ProtocolHandlerGuard {
-  private readonly key: string;
-  private readonly backup: string;
-  private existed = false;
-  private saved = false;
+  private readonly handlers: Array<{ key: string; backup: string; existed?: boolean }>;
 
   constructor(scheme: string, private readonly workDir: string) {
-    this.key = `HKCU\\Software\\Classes\\${scheme}`;
-    this.backup = path.join(workDir, `${scheme}.reg`);
+    const environment = (Object.keys(SCHEMES) as AppEnvironment[]).find(
+      (name) => SCHEMES[name] === scheme,
+    );
+    const schemes = environment ? [scheme, classicDesktop.legacySchemes[environment]] : [scheme];
+    this.handlers = schemes.map((name) => ({
+      key: `HKCU\\Software\\Classes\\${name}`,
+      backup: path.join(workDir, `${name}.reg`),
+    }));
   }
 
   save(): void {
-    if (process.platform !== "win32" || this.saved) return;
+    if (process.platform !== "win32") return;
     fs.mkdirSync(this.workDir, { recursive: true });
-    const query = spawnSync("reg", ["query", this.key], { windowsHide: true });
-    this.existed = query.status === 0;
-    if (this.existed) {
-      execFileSync("reg", ["export", this.key, this.backup, "/y"], { windowsHide: true });
+    for (const handler of this.handlers) {
+      if (handler.existed !== undefined) continue;
+      const query = spawnSync("reg", ["query", handler.key], { windowsHide: true });
+      const existed = query.status === 0;
+      if (existed) {
+        execFileSync("reg", ["export", handler.key, handler.backup, "/y"], { windowsHide: true });
+      }
+      handler.existed = existed;
     }
-    this.saved = true;
   }
 
   restore(): void {
-    if (process.platform !== "win32" || !this.saved) return;
-    spawnSync("reg", ["delete", this.key, "/f"], { windowsHide: true });
-    if (this.existed) {
-      execFileSync("reg", ["import", this.backup], { windowsHide: true });
+    if (process.platform !== "win32") return;
+    for (const handler of this.handlers) {
+      if (handler.existed === undefined) continue;
+      spawnSync("reg", ["delete", handler.key, "/f"], { windowsHide: true });
+      if (handler.existed) {
+        execFileSync("reg", ["import", handler.backup], { windowsHide: true });
+      }
     }
   }
 }

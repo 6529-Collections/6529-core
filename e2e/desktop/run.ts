@@ -15,6 +15,7 @@ import {
   freePort,
   ProtocolHandlerGuard,
   scratchDir,
+  schemeFor,
   waitFor,
 } from "./lib/app";
 import { compareWithBaseline, FUNCTIONS, Recorder, skip, writeReport, type SuiteReport } from "./lib/report";
@@ -70,7 +71,7 @@ async function main(): Promise<number> {
   const privateRuntime = JSON.parse((await readPackagedFile(exe, "main/config/__PRIVATE_RUNTIME.json")) ?? "{}");
   const packageJson = JSON.parse((await readPackagedFile(exe, "package.json")) ?? "{}");
   const environment = detectEnvironment(exe);
-  const scheme: string = publicRuntime.CORE_SCHEME ?? "";
+  const scheme: string = publicRuntime.CORE_SCHEME ?? schemeFor(environment);
   const backend: "live" | "test" = publicRuntime.BACKEND_TARGET === "test" ? "test" : "live";
   const apiEndpoint: string = publicRuntime.API_ENDPOINT ?? "https://api.6529.io";
   const apiHeaders: Record<string, string> =
@@ -80,7 +81,7 @@ async function main(): Promise<number> {
   console.log(`[suite] ${label}: ${exe}`);
   console.log(`[suite] profile ${profileDir}, CDP ${cdpPort}, routes ${routes}, out ${outDir}`);
 
-  const guard = new ProtocolHandlerGuard(scheme || "stagingcore6529", work);
+  const guard = new ProtocolHandlerGuard(scheme, work);
   guard.save();
   const recorder = new Recorder();
   const started = Date.now();

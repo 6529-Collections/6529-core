@@ -3,9 +3,9 @@ import { publicEnv } from "@/config/env";
 export const BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS = 120_000;
 
 const ALLOWED_CORE_SCHEMES = [
-  "localcore6529",
-  "stagingcore6529",
-  "core6529",
+  "localclassiccore6529",
+  "stagingclassiccore6529",
+  "classiccore6529",
 ] as const;
 
 type CoreScheme = (typeof ALLOWED_CORE_SCHEMES)[number];
@@ -35,7 +35,7 @@ export function normalizeCoreScheme(
 }
 
 export function getExpectedCoreScheme(): CoreScheme {
-  return normalizeCoreScheme(publicEnv.CORE_SCHEME) ?? "core6529";
+  return normalizeCoreScheme(publicEnv.CORE_SCHEME) ?? "classiccore6529";
 }
 
 export function getCoreSchemeValidationError(
@@ -47,7 +47,7 @@ export function getCoreSchemeValidationError(
     return "This browser connector link has an invalid desktop return target.";
   }
   if (normalizedRequestedScheme !== expectedScheme) {
-    return "This browser connector link is for a different 6529 Desktop build.";
+    return "This browser connector link is for a different 6529 Desktop Classic build.";
   }
   return null;
 }

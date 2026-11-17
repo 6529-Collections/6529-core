@@ -88,11 +88,11 @@ export function describeBrowserWalletRefusal(
     case "expired":
       return "This wallet request has expired.";
     case "unavailable":
-      return "6529 Desktop could not be reached to load this wallet request.";
+      return "6529 Desktop Classic could not be reached to load this wallet request.";
     case "missing":
     case "unknown":
     case "malformed":
-      return "This wallet request was not issued by 6529 Desktop, or it has already been used.";
+      return "This wallet request was not issued by 6529 Desktop Classic, or it has already been used.";
   }
 }
 
@@ -373,7 +373,7 @@ export function describeBrowserWalletRequest(
         rows,
         warnings: hasCall
           ? [
-              "This transaction calls a contract function that this page cannot decode. Approve it only if you started it in 6529 Desktop and your wallet shows the same details.",
+              "This transaction calls a contract function that this page cannot decode. Approve it only if you started it in 6529 Desktop Classic and your wallet shows the same details.",
             ]
           : [],
         requiredChainId: request.chainId,
@@ -386,7 +386,7 @@ export type BrowserWalletPageOutcome =
   | { readonly result: string }
   | { readonly error: "cancelled" | "rejected"; readonly message?: string };
 
-/** The link that hands the outcome back to 6529 Desktop. */
+/** The link that hands the outcome back to 6529 Desktop Classic. */
 export function buildBrowserWalletReturnLink(
   scheme: string,
   id: string,

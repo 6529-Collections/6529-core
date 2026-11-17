@@ -31,7 +31,7 @@ export default function BrowserConnector({
   const schemeValidationError = getCoreSchemeValidationError(scheme);
 
   useEffect(() => {
-    // A wallet request's lifetime comes from 6529 Desktop, never the URL.
+    // A wallet request's lifetime comes from 6529 Desktop Classic, never the URL.
     if (task === "provider" && !schemeValidationError) {
       setExpired(false);
       setTimeLeft(null);
@@ -95,7 +95,7 @@ export default function BrowserConnector({
               <h2 className="tw-text-white">Invalid desktop return target</h2>
               <p className="tw-text-white">{schemeValidationError}</p>
               <p className="tw-text-white">
-                Close this window and retry from 6529 Desktop.
+                Close this window and retry from 6529 Desktop Classic.
               </p>
             </div>
           ) : isExpired ? (

@@ -707,6 +707,17 @@ function assertContract(condition, relativePath, message) {
 
 const desktopNextConfigPath = "next.config.ts";
 const desktopNextConfig = parseSource(desktopNextConfigPath);
+for (const product of ["ai", "desktop"]) {
+  assertContract(
+    desktopNextConfig.text.includes(`source: "/${product}/download/:path*"`) &&
+      desktopNextConfig.text.includes(
+        `destination: "https://6529.io/${product}/download/:path*"`,
+      ) &&
+      !desktopNextConfig.text.includes(`source: "/${product}/:path*"`),
+    desktopNextConfigPath,
+    `${product} pages must stay in Desktop and hand downloads to 6529.io`,
+  );
+}
 const localeDictionaryAlias = findDescendant(
   desktopNextConfig,
   (node) =>

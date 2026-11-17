@@ -33,7 +33,7 @@ export default function SeedWallets() {
 
   return (
     <div className="tw-py-8">
-      <DesktopPageHeading>6529 Desktop Wallets</DesktopPageHeading>
+      <DesktopPageHeading>6529 Desktop Classic Wallets</DesktopPageHeading>
       <div className="tw-pt-6">
         <div className="tw-grid tw-grid-cols-1 tw-gap-4 sm:tw-grid-cols-2 md:tw-grid-cols-3">
           {seedWallets.map((s) => (

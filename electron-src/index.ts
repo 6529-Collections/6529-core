@@ -1,6 +1,9 @@
 // Must stay the first import: sets the working folder before other modules load.
 import "./startup-cwd-apply";
 import { DeepLinkQueue } from "./deep-link-queue";
+import classicDesktop from "../config/classic-desktop.json";
+import { startClassicMacBundleMove } from "./classic-mac-bundle";
+import { registerClassicDesktopProtocol } from "./classic-desktop-protocol";
 import {
   crashReporter,
   ipcMain,
@@ -1234,6 +1237,14 @@ function isMac(): boolean {
 if (!gotTheLock) {
   app.quit();
 } else {
+  function isClassicDeepLink(url: string): boolean {
+    const scheme = getScheme();
+    return (
+      scheme !== "" &&
+      url.slice(0, scheme.length + 3).toLowerCase() === `${scheme}://`
+    );
+  }
+
   /** Queue links during startup and reopen an initialized background window. */
   function receiveDeepLink(url?: string) {
     if (url) pendingDeepLinks.enqueue(url);
@@ -1251,13 +1262,16 @@ if (!gotTheLock) {
   }
 
   app.on("second-instance", (_event, commandLine, _workingDirectory) => {
-    receiveDeepLink(commandLine.find((arg) => arg.startsWith(`${getScheme()}://`)));
+    receiveDeepLink(commandLine.find(isClassicDeepLink));
   });
 
   app.on("open-url", (event, url) => {
     event.preventDefault();
-    receiveDeepLink(url);
+    if (isClassicDeepLink(url)) receiveDeepLink(url);
   });
+
+  // Windows and Linux pass the URL as a command-line argument on cold start.
+  receiveDeepLink(process.argv.find(isClassicDeepLink));
 
   app.on("window-all-closed", () => {
     Logger.info("All windows closed");
@@ -1272,7 +1286,27 @@ if (!gotTheLock) {
   Menu.setApplicationMenu(menu);
 
   app.whenReady().then(async () => {
+    if (isMac() && app.isPackaged && !pendingDeepLinks.hasPending) {
+      try {
+        const completeMove = await startClassicMacBundleMove(getEnvironment());
+        if (completeMove) {
+          // Keep private links in this process if one arrived during startup.
+          const shouldMove = !pendingDeepLinks.hasPending;
+          await completeMove(shouldMove);
+          if (shouldMove) {
+            app.exit(0);
+            return;
+          }
+        }
+      } catch (error) {
+        Logger.warn("Could not start the Classic app bundle move", error);
+      }
+    }
+    // The packaged manifest keeps the initial name 6529-core, which Electron
+    // uses for userData and the instance lock. Keep the previous ready-time
+    // name as well, so backends that use the runtime name still find their keys.
     app.setName("6529 Desktop");
+    app.setAboutPanelOptions({ applicationName: classicDesktop.displayName });
     const scheme = getScheme();
     protocol.handle(scheme, (_request) => {
       if (mainWindow) {
@@ -1282,8 +1316,8 @@ if (!gotTheLock) {
       return new Response("App focused");
     });
 
-    if (!app.isDefaultProtocolClient(scheme)) {
-      app.setAsDefaultProtocolClient(scheme);
+    if (!registerClassicDesktopProtocol(app, scheme, process.platform)) {
+      Logger.warn("Unable to complete Classic protocol registration", scheme);
     }
 
     if (isMac() && isDev) {
@@ -1306,7 +1340,7 @@ if (!gotTheLock) {
     } catch (error) {
       Logger.error("Failed to start the Desktop renderer server", error);
       dialog.showErrorBox(
-        "Unable to start 6529 Desktop",
+        `Unable to start ${classicDesktop.displayName}`,
         "The local Desktop interface could not start. Fully quit and reopen the app. If the problem continues, check the application logs.",
       );
       app.exit(1);
@@ -1598,6 +1632,7 @@ async function openMainWindow() {
     y: windowState?.y ?? undefined,
     width: windowState?.width ?? 500,
     height: windowState?.height ?? 500,
+    title: classicDesktop.displayName,
     icon: iconPath,
     backgroundColor: "#222",
     titleBarStyle: "hidden",
@@ -1617,18 +1652,13 @@ async function openMainWindow() {
 
   updateSplashMessage("Loading main window");
 
-  const url = `http://localhost:${PORT}`;
+  const rendererOrigin = `http://localhost:${PORT}`;
 
   observeLocalGatewayFrameFailures(
     mainWindow.webContents,
-    url,
+    rendererOrigin,
     IPFS_SERVER.getGatewayEndpoint(),
   );
-  mainWindow.loadURL(url);
-
-  // IPFS starts once the main window is loading and never holds it back;
-  // if a step fails the app runs with IPFS marked unavailable.
-  void IPFS_SERVER.start(PORT);
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
@@ -1700,10 +1730,15 @@ async function openMainWindow() {
     requestMainWindowCloseConfirmation();
   });
 
-  initListeners(mainWindow);
+  initListeners(openingWindow, rendererOrigin);
+  openingWindow.loadURL(rendererOrigin);
+
+  // IPFS starts once the main window is loading and never holds it back;
+  // if a step fails the app runs with IPFS marked unavailable.
+  void IPFS_SERVER.start(PORT);
 }
 
-function initListeners(mw: BrowserWindow) {
+function initListeners(mw: BrowserWindow, rendererOrigin: string) {
   mw.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) {
       navigationReadyWindows.delete(mw);
@@ -1725,7 +1760,7 @@ function initListeners(mw: BrowserWindow) {
       return { action: "deny" };
     }
 
-    if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
+    if (shouldOpenInExternalBrowser(rendererOrigin, url)) {
       Logger.info(
         "Opening external web URL in the default browser:",
         getNavigationLogUrl(url),
@@ -1754,7 +1789,7 @@ function initListeners(mw: BrowserWindow) {
       return;
     }
 
-    if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
+    if (shouldOpenInExternalBrowser(rendererOrigin, url)) {
       Logger.info(
         "Preventing external main-window navigation and opening the default browser:",
         getNavigationLogUrl(url)
@@ -2301,7 +2336,7 @@ ipcMain.handle("restart-for-local-ipfs", (event) => {
 ipcMain.handle("get-main-worker", () => {
   const mainTask = {
     namespace: "6529 Desktop",
-    display: "6529 Desktop",
+    display: classicDesktop.displayName,
     logFile: getMainLogsPath(),
     cronExpression: null,
   };

@@ -157,7 +157,7 @@ function RefusedRequest({ message }: { readonly message: string }) {
 }
 
 /**
- * Runs one wallet request that 6529 Desktop issued. The request is read from
+ * Runs one wallet request that 6529 Desktop Classic issued. The request is read from
  * the app's own server by the one-time id in the URL fragment; the page shows
  * what will be signed or sent, requires the bound wallet and network, and
  * returns the result to the app once.
@@ -297,7 +297,7 @@ export default function BrowserConnectorProvider(
       let result: string;
       switch (request.method) {
         case "personal_sign": {
-          // Sign the exact bytes 6529 Desktop asked for.
+          // Sign the exact bytes 6529 Desktop Classic asked for.
           result = await signMessageAsync({
             account: request.address as `0x${string}`,
             message: { raw: request.message as `0x${string}` },
@@ -402,7 +402,7 @@ export default function BrowserConnectorProvider(
             ) : (
               <p>Error: The account is not connected.</p>
             )}
-            <p>Close this window, return to 6529 Desktop and retry.</p>
+            <p>Close this window, return to 6529 Desktop Classic and retry.</p>
           </Col>
         </Row>
       </Container>
@@ -457,7 +457,7 @@ export default function BrowserConnectorProvider(
                 : isSwitching
                   ? "Switching network…"
                   : isSuccess
-                    ? "Signed. Returning to 6529 Desktop."
+                    ? "Signed. Returning to 6529 Desktop Classic."
                     : ""}
             </span>
             <Row>
@@ -536,7 +536,7 @@ export default function BrowserConnectorProvider(
       >
         <Col xs={12}>
           <span className={styles["circledNumber"]}>2</span>
-          <span>Return to 6529 Desktop</span>
+          <span>Return to 6529 Desktop Classic</span>
         </Col>
         <Col xs={12} className="pt-3">
           {(isSuccess || isCancelled) &&
@@ -549,7 +549,7 @@ export default function BrowserConnectorProvider(
             ) : (
               <Container>
                 <Row>
-                  <Col>Redirected to 6529 Desktop</Col>
+                  <Col>Redirected to 6529 Desktop Classic</Col>
                 </Row>
               </Container>
             ))}
