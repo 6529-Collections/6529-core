@@ -12,7 +12,10 @@
 
 Classic keeps its existing app IDs, local storage, and update feeds. Open the
 updated app once to register its new scheme. On macOS and Windows, Classic
-releases its previous scheme if it still owns that association.
+releases its previous scheme if it still owns that association. Create fresh
+Classic links after upgrading. The `core6529://` scheme belongs to the new
+6529 Desktop app. For browser Connect Device on staging, use a Classic
+Staging build configured for the test backend.
 
 ## Native notification previews
 

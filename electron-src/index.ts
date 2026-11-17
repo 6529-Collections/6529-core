@@ -1236,6 +1236,14 @@ function isMac(): boolean {
 if (!gotTheLock) {
   app.quit();
 } else {
+  function isClassicDeepLink(url: string): boolean {
+    const scheme = getScheme();
+    return (
+      scheme !== "" &&
+      url.slice(0, scheme.length + 3).toLowerCase() === `${scheme}://`
+    );
+  }
+
   /** Queue links during startup and reopen an initialized background window. */
   function receiveDeepLink(url?: string) {
     if (url) pendingDeepLinks.enqueue(url);
@@ -1253,16 +1261,16 @@ if (!gotTheLock) {
   }
 
   app.on("second-instance", (_event, commandLine, _workingDirectory) => {
-    receiveDeepLink(commandLine.find((arg) => arg.startsWith(`${getScheme()}://`)));
+    receiveDeepLink(commandLine.find(isClassicDeepLink));
   });
 
   app.on("open-url", (event, url) => {
     event.preventDefault();
-    receiveDeepLink(url);
+    if (isClassicDeepLink(url)) receiveDeepLink(url);
   });
 
   // Windows and Linux pass the URL as a command-line argument on cold start.
-  receiveDeepLink(process.argv.find((arg) => arg.startsWith(`${getScheme()}://`)));
+  receiveDeepLink(process.argv.find(isClassicDeepLink));
 
   app.on("window-all-closed", () => {
     Logger.info("All windows closed");
@@ -1277,7 +1285,9 @@ if (!gotTheLock) {
   Menu.setApplicationMenu(menu);
 
   app.whenReady().then(async () => {
-    // Preserve the previous runtime name for existing Electron storage.
+    // The packaged manifest keeps the initial name 6529-core, which Electron
+    // uses for userData and the instance lock. Keep the previous ready-time
+    // name as well, so backends that use the runtime name still find their keys.
     app.setName("6529 Desktop");
     app.setAboutPanelOptions({ applicationName: classicDesktop.displayName });
     const scheme = getScheme();

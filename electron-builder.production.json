@@ -6,6 +6,7 @@
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "afterSign": "scripts/notarize.js",
   "extraMetadata": {
+    "desktopName": "6529-core.desktop",
     "env": {
       "ENVIRONMENT": "production"
     }

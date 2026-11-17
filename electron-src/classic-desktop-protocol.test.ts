@@ -95,6 +95,12 @@ test("keeps the legacy scheme if new registration fails or cleanup is unsupporte
 });
 
 test("all packaged builds declare their Classic name and scheme under their existing app ID", () => {
+  // Electron initializes app.name from the embedded manifest before index.ts.
+  // A productName here (as opposed to in electron-builder config) would also
+  // change the profile path used by existing installs.
+  const manifest = JSON.parse(readFileSync("package.json", "utf8"));
+  assert.equal(manifest.productName ?? manifest.name, "6529-core");
+
   for (const [target, environment, name, appId] of [
     ["production", "production", "6529 Desktop Classic", "com.6529.6529core"],
     [
@@ -123,6 +129,20 @@ test("all packaged builds declare their Classic name and scheme under their exis
     const scheme = classicDesktop.schemes[environment];
     assert.equal(config.productName, name);
     assert.equal(config.appId, appId);
+    const embeddedManifest = { ...manifest, ...config.extraMetadata };
+    assert.equal(
+      embeddedManifest.productName ?? embeddedManifest.name,
+      "6529-core",
+    );
+    assert.equal(embeddedManifest.env.ENVIRONMENT, environment);
+    if (config.linux) {
+      // Electron asks xdg-mime to use desktopName, and electron-builder
+      // installs this launcher under the configured executable basename.
+      assert.equal(
+        embeddedManifest.desktopName,
+        `${config.linux.executableName}.desktop`,
+      );
+    }
     assert.deepEqual(
       config.protocols.flatMap(
         (protocol: { schemes: string[] }) => protocol.schemes,

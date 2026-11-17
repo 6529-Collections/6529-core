@@ -11,7 +11,7 @@
       type="font/woff2"
       crossorigin
     />
-    <title>Launching 6529 Desktop</title>
+    <title>Launching 6529 Desktop Classic</title>
     <style>
       @font-face {
         font-family: "Montserrat";
@@ -148,7 +148,7 @@
         <div class="top">
           <img class="logo" src="./6529.svg" alt="6529" />
           <span class="title">
-            <span id="app-title">6529 Desktop</span>
+            <span id="app-title">6529 Desktop Classic</span>
             <span class="environment" id="app-environment"></span>
           </span>
         </div>
@@ -272,7 +272,6 @@
           versionEl.textContent = window.splashAPI.version
             ? "v" + window.splashAPI.version
             : "";
-          document.getElementById("app-title").textContent = "6529 Desktop";
           document.getElementById("app-environment").textContent =
             getEnvironmentLabel(
               window.splashAPI.environment,

@@ -1,4 +1,4 @@
-Create concise, user-facing release-note bullets for a 6529 Desktop production release.
+Create concise, user-facing release-note bullets for a 6529 Desktop Classic production release.
 
 Return strict JSON only in this shape:
 

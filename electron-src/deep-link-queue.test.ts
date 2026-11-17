@@ -99,9 +99,12 @@ test("OS deep links queue through cold startup and reopen an initialized window"
   );
   const events = new Map<string, Function>();
   const declarations: string[] = [];
-  const coldLink = "localclassiccore6529://navigate?path=/connection/accept#cold";
+  const coldLink = "LOCALCLASSICCORE6529://navigate?path=/connection/accept#cold";
   const visit = (node: ts.Node) => {
-    if (ts.isFunctionDeclaration(node) && node.name?.text === "receiveDeepLink")
+    if (
+      ts.isFunctionDeclaration(node) &&
+      ["isClassicDeepLink", "receiveDeepLink"].includes(node.name?.text ?? "")
+    )
       declarations.push(node.getText(source));
     if (
       ts.isExpressionStatement(node) &&
@@ -122,7 +125,7 @@ test("OS deep links queue through cold startup and reopen an initialized window"
     ts.forEachChild(node, visit);
   };
   visit(source);
-  assert.equal(declarations.length, 4);
+  assert.equal(declarations.length, 5);
   const links: string[] = [];
   let reopened = 0;
   const context = vm.createContext({
@@ -162,6 +165,12 @@ test("OS deep links queue through cold startup and reopen an initialized window"
   assert.equal(links.length, 2);
   assert.equal(reopened, 0);
   context.mainWindowStartupComplete = true;
+  const openUrl = events.get("open-url")!;
+  for (const scheme of ["core6529", "localcore6529", "stagingclassiccore6529", "https"]) {
+    openUrl({ preventDefault() {} }, `${scheme}://navigate/connection/accept#wrong-app`);
+  }
+  assert.equal(links.length, 2);
+  assert.equal(reopened, 0);
   events.get("second-instance")!({}, [
     "app",
     "localclassiccore6529://navigate?path=/connection/accept#second",

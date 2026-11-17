@@ -8,6 +8,7 @@
   "npmRebuild": false,
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "extraMetadata": {
+    "desktopName": "6529-desktop-local.desktop",
     "env": {
       "ENVIRONMENT": "local"
     }

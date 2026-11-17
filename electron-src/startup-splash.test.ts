@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import classicDesktop from "../config/classic-desktop.json";
 import { CORE_TITLEBAR_HEIGHT_PX } from "../shared/desktop-titlebar";
 import { observeLocalGatewayFrameFailures } from "./ipfs/local-gateway-frame-failures";
 
@@ -87,6 +88,7 @@ function createHarness(
     latestSplashMessage: "Loading",
     BrowserWindow: FakeWindow,
     CORE_TITLEBAR_HEIGHT_PX,
+    classicDesktop,
     path,
     __dirname: "/FAKE",
     PORT: 3000,
@@ -183,6 +185,7 @@ test("startup shows the splash immediately while database initialization is pend
   finishDatabase();
   await launch;
   assert.equal(h.main.visible, false);
+  assert.equal(h.main.options.title, "6529 Desktop Classic");
 });
 
 test("even fast startup shows a splash and switches to the ready main window without a delay", async () => {
