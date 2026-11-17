@@ -8,6 +8,8 @@ import {
   SeedWalletRequest,
 } from "../shared/types";
 import type {
+  BrowserWalletRequestInput,
+  BrowserWalletRequestOutcome,
   ElectronSeedConnector as SeedConnectorBridge,
   NotificationNavigationContext,
   NotificationNavigatePayload,
@@ -162,6 +164,10 @@ export const api = {
   onWalletConnection: (connectionData: any) => {
     ipcRenderer.on("wallet-connection", connectionData);
   },
+  browserWalletRequest: (
+    request: BrowserWalletRequestInput,
+  ): Promise<BrowserWalletRequestOutcome> =>
+    ipcRenderer.invoke("browser-wallet:request", request),
   handleWalletResponse: (response: any) => {
     ipcRenderer.on("wallet-response", response);
   },

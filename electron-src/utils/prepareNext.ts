@@ -2,7 +2,11 @@
 
 import { app } from "electron";
 import Logger from "electron-log";
-import { createServer } from "http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "http";
 import fs from "node:fs";
 import Module, { createRequire } from "node:module";
 import path from "node:path";
@@ -154,10 +158,20 @@ const next = resolveNextFactory();
 const nextApp = next(nextConfig);
 const handle = nextApp.getRequestHandler();
 
-export async function prepareNext(port: number) {
+/** Handles a request before the renderer; returns true when it did. */
+export type RendererRequestInterceptor = (
+  req: IncomingMessage,
+  res: ServerResponse,
+) => boolean;
+
+export async function prepareNext(
+  port: number,
+  intercept: RendererRequestInterceptor = () => false,
+) {
   await nextApp.prepare();
 
   const nextServer = createServer((req, res) => {
+    if (intercept(req, res)) return;
     const parsedUrl = parse(req.url!, true);
     handle(req, res, parsedUrl);
   });

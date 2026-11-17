@@ -31,6 +31,12 @@ export default function BrowserConnector({
   const schemeValidationError = getCoreSchemeValidationError(scheme);
 
   useEffect(() => {
+    // A wallet request's lifetime comes from 6529 Desktop, never the URL.
+    if (task === "provider" && !schemeValidationError) {
+      setExpired(false);
+      setTimeLeft(null);
+      return;
+    }
     if (!t || schemeValidationError) {
       setExpired(true);
       setTimeLeft(null);
@@ -59,7 +65,7 @@ export default function BrowserConnector({
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [schemeValidationError, t]);
+  }, [schemeValidationError, t, task]);
 
   return (
     <div className="tw-grid tw-min-h-screen tw-grid-cols-1 md:tw-grid-cols-2">
