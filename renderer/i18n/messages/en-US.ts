@@ -289,6 +289,7 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
   "edit.title": "Add Rep to {name}",
   "edit.totalLabel": "Your total Rep for {category}:",
   "edit.save": "Save",
+  "edit.saved": "Saved",
   "edit.cancel": "Cancel",
   "edit.availableRep": "Your available Rep:",
   "edit.ratingLimit": "Your max/min Rep Rating to {category}:",
@@ -298,6 +299,7 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
   "edit.tryAgain": "Please try again.",
   "edit.loginRequired": "Log in to continue.",
   "grant.searchPlaceholder": "Category to grant REP for",
+  "panel.yourAmount": "Your REP in {category}",
   "grant.minimumCharacters": "Type at least {min} characters.",
   "grant.maximumCharacters": "Type at most {max} characters.",
   "grant.searching": "Finding existing categories...",
@@ -308,6 +310,9 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
     '"{category}" is a separate category. Only {submissionCategory} counts for submissions.',
   "grant.amountLabel": "Your total REP for this category",
   "grant.availableRepLabel": "Your available REP:",
+  "grant.youAssigned": "You assigned",
+  "grant.noMatchingChoices": "No matching categories.",
+  "grant.changeCategory": "Change category",
   "grant.assignedRepLabel": "Your REP assigned to {name}:",
   "grant.availableRep": "Your available REP: {amount}",
   "grant.assignedRep": "Your REP assigned to {name}: {amount}",
@@ -516,6 +521,7 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "primary.dms": "DMs",
   "primary.join6529": "Join 6529",
   "primary.validator": "Validator",
+  "primary.ai": "6529 AI",
   "primary.about": "About",
   "primary.museum": "Museum",
   "about.overview": "Overview",
@@ -631,6 +637,14 @@ const MEMES_SUBMISSION_MESSAGES = objectMessages("memes.submission", {
   "signing.rabbyDescription":
     "May show the message as raw data with “Unknown Signature Type”. Review the message details before signing.",
   "signing.mismatch": "Cancel if the details do not match your submission.",
+  "traits.useNo": "Leave blank to use No",
+  "traits.checking": "Checking traits…",
+  "traits.checkFailed": "Couldn’t check artwork traits. Try again.",
+  "traits.required": "This field is required.",
+  "traits.duplicate": "Use a single value for this field.",
+  "traits.invalidChoice": "Select one of the available choices.",
+  "traits.invalidPoints": "Enter a nonzero number from {min} to {max}.",
+  "traits.invalidBoolean": "Choose Yes or No.",
   "media.missingUpload": "Select artwork or choose Interactive HTML.",
   "media.missingInteractive": "Enter a valid hash or choose Upload File.",
   "identity.connectPrompt":
@@ -830,6 +844,8 @@ const WAVE_VOTE_DETAILS_MESSAGES = objectMessages("waves.voteDetails", {
 
 const WAVE_DROP_ACTIONS_MESSAGES = objectMessages("waves.drop.actions", {
   menuLabel: "Drop actions",
+  scrollForMore: "More actions, scroll down",
+  scrollUp: "Scroll up",
   reply: "Reply",
   replyToDrop: "Reply to drop",
   replyUnavailable: "You are not eligible to chat in this wave",
@@ -4202,6 +4218,11 @@ export const EN_US_ROOT_MESSAGES = {
   "desktopUpdate.failed": "The update could not be downloaded.",
   "desktopUpdate.retry": "Try again",
   "desktopUpdate.later": "Not now",
+  "desktopUpdate.openPage": "Open download page",
+  "desktopUpdate.pageOpened":
+    "The download page is open in your browser. Download and install the new version from there.",
+  "desktopUpdate.pageFailed":
+    "The download page did not open. Open {url} in your browser.",
   "desktop.titleStrip.label": "6529 Desktop window title",
   "desktop.titleStrip.back": "Back",
   "desktop.titleStrip.forward": "Forward",
@@ -4609,6 +4630,14 @@ export const EN_US_ROOT_MESSAGES = {
   "subscriptions.coverage.loading": "Loading subscription coverage",
   "subscriptions.coverage.unavailable":
     "Coverage is temporarily unavailable. Your subscription settings have not changed.",
+  "subscriptions.coverage.visitor.unavailable":
+    "Coverage is temporarily unavailable.",
+  "subscriptions.coverage.visitor.noEligibility":
+    "This profile is not currently eligible for an upcoming Meme mint.",
+  "subscriptions.coverage.visitor.noSelections":
+    "No drops are selected in Manual mode.",
+  "subscriptions.coverage.visitor.unknown":
+    "Some forecast information is missing.",
   "subscriptions.coverage.stale":
     "Last known coverage is shown and may be out of date.",
   "subscriptions.coverage.refresh": "Refresh coverage",
