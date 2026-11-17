@@ -55,6 +55,7 @@ function harness(
     },
     scheduledWorkers: [],
     seedWalletSession: { lock() {} },
+    browserWalletRequests: { cancelAll() {} },
     stopSchedulers: async () => {
       calls.push("workers");
       await stop();
