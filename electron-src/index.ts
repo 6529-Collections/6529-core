@@ -1266,8 +1266,9 @@ if (!gotTheLock) {
   });
 
   app.on("open-url", (event, url) => {
+    if (!isClassicDeepLink(url)) return;
     event.preventDefault();
-    if (isClassicDeepLink(url)) receiveDeepLink(url);
+    receiveDeepLink(url);
   });
 
   // Windows and Linux pass the URL as a command-line argument on cold start.
@@ -1293,7 +1294,7 @@ if (!gotTheLock) {
           // Keep private links in this process if one arrived during startup.
           const shouldMove = !pendingDeepLinks.hasPending;
           await completeMove(shouldMove);
-          if (shouldMove) {
+          if (shouldMove && !pendingDeepLinks.hasPending) {
             app.exit(0);
             return;
           }

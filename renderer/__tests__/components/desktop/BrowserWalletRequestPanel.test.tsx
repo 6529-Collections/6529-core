@@ -175,7 +175,7 @@ describe("BrowserWalletRequestPanel", () => {
       value: SIGNATURE,
     });
     expect(
-      screen.getByRole("link", { name: "Open 6529 Desktop" })
+      screen.getByRole("link", { name: "Open 6529 Desktop Classic" })
     ).toHaveAttribute("href", assign.mock.calls[0][0]);
   });
 
@@ -351,7 +351,7 @@ describe("BrowserWalletRequestPanel", () => {
       screen.queryByRole("button", { name: "Sign in wallet" })
     ).not.toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "Tell 6529 Desktop and close" })
+      screen.getByRole("button", { name: "Tell 6529 Desktop Classic and close" })
     );
     expect(returnedData()).toEqual({
       v: 1,

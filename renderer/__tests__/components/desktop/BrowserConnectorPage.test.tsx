@@ -66,15 +66,15 @@ describe("BrowserConnectorPage", () => {
     render(<BrowserConnectorPage />);
 
     expect(
-      await screen.findByText(/not a valid 6529 Desktop sign-in link/)
+      await screen.findByText(/not a valid 6529 Desktop Classic sign-in link/)
     ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("not a valid");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it.each([
-    ["localcore6529", "This returns to 6529 Desktop (local build)."],
-    ["stagingcore6529", "This returns to 6529 Desktop (staging build)."],
+    ["localcore6529", "This returns to 6529 Desktop Classic (local build)."],
+    ["stagingcore6529", "This returns to 6529 Desktop Classic (staging build)."],
     ["core6529", null],
   ])("says which build a %s link returns to", async (scheme, label) => {
     search = new URLSearchParams({
@@ -88,7 +88,7 @@ describe("BrowserConnectorPage", () => {
     if (label) {
       expect(screen.getByText(label)).toBeInTheDocument();
     } else {
-      expect(screen.queryByText(/returns to 6529 Desktop/)).toBeNull();
+      expect(screen.queryByText(/returns to 6529 Desktop Classic/)).toBeNull();
     }
   });
 
@@ -120,7 +120,7 @@ describe("BrowserConnectorPage", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Sign and return to 6529 Desktop",
+        name: "Sign and return to 6529 Desktop Classic",
       })
     );
 
@@ -147,7 +147,7 @@ describe("BrowserConnectorPage", () => {
       },
     });
     expect(
-      screen.getByRole("link", { name: "Open 6529 Desktop" })
+      screen.getByRole("link", { name: "Open 6529 Desktop Classic" })
     ).toHaveAttribute("href", link);
   });
 
@@ -185,7 +185,7 @@ describe("BrowserConnectorPage", () => {
         render(<BrowserConnectorPage />);
         await user.click(
           await screen.findByRole("button", {
-            name: "Sign and return to 6529 Desktop",
+            name: "Sign and return to 6529 Desktop Classic",
           })
         );
 
@@ -206,7 +206,7 @@ describe("BrowserConnectorPage", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Sign and return to 6529 Desktop",
+        name: "Sign and return to 6529 Desktop Classic",
       })
     );
 

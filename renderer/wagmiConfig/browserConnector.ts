@@ -811,9 +811,9 @@ export function browserConnector(parameters: {
   const pendingDeepLinkResponses: Map<string, PendingDeepLinkResponse> =
     new Map();
 
-  let initialized = false;
-  let scheme = "classiccore6529";
-  let port = 6529;
+  let initialization: Promise<void> | undefined;
+  let scheme: string;
+  let port: number;
 
   let connectionObject: ConnectionObject = {
     accounts: [],
@@ -867,10 +867,23 @@ export function browserConnector(parameters: {
     }
   };
 
-  async function init(name: string) {
-    if (!window || initialized) return;
+  function init(name: string): Promise<void> {
+    if (!initialization) {
+      initialization = initialize(name).catch((error) => {
+        initialization = undefined;
+        throw error;
+      });
+    }
+    return initialization;
+  }
 
-    const storedConnection = await window.store.get(connectionStoreKey);
+  async function initialize(name: string) {
+    const [storedConnection, info] = await Promise.all([
+      window.store.get(connectionStoreKey),
+      window.api.getInfo(),
+    ]);
+    scheme = info.scheme;
+    port = info.port;
     const parsedStoredConnection = parseConnectionObject(storedConnection);
     if (parsedStoredConnection) {
       connectionObject = parsedStoredConnection;
@@ -893,13 +906,6 @@ export function browserConnector(parameters: {
         console.log(`[${name}] No callback found for requestId`, requestId);
       }
     });
-
-    window.api.getInfo().then((newInfo) => {
-      scheme = newInfo.scheme;
-      port = newInfo.port;
-    });
-
-    initialized = true;
   }
 
   function generateRequestId(): string {
@@ -1178,6 +1184,7 @@ export function browserConnector(parameters: {
       });
     },
     async disconnect() {
+      await initialization?.catch(() => undefined);
       deepLinkCallbacks.clear();
       clearAllPendingDeepLinkResponses();
       connectionObject = {

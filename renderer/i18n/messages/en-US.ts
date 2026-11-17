@@ -4283,42 +4283,42 @@ export const EN_US_ROOT_MESSAGES = {
     "Trading is not available in 6529 Desktop Classic with a browser wallet. Continue on {site} in your browser.",
   "desktopWalletRequest.notForwarded":
     "6529 Desktop Classic does not send this kind of signature to your browser wallet. Continue on {site} in your browser, where your wallet signs it directly.",
-  "browserConnector.title": "Sign in to 6529 Desktop",
+  "browserConnector.title": "Sign in to 6529 Desktop Classic",
   "browserConnector.description":
-    "Sign in to 6529 Desktop with a browser wallet.",
+    "Sign in to 6529 Desktop Classic with a browser wallet.",
   "browserConnector.checking": "Checking the sign-in link…",
   "browserConnector.target.local":
-    "This returns to 6529 Desktop (local build).",
+    "This returns to 6529 Desktop Classic (local build).",
   "browserConnector.target.staging":
-    "This returns to 6529 Desktop (staging build).",
+    "This returns to 6529 Desktop Classic (staging build).",
   "browserConnector.signing": "Waiting for your wallet to sign…",
   "browserConnector.connectIntro":
-    "Connect the browser wallet you want to use in 6529 Desktop.",
+    "Connect the browser wallet you want to use in 6529 Desktop Classic.",
   "browserConnector.connect": "Connect wallet",
   "browserConnector.signIntro":
-    "Sign a message with {address} to sign in to 6529 Desktop. Signing costs nothing.",
-  "browserConnector.sign": "Sign and return to 6529 Desktop",
+    "Sign a message with {address} to sign in to 6529 Desktop Classic. Signing costs nothing.",
+  "browserConnector.sign": "Sign and return to 6529 Desktop Classic",
   "browserConnector.failed": "The message was not signed. Try again.",
   "browserConnector.returned":
-    "Signed. Return to 6529 Desktop to finish. You can close this tab.",
-  "browserConnector.openApp": "Open 6529 Desktop",
+    "Signed. Return to 6529 Desktop Classic to finish. You can close this tab.",
+  "browserConnector.openApp": "Open 6529 Desktop Classic",
   "browserConnector.problem.invalid":
-    "This link is not a valid 6529 Desktop sign-in link. Start again from 6529 Desktop.",
+    "This link is not a valid 6529 Desktop Classic sign-in link. Start again from 6529 Desktop Classic.",
   "browserConnector.problem.expired":
-    "This sign-in link has expired. Start again from 6529 Desktop.",
-  "browserConnector.wallet.title": "Sign for 6529 Desktop",
-  "browserConnector.wallet.checking": "Checking the request from 6529 Desktop…",
+    "This sign-in link has expired. Start again from 6529 Desktop Classic.",
+  "browserConnector.wallet.title": "Sign for 6529 Desktop Classic",
+  "browserConnector.wallet.checking": "Checking the request from 6529 Desktop Classic…",
   "browserConnector.wallet.code":
-    "Request code {code}. Check that 6529 Desktop shows the same code.",
+    "Request code {code}. Check that 6529 Desktop Classic shows the same code.",
   "browserConnector.wallet.safety":
     "6529 never asks for your recovery phrase or password. Signing costs nothing and sends no transaction.",
   "browserConnector.wallet.messageIntro":
-    "6529 Desktop asks {address} to sign this message:",
-  "browserConnector.wallet.typedIntro": "6529 Desktop asks {address} to sign:",
+    "6529 Desktop Classic asks {address} to sign this message:",
+  "browserConnector.wallet.typedIntro": "6529 Desktop Classic asks {address} to sign:",
   "browserConnector.wallet.schema.encryptedMessagesGrant":
-    "Let 6529 Desktop on this computer send and read your encrypted messages.",
+    "Let 6529 Desktop Classic on this computer send and read your encrypted messages.",
   "browserConnector.wallet.schema.signedMessagesGrant":
-    "Turn on signed messages for 6529 Desktop on this computer.",
+    "Turn on signed messages for 6529 Desktop Classic on this computer.",
   "browserConnector.wallet.schema.memesSubmission":
     "Submit “{artwork}” to {destination}.",
   "browserConnector.wallet.schema.profileSitePublish":
@@ -4337,19 +4337,19 @@ export const EN_US_ROOT_MESSAGES = {
   "browserConnector.wallet.failed":
     "Your wallet did not sign. Try again, or decline.",
   "browserConnector.wallet.returned":
-    "Done. Return to 6529 Desktop. You can close this tab.",
+    "Done. Return to 6529 Desktop Classic. You can close this tab.",
   "browserConnector.wallet.declined":
-    "Declined. Return to 6529 Desktop. You can close this tab.",
+    "Declined. Return to 6529 Desktop Classic. You can close this tab.",
   "browserConnector.wallet.problem.invalid":
-    "This page did not get a valid request from 6529 Desktop, so there is nothing to sign. Start again from 6529 Desktop.",
+    "This page did not get a valid request from 6529 Desktop Classic, so there is nothing to sign. Start again from 6529 Desktop Classic.",
   "browserConnector.wallet.problem.expired":
-    "This request has expired. Nothing was signed. Start again from 6529 Desktop.",
+    "This request has expired. Nothing was signed. Start again from 6529 Desktop Classic.",
   "browserConnector.wallet.refusal.unreadable-message":
     "This page will not ask your wallet to sign this request: the message is not readable text.",
   "browserConnector.wallet.refusal.sign-in-message":
-    "This page will not ask your wallet to sign this request: it is a sign-in message. Sign in from 6529 Desktop instead.",
+    "This page will not ask your wallet to sign this request: it is a sign-in message. Sign in from 6529 Desktop Classic instead.",
   "browserConnector.wallet.refusal.unknown-message":
-    "This page will not ask your wallet to sign this request: it is not a message 6529 Desktop signs from here. Continue on {site} in your browser instead.",
+    "This page will not ask your wallet to sign this request: it is not a message 6529 Desktop Classic signs from here. Continue on {site} in your browser instead.",
   "browserConnector.wallet.format.drop":
     "Create a 6529 drop. This also covers accepting a wave's terms.",
   "browserConnector.wallet.format.decisionVote":
@@ -4357,18 +4357,18 @@ export const EN_US_ROOT_MESSAGES = {
   "browserConnector.wallet.format.decisionEntry":
     "Submit an entry to a 6529 decision.",
   "browserConnector.wallet.refusal.unknown-typed-data":
-    "This page will not ask your wallet to sign this request: it is a kind of request 6529 Desktop does not send from here. Continue on {site} in your browser instead.",
+    "This page will not ask your wallet to sign this request: it is a kind of request 6529 Desktop Classic does not send from here. Continue on {site} in your browser instead.",
   "browserConnector.wallet.refusal.wrong-wallet":
     "This page will not ask your wallet to sign this request: it names a different wallet than the one asked to sign.",
   "browserConnector.wallet.refusal.wrong-origin":
-    "This page will not ask your wallet to sign this request: it names a different app than 6529 Desktop.",
+    "This page will not ask your wallet to sign this request: it names a different app than 6529 Desktop Classic.",
   "browserConnector.wallet.refusal.statement-mismatch":
     "This page will not ask your wallet to sign this request: its description does not match what it would sign.",
   "browserConnector.wallet.refusal.context-mismatch":
-    "This page will not ask your wallet to sign this request: the content 6529 Desktop sent does not match what the message commits to. Nothing was signed.",
+    "This page will not ask your wallet to sign this request: the content 6529 Desktop Classic sent does not match what the message commits to. Nothing was signed.",
   "browserConnector.wallet.fingerprint": "Content fingerprint: {fingerprint}",
   "browserConnector.wallet.fingerprintOnly":
-    "6529 Desktop did not send the content, so this page cannot show it. The message below identifies the content only by its fingerprint. Check that 6529 Desktop shows the same fingerprint, and sign only if you started this action there.",
+    "6529 Desktop Classic did not send the content, so this page cannot show it. The message below identifies the content only by its fingerprint. Check that 6529 Desktop Classic shows the same fingerprint, and sign only if you started this action there.",
   "browserConnector.wallet.contentVerified":
     "This page recomputed the fingerprint from this content and it matches the message, so this is exactly what you sign.",
   "browserConnector.wallet.content.wave": "In wave {waveId}",
@@ -4385,7 +4385,7 @@ export const EN_US_ROOT_MESSAGES = {
   "browserConnector.wallet.content.committed":
     "Everything this signature commits to",
   "browserConnector.wallet.content.message": "The message your wallet signs",
-  "browserConnector.wallet.tellApp": "Tell 6529 Desktop and close",
+  "browserConnector.wallet.tellApp": "Tell 6529 Desktop Classic and close",
   "headerShare.qr.browserAlt": "Current page QR code",
   "headerShare.qr.mobileAlt": "Mobile App Link - QR Code",
   "headerShare.qr.shareConnectionAlt": "Connect 6529 Mobile QR code",

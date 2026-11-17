@@ -83,7 +83,6 @@ for (const [file, title] of [
   ["tdh-calculation/TDHCalculation", "TDH Calculation"],
   ["core-wallet/SeedWallets", "6529 Desktop Classic Wallets"],
   ["core-wallet/SeedWalletImport", "Import Seed Wallet"],
-  ["app-info/AppInfo", "6529 Desktop Classic About"],
 ]) {
   test(`${file} keeps its title as one uniform Desktop page heading`, () => {
     const source = ts.createSourceFile(
@@ -118,3 +117,33 @@ for (const [file, title] of [
     );
   });
 }
+
+test("AppInfo renders its localized title as one Desktop heading", () => {
+  const source = ts.createSourceFile(
+    "AppInfo.tsx",
+    read("renderer/components/core/app-info/AppInfo.tsx"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const headings: ts.JsxElement[] = [];
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isJsxElement(node) &&
+      node.openingElement.tagName.getText(source) === "DesktopPageHeading"
+    ) {
+      headings.push(node);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  assert.equal(headings.length, 1);
+  const content = headings[0].children.filter(
+    (child) => !ts.isJsxText(child) || child.text.trim() !== "",
+  );
+  assert.equal(content.length, 1);
+  assert.equal(
+    content[0].getText(source),
+    '{t(locale, "desktop.appInfo.title")}',
+  );
+});
