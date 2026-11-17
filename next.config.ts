@@ -550,15 +550,15 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     redirects() {
       return Promise.resolve([
-        // The installed app has no access to the website's private release buckets.
+        // The hosted site serves the installers and applies its download rules.
         {
-          source: "/desktop/:path*",
-          destination: "https://6529.io/desktop/:path*",
+          source: "/desktop/download/:path*",
+          destination: "https://6529.io/desktop/download/:path*",
           permanent: false,
         },
         {
-          source: "/ai/:path*",
-          destination: "https://6529.io/ai/:path*",
+          source: "/ai/download/:path*",
+          destination: "https://6529.io/ai/download/:path*",
           permanent: false,
         },
         {

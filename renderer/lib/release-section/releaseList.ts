@@ -207,6 +207,17 @@ function readList(bytes: Uint8Array): ListContent | string {
   return { json, sequence };
 }
 
+/** Verify a format 1 list before parsing the exact signed bytes. */
+export function verifyReleaseListPair(
+  list: Uint8Array,
+  signature: Uint8Array,
+  { signers, domain }: Pick<ReleaseListConfig, "signers" | "domain">
+): ListContent | string {
+  return isFeedSignatureValid(list, signature, signers, domain)
+    ? readList(list)
+    : "the list's signature does not verify";
+}
+
 /**
  * Names the pair by its content, so every server answers the same name for
  * the same list and signature. The list's length goes first, so moving
@@ -246,19 +257,7 @@ function checkBundle(
   if (typeof pair === "string") {
     return pair;
   }
-  // Nothing in the list is read before its signature checks out: the
-  // signature is what vouches for the SHA-256 values the pages show.
-  if (
-    !isFeedSignatureValid(
-      pair.list,
-      pair.signature,
-      config.signers,
-      config.domain
-    )
-  ) {
-    return "the list's signature does not verify";
-  }
-  const content = readList(pair.list);
+  const content = verifyReleaseListPair(pair.list, pair.signature, config);
   return typeof content === "string" ? content : { pair, content };
 }
 

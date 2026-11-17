@@ -218,6 +218,7 @@
     "@lexical/table": "0.14.5",
     "@lexical/utils": "0.14.5",
     "@mojs/core": "1.7.1",
+    "@noble/curves": "1.9.7",
     "@reown/appkit": "1.8.19",
     "@reown/appkit-adapter-wagmi": "1.8.19",
     "@reown/appkit-common": "1.8.19",
