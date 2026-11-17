@@ -57,7 +57,7 @@ function createHarness(
       send: (channel: string, payload: unknown) =>
         sent.push({ channel, payload }),
     });
-    constructor(readonly options: { show?: boolean; frame?: boolean }) {
+    constructor(readonly options: { show?: boolean; frame?: boolean; title?: string }) {
       super();
       this.visible = options.show !== false;
       windows.push(this);
