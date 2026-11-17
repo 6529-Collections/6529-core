@@ -22,7 +22,13 @@ const {
 const {
   signSeedWalletTypedData,
 } = require("../renderer/wagmiConfig/seedWalletTypedData.ts");
+const requestHelpers = require("../renderer/components/browser-connector/browserWalletRequest.helpers.ts");
+const {
+  validateBrowserWalletRequest,
+} = require("./browser-wallet-requests.ts");
 const address = `0x${"11".repeat(20)}`;
+const REQUEST_ID = "R".repeat(43);
+const RETURN_TOKEN = "T".repeat(43);
 const source = fs.readFileSync(
   "renderer/components/browser-connector/BrowserConnectorProvider.tsx",
   "utf8",
@@ -36,12 +42,13 @@ const compiled = ts.transpileModule(source, {
   },
 }).outputText;
 
-// Mount the real component and click its controls; only wallet/network hooks
-// and Next's query source are replaced. No Jest suite or wallet is started.
+// Mount the real component and click its controls; only wallet hooks and the
+// app server's answer are replaced. No Jest suite or wallet is started.
 async function withConnector(
   run,
   method = "eth_signTypedData_v4",
   typedDataParams = undefined,
+  options = {},
 ) {
   // A supplied request is signed by its own (connected) wallet.
   const connected = typedDataParams?.[0]?.toLowerCase() ?? address;
@@ -63,17 +70,21 @@ async function withConnector(
     });
   }
   const timers = [];
+  const expiryTimers = [];
   const outgoing = [];
   const pending = [];
+  const fetched = [];
   let calls = 0;
   const signArgs = [];
+  const switched = [];
   const sign = (args) => {
     calls++;
     signArgs.push(args);
     return new Promise((resolve, reject) => pending.push({ resolve, reject }));
   };
   const signingParams =
-    method === "personal_sign"
+    options.params ??
+    (method === "personal_sign"
       ? ["0x6869", address]
       : typedDataParams ?? [
           address,
@@ -83,14 +94,29 @@ async function withConnector(
             primaryType: "Grant",
             message: { statement: "Fixture" },
           }),
-        ];
-  const params = new URLSearchParams({
+        ]);
+  // What the app issued: the same reduction the main process applies.
+  const issued = validateBrowserWalletRequest({
     method,
-    params: encodeURIComponent(JSON.stringify(signingParams)),
-    requestId: "fixture",
+    params: signingParams,
+    address: connected,
+    chainId: options.chainId ?? 1,
   });
+  assert.equal(issued.ok, true, JSON.stringify(issued));
+  const serverAnswer =
+    options.serverAnswer ??
+    { status: 200, body: { request: issued.view, returnToken: RETURN_TOKEN, expiresInMs: 60_000 } };
+  const fakeFetch = async (url, init) => {
+    fetched.push({ url, init });
+    return {
+      ok: serverAnswer.status === 200,
+      status: serverAnswer.status,
+      json: async () => serverAnswer.body,
+    };
+  };
   const mockWindow = {
     location: {
+      hash: options.hash ?? `#request=${REQUEST_ID}`,
       set href(value) {
         outgoing.push(value);
       },
@@ -101,17 +127,24 @@ async function withConnector(
     exports,
     Error,
     URLSearchParams,
+    BigInt,
+    Date,
     window: mockWindow,
     setInterval: () => 1,
     clearInterval: () => {},
-    setTimeout: (callback) => timers.push(callback),
+    // The return countdown is 3 s; the request expiry timer is kept apart.
+    setTimeout: (callback, ms) =>
+      ms === 3000 ? timers.push(callback) : expiryTimers.push(callback),
+    clearTimeout: () => {},
     require: (name) => {
       if (name === "react" || name === "react/jsx-runtime" || name === "viem")
         return rendererRequire(name);
-      if (name === "next/navigation") return { useSearchParams: () => params };
       if (name === "wagmi")
         return {
-          useChainId: () => 1,
+          useAccount: () => ({ chainId: options.walletChainId ?? 1 }),
+          useSwitchChain: () => ({
+            switchChainAsync: async (args) => switched.push(args),
+          }),
           useSignMessage: () => ({ signMessageAsync: sign }),
           useSendTransaction: () => ({ sendTransactionAsync: sign }),
           useSignTypedData: () => ({ signTypedDataAsync: sign }),
@@ -127,13 +160,18 @@ async function withConnector(
         return {
           parseTypedDataRequest,
           SIGN_TYPED_DATA_V4: "eth_signTypedData_v4",
-          getTypedDataRequestAddress: () => connected,
         };
       if (name.endsWith("typedDataRoot")) return { assertTypedDataRoot };
       if (name.endsWith("browserConnector.helpers"))
         return {
           normalizeBrowserConnectorAddress: (value) =>
             value?.toLowerCase() ?? null,
+        };
+      if (name.endsWith("browserWalletRequest.helpers"))
+        return {
+          ...requestHelpers,
+          fetchBrowserWalletRequest: (id) =>
+            requestHelpers.fetchBrowserWalletRequest(id, fakeFetch),
         };
       if (name.endsWith("BrowserConnectorWalletIntentNotice"))
         return { __esModule: true, default: () => null };
@@ -158,10 +196,14 @@ async function withConnector(
         [...dom.window.document.querySelectorAll("button")].find(
           (button) => button.textContent === text,
         ),
+      text: () => dom.window.document.body.textContent,
       pending,
       timers,
+      expiryTimers,
       outgoing,
+      fetched,
       signArgs,
+      switched,
       calls: () => calls,
     });
   } finally {
@@ -173,6 +215,19 @@ async function withConnector(
     }
   }
 }
+
+// Values created inside the component realm, compared by content.
+const plain = (value) =>
+  JSON.parse(
+    JSON.stringify(value, (_key, item) =>
+      typeof item === "bigint" ? `${item}n` : item,
+    ),
+  );
+
+const returned = (link) => {
+  assert.match(link, /^localcore6529:\/\/connector\?data=/);
+  return JSON.parse(new URL(link).searchParams.get("data"));
+};
 
 test("browser Sign stays single-flight while Cancel immediately wins over a late approval", async () => {
   await withConnector(async ({ button, pending, timers, outgoing, calls }) => {
@@ -188,17 +243,23 @@ test("browser Sign stays single-flight while Cancel immediately wins over a late
     assert.equal(timers.length, 1);
     await React.act(async () => timers[0]());
     assert.equal(outgoing.length, 1);
-    const response = JSON.parse(new URL(outgoing[0]).searchParams.get("data"));
-    assert.deepEqual(response, {
-      requestId: "fixture",
-      data: { error: "Cancelled" },
+    assert.deepEqual(returned(outgoing[0]), {
+      v: 2,
+      id: REQUEST_ID,
+      token: RETURN_TOKEN,
+      error: "cancelled",
     });
   });
 });
 
 test("a failed browser signing request releases the guard for a retry", async () => {
-  await withConnector(async ({ button, pending, calls, timers }) => {
+  await withConnector(async ({ button, pending, calls, timers, signArgs }) => {
     await React.act(async () => button("Sign").click());
+    // The exact bytes the app issued are signed, not a re-encoded string.
+    assert.deepEqual(plain(signArgs[0]), {
+      account: address,
+      message: { raw: "0x6869" },
+    });
     await React.act(async () =>
       pending[0].reject(new Error("Wallet rejected request")),
     );
@@ -209,6 +270,127 @@ test("a failed browser signing request releases the guard for a retry", async ()
     assert.equal(button("Signed").disabled, true);
     assert.equal(timers.length, 1);
   }, "personal_sign");
+});
+
+test("the page reads the request from its own app server by the fragment id", async () => {
+  await withConnector(async ({ fetched, text }) => {
+    assert.equal(fetched.length, 1);
+    assert.equal(fetched[0].url, "/_desktop/browser-wallet-request");
+    assert.equal(fetched[0].init.method, "POST");
+    assert.equal(fetched[0].init.headers["x-6529-browser-connector"], "1");
+    assert.deepEqual(JSON.parse(fetched[0].init.body), { id: REQUEST_ID });
+    assert.match(text(), /Sign a message/);
+    assert.match(text(), /Message\s*hi/);
+  }, "personal_sign");
+});
+
+test("a page without an app-issued request id offers nothing to sign", async () => {
+  for (const hash of ["", "#request=short", "#requestId=x"]) {
+    await withConnector(
+      async ({ button, fetched, text }) => {
+        assert.equal(fetched.length, 0);
+        assert.equal(button("Sign"), undefined);
+        assert.match(text(), /not issued by 6529 Desktop/);
+      },
+      "personal_sign",
+      undefined,
+      { hash },
+    );
+  }
+});
+
+test("a request the app did not issue, or one that expired, is refused", async () => {
+  for (const [error, copy] of [
+    ["unknown", /not issued by 6529 Desktop/],
+    ["expired", /has expired/],
+  ]) {
+    await withConnector(
+      async ({ button, text, calls }) => {
+        assert.equal(button("Sign"), undefined);
+        assert.match(text(), copy);
+        assert.match(text(), /Nothing will be signed/);
+        assert.equal(calls(), 0);
+      },
+      "personal_sign",
+      undefined,
+      { serverAnswer: { status: 404, body: { error } } },
+    );
+  }
+});
+
+test("a malformed app answer is refused", async () => {
+  await withConnector(
+    async ({ button, text }) => {
+      assert.equal(button("Sign"), undefined);
+      assert.match(text(), /not issued by 6529 Desktop/);
+    },
+    "personal_sign",
+    undefined,
+    {
+      serverAnswer: {
+        status: 200,
+        body: { request: { method: "eth_sign", address, chainId: 1 }, returnToken: RETURN_TOKEN, expiresInMs: 1 },
+      },
+    },
+  );
+});
+
+const transferParams = [
+  {
+    from: address,
+    to: `0x${"22".repeat(20)}`,
+    value: "0xde0b6b3a7640000",
+    data: "0xa9059cbb0000",
+  },
+];
+
+test("a transaction shows its network, recipient, value and function before signing", async () => {
+  await withConnector(
+    async ({ button, text, signArgs, pending, timers, outgoing }) => {
+      const body = text();
+      assert.match(body, /Send a transaction/);
+      assert.match(body, /Network\s*Ethereum/);
+      assert.match(body, new RegExp(`To\\s*0x${"22".repeat(20)}`));
+      assert.match(body, /Value\s*1 ETH/);
+      assert.match(body, /0xa9059cbb \(not decoded\)/);
+      assert.match(body, /cannot decode/);
+      await React.act(async () => button("Sign").click());
+      assert.deepEqual(plain(signArgs[0]), {
+        account: address,
+        to: `0x${"22".repeat(20)}`,
+        data: "0xa9059cbb0000",
+        value: "1000000000000000000n",
+        chainId: 1,
+      });
+      const hash = `0x${"ab".repeat(32)}`;
+      await React.act(async () => pending[0].resolve(hash));
+      await React.act(async () => timers[0]());
+      assert.deepEqual(returned(outgoing[0]), {
+        v: 2,
+        id: REQUEST_ID,
+        token: RETURN_TOKEN,
+        result: hash,
+      });
+    },
+    "eth_sendTransaction",
+    undefined,
+    { params: transferParams },
+  );
+});
+
+test("a transaction is never sent while the wallet is on another network", async () => {
+  await withConnector(
+    async ({ button, text, calls, switched }) => {
+      assert.equal(button("Sign"), undefined);
+      assert.match(text(), /Switch it to Sepolia \(test network\)/);
+      await React.act(async () => button("Switch network").click());
+      assert.deepEqual(plain(switched), [{ chainId: 11155111 }]);
+      assert.equal(calls(), 0);
+    },
+    "eth_sendTransaction",
+    undefined,
+    { params: transferParams, chainId: 11155111, walletChainId: 1 },
+  );
 });
 
 test("browser viem transport retains string chain IDs and the Core EIP-712 signing hash", async () => {
@@ -348,9 +530,25 @@ test("a v2 device grant reaches both Desktop signers unchanged and signs the sha
       const response = JSON.parse(
         new URL(outgoing[0]).searchParams.get("data"),
       );
-      assert.deepEqual(response, { requestId: "fixture", data: signature });
+      assert.deepEqual(response, {
+        v: 2,
+        id: REQUEST_ID,
+        token: RETURN_TOKEN,
+        result: signature,
+      });
     },
     "eth_signTypedData_v4",
     rpc.params,
   );
+});
+
+test("an open request stops offering Sign when the app's expiry passes", async () => {
+  await withConnector(async ({ button, expiryTimers, text, calls }) => {
+    assert.ok(button("Sign"));
+    assert.equal(expiryTimers.length, 1);
+    await React.act(async () => expiryTimers[0]());
+    assert.equal(button("Sign"), undefined);
+    assert.match(text(), /has expired/);
+    assert.equal(calls(), 0);
+  }, "personal_sign");
 });

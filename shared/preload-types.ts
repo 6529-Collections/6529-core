@@ -33,6 +33,18 @@ export type SanitizedProfilePicture =
     }
   | { readonly ok: false; readonly error: string };
 
+export interface BrowserWalletRequestInput {
+  readonly browser: string;
+  readonly method: string;
+  readonly params: readonly unknown[];
+  readonly address: string;
+  readonly chainId: number;
+}
+
+export type BrowserWalletRequestOutcome =
+  | { readonly ok: true; readonly value: string }
+  | { readonly ok: false; readonly code: string; readonly message: string };
+
 export interface ElectronAPI {
   on: (channel: string, callback: Function) => void;
   send: (channel: string, ...args: any[]) => void;
@@ -69,6 +81,10 @@ export interface ElectronAPI {
   getScheduledWorkers: () => Promise<any>;
   getCrashReports: () => Promise<any>;
   onWalletConnection: (connectionData: any) => void;
+  /** Has 6529 Desktop issue a browser wallet request and wait for its checked result. */
+  browserWalletRequest: (
+    request: BrowserWalletRequestInput
+  ) => Promise<BrowserWalletRequestOutcome>;
   handleWalletResponse: (response: any) => void;
   onNavigate: (url: any) => void;
   navigationReady: () => Promise<void>;

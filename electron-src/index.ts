@@ -132,6 +132,11 @@ import { DesktopProfileStorage } from "./desktop-profile-storage";
 import { readLegacyDesktopProfiles } from "./legacy-desktop-profiles";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 import { openInBrowser, type BrowserLaunchDeps } from "./browser-launch";
+import {
+  BrowserWalletRequestStore,
+  isBrowserWalletReturnFormat,
+} from "./browser-wallet-requests";
+import { handleBrowserWalletEndpoint } from "./browser-wallet-endpoint";
 import { hideBackgroundTray, showBackgroundTray } from "./background-tray";
 import {
   getDesktopNotificationOptions,
@@ -1101,6 +1106,16 @@ function saveSplashCardAndImage(data: SplashCard): Promise<void> {
 
 let PORT: number;
 
+// Browser wallet requests issued during this run (memory only).
+const browserWalletRequests = new BrowserWalletRequestStore({
+  hasSession: (address) =>
+    (["desktop", "native"] as const).some((clientType) =>
+      isStoredNativeRefreshToken(
+        getValue(getNativeAuthRefreshTokenKey({ address, clientType })),
+      ),
+    ),
+});
+
 let IPFS_PORT: number;
 let IPFS_RPC_PORT: number;
 let IPFS_SWARM_PORT: number;
@@ -1138,6 +1153,14 @@ function handleUrl(url: string) {
       return;
     }
     const connectionInfo = JSON.parse(encodedData);
+    // Results for app-issued browser wallet requests are checked and
+    // consumed here; they never reach the page.
+    if (isBrowserWalletReturnFormat(connectionInfo)) {
+      if (!browserWalletRequests.complete(connectionInfo)) {
+        Logger.info("Ignored a browser wallet result with no matching request");
+      }
+      return;
+    }
     mainWindow?.webContents.send("wallet-connection", connectionInfo);
   } else {
     const navigation = getConnectionDeepLinkNavigation(urlObj);
@@ -1241,6 +1264,7 @@ if (!gotTheLock) {
 
   app.on("before-quit", () => {
     Logger.info("Before quitting app");
+    browserWalletRequests.cancelAll();
   });
 
   const menu = Menu.buildFromTemplate(menuTemplate);
@@ -1269,7 +1293,12 @@ if (!gotTheLock) {
     try {
       PORT = await resolveRendererPort({
         remembered: getValue(RENDERER_PORT_STORE_KEY),
-        listen: prepareNext,
+        listen: (port) =>
+          prepareNext(port, (req, res) =>
+            handleBrowserWalletEndpoint(req, res, {
+              claim: (id) => browserWalletRequests.claim(id),
+            }),
+          ),
         remember: (port) => setValue(RENDERER_PORT_STORE_KEY, port),
       });
       Logger.info("PORT:", PORT);
@@ -1929,6 +1958,40 @@ ipcMain.on("open-external-brave", (event, url) => {
   openInBrowser(url, apps.brave, "Brave", browserLaunchDeps);
 });
 
+const BROWSER_WALLET_LAUNCHERS = {
+  chrome: { app: apps.chrome, name: "Chrome" },
+  firefox: { app: apps.firefox, name: "Firefox" },
+  brave: { app: apps.brave, name: "Brave" },
+} as const;
+
+/**
+ * Issues a browser wallet request for the app window, opens the browser
+ * connector page for it and resolves with the checked result. The page
+ * reads the request by its one-time id from this app's server.
+ */
+ipcMain.handle("browser-wallet:request", async (event, input: unknown) => {
+  if (!isMainRenderer(event) || !input || typeof input !== "object") {
+    return { ok: false, code: "invalid", message: "The wallet request is malformed." };
+  }
+  const { browser, ...request } = input as Record<string, unknown>;
+  const launcher =
+    typeof browser === "string" && Object.prototype.hasOwnProperty.call(BROWSER_WALLET_LAUNCHERS, browser)
+      ? BROWSER_WALLET_LAUNCHERS[browser as keyof typeof BROWSER_WALLET_LAUNCHERS]
+      : null;
+  if (!launcher || !PORT) {
+    return { ok: false, code: "invalid", message: "The wallet request is malformed." };
+  }
+  const created = browserWalletRequests.create(request);
+  if (!created.ok) return created;
+  const url = `http://localhost:${PORT}/browser-connector?${new URLSearchParams({
+    task: "provider",
+    scheme: getScheme(),
+  }).toString()}#request=${created.id}`;
+  Logger.info(`Opening a browser wallet request in ${launcher.name}`);
+  openInBrowser(url, launcher.app, launcher.name, browserLaunchDeps);
+  return created.done;
+});
+
 ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
   let logsWindow = logWindowsMap.get(logFile);
   if (!logsWindow || logsWindow.isDestroyed()) {
@@ -2021,6 +2084,7 @@ function destroyMainWindow(): void {
   isMainWindowCloseAuthorized = true;
   try {
     seedWalletSession.lock();
+    browserWalletRequests.cancelAll();
     windowToDestroy.webContents.removeAllListeners();
     windowToDestroy.destroy();
     if (mainWindow === windowToDestroy) {

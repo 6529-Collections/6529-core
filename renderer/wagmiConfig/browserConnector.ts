@@ -127,6 +127,45 @@ const getProviderRequesterAddress = ({
   return normalizedRequester as `0x${string}` | null;
 };
 
+/** An EIP-1193 error for a browser wallet request, keeping the wallet's code. */
+export class BrowserWalletRequestError extends Error {
+  readonly code: number;
+
+  constructor(message: string, code: number) {
+    super(message);
+    this.name = "BrowserWalletRequestError";
+    this.code = code;
+  }
+}
+
+/** Maps a refused or failed browser wallet request to an EIP-1193 error. */
+export const toBrowserWalletRequestError = (
+  outcome: unknown
+): BrowserWalletRequestError => {
+  const record =
+    outcome && typeof outcome === "object"
+      ? (outcome as { code?: unknown; message?: unknown })
+      : {};
+  const message =
+    typeof record.message === "string" && record.message.length > 0
+      ? record.message
+      : "The browser wallet request failed.";
+  switch (record.code) {
+    case "cancelled":
+      return new BrowserWalletRequestError("Cancelled", 4001);
+    case "rejected":
+      return new BrowserWalletRequestError(message, 4001);
+    case "not-signed-in":
+      return new BrowserWalletRequestError(message, 4100);
+    case "unsupported":
+      return new BrowserWalletRequestError(message, 4200);
+    case "invalid":
+      return new BrowserWalletRequestError(message, -32602);
+    default:
+      return new BrowserWalletRequestError(message, -32603);
+  }
+};
+
 const getKnownDesktopAccountAddresses = (): readonly `0x${string}`[] => {
   const knownAddresses: `0x${string}`[] = [];
   const seen = new Set<string>();
@@ -1164,47 +1203,40 @@ export function browserConnector(parameters: {
             return this.getChainId();
           }
 
-          return new Promise((resolve, reject) => {
-            const requestId = generateRequestId();
-            const encodedParams = encodeURIComponent(JSON.stringify(params));
-            const t = Date.now();
-            const providerSearchParams = new URLSearchParams({
-              task: "provider",
-              scheme,
-              requestId,
-              t: String(t),
-              method,
-              params: encodedParams,
-            });
-            const requesterAddress = getProviderRequesterAddress({
-              method,
-              params: params ?? [],
-            });
-            if (requesterAddress) {
-              providerSearchParams.set("intendedWalletAddress", requesterAddress);
-            }
-            const url = `http://localhost:${port}/browser-connector?${providerSearchParams.toString()}`;
-            const timeoutId = setTimeout(() => {
-              console.log(
-                `[${this.name}] Deep link callback timed out`,
-                requestId
-              );
-              deepLinkCallbacks.delete(requestId);
-              clearPendingDeepLinkResponse(requestId);
-              reject(new Error("Provider request timed out"));
-            }, BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS);
-
-            registerDeepLinkCallback(requestId, (response: any) => {
-              clearTimeout(timeoutId);
-              if (!response || response.error) {
-                reject(new Error(response?.error));
-              } else {
-                resolve(response);
-              }
-            });
-
-            parameters.openUrlFn(url);
+          // 6529 Desktop issues the request, opens the browser connector
+          // page for it and returns the checked result.
+          const requesterAddress = getProviderRequesterAddress({
+            method,
+            params: params ?? [],
           });
+          if (
+            !requesterAddress ||
+            !connectionObject.accounts.some(
+              (account) => account.toLowerCase() === requesterAddress
+            )
+          ) {
+            throw new BrowserWalletRequestError(
+              "This wallet request is not for a connected wallet.",
+              4100
+            );
+          }
+          if (typeof window.api.browserWalletRequest !== "function") {
+            throw new BrowserWalletRequestError(
+              "Browser wallet requests are not available.",
+              4200
+            );
+          }
+          const outcome = await window.api.browserWalletRequest({
+            browser: parameters.id,
+            method,
+            params: params ?? [],
+            address: requesterAddress,
+            chainId: connectionObject.chainId,
+          });
+          if (outcome?.ok === true && typeof outcome.value === "string") {
+            return outcome.value;
+          }
+          throw toBrowserWalletRequestError(outcome);
         },
       };
     },

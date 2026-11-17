@@ -2113,6 +2113,33 @@ assertContract(
   "renderer/components/browser-connector/BrowserConnectorProvider.tsx",
   "browser wallet handoffs must support EIP-712 app device grants",
 );
+{
+  const providerPath =
+    "renderer/components/browser-connector/BrowserConnectorProvider.tsx";
+  const provider = findFunction(
+    parseSource(providerPath),
+    "BrowserConnectorProvider",
+  );
+  assertContract(
+    provider &&
+      callsIdentifier(provider, "readBrowserWalletRequestId") &&
+      callsIdentifier(provider, "fetchBrowserWalletRequest") &&
+      callsIdentifier(provider, "describeBrowserWalletRequest") &&
+      !callsIdentifier(provider, "useSearchParams"),
+    providerPath,
+    "browser wallet requests must come from the app server by their one-time id, be described before signing, and never be read from the page URL",
+  );
+  const connectorProvider = findFunction(
+    parseSource("renderer/wagmiConfig/browserConnector.ts"),
+    "browserConnector",
+  );
+  assertContract(
+    connectorProvider &&
+      connectorProvider.getText().includes("window.api.browserWalletRequest("),
+    "renderer/wagmiConfig/browserConnector.ts",
+    "browser wallet requests must be issued by the main process",
+  );
+}
 assertContract(
   callsIdentifier(findFunction(parseSource("renderer/components/browser-connector/BrowserConnectorProvider.tsx"), "BrowserConnectorProvider"), "assertTypedDataRoot") &&
     callsIdentifier(findFunction(parseSource("renderer/wagmiConfig/seedWalletTypedData.ts"), "signSeedWalletTypedData"), "assertTypedDataRoot"),
