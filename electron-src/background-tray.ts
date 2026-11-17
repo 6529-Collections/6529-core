@@ -5,14 +5,14 @@ export interface BackgroundTrayActions {
   quit: () => void;
 }
 
-export const BACKGROUND_TRAY_TOOLTIP = "6529 Desktop is running in the background";
+export const BACKGROUND_TRAY_TOOLTIP = "6529 Desktop Classic is running in the background";
 
 /** Labels and actions of the tray menu, kept apart from Electron for tests. */
 export function backgroundTrayMenu(actions: BackgroundTrayActions) {
   return [
-    { label: "Open 6529 Desktop", click: actions.open },
+    { label: "Open 6529 Desktop Classic", click: actions.open },
     { type: "separator" as const },
-    { label: "Quit 6529 Desktop", click: actions.quit },
+    { label: "Quit 6529 Desktop Classic", click: actions.quit },
   ];
 }
 

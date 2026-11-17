@@ -86,7 +86,7 @@ describe("browser connector page request handling", () => {
   });
 
   it("returns the outcome with the request id and return token only", () => {
-    const link = buildBrowserWalletReturnLink("core6529", "i".repeat(43), "t".repeat(43), {
+    const link = buildBrowserWalletReturnLink("classiccore6529", "i".repeat(43), "t".repeat(43), {
       error: "cancelled",
     });
     const data = JSON.parse(new URL(link).searchParams.get("data") ?? "null");

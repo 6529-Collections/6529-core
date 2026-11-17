@@ -18,6 +18,7 @@ const { refreshPackedAsarIntegrity } = require("./helpers/asar-integrity.cjs");
 const { pruneInactiveReviewVersions } = require("./helpers/review-data.cjs");
 const { pruneSqliteModule } = require("./helpers/sqlite-binary.cjs");
 const { assertWindowsInstallPaths } = require("./helpers/windows-install-paths.cjs");
+const { buildClassicMacBundleMove } = require("./helpers/classic-mac-bundle.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -360,6 +361,7 @@ module.exports = async function afterPack(context) {
   await writeWindowsAppUpdateConfig(context);
   // app.asar is final now: embed its hash for the integrity fuse.
   refreshPackedAsarIntegrity(context);
+  buildClassicMacBundleMove(context);
   if (context.electronPlatformName === "win32") {
     assertWindowsInstallPaths(context.appOutDir);
   }

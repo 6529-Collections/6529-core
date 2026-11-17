@@ -1,11 +1,12 @@
 {
   "appId": "com.6529.6529stagingcore",
-  "productName": "6529 Desktop Staging",
+  "productName": "6529 Desktop Classic Staging",
   "asar": true,
   "npmRebuild": false,
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "afterSign": "scripts/notarize.js",
   "extraMetadata": {
+    "desktopName": "6529-staging-core.desktop",
     "env": {
       "ENVIRONMENT": "staging"
     }
@@ -13,7 +14,7 @@
   "protocols": [
     {
       "name": "6529stagingcore",
-      "schemes": ["stagingcore6529"]
+      "schemes": ["stagingclassiccore6529"]
     }
   ],
   "files": [
@@ -85,16 +86,18 @@
     ],
     "artifactName": "6529-DESKTOP-STAGING-mac-${arch}-${version}.${ext}",
     "extendInfo": {
+      "CFBundleExecutable": "6529 Desktop Staging",
       "CFBundleURLTypes": [
         {
           "CFBundleURLName": "com.6529.6529stagingcore",
-          "CFBundleURLSchemes": ["stagingcore6529"]
+          "CFBundleURLSchemes": ["stagingclassiccore6529"]
         }
       ]
     }
   },
   "win": {
     "icon": "assets/icon.ico",
+    "executableName": "6529 Desktop Staging",
     "target": [
       {
         "target": "nsis",
@@ -115,7 +118,7 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "6529 Desktop Staging"
+    "shortcutName": "6529 Desktop Classic Staging"
   },
   "linux": {
     "icon": "assets",
@@ -135,18 +138,18 @@
     "artifactName": "6529-DESKTOP-STAGING-linux-${arch}-${version}.${ext}",
     "desktop": {
       "entry": {
-        "Name": "6529 Desktop Staging",
+        "Name": "6529 Desktop Classic Staging",
         "Type": "Application",
         "Terminal": "false",
-        "MimeType": "x-scheme-handler/stagingcore6529;",
+        "MimeType": "x-scheme-handler/stagingclassiccore6529;",
         "Categories": "Utility;Network;",
-        "Comment": "6529 Desktop Staging Application"
+        "Comment": "6529 Desktop Classic Staging Application"
       }
     },
     "protocols": [
       {
-        "name": "6529 Desktop Staging Protocol",
-        "schemes": ["stagingcore6529"]
+        "name": "6529 Desktop Classic Staging Protocol",
+        "schemes": ["stagingclassiccore6529"]
       }
     ]
   }

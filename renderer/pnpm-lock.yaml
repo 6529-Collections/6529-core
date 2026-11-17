@@ -149,6 +149,9 @@ importers:
       '@mojs/core':
         specifier: 1.7.1
         version: 1.7.1
+      '@noble/curves':
+        specifier: 1.9.7
+        version: 1.9.7
       '@reown/appkit':
         specifier: 1.8.19
         version: 1.8.19(@types/react@19.2.3)(bufferutil@4.1.0)(immer@11.1.4)(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(utf-8-validate@5.0.10)(zod@3.25.76)

@@ -266,7 +266,7 @@ export default function AppInfo() {
 
   return (
     <div className="tw-py-8">
-      <DesktopPageHeading>6529 Desktop About</DesktopPageHeading>
+      <DesktopPageHeading>6529 Desktop Classic About</DesktopPageHeading>
       <div className="tw-mt-6">{printAppVersion()}</div>
       <div className="tw-mt-6">
         <LocalIpfsSettings />

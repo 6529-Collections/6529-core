@@ -31,7 +31,7 @@ export default function SeedWalletImport() {
             href="/core/core-wallets"
           >
             <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
-            Back to 6529 Desktop Wallets
+            Back to 6529 Desktop Classic Wallets
           </Link>
         </div>
         <div className="tw-pt-4">

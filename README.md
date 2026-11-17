@@ -1,8 +1,21 @@
-# 6529-Desktop
+# 6529 Desktop Classic
 
 ## Overview
 
-6529 Desktop App supporting Windows, MacOS and Linux
+6529 Desktop Classic supports Windows, macOS, and Linux.
+
+| Build | App name | Link scheme |
+| --- | --- | --- |
+| Production | 6529 Desktop Classic | `classiccore6529://` |
+| Staging | 6529 Desktop Classic Staging | `stagingclassiccore6529://` |
+| Local | 6529 Desktop Classic Local | `localclassiccore6529://` |
+
+Classic keeps its existing app IDs, local storage, and update feeds. Open the
+updated app once to register its new scheme. On macOS and Windows, Classic
+releases its previous scheme if it still owns that association. Create fresh
+Classic links after upgrading. The `core6529://` scheme belongs to the new
+6529 Desktop app. For browser Connect Device on staging, use a Classic
+Staging build configured for the test backend.
 
 ## Native notification previews
 

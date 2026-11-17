@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import classicDesktop from "./config/classic-desktop.json";
 import { PRODUCTION_ASSET_PREFIX } from "./renderer/config/assetPrefix";
 import {
   FIRST_PARTY_MEDIA_RESOLVER_HOSTS,
@@ -437,11 +438,7 @@ interface PublicEnv {
   NEXT_PUBLIC_E2EE_DM_ENABLED?: string;
 }
 
-const CORE_SCHEMES = {
-  local: "localcore6529",
-  staging: "stagingcore6529",
-  production: "core6529",
-} as const;
+const CORE_SCHEMES = classicDesktop.schemes;
 
 type AppEnvironment = keyof typeof CORE_SCHEMES;
 
@@ -553,15 +550,15 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     redirects() {
       return Promise.resolve([
-        // The installed app has no access to the website's private release buckets.
+        // The hosted site serves the installers and applies its download rules.
         {
-          source: "/desktop/:path*",
-          destination: "https://6529.io/desktop/:path*",
+          source: "/desktop/download/:path*",
+          destination: "https://6529.io/desktop/download/:path*",
           permanent: false,
         },
         {
-          source: "/ai/:path*",
-          destination: "https://6529.io/ai/:path*",
+          source: "/ai/download/:path*",
+          destination: "https://6529.io/ai/download/:path*",
           permanent: false,
         },
         {

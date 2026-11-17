@@ -1,6 +1,13 @@
-import type { ReleaseListSnapshot } from "@/lib/release-section/releaseList";
+import { isDesktopRendererServer } from "@/config/serverEnv";
+import { readHostedReleasePair } from "@/lib/release-section/hostedFeed";
+import {
+  verifyReleaseListPair,
+  type ReleaseListSnapshot,
+} from "@/lib/release-section/releaseList";
 import {
   compareVersions,
+  parseFeedSupport,
+  parseReleaseFeed,
   parseVersion,
   type ValidatorFeedSupport,
   type ValidatorRelease,
@@ -340,6 +347,8 @@ function errorSnapshot(reason: string): AiReleaseFeedSnapshot {
 }
 
 async function fetchSnapshot(): Promise<AiReleaseFeedSnapshot> {
+  if (isDesktopRendererServer()) return fetchHostedSnapshot();
+
   const [feed, signature] = await Promise.all([
     readAiReleaseObject(AI_FEED_OBJECT_KEY),
     readAiReleaseObject(AI_FEED_SIGNATURE_OBJECT_KEY),
@@ -359,6 +368,13 @@ async function fetchSnapshot(): Promise<AiReleaseFeedSnapshot> {
   if (signature.state !== "found") {
     return errorSnapshot("the feed has no signature");
   }
+  return readEd25519Snapshot(feed, signature);
+}
+
+function readEd25519Snapshot(
+  feed: FeedObject,
+  signature: FeedObject
+): AiReleaseFeedSnapshot {
   if (!isAiFeedSignatureValid(feed.body, signature.body)) {
     return errorSnapshot("the feed's signature does not verify");
   }
@@ -381,11 +397,43 @@ async function fetchSnapshot(): Promise<AiReleaseFeedSnapshot> {
   };
 }
 
-/**
- * The Ed25519 feed and its signature, read together so they always match,
- * and reused for a minute. A new release shows within that minute.
- */
-async function getEd25519FeedSnapshot(): Promise<AiReleaseFeedSnapshot> {
+async function fetchHostedSnapshot(): Promise<AiReleaseFeedSnapshot> {
+  const hosted = await readHostedReleasePair("ai");
+  if (hosted.state === "error") return errorSnapshot(hosted.reason);
+  if (hosted.state === "missing") return MISSING;
+
+  const { feed, signature } = hosted;
+  const list = verifyReleaseListPair(
+    feed.body,
+    signature.body,
+    aiReleaseList.config
+  );
+  if (typeof list === "string") {
+    // Once the format 1 list has been served, do not fall back to the old feed.
+    return servedList
+      ? errorSnapshot(list)
+      : readEd25519Snapshot(
+          { state: "found", ...feed },
+          { state: "found", ...signature }
+        );
+  }
+  if (servedList && list.sequence < highestSequence) {
+    return errorSnapshot("the hosted list is older than one already served");
+  }
+  servedList = true;
+  highestSequence = list.sequence;
+  return fromReleaseList({
+    ...hosted,
+    list: {
+      sequence: list.sequence,
+      releases: parseReleaseFeed(list.json),
+      support: parseFeedSupport(list.json),
+    },
+  });
+}
+
+/** Share the last verified snapshot across page requests. */
+async function getCachedFeedSnapshot(): Promise<AiReleaseFeedSnapshot> {
   const now = Date.now();
   if (cachedSnapshot && now - cachedSnapshot.loadedAt < SNAPSHOT_TTL_MS) {
     return cachedSnapshot.snapshot;
@@ -527,11 +575,13 @@ let servedList = false;
  * feed. Each is reused for a minute, so a new release shows within it.
  */
 export async function getAiReleaseFeedSnapshot(): Promise<AiReleaseFeedSnapshot> {
+  if (isDesktopRendererServer()) return getCachedFeedSnapshot();
+
   const list = await aiReleaseList.snapshot();
   if (list.state === "ok") {
     servedList = true;
   }
-  return servedList ? fromReleaseList(list) : getEd25519FeedSnapshot();
+  return servedList ? fromReleaseList(list) : getCachedFeedSnapshot();
 }
 
 /**

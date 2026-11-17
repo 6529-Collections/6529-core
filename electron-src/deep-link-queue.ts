@@ -7,6 +7,10 @@ export class DeepLinkQueue {
     private readonly deliver: (url: string) => void,
   ) {}
 
+  get hasPending(): boolean {
+    return this.pending.length > 0;
+  }
+
   /** Accept a link even during cold startup or window recreation. */
   enqueue(url: string): void {
     this.pending.push(url);

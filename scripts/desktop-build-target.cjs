@@ -4,6 +4,7 @@ const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const dotenv = require("dotenv");
+const classicDesktop = require("../config/classic-desktop.json");
 const { resolvePnpmCommand } = require("./helpers/pnpm-command.cjs");
 const { getDesktopFeatureFlags } = require("./helpers/desktop-feature-flags.cjs");
 
@@ -14,11 +15,7 @@ const LIVE_WS_ENDPOINT = "wss://ws.6529.io";
 const TEST_BASE_ENDPOINT = "https://staging.6529.io";
 const TEST_API_ENDPOINT = "https://api.staging.6529.io";
 const TEST_WS_ENDPOINT = "wss://ws.staging.6529.io";
-const CORE_SCHEMES = {
-  local: "localcore6529",
-  staging: "stagingcore6529",
-  production: "core6529",
-};
+const CORE_SCHEMES = classicDesktop.schemes;
 
 const PACKAGE_PLATFORMS = {
   "--mac": "darwin",

@@ -185,7 +185,7 @@ test("standalone renderer build and dev apply desktop flags despite stale shell 
         logOnce: () => {},
         computeVersionFromPkg: () => "0.3.16",
         resolveAssetsFlagFromEnv: () => false,
-        getCoreScheme: () => "localcore6529",
+        getCoreScheme: () => "localclassiccore6529",
         getDesktopFeatureFlags,
         persistPrivateRuntimeConfig: () => {},
         publicEnvSchema: {

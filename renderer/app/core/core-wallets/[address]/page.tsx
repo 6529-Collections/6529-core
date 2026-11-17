@@ -24,5 +24,5 @@ export async function generateMetadata({
   readonly params: Promise<{ address: string }>;
 }): Promise<Metadata> {
   const { address } = await params;
-  return getAppMetadata({ title: `6529 Desktop Wallet ${address}` });
+  return getAppMetadata({ title: `6529 Desktop Classic Wallet ${address}` });
 }
