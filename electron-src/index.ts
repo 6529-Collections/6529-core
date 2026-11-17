@@ -1635,18 +1635,13 @@ async function openMainWindow() {
 
   updateSplashMessage("Loading main window");
 
-  const url = `http://localhost:${PORT}`;
+  const rendererOrigin = `http://localhost:${PORT}`;
 
   observeLocalGatewayFrameFailures(
     mainWindow.webContents,
-    url,
+    rendererOrigin,
     IPFS_SERVER.getGatewayEndpoint(),
   );
-  mainWindow.loadURL(url);
-
-  // IPFS starts once the main window is loading and never holds it back;
-  // if a step fails the app runs with IPFS marked unavailable.
-  void IPFS_SERVER.start(PORT);
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
@@ -1718,10 +1713,15 @@ async function openMainWindow() {
     requestMainWindowCloseConfirmation();
   });
 
-  initListeners(mainWindow);
+  initListeners(openingWindow, rendererOrigin);
+  openingWindow.loadURL(rendererOrigin);
+
+  // IPFS starts once the main window is loading and never holds it back;
+  // if a step fails the app runs with IPFS marked unavailable.
+  void IPFS_SERVER.start(PORT);
 }
 
-function initListeners(mw: BrowserWindow) {
+function initListeners(mw: BrowserWindow, rendererOrigin: string) {
   mw.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) {
       navigationReadyWindows.delete(mw);
@@ -1743,7 +1743,7 @@ function initListeners(mw: BrowserWindow) {
       return { action: "deny" };
     }
 
-    if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
+    if (shouldOpenInExternalBrowser(rendererOrigin, url)) {
       Logger.info(
         "Opening external web URL in the default browser:",
         getNavigationLogUrl(url),
@@ -1772,7 +1772,7 @@ function initListeners(mw: BrowserWindow) {
       return;
     }
 
-    if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
+    if (shouldOpenInExternalBrowser(rendererOrigin, url)) {
       Logger.info(
         "Preventing external main-window navigation and opening the default browser:",
         getNavigationLogUrl(url)
