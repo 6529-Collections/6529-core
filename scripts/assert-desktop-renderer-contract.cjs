@@ -1403,6 +1403,12 @@ const connectProvider = parseSource(
 );
 const connectProviderPath =
   "renderer/components/auth/SeizeConnectProvider.tsx";
+const appKitModalHook = parseSource(
+  "renderer/components/auth/useOpenConnectModal.ts",
+);
+const connectController = parseSource(
+  "renderer/components/auth/capacitorConnectController.ts",
+);
 const seizeDisconnect = findVariable(connectProvider, "seizeDisconnect");
 assertContract(
   seizeDisconnect &&
@@ -1443,10 +1449,13 @@ const authSignOutGuard = authFunction
 const shouldShowSignModal = findVariable(authProvider, "shouldShowSignModal");
 assertContract(
   Boolean(signOutAllResetEffect) &&
-    countIdentifierCalls(
-      connectProvider,
-      "hasSignOutAllGenerationChanged",
-    ) >= 4 &&
+    callsIdentifier(connectProvider, "hasSignOutAllGenerationChanged") &&
+    callsIdentifier(
+      findVariable(connectProvider, "seizeConnectFresh"),
+      "openFreshUserConnection",
+    ) &&
+    callsIdentifier(connectController, "hasSignOutAllGenerationChanged") &&
+    callsIdentifier(appKitModalHook, "hasSignOutAllGenerationChanged") &&
     callsIdentifier(connectProvider, "getSignOutAllGeneration"),
   connectProviderPath,
   "atomic sign-out must close desktop connector state and fence delayed connect/add continuations",
@@ -1481,6 +1490,7 @@ const electronChooserDirectOpenGuard = openConnectModal
         callsIdentifier(node.expression, "isElectron") &&
         callsIdentifier(node.thenStatement, "setShowConnectModal") &&
         !callsIdentifier(node.thenStatement, "waitForAppKitReady") &&
+        !callsIdentifier(node.thenStatement, "openAppKitConnectModal") &&
         Boolean(
           findDescendant(node.thenStatement, (child) =>
             ts.isReturnStatement(child),
@@ -1488,13 +1498,14 @@ const electronChooserDirectOpenGuard = openConnectModal
         ),
     )
   : undefined;
-const appKitReadinessWait = openConnectModal
+const appKitModalOpener = findVariable(connectProvider, "openAppKitConnectModal");
+const appKitModalDelegate = openConnectModal
   ? findDescendant(
       openConnectModal,
       (node) =>
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
-        node.expression.text === "waitForAppKitReady",
+        node.expression.text === "openAppKitConnectModal",
     )
   : undefined;
 const seizeAddConnectedAccount = findVariable(
@@ -1740,8 +1751,11 @@ assertContract(
 );
 assertContract(
   electronChooserDirectOpenGuard &&
-    appKitReadinessWait &&
-    electronChooserDirectOpenGuard.getStart() < appKitReadinessWait.getStart(),
+    appKitModalDelegate &&
+    electronChooserDirectOpenGuard.getStart() < appKitModalDelegate.getStart() &&
+    appKitModalOpener &&
+    callsIdentifier(appKitModalOpener.initializer, "useOpenConnectModal") &&
+    callsIdentifier(appKitModalHook, "waitForAppKitReady"),
   "renderer/components/auth/SeizeConnectProvider.tsx",
   "Electron connector chooser must open before and independently of AppKit readiness",
 );
