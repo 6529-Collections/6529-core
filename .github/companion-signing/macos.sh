@@ -36,7 +36,7 @@ import sys
 
 mount = Path(sys.argv[1])
 app = mount / "6529 Validator Companion.app"
-volume = {".DS_Store", ".VolumeIcon.icns", ".background", ".fseventsd", ".Trashes",
+volume = {".DS_Store", ".VolumeIcon.icns", ".background.tiff", ".fseventsd", ".Trashes",
           ".Spotlight-V100", ".metadata_never_index", "Applications", app.name}
 if not app.is_dir() or app.is_symlink() or set(item.name for item in mount.iterdir()) - volume:
     sys.exit("Unexpected files at the root of the Companion DMG.")
