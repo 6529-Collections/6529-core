@@ -206,6 +206,8 @@ foreign navigation targets fall back to Notifications.
 
 ## Building and Publishing
 
+For the separate 6529 Validator Companion app, see [Companion release signing](.github/companion-signing/README.md).
+
 Publish the first Desktop release with encrypted DMs only after the C+ backend
 and web releases are live in production. The
 [C+ release checklist](renderer/ops/workstreams/e2ee-suite-0x004e/release-checklist.md#23-desktop-and-phone-within-1-day-of-web-live)

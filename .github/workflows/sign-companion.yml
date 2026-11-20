@@ -1,0 +1,136 @@
+name: Sign Validator Companion
+run-name: Sign Validator Companion ${{ inputs.handoff_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      handoff_id:
+        description: Companion build run, attempt, target, and phase
+        required: true
+        type: string
+      version:
+        description: Companion release version
+        required: true
+        type: string
+      channel:
+        description: Companion release channel
+        required: true
+        type: choice
+        options: [test, stable]
+      target:
+        description: Companion installer target
+        required: true
+        type: choice
+        options: [mac-arm64, mac-x64, windows-x64]
+      phase:
+        description: Sign Mac DMG or Windows payload first, then Windows Setup.exe
+        required: true
+        type: choice
+        options: [payload, installer]
+      commit:
+        description: Companion source commit
+        required: true
+        type: string
+      bundle_url:
+        description: Short-lived URL in the private signing transfer bucket
+        required: true
+        type: string
+      bundle_sha256:
+        description: SHA-256 of the input ZIP
+        required: true
+        type: string
+      artifact_attestation:
+        description: GitHub-signed receipt for the build archive or assembled Windows setup
+        required: true
+        type: string
+      recipient_cert:
+        description: Temporary RSA certificate for encrypting the signed result
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  VERSION: ${{ inputs.version }}
+  CHANNEL: ${{ inputs.channel }}
+  TARGET: ${{ inputs.target }}
+  PHASE: ${{ inputs.phase }}
+  SIGNING_BUCKET: ${{ vars.COMPANION_SIGNING_BUCKET }}
+  SIGNING_REGION: ${{ vars.COMPANION_SIGNING_REGION }}
+
+jobs:
+  macos:
+    if: github.repository == '6529-Collections/6529-core' && github.ref == 'refs/heads/main' && startsWith(inputs.target, 'mac-')
+    runs-on: macos-15
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the release operator
+        shell: bash
+        env:
+          AUTHORIZED_ACTOR_ID: ${{ vars.COMPANION_SIGNING_ACTOR_ID }}
+        run: bash .github/companion-signing/authorize.sh
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+      - name: Verify and unpack signing input
+        run: python .github/companion-signing/bundle.py receive
+      - name: Sign, notarize, and staple the disk image
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bash .github/companion-signing/macos.sh
+      - name: Encrypt signed output
+        run: python .github/companion-signing/bundle.py send
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-companion
+          path: ${{ runner.temp }}/companion-signing/signed.tar.p7m
+          if-no-files-found: error
+          retention-days: 3
+
+  windows:
+    if: github.repository == '6529-Collections/6529-core' && github.ref == 'refs/heads/main' && inputs.target == 'windows-x64'
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the release operator
+        shell: bash
+        env:
+          AUTHORIZED_ACTOR_ID: ${{ vars.COMPANION_SIGNING_ACTOR_ID }}
+        run: bash .github/companion-signing/authorize.sh
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+      - name: Verify and unpack signing input
+        run: python .github/companion-signing/bundle.py receive
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install AzureSignTool
+        run: dotnet tool install --global AzureSignTool --version 6.0.1
+      - name: Sign and verify the Windows release files
+        env:
+          AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          CERT_NAME: ${{ secrets.CERT_NAME }}
+        run: ./.github/companion-signing/windows.ps1
+      - name: Encrypt signed output
+        run: python .github/companion-signing/bundle.py send
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-companion
+          path: ${{ runner.temp }}/companion-signing/signed.tar.p7m
+          if-no-files-found: error
+          retention-days: 3
