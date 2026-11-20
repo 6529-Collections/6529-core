@@ -71,9 +71,13 @@ echo "::add-mask::$password"
 printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$p12"
 security create-keychain -p "$password" "$keychain"
 security set-keychain-settings -lut 7200 "$keychain"
+security default-keychain -s "$keychain"
 security unlock-keychain -p "$password" "$keychain"
 security import "$p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign
 security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" >/dev/null
+# Match Core's release signing setup so codesign can find the temporary identity.
+# shellcheck disable=SC2046
+security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
 rm -f "$p12"
 identity=$(security find-identity -v -p codesigning "$keychain" |
   awk '/Developer ID Application: 6529 Collection LLC \(4962266Y3D\)/ {print $2}')
