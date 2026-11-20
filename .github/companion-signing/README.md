@@ -4,7 +4,8 @@ The release script on the operator’s Mac dispatches `sign-companion.yml` for
 installers built by `6529-Collections/6529-validator-companion`. The workflow
 runs on Core’s `main` branch, and the GitHub user ID in
 `COMPANION_SIGNING_ACTOR_ID` identifies the operator who may dispatch and rerun
-it. This setting applies to Companion only.
+it. Each signing job checks the operator again on every attempt. This setting
+applies to Companion only.
 
 The dispatch identifies the source build run and commit, release version,
 channel, target, and phase. It carries an input ZIP checksum, a short-lived
@@ -15,10 +16,11 @@ RSA certificate. Set Core’s `COMPANION_SIGNING_BUCKET` and
 Core checks the bundle’s expected paths, sizes, and checksums. A GitHub-signed
 receipt binds the unsigned archive to Companion’s build workflow on `main`.
 For Windows setup signing, the receipt binds the assembled installer SHA-256
-to Companion’s Windows assembly workflow and to the original build run and
-commit. Core checks GitHub’s signature, the workflow, ref, and digest before
-signing. Stored receipts can be used during the 14-day build-artifact retention
-period. The authorized release operator can retry a handoff with a new ID.
+to Companion’s Windows assembly workflow and to the original build run,
+commit, version, and channel. Core checks GitHub’s signature, the workflow,
+ref, and release details before signing. Stored receipts can be used during the
+14-day build-artifact retention period. The authorized release operator can
+retry a handoff with a new ID.
 
 On macOS, Core verifies the app identity and architecture, signs the app,
 notarizes and staples the DMG, and checks Gatekeeper. On Windows the first pass

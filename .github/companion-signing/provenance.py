@@ -75,7 +75,8 @@ def verify_claims(claims, inputs, build_run_id, installer_digest, now):
     else:
         expected |= {
             "workflow_ref": f"{REPO}/.github/workflows/assemble-windows.yml@refs/heads/main",
-            "aud": f"{AUDIENCE}:windows-assembly:{build_run_id}:{inputs['commit']}:{installer_digest}",
+            "aud": (f"{AUDIENCE}:windows-assembly:{build_run_id}:{inputs['commit']}:"
+                    f"{inputs['version']}:{inputs['channel']}:{installer_digest}"),
         }
     if any(claims.get(field) != value for field, value in expected.items()):
         raise ValueError("GitHub did not attest this artifact from the expected Companion workflow.")
