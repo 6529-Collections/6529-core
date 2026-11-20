@@ -9,6 +9,8 @@ from urllib.request import build_opener, HTTPRedirectHandler
 
 
 ISSUER = "https://token.actions.githubusercontent.com"
+# jwks_uri advertised by the issuer's /.well-known/openid-configuration.
+JWKS_URL = f"{ISSUER}/.well-known/jwks"
 REPO = "6529-Collections/6529-validator-companion"
 AUDIENCE = "urn:6529:validator-companion"
 RECEIPT_AGE = 14 * 24 * 60 * 60  # Same retention as the unsigned build.
@@ -47,7 +49,7 @@ def public_key(jwk):
 
 
 def github_key(key_id):
-    with build_opener(NoRedirects).open(ISSUER + "/.well-known/jwks", timeout=25) as response:
+    with build_opener(NoRedirects).open(JWKS_URL, timeout=25) as response:
         keys = json.loads(response.read(131072))["keys"]
     matches = [key for key in keys if key.get("kid") == key_id and key.get("kty") == "RSA"]
     if len(matches) != 1:
@@ -55,8 +57,7 @@ def github_key(key_id):
     return matches[0]
 
 
-def verify_claims(claims, inputs, installer_digest, now):
-    run_id = inputs["handoff_id"].split("-", 1)[0]
+def verify_claims(claims, inputs, build_run_id, installer_digest, now):
     expected = {
         "iss": ISSUER,
         "repository": REPO,
@@ -69,24 +70,24 @@ def verify_claims(claims, inputs, installer_digest, now):
             "workflow_ref": f"{REPO}/.github/workflows/build-desktop.yml@refs/heads/main",
             "aud": f"{AUDIENCE}:build:{inputs['bundle_sha256']}",
             "sha": inputs["commit"],
-            "run_id": run_id,
+            "run_id": build_run_id,
         }
     else:
         expected |= {
             "workflow_ref": f"{REPO}/.github/workflows/assemble-windows.yml@refs/heads/main",
-            "aud": f"{AUDIENCE}:windows-assembly:{run_id}:{inputs['commit']}:{installer_digest}",
+            "aud": f"{AUDIENCE}:windows-assembly:{build_run_id}:{inputs['commit']}:{installer_digest}",
         }
     if any(claims.get(field) != value for field, value in expected.items()):
         raise ValueError("GitHub did not attest this artifact from the expected Companion workflow.")
     issued, expires = claims["iat"], claims["exp"]
     # The receipt proves what the runner produced, and is not used to log in.
     # Permit stored receipts within artifact retention so a release can be held.
-    if (type(issued) is not int or type(expires) is not int or not issued < expires <= issued + 900
+    if (type(issued) is not int or type(expires) is not int or not issued < expires
             or not now - RECEIPT_AGE <= issued <= now + 60):
         raise ValueError("The GitHub artifact receipt is outside its accepted build age.")
 
 
-def verify_artifact(inputs, installer_digest, work: Path, openssl):
+def verify_artifact(inputs, build_run_id, installer_digest, work: Path, openssl):
     receipt = inputs["artifact_attestation"]
     if not isinstance(receipt, str) or len(receipt) > 16384:
         raise ValueError("Expected a bounded GitHub artifact receipt.")
@@ -109,4 +110,4 @@ def verify_artifact(inputs, installer_digest, work: Path, openssl):
     claims = json.loads(decode(payload))
     if not isinstance(claims, dict):
         raise ValueError("Invalid GitHub artifact receipt claims.")
-    verify_claims(claims, inputs, installer_digest, int(time.time()))
+    verify_claims(claims, inputs, build_run_id, installer_digest, int(time.time()))

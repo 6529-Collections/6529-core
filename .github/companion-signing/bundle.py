@@ -43,8 +43,10 @@ def validate_request(inputs):
         raise ValueError("Only Windows uses the installer signing phase.")
     if not re.fullmatch(r"[a-f0-9]{40}", inputs["commit"]) or not re.fullmatch(r"[a-f0-9]{64}", inputs["bundle_sha256"]):
         raise ValueError("Expected a source commit and archive SHA-256.")
-    if not re.fullmatch(r"[1-9][0-9]*-[1-9][0-9]*-" + target + "-" + phase, inputs["handoff_id"]):
+    handoff = re.fullmatch(r"([1-9][0-9]*)-[1-9][0-9]*-" + target + "-" + phase, inputs["handoff_id"])
+    if handoff is None:
         raise ValueError("Invalid handoff ID.")
+    return handoff[1]
 
 
 def expected_paths(inputs):
@@ -122,7 +124,7 @@ def openssl(*arguments, **kwargs):
 
 
 def receive(inputs):
-    validate_request(inputs)
+    build_run_id = validate_request(inputs)
     if WORK.exists():
         shutil.rmtree(WORK)
     WORK.mkdir()
@@ -138,8 +140,12 @@ def receive(inputs):
         raise ValueError("Expected an RSA recipient certificate with at least 2048 bits.")
     archive = WORK / "input.zip"
     fetch_bundle(inputs, archive)
-    info = unpack(inputs, archive, WORK / "input")
-    verify_artifact(inputs, info["installer"]["sha256"], WORK, openssl)
+    extracted = WORK / "input"
+    info = unpack(inputs, archive, extracted)
+    installer_digest = None
+    if inputs["phase"] == "installer":
+        installer_digest = digest(extracted / info["installer"]["path"])
+    verify_artifact(inputs, build_run_id, installer_digest, WORK, openssl)
     (WORK / "build-info.json").write_text(json.dumps(info), encoding="utf-8")
 
 
