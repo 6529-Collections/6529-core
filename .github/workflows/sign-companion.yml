@@ -39,6 +39,10 @@ on:
         description: SHA-256 of the input ZIP
         required: true
         type: string
+      artifact_attestation:
+        description: GitHub-signed receipt for the build archive or assembled Windows setup
+        required: true
+        type: string
       recipient_cert:
         description: Temporary RSA certificate for encrypting the signed result
         required: true
@@ -56,7 +60,26 @@ env:
   SIGNING_REGION: ${{ vars.COMPANION_SIGNING_REGION }}
 
 jobs:
+  authorize:
+    if: github.repository == '6529-Collections/6529-core' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check the release operator
+        shell: bash
+        env:
+          AUTHORIZED_ACTOR_ID: ${{ vars.COMPANION_SIGNING_ACTOR_ID }}
+        run: |
+          if [[ ! "$AUTHORIZED_ACTOR_ID" =~ ^[1-9][0-9]*$ ||
+                "$GITHUB_ACTOR_ID" != "$AUTHORIZED_ACTOR_ID" ||
+                "$GITHUB_ACTOR" != "$GITHUB_TRIGGERING_ACTOR" ]]; then
+            echo "::error::Companion signing requires the configured release operator."
+            exit 1
+          fi
+
   macos:
+    needs: authorize
     if: github.repository == '6529-Collections/6529-core' && github.ref == 'refs/heads/main' && startsWith(inputs.target, 'mac-')
     runs-on: macos-15
     timeout-minutes: 50
@@ -64,7 +87,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.12'
       - name: Verify and unpack signing input
@@ -87,6 +110,7 @@ jobs:
           retention-days: 3
 
   windows:
+    needs: authorize
     if: github.repository == '6529-Collections/6529-core' && github.ref == 'refs/heads/main' && inputs.target == 'windows-x64'
     runs-on: windows-2025
     timeout-minutes: 30
@@ -94,7 +118,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.12'
       - name: Verify and unpack signing input

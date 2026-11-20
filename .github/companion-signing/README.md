@@ -1,28 +1,32 @@
 # Validator Companion release signing
 
-The `sign-companion.yml` workflow accepts the release inputs produced by
-`6529-Collections/6529-validator-companion` on `main` once that repository is set up. The
-Companion release workflow dispatches it for each selected target.
+The release script on the operator’s Mac dispatches `sign-companion.yml` for
+installers built by `6529-Collections/6529-validator-companion`. The workflow
+runs on Core’s `main` branch, and the GitHub user ID in
+`COMPANION_SIGNING_ACTOR_ID` identifies the operator who may dispatch and rerun
+it. This setting applies to Companion only.
 
-The dispatch identifies the Companion run and attempt, version, channel, target,
-phase, and commit. It supplies the unsigned ZIP’s SHA-256, a time-limited HTTPS
-download from the configured signing bucket, and an RSA certificate for the return
-artifact. Set the Core repository variables `COMPANION_SIGNING_BUCKET` and
-`COMPANION_SIGNING_REGION` to match Companion’s private transfer bucket. Only the
-authorized Companion release role should write to the
-`6529-validator-companion/signing/` prefix. The Actions credential used for dispatch
-must be entrusted with requesting release signatures.
+The dispatch identifies the source build run and commit, release version,
+channel, target, and phase. It carries an input ZIP checksum, a short-lived
+HTTPS download from the private signing bucket, and the operator’s ephemeral
+RSA certificate. Set Core’s `COMPANION_SIGNING_BUCKET` and
+`COMPANION_SIGNING_REGION` to match the private transfer bucket in `eu-west-1`.
 
-Core checks the input against the target-specific paths, checksums, and release
-metadata. The Mac signing job also verifies the app identity and exact architecture.
-It uses the existing Developer ID identity, notarizes the signed DMG, staples the
-ticket, and checks Gatekeeper. On Windows, `payload` signs the app, both helpers, and
-the NSIS uninstaller. Companion reassembles the per-machine installer with those
-signed files. In the `installer` phase, Core verifies the signed payloads, compares
-the embedded binaries, and signs Setup.exe. The workflow uses Core’s existing Apple
-notary and Azure Key Vault credentials.
+Core checks the bundle’s expected paths, sizes, and checksums. A GitHub-signed
+receipt binds the unsigned archive to Companion’s build workflow on `main`.
+For Windows setup signing, the receipt binds the assembled installer SHA-256
+to Companion’s Windows assembly workflow and to the original build run and
+commit. Core checks GitHub’s signature, the workflow, ref, and digest before
+signing. Stored receipts can be used during the 14-day build-artifact retention
+period. The authorized release operator can retry a handoff with a new ID.
 
-Each successful run returns `signed-companion`, an encrypted `signed.tar.p7m` with
-the signed files and their checksums. Companion retrieves and verifies it before
-offering the final installer as a release artifact. Companion handles the later
-publication to S3 and the update feed.
+On macOS, Core verifies the app identity and architecture, signs the app,
+notarizes and staples the DMG, and checks Gatekeeper. On Windows the first pass
+signs the app, both helpers, and the NSIS uninstaller. Companion embeds the
+signed uninstaller as a regular installer file. Before signing the finished
+installer, Core extracts and compares all four embedded programs byte for byte
+and verifies the standalone signatures. No installer is executed on a signer.
+
+Each successful run returns an encrypted `signed.tar.p7m` with the signed files
+and their checksums. The release script retrieves and verifies the files on the
+Mac and handles subsequent uploads and the Companion update feed.

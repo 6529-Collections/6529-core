@@ -48,10 +48,14 @@ if ($env:PHASE -eq 'installer') {
     $sevenZip = (Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
     if (-not $sevenZip) { $sevenZip = Join-Path $env:ProgramFiles '7-Zip/7z.exe' }
     $inspect = Join-Path $work 'installer-contents'
-    & $sevenZip x $installer "-o$inspect" -y -bso0 -bsp0 'companion-windows.exe' 'helpers/companion-host.exe' 'helpers/companion-iroh-transport.exe'
+    & $sevenZip x $installer "-o$inspect" -y -bso0 -bsp0 'companion-windows.exe' 'helpers/companion-host.exe' 'helpers/companion-iroh-transport.exe' 'uninstall.exe'
     if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect the NSIS installer.' }
-    foreach ($entry in $programs | Where-Object path -ne 'windows/nsis/uninstall.exe') {
-        $relative = $entry.path.Substring('windows/'.Length)
+    foreach ($entry in $programs) {
+        $relative = if ($entry.path -eq 'windows/nsis/uninstall.exe') {
+            'uninstall.exe'
+        } else {
+            $entry.path.Substring('windows/'.Length)
+        }
         $installed = @(Get-ChildItem -LiteralPath $inspect -File -Recurse |
             Where-Object { $_.FullName.Replace('\', '/').EndsWith("/$relative") })
         if ($installed.Count -ne 1 -or
@@ -62,6 +66,8 @@ if ($env:PHASE -eq 'installer') {
     $toSign = @($info.installer)
 }
 
+$azureSignTool = Join-Path $env:USERPROFILE '.dotnet/tools/AzureSignTool.exe'
+if (-not (Test-Path -LiteralPath $azureSignTool)) { throw 'AzureSignTool was not installed.' }
 $sign = @('sign',
     '--azure-key-vault-url', $env:AZURE_KEY_VAULT_URL,
     '--azure-key-vault-client-id', $env:AZURE_CLIENT_ID,
@@ -74,7 +80,7 @@ foreach ($entry in $toSign) {
     $file = Join-Path $out $entry.path
     New-Item -ItemType Directory -Force (Split-Path -Parent $file) | Out-Null
     Copy-Item -LiteralPath (Join-Path $inputDir $entry.path) -Destination $file
-    & azuresigntool @sign $file
+    & $azureSignTool @sign $file
     if ($LASTEXITCODE -ne 0) { throw "AzureSignTool failed for $($entry.path)." }
     $publishers += Verify-Signature $file
 }

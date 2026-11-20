@@ -52,6 +52,7 @@ for path in app.rglob("*"):
         if relative not in allowed:
             sys.exit(f"Unexpected app file: {relative}")
 PY
+# The packaged app points at the public update feed. Signing inputs use a different private bucket.
 plist_value() { plutil -extract "$1" raw -o - "$plist"; }
 [[ "$(plist_value CFBundleIdentifier)" == "$bundle" &&
    "$(plist_value CFBundleExecutable)" == CompanionIroh &&

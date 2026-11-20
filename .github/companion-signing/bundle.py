@@ -13,6 +13,8 @@ import urllib.parse
 import urllib.request
 import zipfile
 
+from provenance import NoRedirects, verify_artifact
+
 
 WORK = Path(os.environ["RUNNER_TEMP"]) / "companion-signing"
 LIMIT = 256 * 1024 * 1024
@@ -22,11 +24,6 @@ WINDOWS_PROGRAMS = {
     "windows/helpers/companion-iroh-transport.exe",
     "windows/nsis/uninstall.exe",
 }
-
-
-class NoRedirects(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):
-        return None
 
 
 def digest(path):
@@ -62,7 +59,7 @@ def fetch_bundle(inputs, archive):
     url = urllib.parse.urlsplit(inputs["bundle_url"])
     bucket, region = os.environ["SIGNING_BUCKET"], os.environ["SIGNING_REGION"]
     if (not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,61}[a-z0-9]", bucket) or bucket == "6529bucket"
-            or not re.fullmatch(r"[a-z0-9-]+", region)):
+            or region != "eu-west-1"):
         raise ValueError("Configure the private signing transfer bucket.")
     expected_host = f"{bucket}.s3.{region}.amazonaws.com"
     expected_key = f"/6529-validator-companion/signing/{inputs['handoff_id']}/{inputs['bundle_sha256']}.zip"
@@ -91,6 +88,10 @@ def unpack(inputs, archive, dest):
         if sum(entry.file_size for entry in entries) > LIMIT or bundle.getinfo("build-info.json").file_size > 16384:
             raise ValueError("Signing input contents are too large.")
         info = json.loads(bundle.read("build-info.json"))
+        if (not isinstance(info, dict) or not isinstance(info.get("installer"), dict)
+                or not isinstance(info.get("programs"), list)
+                or not all(isinstance(entry, dict) for entry in info["programs"])):
+            raise ValueError("Invalid signing catalog structure.")
         source = {"ref": "refs/heads/main", "commit": inputs["commit"]}
         if (info["source"] != source or info["product"] != "6529 Validator Companion" or info["schema"] != 1
                 or any(info[key] != inputs[key] for key in ("version", "channel", "target"))):
@@ -102,6 +103,7 @@ def unpack(inputs, archive, dest):
         records = [info["installer"], *info["programs"]]
         if info["installer"]["path"] != installer or sorted(entry["path"] for entry in records) != sorted({installer} | programs):
             raise ValueError("Missing or unexpected file in the signing catalog.")
+        # Extract only the exact catalog paths checked against the allowlist above.
         for entry in records:
             path = dest / entry["path"]
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,7 +123,10 @@ def openssl(*arguments, **kwargs):
 
 def receive(inputs):
     validate_request(inputs)
+    if WORK.exists():
+        shutil.rmtree(WORK)
     WORK.mkdir()
+    # An authorized operator supplies an ephemeral certificate for the return artifact.
     certificate = WORK / "recipient.pem"
     pem = inputs["recipient_cert"].strip()
     if not re.fullmatch(r"-----BEGIN CERTIFICATE-----\n[A-Za-z0-9+/=\n]+\n-----END CERTIFICATE-----", pem):
@@ -134,6 +139,7 @@ def receive(inputs):
     archive = WORK / "input.zip"
     fetch_bundle(inputs, archive)
     info = unpack(inputs, archive, WORK / "input")
+    verify_artifact(inputs, info["installer"]["sha256"], WORK, openssl)
     (WORK / "build-info.json").write_text(json.dumps(info), encoding="utf-8")
 
 
@@ -161,5 +167,5 @@ if __name__ == "__main__":
     try:
         inputs = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))["inputs"]
         {"receive": receive, "send": send}[sys.argv[1]](inputs)
-    except (KeyError, ValueError, OSError, zipfile.BadZipFile, subprocess.CalledProcessError) as error:
+    except (KeyError, TypeError, ValueError, OSError, zipfile.BadZipFile, subprocess.CalledProcessError) as error:
         sys.exit(f"Signing transfer failed: {error}")
