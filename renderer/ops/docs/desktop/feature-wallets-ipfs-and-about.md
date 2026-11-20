@@ -86,7 +86,9 @@ Under **6529 Desktop > Local Services**, choose **6529 Validator** to launch the
 
 ### App version, updates, and diagnostics
 
-Open 6529 Desktop > About for the installed version, OS/architecture, app scheme, app port, IPFS ports, updater status, and App Logs. Opening About checks for updates.
+In the desktop title bar, select **App info**, then **Check for updates**. The dialog shows **Checking for updates…** followed by **No updates found** or an available-update message. If the check fails, select **Check for updates** to try again. The app shows the download action in its update notice.
+
+In 6529 Desktop Classic, open **6529 Desktop Classic > About** in the sidebar for the installed version, OS/architecture, app scheme, app port, IPFS ports, updater status, and App Logs. Opening this page checks for updates and shows any download or installation progress.
 
 When Electron detects a new desktop version, an Update rocket appears above
 Search in the sidebar. Select it to open About and use the existing download

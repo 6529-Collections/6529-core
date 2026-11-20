@@ -1,4 +1,9 @@
 "use client";
+import useDialogKeyboard, {
+  DIALOG_KEYBOARD_VIEWPORT_STYLE,
+} from "@/hooks/useDialogKeyboard";
+
+import IconButton from "@/components/utils/button/IconButton";
 
 import { DROPDOWN_FIELD_CLASSES } from "@/components/utils/select/dropdown/dropdownTriggerStyles";
 import { useAuth } from "@/components/auth/Auth";
@@ -265,6 +270,7 @@ export default function ReportDropModal({
   readonly onClose: () => void;
 }) {
   const locale = useBrowserLocale();
+  const keyboardViewportRef = useDialogKeyboard(isOpen);
   const { connectedProfile, requestAuth, setToast } = useAuth();
   const queryClient = useQueryClient();
   const dropGateContext = useContentModerationDropGateContext();
@@ -546,7 +552,11 @@ export default function ReportDropModal({
       aria-describedby={descriptionId}
     >
       <DialogBackdrop className="tw-fixed tw-inset-0 tw-bg-iron-950/80" />
-      <div className="tw-fixed tw-inset-0 tw-overflow-y-auto tw-p-4">
+      <div
+        ref={keyboardViewportRef}
+        style={DIALOG_KEYBOARD_VIEWPORT_STYLE}
+        className="tw-fixed tw-inset-0 tw-overflow-y-auto tw-p-4"
+      >
         <div className="tw-flex tw-min-h-full tw-items-end tw-justify-center sm:tw-items-center">
           <DialogPanel className="tw-w-full tw-max-w-4xl tw-rounded-2xl tw-border tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-5 tw-shadow-2xl sm:tw-p-7">
             <div className="tw-flex tw-items-start tw-justify-between tw-gap-4">
@@ -562,15 +572,16 @@ export default function ReportDropModal({
                   {t(locale, dialogDescriptionKey)}
                 </p>
               </div>
-              <button
+              <IconButton
                 type="button"
                 onClick={closeModal}
                 disabled={mutation.isPending || withdrawMutation.isPending}
                 aria-label={t(locale, "contentModeration.report.close")}
-                className="tw-flex tw-size-9 tw-flex-shrink-0 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-transparent tw-text-iron-400 hover:tw-bg-iron-800 hover:tw-text-iron-100 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
+                size={36}
+                variant="ghost"
               >
                 <XMarkIcon aria-hidden="true" className="tw-size-5" />
-              </button>
+              </IconButton>
             </div>
 
             <ReportDropModalContent

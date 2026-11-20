@@ -396,6 +396,7 @@ const REP_CATEGORY_VALIDATION_MESSAGES = objectMessages(
   "rep.categories.validation",
   {
     errorTitle: "That category name won't work",
+    unavailable: "This category name is unavailable. Try a different name.",
     required: "Rep category is required.",
     tooShort: "Use at least {min} characters.",
     tooLong: "It's {length} characters long — the maximum is {max}.",
@@ -4157,7 +4158,7 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.shareModal.backdropAriaLabel": "Dismiss share modal",
   "headerShare.connectModal.title": "Connect Device",
   "headerShare.connectModal.mobileTitle": "Connect 6529 Mobile",
-  "headerShare.connectModal.desktopTitle": "Connect 6529 Desktop",
+  "headerShare.connectModal.desktopTitle": "Connect 6529 Desktop Classic",
   "headerShare.connectModal.chooseApp": "Which app are you connecting?",
   "headerShare.connectModal.only": "Connect only",
   "headerShare.connectModal.secure":
@@ -4166,7 +4167,7 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.connectModal.asSecure":
     "Connect as {name} with Post Signing & DM Encryption",
   "headerShare.connectModal.desktopMinimumVersion":
-    "Requires 6529 Desktop {version} or later.",
+    "Requires 6529 Desktop Classic {version} or later.",
   "headerShare.connectModal.back": "Back",
   "headerShare.connectModal.oneTime":
     "Use only on a device you own. This code works once.",
@@ -4179,7 +4180,7 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.menu.browser": "Browser",
   "headerShare.menu.app": "App",
   "headerShare.menu.mobile": "6529 Mobile",
-  "headerShare.menu.desktop": "6529 Desktop",
+  "headerShare.menu.desktop": "6529 Desktop Classic",
   "desktopNotifications.someone": "Someone",
   "desktopNotifications.followed": "{handle} is now following you",
   "desktopNotifications.viewProfile": "View profile",
@@ -4236,6 +4237,9 @@ export const EN_US_ROOT_MESSAGES = {
   "desktop.appInfo.version": "Version",
   "desktop.appInfo.environment": "Environment",
   "desktop.appInfo.checkUpdates": "Check for updates",
+  "desktop.appInfo.checkingUpdates": "Checking for updates…",
+  "desktop.appInfo.noUpdates": "No updates found.",
+  "desktop.appInfo.checkFailed": "Couldn’t check for updates. Try again.",
   "desktopConnect.title": "Connect a wallet",
   "desktopConnect.intro":
     "6529 Desktop Classic cannot use browser extensions directly. Choose how to connect:",
@@ -4389,8 +4393,8 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.qr.browserAlt": "Current page QR code",
   "headerShare.qr.mobileAlt": "Mobile App Link - QR Code",
   "headerShare.qr.shareConnectionAlt": "Connect 6529 Mobile QR code",
-  "headerShare.core.alt": "6529 Desktop",
-  "headerShare.core.open": "Open in 6529 Desktop",
+  "headerShare.core.alt": "6529 Desktop Classic",
+  "headerShare.core.open": "Open in 6529 Desktop Classic",
   "headerShare.connectionNotice.legacyTitle": "Update Authentication",
   "headerShare.connectionNotice.loadingTitle": "Preparing Device Connection",
   "headerShare.connectionNotice.errorTitle": "Device Connection Unavailable",
@@ -4636,6 +4640,34 @@ export const EN_US_ROOT_MESSAGES = {
   "subscriptions.history.emptyLogs": "No logs found",
   "subscriptions.history.emptyTopups": "No Top Ups found",
   "subscriptions.history.loading": "Loading {title}",
+  "subscriptions.coverage.summary.nextFundedDrops": "Next {count} drops funded",
+  "subscriptions.coverage.summary.paidTitle": "Subscription paid",
+  "subscriptions.coverage.summary.paid":
+    "The subscription for {meme} is already paid.",
+  "subscriptions.coverage.summary.forecastSnapshot": "Last forecast: {funded}.",
+  "subscriptions.coverage.summary.paymentUnavailable":
+    "This subscription could not be checked. It will be checked again shortly.",
+  "subscriptions.coverage.summary.uncoveredToday": "Today’s mint isn’t covered",
+  "subscriptions.coverage.summary.uncovered":
+    "The Memes #{token} isn’t covered",
+  "subscriptions.coverage.summary.partiallyCoveredToday":
+    "Today’s mint isn’t fully covered",
+  "subscriptions.coverage.summary.partiallyCovered":
+    "The Memes #{token} isn’t fully covered",
+  "subscriptions.coverage.summary.partialEditions":
+    "{funded} of {total} editions funded",
+  "subscriptions.coverage.summary.partialDeadline.one":
+    "Top up by {deadline} to receive the remaining {count} edition of The Memes #{token}.",
+  "subscriptions.coverage.summary.partialDeadline.many":
+    "Top up by {deadline} to receive the remaining {count} editions of The Memes #{token}.",
+  "subscriptions.coverage.summary.deadlinePassed": "Deadline passed",
+  "subscriptions.coverage.summary.expiredDeadline":
+    "Top-up deadline: {deadline}.",
+  "subscriptions.coverage.summary.viewHistory": "View history",
+  "subscriptions.coverage.summary.topUpFutureDrops": "Top up for future drops",
+  "subscriptions.coverage.summary.lastKnown": "Last known coverage",
+  "subscriptions.coverage.summary.lastUpdated":
+    "Last updated {time}. May be out of date.",
   "subscriptions.coverage.title": "Subscription coverage",
   "subscriptions.coverage.loading": "Loading subscription coverage",
   "subscriptions.coverage.unavailable":
@@ -4684,6 +4716,7 @@ export const EN_US_ROOT_MESSAGES = {
     "Projected from current eligibility, settings, balance, and the published Meme schedule.",
   "subscriptions.coverage.fundedThrough": "Funded through",
   "subscriptions.coverage.nextUnfunded": "Next unfunded",
+  "subscriptions.coverage.summary.nextDrop": "Next drop",
   "subscriptions.coverage.projected": "Projected",
   "subscriptions.coverage.memeToken": "The Memes #{token}",
   "subscriptions.coverage.topUpBy":
@@ -5721,6 +5754,8 @@ export const EN_US_ROOT_MESSAGES = {
   "waves.discovery.votingOpen": "Voting open",
   "waves.discovery.votingEnds": "Voting ends {date}",
   "waves.discovery.nextDecision": "Next result {date}",
+  "waves.discovery.activeSubmissions.one": "{count} active submission",
+  "waves.discovery.activeSubmissions.other": "{count} active submissions",
   "waves.discovery.emptyVotes": "No active TDH votes right now.",
   "waves.discovery.emptyRecommendations": "No recommendations right now.",
   "waves.discovery.loadingRecommendations": "Loading recommendations…",
