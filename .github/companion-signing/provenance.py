@@ -38,14 +38,18 @@ def der(tag, value):
 
 
 def public_key(jwk):
-    # PKCS#1 public key DER. OpenSSL performs the signature verification.
+    # Use a SubjectPublicKeyInfo PEM for OpenSSL and macOS system LibreSSL.
     def integer(name):
         value = decode(jwk[name]).lstrip(b"\0")
         if not value:
             raise ValueError("Invalid GitHub RSA key.")
         return der(2, (b"\0" if value[0] & 128 else b"") + value)
 
-    return der(48, integer("n") + integer("e"))
+    rsa = der(48, integer("n") + integer("e"))
+    rsa_algorithm = bytes.fromhex("300d06092a864886f70d0101010500")  # rsaEncryption with NULL parameters
+    encoded = base64.b64encode(der(48, rsa_algorithm + der(3, b"\0" + rsa)))
+    lines = [encoded[offset:offset + 64] for offset in range(0, len(encoded), 64)]
+    return b"\n".join([b"-----BEGIN PUBLIC KEY-----", *lines, b"-----END PUBLIC KEY-----", b""])
 
 
 def github_key(key_id):
@@ -97,14 +101,14 @@ def verify_artifact(inputs, build_run_id, installer_digest, work: Path, openssl)
     if (not isinstance(metadata, dict) or metadata.get("alg") != "RS256"
             or not isinstance(metadata.get("kid"), str)):
         raise ValueError("Expected a GitHub RSA receipt.")
-    key = work / "github-receipt-key.der"
+    key = work / "github-receipt-key.pem"
     key.write_bytes(public_key(github_key(metadata["kid"])))
     signature_file = work / "github-receipt.sig"
     signature_file.write_bytes(decode(signature))
     message = work / "github-receipt.txt"
     message.write_text(f"{header}.{payload}", encoding="ascii")
     try:
-        openssl("dgst", "-sha256", "-keyform", "DER", "-verify", str(key),
+        openssl("dgst", "-sha256", "-verify", str(key),
                 "-signature", str(signature_file), str(message), capture_output=True)
     except subprocess.CalledProcessError:
         raise ValueError("The GitHub artifact receipt signature is invalid.") from None
