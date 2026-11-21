@@ -33,6 +33,10 @@ run-name: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.
 
 jobs:
   build-mac:
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
     name: MacOS
     uses: ./.github/workflows/build-mac.yml
     with:
@@ -42,6 +46,10 @@ jobs:
     secrets: inherit
 
   build-windows:
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
     name: Windows
     uses: ./.github/workflows/build-windows.yml
     with:
@@ -51,6 +59,10 @@ jobs:
     secrets: inherit
 
   sign-windows:
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
     name: Sign Windows
     uses: ./.github/workflows/sign-windows.yml
     with:
@@ -60,6 +72,10 @@ jobs:
     secrets: inherit
 
   build-linux:
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
     name: Linux
     uses: ./.github/workflows/build-linux.yml
     with:
@@ -166,6 +182,10 @@ jobs:
         run: node scripts/notify-ci-wave.mjs
 
   publish:
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
     if: ${{ github.event.inputs.flow == 'Build All' || github.event.inputs.flow == 'Publish' }}
     name: Publish
     runs-on: ubuntu-latest
@@ -245,8 +265,10 @@ jobs:
         if: env.SHOULD_FAIL != 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_RELEASE_ROLE_ARN }}
+          role-session-name: desktop-release-${{ github.run_id }}
+          # macOS builds run ~80 min; the role allows 3 h sessions.
+          role-duration-seconds: 10800
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Publish S3 Links
@@ -373,6 +395,10 @@ jobs:
               .write()
 
   invalidate-cloudfront:
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
     if: ${{ github.event.inputs.flow == 'Invalidate CloudFront' }}
     name: Invalidate CloudFront
     runs-on: ubuntu-latest
@@ -403,8 +429,10 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_RELEASE_ROLE_ARN }}
+          role-session-name: desktop-release-${{ github.run_id }}
+          # macOS builds run ~80 min; the role allows 3 h sessions.
+          role-duration-seconds: 10800
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Invalidate CloudFront
