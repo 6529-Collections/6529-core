@@ -16,6 +16,7 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import styles from "./BrowserConnector.module.css";
 import BrowserConnectorWalletIntentNotice, {
   type BrowserConnectorWalletIntentNoticeType,
@@ -393,6 +394,9 @@ export default function BrowserConnectorProvider(
   }
 
   if (!account.isConnected) {
+    // This browser has no wallet connection for the app's origin (first use,
+    // cleared site data, or another port). Offer the same connect step as the
+    // sign-in page so the request can continue here instead of dead-ending.
     return (
       <Container>
         <Row>
@@ -400,9 +404,25 @@ export default function BrowserConnectorProvider(
             {walletIntentNotice ? (
               <BrowserConnectorWalletIntentNotice notice={walletIntentNotice} />
             ) : (
-              <p>Error: The account is not connected.</p>
+              <p>Connect your wallet to continue.</p>
             )}
-            <p>Close this window, return to 6529 Desktop Classic and retry.</p>
+            <p>
+              Connect your browser wallet here. This request stays open while
+              you connect.
+            </p>
+            <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+              <HeaderUserConnect label="Connect wallet" />
+              {!isCancelled && (
+                <button onClick={onCancel} className={CANCEL_BUTTON_CLASS}>
+                  Cancel
+                </button>
+              )}
+            </div>
+            {isCancelled && (
+              <p role="status" className="tw-pt-3">
+                Cancelled. Returning to 6529 Desktop Classic.
+              </p>
+            )}
           </Col>
         </Row>
       </Container>
