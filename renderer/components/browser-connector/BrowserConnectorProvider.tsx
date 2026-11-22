@@ -188,6 +188,12 @@ export default function BrowserConnectorProvider(
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const responseStartedRef = useRef(false);
+  const cancelledStatusRef = useRef<HTMLParagraphElement>(null);
+
+  // Cancel removes the focused control; keep keyboard focus on its outcome.
+  useEffect(() => {
+    if (isCancelled) cancelledStatusRef.current?.focus();
+  }, [isCancelled]);
 
   useEffect(() => {
     let active = true;
@@ -401,27 +407,33 @@ export default function BrowserConnectorProvider(
       <Container>
         <Row>
           <Col>
-            {walletIntentNotice ? (
+            {walletIntentNotice && (
               <BrowserConnectorWalletIntentNotice notice={walletIntentNotice} />
-            ) : (
-              <p>Connect your wallet to continue.</p>
             )}
             <p>
               Connect your browser wallet here. This request stays open while
               you connect.
             </p>
-            <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
-              <HeaderUserConnect label="Connect wallet" />
-              {!isCancelled && (
-                <button onClick={onCancel} className={CANCEL_BUTTON_CLASS}>
-                  Cancel
-                </button>
-              )}
-            </div>
-            {isCancelled && (
-              <p role="status" className="tw-pt-3">
+            {isCancelled ? (
+              <p
+                ref={cancelledStatusRef}
+                role="status"
+                tabIndex={-1}
+                className="tw-pt-3"
+              >
                 Cancelled. Returning to 6529 Desktop Classic.
               </p>
+            ) : (
+              <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+                <HeaderUserConnect label="Connect wallet" />
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className={CANCEL_BUTTON_CLASS}
+                >
+                  Cancel
+                </button>
+              </div>
             )}
           </Col>
         </Row>

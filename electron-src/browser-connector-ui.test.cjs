@@ -642,7 +642,13 @@ test("a browser without a wallet connection can cancel the request back to the a
     async ({ button, text, timers, outgoing, calls }) => {
       await React.act(async () => button("Cancel").click());
       assert.equal(button("Cancel"), undefined);
+      // Once cancelled, the page offers no way to start a second outcome.
+      assert.equal(button("Connect wallet"), undefined);
       assert.match(text(), /Cancelled\. Returning to 6529 Desktop Classic/);
+      assert.equal(
+        globalThis.document.activeElement?.getAttribute("role"),
+        "status",
+      );
       assert.equal(timers.length, 1);
       await React.act(async () => timers[0]());
       assert.deepEqual(returned(outgoing[0]), {
