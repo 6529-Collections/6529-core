@@ -23,26 +23,26 @@ import {
 } from "@/services/api/competitions-api";
 import type { ApiSetCompetitionVoteRequest } from "@/generated/models/ApiSetCompetitionVoteRequest";
 import { useCompetitionViewer } from "@/hooks/competitions/useCompetitionQueries";
-import { useCompetitionSignatureFor } from "@/hooks/competitions/useCompetitionSignature";
+import {
+  getCompetitionSignatureFailureKey,
+  toCompetitionSignatureError,
+  useCompetitionSignatureFor,
+} from "@/hooks/competitions/useCompetitionSignature";
 import {
   newCompetitionRequestKey,
   isRejectedCompetitionCommand,
   isCompetitionAccessError,
 } from "@/helpers/competition.helpers";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
-import { t } from "@/i18n/messages";
+import { t, type MessageKey } from "@/i18n/messages";
 import { formatInteger } from "@/i18n/format";
 import { getCompetitionConfigLabel } from "@/helpers/competition-labels.helpers";
 import { CompetitionState } from "./CompetitionState";
 import CompetitionCredits from "./CompetitionCredits";
 import { VotePanel } from "@/components/voting/VotePanel";
 import { VoteActionButton } from "@/components/voting/VoteActionButton";
-import {
-  VOTE_INPUT_AREA_CLASSES,
-  VOTE_NUMERIC_INPUT_BASE_CLASS,
-  VOTE_NUMERIC_INPUT_CLASSES,
-  VOTE_NUMERIC_UNIT_CLASS,
-} from "@/components/voting/VoteControl.styles";
+import { VOTE_INPUT_AREA_CLASSES } from "@/components/voting/VoteControl.styles";
+import { VoteNumericInput } from "@/components/voting/VoteNumericInput";
 import type { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import type { ApiCompetition } from "@/generated/models/ApiCompetition";
 import {
@@ -160,7 +160,7 @@ export function CompetitionVoteForm({
     null
   );
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<MessageKey | null>(null);
   const [saved, setSaved] = useState(false);
   const [lastVote, setLastVote] = useState<{
     source: string;
@@ -188,6 +188,10 @@ export function CompetitionVoteForm({
   const rangeDescriptionId = `competition-vote-range-${entryId}`;
   const min = credit.data?.min_vote;
   const max = credit.data?.max_vote;
+  const updateNumericDraft = (next: string) => {
+    setVoteDraft(next);
+    setSaved(false);
+  };
   const valid =
     value.trim() !== "" &&
     Number.isSafeInteger(numeric) &&
@@ -216,7 +220,7 @@ export function CompetitionVoteForm({
       });
     setBusy(true);
     onSubmittingChange?.(true);
-    setFailed(false);
+    setFailed(null);
     setSaved(false);
     try {
       if (!(await requestAuth()).success || !isCurrentActor()) return;
@@ -237,7 +241,9 @@ export function CompetitionVoteForm({
             { value: numeric },
             entryId,
             dropId
-          );
+          ).catch((error: unknown) => {
+            throw toCompetitionSignatureError(error);
+          });
         pending.current = { actor: viewer, body };
       }
       if (!isCurrentActor()) return;
@@ -266,7 +272,9 @@ export function CompetitionVoteForm({
       void invalidateCompetition(client, identity).catch(() => undefined);
     } catch (error) {
       if (isRejectedCompetitionCommand(error)) pending.current = null;
-      setFailed(true);
+      setFailed(
+        getCompetitionSignatureFailureKey(error) ?? "competitions.failure"
+      );
       await credit.refetch();
     } finally {
       setBusy(false);
@@ -361,7 +369,7 @@ export function CompetitionVoteForm({
               aria-describedby={[rangeDescriptionId, errorDescriptionId]
                 .filter(Boolean)
                 .join(" ")}
-              className="tw-h-11 tw-w-[12ch] tw-min-w-[10ch] tw-max-w-[12ch] tw-flex-1 tw-rounded-lg tw-border-0 tw-bg-transparent tw-pl-3 tw-pr-0 tw-text-base tw-font-semibold tw-tabular-nums tw-text-iron-50 tw-outline-none [appearance:textfield] focus:tw-ring-0 @[46rem]/my-vote:tw-h-9 @[46rem]/my-vote:tw-min-w-0 @[46rem]/my-vote:tw-text-sm [&::-webkit-inner-spin-button]:tw-appearance-none [&::-webkit-outer-spin-button]:tw-appearance-none"
+              className="tw-h-11 tw-w-[12ch] tw-min-w-[10ch] tw-max-w-[12ch] tw-flex-1 tw-rounded-lg tw-border-0 tw-bg-transparent tw-pl-3 tw-pr-0 tw-text-base tw-font-semibold !tw-tabular-nums tw-text-iron-50 tw-outline-none [appearance:textfield] focus:tw-ring-0 @[46rem]/my-vote:tw-h-9 @[46rem]/my-vote:tw-min-w-0 @[46rem]/my-vote:tw-text-sm [&::-webkit-inner-spin-button]:tw-appearance-none [&::-webkit-outer-spin-button]:tw-appearance-none"
             />
             <span className="tw-ml-auto tw-mr-2 tw-flex-shrink-0 tw-whitespace-nowrap tw-py-1 tw-text-xs tw-leading-4 tw-text-iron-400">
               {creditLabel}
@@ -396,7 +404,7 @@ export function CompetitionVoteForm({
               <Button
                 variant="tertiary"
                 size="sm"
-                className="tw-relative tw-col-start-2 tw-row-start-2 tw-my-1 tw-self-center after:tw-absolute after:tw-inset-x-0 after:tw-top-1/2 after:tw-h-11 after:-tw-translate-y-1/2 after:tw-content-[''] @[24rem]/vote-controls:tw-row-start-1 @[46rem]/my-vote:tw-my-0"
+                className="tw-relative tw-col-start-2 tw-row-start-2 tw-my-1 tw-self-center !tw-font-medium after:tw-absolute after:tw-inset-x-0 after:tw-top-1/2 after:tw-h-11 after:-tw-translate-y-1/2 after:tw-content-[''] @[24rem]/vote-controls:tw-row-start-1 @[46rem]/my-vote:tw-my-0"
                 aria-label={t(locale, "waves.voteRationale.explainAriaLabel")}
                 data-tooltip-id={explainTooltipId}
                 data-tooltip-content={t(
@@ -445,7 +453,7 @@ export function CompetitionVoteForm({
             role="alert"
             className="tw-mb-0 tw-mt-1 tw-text-xs tw-text-red"
           >
-            {t(locale, "competitions.failure")}
+            {t(locale, failed)}
           </p>
         )}
       </form>
@@ -513,23 +521,30 @@ export function CompetitionVoteForm({
             >
               {t(locale, "competitions.voteValue")}
             </label>
-            <input
+            <VoteNumericInput
               id={`competition-vote-${entryId}`}
+              unit={creditLabel}
+              variant={controlVariant}
               type="number"
               step="1"
               min={min ?? undefined}
               max={max ?? undefined}
-              className={`${VOTE_NUMERIC_INPUT_BASE_CLASS} ${VOTE_NUMERIC_INPUT_CLASSES[controlVariant]}`}
               value={value}
               disabled={busy || disabled || !competition.permissions.vote}
               aria-invalid={!valid}
               aria-describedby={errorDescriptionId}
-              onChange={(event) => {
-                setVoteDraft(event.target.value);
-                setSaved(false);
-              }}
+              onChange={(event) => updateNumericDraft(event.target.value)}
+              adjustments={
+                typeof min === "number" && typeof max === "number"
+                  ? {
+                      min,
+                      max,
+                      value: Number.isSafeInteger(numeric) ? numeric : 0,
+                      onChange: (next) => updateNumericDraft(String(next)),
+                    }
+                  : undefined
+              }
             />
-            <span className={VOTE_NUMERIC_UNIT_CLASS}>{creditLabel}</span>
           </div>
         )}
       </div>
@@ -546,7 +561,7 @@ export function CompetitionVoteForm({
           role="alert"
           className="tw-text-sm tw-text-red"
         >
-          {t(locale, "competitions.failure")}
+          {t(locale, failed)}
         </p>
       )}
       {saved && (

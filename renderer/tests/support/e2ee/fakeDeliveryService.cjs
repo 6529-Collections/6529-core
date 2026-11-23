@@ -1289,6 +1289,20 @@ function createFakeDeliveryService(options = {}) {
       }));
   }
 
+  function deviceInboxStatus(profileId, deviceKey) {
+    requireOwnDevice(profileId, deviceKey);
+    const hasDelivery = (s.deliveries.get(deviceKey)?.length ?? 0) > 0;
+    const hasUnjoinedChat = [...s.groups.values()].some(
+      (group) =>
+        !group.roster.has(deviceKey) &&
+        [...group.roster.values()].some((row) => row.profile_id === profileId)
+    );
+    return {
+      has_pending_chats: hasDelivery || hasUnjoinedChat,
+      has_queued_welcomes: hasDelivery,
+    };
+  }
+
   // -- blobs --------------------------------------------------------------------
 
   function createBlob(profileId, body) {
@@ -1516,6 +1530,11 @@ function createFakeDeliveryService(options = {}) {
       /^e2ee\/devices\/(0x[0-9a-f]+)\/groups$/,
       (c, [key]) => deviceGroups(c.profileId, key),
     ],
+    [
+      "GET",
+      /^e2ee\/devices\/(0x[0-9a-f]+)\/inbox-status$/,
+      (c, [key]) => deviceInboxStatus(c.profileId, key),
+    ],
     ["POST", /^e2ee\/blobs$/, (c) => createBlob(c.profileId, c.body)],
     [
       "PUT",
@@ -1666,6 +1685,19 @@ function createFakeDeliveryService(options = {}) {
       const id = lower(hashMessage(message));
       s.loginGrants.set(id, { message, signature, wallet, revoked: false });
       return id;
+    },
+    /**
+     * When the device a combined sign-in grant enrolled was revoked, or
+     * null. Like the backend, revoking that device ends the grant too.
+     */
+    loginGrantRevokedAt(grantId) {
+      const id = lower(grantId);
+      for (const device of s.devices.values()) {
+        if (device.grant_id === id && device.revoked_at !== null) {
+          return device.revoked_at;
+        }
+      }
+      return null;
     },
     /** NC8: the wallet's session revoked the grant (DN1 device list). */
     revokeLoginGrant(grantId) {
@@ -1845,6 +1877,8 @@ function createFakeApiClient(ds, profileId) {
       );
     },
     getDeviceGroups: (key) => call("GET", `e2ee/devices/${enc(key)}/groups`),
+    getDeviceInboxStatus: (key) =>
+      call("GET", `e2ee/devices/${enc(key)}/inbox-status`),
     createBlob: (body) => call("POST", "e2ee/blobs", body),
     putBlobChunk: (blob, index, body) =>
       call("PUT", `e2ee/blobs/${enc(blob)}/chunks/${index}`, body),

@@ -1,6 +1,7 @@
 "use client";
 
-import { DROPDOWN_FIELD_CLASSES } from "@/components/utils/select/dropdown/dropdownTriggerStyles";
+import DesktopWalletTransactionGate from "@/components/desktop/DesktopWalletTransactionGate";
+import { getDropdownTriggerClasses } from "@/components/utils/select/dropdown/dropdownTriggerStyles";
 import { useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect, useId, useReducer, useState } from "react";
 import {
@@ -551,7 +552,7 @@ export default function ManifoldMintingWidget(
     return (
       <select
         id={mintCountControlId}
-        className={`${DROPDOWN_FIELD_CLASSES} tw-h-11 tw-px-3 tw-text-sm`}
+        className={`${getDropdownTriggerClasses({ variant: "form", metrics: { height: 44, x: 12, text: "sm" } })}`}
         value={safeMintCount}
         onChange={(e) => setMintCount(normalizeMintCount(e.target.value))}
       >
@@ -609,7 +610,7 @@ export default function ManifoldMintingWidget(
             )}
           </div>
         </div>
-        <div className="tw-pt-3">
+        <DesktopWalletTransactionGate forwardable className="tw-pt-3">
           <Button
             variant="action"
             size="md"
@@ -624,7 +625,7 @@ export default function ManifoldMintingWidget(
           >
             {getButtonText()}
           </Button>
-        </div>
+        </DesktopWalletTransactionGate>
         {mintError && !hasOnchainTransactionError && (
           <div className="tw-pt-3 tw-text-base tw-text-red">{mintError}</div>
         )}

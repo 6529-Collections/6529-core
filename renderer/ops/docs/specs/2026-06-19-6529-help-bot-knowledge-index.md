@@ -347,7 +347,8 @@ the left-side criteria list, and saving still creates and applies a new group.
 
 The `the-memes.list-sorting` record explains the phone's sticky, horizontally
 scrollable sort controls, side-by-side Year and Season filters, bottom sheets,
-and square card previews. Existing sorting, query, and detail-page guidance
+and square card previews. Sort choices, including Volume, use the selected
+underline treatment on mobile, in the app, and on desktop. Existing sorting, query, and detail-page guidance
 continues to apply.
 
 The profile-header record describes the single desktop `Edit` action, the
@@ -634,11 +635,10 @@ navigation because the frontend owns:
 The backend should own caching, retrieval, embeddings when added, job
 orchestration, LLM calls, message reactions, and bot replies.
 
-The backend also owns Help6529 Credit accounting. The V1 public behavior is
-indexed here so users can ask about it: the credit category is `Help6529
-Credits`, each bot question costs 1 REP in that category, signup grants 5,
-profile setup grants 5, and daily activity grants 5 when a user sends any
-message that day. Automatic daily activity grants do not have a balance cap.
+Asking help6529 is free. It no longer uses Help6529 Credits. The
+`help-bot.credits` record gives that answer, which matches the backend's reply
+to credit questions. If the backend charges for questions again, update this
+record in the same change.
 
 ## Agent Maintenance Contract
 
@@ -1097,14 +1097,22 @@ on desktop. Compact decision submission cards that offer replies keep
 `Explain vote` on the left and the small `Vote` action on the right of one footer
 row, with the reply above it.
 The record covers positive green/negative red/zero neutral styling and keyboard
-focus on the slider handle. In the iPhone app, single-submission and leaderboard
-voting share the same sheet, including in landscape. Voting sheets and compact artist,
+focus on the slider handle. On compact screens, single-submission and leaderboard
+voting open as a bottom sheet. In the iPhone app the sheet follows the keyboard,
+including in compact landscape. Voting sheets and compact artist,
 participant, and My submissions galleries track the keyboard while keeping the
 wave behind them steady; optional replies use the same motion curve. Decision remaining,
 spent, and available credits retain their own meaning. The record keeps
 decision-card Slider defaults, other mini-card Numeric defaults without a reply,
 generated placeholder versus prefill behavior, and each flow's existing close
 timing distinct; My Votes retains its separate compact row controls.
+Numeric fields share the app font, neutral styling and visible keyboard focus
+across full and compact panels. Full-size and compact submission-card numeric
+controls in waves and decisions share the bordered field and step buttons.
+Percentage shortcuts appear in full panels.
+Shortcuts use the allowed vote on the drop or entry. The record covers one-step
+keyboard, pointer and touch activation, cancellation of a held press, and draft
+changes without submission. Mini controls keep their smaller field and arrows without percentage shortcuts.
 
 The subscriptions record distinguishes pending and failed reads from successfully
 loaded zero balances and empty lists. Failed balance, settings, airdrop-address
