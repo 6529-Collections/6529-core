@@ -53,10 +53,9 @@
 #   then built around them in 6529-ai (deploy/release/sign-remote.sh windows),
 #   and signed with kind installer.
 #   The sessions' guest (guest/vmlinux, the guest's Linux kernel;
-#   guest/rootfs.ext4, its root file system; guest/manifest.txt) is data
-#   that the installer carries, and is never sent here: 6529-ai's
-#   release.py bundle leaves it out, and this job refuses any file under
-#   windows/guest/. The installer's own signature covers it.
+#   guest/rootfs.ext4, its root file system; guest/manifest.txt) is data,
+#   and is never sent here: 6529-ai's release.py bundle leaves it out, and
+#   this job refuses any file under windows/guest/.
 # kind programs, macOS: build-info.json's "macos.dmg" names
 #     macos/6529-ai-<version>-macos-arm64.dmg
 #                         the disk image as 6529-ai's package-macos.sh builds
@@ -766,8 +765,8 @@ jobs:
               if ($n.EndsWith('/')) { continue }
               if (-not $n.StartsWith('windows/')) { if ($n -cne 'build-info.json' -and -not $n.StartsWith('macos/')) { Write-Output "ignored here: $n" }; continue }
               $p = $n.Substring(8)
-              # The sessions' guest is data the installer carries; it is never sent here.
-              if ($p.StartsWith('guest/')) { throw "the bundle holds windows/${p}: the sessions' guest is data that the installer carries, and this workflow takes none of it" }
+              # The sessions' guest is data; it is never sent here.
+              if ($p.StartsWith('guest/')) { throw "the bundle holds windows/${p}: the sessions' guest is data, and this workflow takes none of it" }
               if (-not $listed.ContainsKey($p)) { throw "the bundle holds windows/$p, which build-info.json does not list" }
               $f = $listed[$p]
               $dest = Join-Path $out (Join-Path 'windows' $p)
