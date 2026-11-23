@@ -30,6 +30,13 @@
 #   "windows.files" lists {path, sha256, size} for each of
 #     windows/bin/6529-ai.exe, windows/bin/6529-ai-cli.exe
 #                         the service and the command line (Rust)
+#     windows/bin/openvmm.exe
+#                         OpenVMM, Microsoft's virtual machine monitor (Rust,
+#                         MIT), which runs each of 6529 AI's sessions in its
+#                         own VM through the Windows Hypervisor Platform. Built
+#                         from the commit 6529-ai's pins/engines.tsv names,
+#                         with the C runtime linked in, so it loads only
+#                         Windows' own libraries
 #     windows/engines/cpu/<name>.exe|.dll, windows/engines/vulkan/<name>.exe|.dll
 #                         llama-server, whisper-server and sd-server, built
 #                         from the commits 6529-ai's pins/engines.tsv names,
@@ -45,6 +52,11 @@
 #   each signed with AzureSignTool as sign-windows.yml signs. The installer is
 #   then built around them in 6529-ai (deploy/release/sign-remote.sh windows),
 #   and signed with kind installer.
+#   The sessions' guest (guest/vmlinux, the guest's Linux kernel;
+#   guest/rootfs.ext4, its root file system; guest/manifest.txt) is data
+#   that the installer carries, and is never sent here: 6529-ai's
+#   release.py bundle leaves it out, and this job refuses any file under
+#   windows/guest/. The installer's own signature covers it.
 # kind programs, macOS: build-info.json's "macos.dmg" names
 #     macos/6529-ai-<version>-macos-arm64.dmg
 #                         the disk image as 6529-ai's package-macos.sh builds
@@ -62,12 +74,28 @@
 #     Contents/Resources/6529-ai/engines/whisper-server  io.6529.ai.whisper-server
 #     Contents/Resources/6529-ai/engines/sd-server       io.6529.ai.sd-server
 #     Contents/Resources/6529-ai/kubo/ipfs               io.6529.ai.ipfs
+#     Contents/Resources/6529-ai/bin/6529-ai-vm          io.6529.ai.vm
 #   then the app itself, io.6529.ai.app, which signs its program with it and
-#   seals the script and every other file. None gets an entitlement: the 6529
-#   AI programs are compiled ahead of time (Rust, and C++ with Metal shaders
-#   that Apple's own compiler service builds for the GPU), Kubo is Go, and
-#   nothing loads another team's library. Any other program or library in
-#   the app is refused. The app is notarized and its ticket stapled. The disk
+#   seals the script and every other file. The app is never signed with
+#   --deep, which would sign every program again without its entitlement.
+#   6529-ai-vm, the VM runner of 6529 AI's sessions on a Mac (Swift, on
+#   Apple's Virtualization framework), gets one entitlement,
+#   com.apple.security.virtualization, from the plist this workflow writes
+#   itself, never from the bundle; its ad-hoc signature as built must ask for
+#   exactly that entitlement, and nothing more. No other program, and not the
+#   app, gets an entitlement: the other 6529 AI programs are compiled ahead of
+#   time (Rust, and C++ with Metal shaders that Apple's own compiler service
+#   builds for the GPU), Kubo is Go, and nothing loads another team's
+#   library. Any other program or library in the app is refused.
+#   The app may also carry the sessions' guest, as data, by path:
+#     Contents/Resources/6529-ai/guest/Image             the guest's Linux kernel
+#     Contents/Resources/6529-ai/guest/rootfs.ext4       the guest's root file system
+#     Contents/Resources/6529-ai/guest/manifest.txt      what the guest was built from
+#   Image and rootfs.ext4 come together or not at all. None of them may be a
+#   Mach-O program, and no other file may sit in guest/. They are left out of
+#   the search for programs by these paths alone, and never signed. Image
+#   starts with "MZ", the arm64 kernel's EFI stub: it is not a Mach-O program.
+#   The app is notarized and its ticket stapled. The disk
 #   image is then made again around the signed app with the same volume name
 #   and link, codesigned, notarized and stapled, and checked with spctl -t
 #   open (the disk image) and spctl -t exec (the app in it), both of which
@@ -310,7 +338,7 @@ jobs:
           echo "SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
           echo "TEAM_ID=$team" >> "$GITHUB_ENV"
 
-      - name: Codesign every program in the app, then the app (hardened runtime, secure timestamp, io.6529.ai.<name>)
+      - name: Codesign every program in the app, 6529-ai-vm with its one entitlement, then the app (hardened runtime, secure timestamp, io.6529.ai.<name>, never --deep)
         run: |
           set -euo pipefail
           retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "attempt $n failed: $1"; [ "$n" = 3 ] || sleep $((n * 15)); done; return 1; }
@@ -320,39 +348,95 @@ jobs:
           rm -rf "$APP/Contents/_CodeSignature" "$APP/Contents/CodeResources"
           tree=Contents/Resources/6529-ai
           known=("$tree/bin/6529-ai" "$tree/bin/6529-ai-cli" "$tree/engines/llama-server" "$tree/engines/whisper-server"
-            "$tree/engines/sd-server" "$tree/kubo/ipfs")
+            "$tree/engines/sd-server" "$tree/kubo/ipfs" "$tree/bin/6529-ai-vm")
           is_known() { local k; for k in "${known[@]}"; do [ "$k" = "$1" ] && return 0; done; return 1; }
+          # The sessions' guest, data by path: never a program, never signed.
+          data=("$tree/guest/Image" "$tree/guest/rootfs.ext4" "$tree/guest/manifest.txt")
+          is_data() { local k; for k in "${data[@]}"; do [ "$k" = "$1" ] && return 0; done; return 1; }
+          # The VM runner's one entitlement, written here: the bundle never
+          # chooses an entitlement.
+          vm="$tree/bin/6529-ai-vm"
+          vm_ents="$RUNNER_TEMP/6529-ai-vm.entitlements"
+          cat > "$vm_ents" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.security.virtualization</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$vm_ents"
+          want_ents='{"com.apple.security.virtualization":true}'
+          [ "$(plutil -convert json -o - "$vm_ents")" = "$want_ents" ] || { echo "::error::the runner's entitlements plist is not $want_ents"; exit 1; }
+          # guest/ holds the guest's files alone, none a program, and Image
+          # and rootfs.ext4 together or neither.
+          if [ -e "$APP/$tree/guest" ]; then
+            while IFS= read -r -d '' f; do
+              rel=${f#"$APP"/}
+              is_data "$rel" || { echo "::error::$rel is not one of the guest's files (${data[*]})"; exit 1; }
+            done < <(find "$APP/$tree/guest" -mindepth 1 -print0)
+            n_guest=0
+            for g in "$tree/guest/Image" "$tree/guest/rootfs.ext4"; do [ -f "$APP/$g" ] && n_guest=$((n_guest + 1)); done
+            [ "$n_guest" = 2 ] || { echo "::error::guest/ holds $n_guest of Image and rootfs.ext4, not both"; exit 1; }
+          fi
           : > "$RUNNER_TEMP/programs.txt"
           while IFS= read -r -d '' f; do
-            desc=$(file -b "$f")
-            case "$desc" in Mach-O*) ;; *) continue ;; esac
             rel=${f#"$APP"/}
+            desc=$(file -b "$f")
+            # The guest's files by their path, before the search for
+            # programs, and refused if one is a program after all.
+            if is_data "$rel"; then
+              case "$desc" in Mach-O*) echo "::error::$rel is a program ($desc), where only the guest's data may be"; exit 1 ;; esac
+              echo "data, not signed: $rel ($desc)"
+              continue
+            fi
+            case "$desc" in Mach-O*) ;; *) continue ;; esac
             [ "$(lipo -archs "$f")" = arm64 ] || { echo "::error::$rel is not an arm64 program ($(lipo -archs "$f"))"; exit 1; }
             # The app's program is signed with the app, below.
             [ "$rel" = "$APP_EXE" ] && continue
             is_known "$rel" || { echo "::error::$rel is a program this workflow does not know ($desc); refusing to sign it"; exit 1; }
-            printf '%s\tio.6529.ai.%s\n' "$rel" "$(basename "$rel")" >> "$RUNNER_TEMP/programs.txt"
+            if [ "$rel" = "$vm" ]; then
+              printf '%s\tio.6529.ai.vm\tvirtualization\n' "$rel" >> "$RUNNER_TEMP/programs.txt"
+            else
+              printf '%s\tio.6529.ai.%s\t-\n' "$rel" "$(basename "$rel")" >> "$RUNNER_TEMP/programs.txt"
+            fi
           done < <(find "$APP" -type f -print0)
           listed=$(cut -f1 "$RUNNER_TEMP/programs.txt")
           for p in "${known[@]}"; do
             grep -qxF "$p" <<< "$listed" || { echo "::error::the app has no $p"; exit 1; }
           done
-          echo "== the programs, inside out"
-          while IFS=$'\t' read -r rel id; do
+          # The runner as built asks for this one entitlement, in its ad-hoc
+          # signature; a build that asks for another or for more is refused.
+          codesign --display --entitlements - --xml "$APP/$vm" > "$RUNNER_TEMP/6529-ai-vm.asked.plist" 2> /dev/null \
+            || { echo "::error::$vm: its ad-hoc entitlements could not be read"; exit 1; }
+          asked=$(plutil -convert json -o - "$RUNNER_TEMP/6529-ai-vm.asked.plist") || { echo "::error::$vm: its ad-hoc signature asks for no entitlements"; exit 1; }
+          [ "$asked" = "$want_ents" ] || { echo "::error::$vm asks for $asked, not $want_ents"; exit 1; }
+          echo "== the programs, inside out; 6529-ai-vm before the app"
+          while IFS=$'\t' read -r rel id ents; do
             echo "-- $rel ($id)"
-            retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --identifier "$id" \
-              --sign "$SIGN_IDENTITY" "$APP/$rel"
+            if [ "$ents" = virtualization ]; then
+              echo "   entitlements: com.apple.security.virtualization"
+              retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --identifier "$id" \
+                --entitlements "$vm_ents" --sign "$SIGN_IDENTITY" "$APP/$rel"
+            else
+              retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --identifier "$id" \
+                --sign "$SIGN_IDENTITY" "$APP/$rel"
+            fi
           done < "$RUNNER_TEMP/programs.txt"
           echo "== 6529 AI.app (io.6529.ai.app), with its program $APP_EXE; the script and every other file sealed"
+          # Never --deep: it would sign each program again, without the
+          # runner's entitlement.
           retry codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --sign "$SIGN_IDENTITY" "$APP"
 
-      - name: Check every signature (codesign --verify --strict --deep, team, runtime, timestamp, identifier, no entitlements)
+      - name: Check every signature (codesign --verify --strict --deep, team, runtime, timestamp, identifier; the virtualization entitlement on 6529-ai-vm alone)
         run: |
           set -euo pipefail
           # codesign's output is read whole before grep looks at it: with
           # pipefail, grep -q quitting early could fail the pipe with SIGPIPE.
-          check() { # FILE NAME IDENTIFIER
-            local f=$1 rel=$2 want=$3 info ents
+          check() { # FILE NAME IDENTIFIER ENTITLEMENTS (- for none, virtualization for the runner's one)
+            local f=$1 rel=$2 want=$3 want_ents=$4 info ents json
             codesign --verify --strict "$f" || { echo "::error::$rel: not validly signed"; exit 1; }
             info=$(codesign --display --verbose=2 "$f" 2>&1)
             grep -qx "TeamIdentifier=$TEAM_ID" <<< "$info" || { echo "::error::$rel: not signed with this Developer ID"; exit 1; }
@@ -360,13 +444,24 @@ jobs:
             grep -Eq 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$info" || { echo "::error::$rel: no hardened runtime"; exit 1; }
             grep -q '^Timestamp=' <<< "$info" || { echo "::error::$rel: no secure timestamp"; exit 1; }
             ents=$(codesign --display --entitlements - --xml "$f" 2> /dev/null) || { echo "::error::$rel: its entitlements could not be read"; exit 1; }
-            if grep -q '<key>' <<< "$ents"; then
-              echo "::error::$rel: signed with entitlements"; exit 1
+            if [ "$want_ents" = virtualization ]; then
+              printf '%s\n' "$ents" > "$RUNNER_TEMP/entitlements-shown.plist"
+              json=$(plutil -convert json -o - "$RUNNER_TEMP/entitlements-shown.plist") || { echo "::error::$rel: signed with no entitlements"; exit 1; }
+              [ "$json" = '{"com.apple.security.virtualization":true}' ] \
+                || { echo "::error::$rel: entitlements $json, not com.apple.security.virtualization alone"; exit 1; }
+              echo "$rel: $want, runtime, timestamped, entitlements com.apple.security.virtualization alone"
+            else
+              if grep -q '<key>' <<< "$ents"; then
+                echo "::error::$rel: signed with entitlements"; exit 1
+              fi
+              echo "$rel: $want, runtime, timestamped, no entitlements"
             fi
-            echo "$rel: $want, runtime, timestamped, no entitlements"
           }
-          while IFS=$'\t' read -r rel id; do check "$APP/$rel" "$rel" "$id"; done < "$RUNNER_TEMP/programs.txt"
-          check "$APP" "6529 AI.app" io.6529.ai.app
+          while IFS=$'\t' read -r rel id ents; do check "$APP/$rel" "$rel" "$id" "$ents"; done < "$RUNNER_TEMP/programs.txt"
+          # The runner, and nothing else, carries an entitlement.
+          [ "$(awk -F'\t' '$3 != "-"' "$RUNNER_TEMP/programs.txt" | cut -f1)" = Contents/Resources/6529-ai/bin/6529-ai-vm ] \
+            || { echo "::error::a program other than 6529-ai-vm, or none, was signed with an entitlement"; exit 1; }
+          check "$APP" "6529 AI.app" io.6529.ai.app -
           codesign --verify --deep --strict --verbose=2 "$APP"
           # Every Mach-O in the app was signed here.
           while IFS= read -r -d '' f; do
@@ -498,11 +593,20 @@ jobs:
           diff <(listing "$APP") <(listing "$app") || { echo "::error::the app on the disk image differs from the app signed here"; exit 1; }
           echo "== 6529 AI.app on the disk image"
           codesign --verify --strict --deep --verbose=2 "$app"
-          while IFS=$'\t' read -r rel id; do
+          while IFS=$'\t' read -r rel id ents; do
             codesign --verify --strict "$app/$rel" || { echo "::error::$rel: not validly signed on the disk image"; exit 1; }
             info=$(codesign --display --verbose=2 "$app/$rel" 2>&1)
             grep -qx "Identifier=$id" <<< "$info" || { echo "::error::$rel: not $id on the disk image"; exit 1; }
-            echo "$rel: signed, $id"
+            shown=$(codesign --display --entitlements - --xml "$app/$rel" 2> /dev/null) || { echo "::error::$rel: its entitlements could not be read on the disk image"; exit 1; }
+            if [ "$ents" = virtualization ]; then
+              printf '%s\n' "$shown" > entitlements-shown.plist
+              [ "$(plutil -convert json -o - entitlements-shown.plist 2> /dev/null)" = '{"com.apple.security.virtualization":true}' ] \
+                || { echo "::error::$rel: lost com.apple.security.virtualization on the disk image"; exit 1; }
+              echo "$rel: signed, $id, entitlement com.apple.security.virtualization"
+            else
+              if grep -q '<key>' <<< "$shown"; then echo "::error::$rel: carries entitlements on the disk image"; exit 1; fi
+              echo "$rel: signed, $id"
+            fi
           done < programs.txt
           n=$(wc -l < programs.txt | tr -d ' ')
           if [ "$NOTARIZE" = true ]; then
@@ -519,10 +623,10 @@ jobs:
               # Informational: Apple's online record of each program.
               codesign --verify --verbose=2 -R='notarized' --check-notarization "$app/$rel" 2>&1 || echo "(no online notarization record found for $rel)"
             done < programs.txt
-            programs="programs: the $n programs and 6529 AI.app codesigned (hardened runtime, timestamp, no entitlements) and notarized; the app's ticket stapled; spctl -t exec: Notarized Developer ID"
+            programs="programs: the $n programs and 6529 AI.app codesigned (hardened runtime, timestamp; 6529-ai-vm with com.apple.security.virtualization alone, no other entitlements) and notarized; the app's ticket stapled; spctl -t exec: Notarized Developer ID"
             state="package: $DMG_NAME codesigned, notarized, ticket stapled; spctl -t open: Notarized Developer ID"
           else
-            programs="programs: the $n programs and 6529 AI.app codesigned (hardened runtime, timestamp, no entitlements), NOT notarized (notarize=false): for tests only"
+            programs="programs: the $n programs and 6529 AI.app codesigned (hardened runtime, timestamp; 6529-ai-vm with com.apple.security.virtualization alone, no other entitlements), NOT notarized (notarize=false): for tests only"
             state="package: $DMG_NAME codesigned, NOT notarized (notarize=false): for tests only"
           fi
           echo "$programs"
@@ -624,7 +728,7 @@ jobs:
             if (-not ($h[0] -eq 0x4D -and $h[1] -eq 0x5A -and $pe -ge 0 -and $pe -le 4090 -and [BitConverter]::ToUInt32($h, $pe) -eq 0x00004550)) { return -1 }
             return [int][BitConverter]::ToUInt16($h, $pe + 4)
           }
-          $required = @('bin/6529-ai.exe', 'bin/6529-ai-cli.exe', 'kubo/ipfs.exe')
+          $required = @('bin/6529-ai.exe', 'bin/6529-ai-cli.exe', 'bin/openvmm.exe', 'kubo/ipfs.exe')
           foreach ($b in @('cpu', 'vulkan')) { foreach ($e in @('llama', 'whisper', 'sd')) { $required += "engines/$b/$e-server.exe" } }
           $zip = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $temp 'bundle.zip'))
           try {
@@ -642,7 +746,7 @@ jobs:
                 if ($null -eq $f) { continue }
                 $p = [string]$f.path
                 # The installer's programs by their place in it, and Inno Setup's uninstaller.
-                if ($p -cnotmatch '^(bin/6529-ai(-cli)?\.exe|kubo/ipfs\.exe|engines/(cpu|vulkan)/[a-z0-9][a-z0-9._-]*\.(exe|dll)|uninstaller/uninst-[0-9]+\.[0-9]+\.[0-9]+-[0-9a-f]{10}\.e32)$' -or $p.Contains('..')) {
+                if ($p -cnotmatch '^(bin/(6529-ai(-cli)?|openvmm)\.exe|kubo/ipfs\.exe|engines/(cpu|vulkan)/[a-z0-9][a-z0-9._-]*\.(exe|dll)|uninstaller/uninst-[0-9]+\.[0-9]+\.[0-9]+-[0-9a-f]{10}\.e32)$' -or $p.Contains('..')) {
                   throw "build-info.json lists a file named `"$p`", which this workflow does not sign"
                 }
                 if ([string]$f.sha256 -cnotmatch '^[0-9a-f]{64}$') { throw "build-info.json: $p has no SHA-256" }
@@ -662,6 +766,8 @@ jobs:
               if ($n.EndsWith('/')) { continue }
               if (-not $n.StartsWith('windows/')) { if ($n -cne 'build-info.json' -and -not $n.StartsWith('macos/')) { Write-Output "ignored here: $n" }; continue }
               $p = $n.Substring(8)
+              # The sessions' guest is data the installer carries; it is never sent here.
+              if ($p.StartsWith('guest/')) { throw "the bundle holds windows/${p}: the sessions' guest is data that the installer carries, and this workflow takes none of it" }
               if (-not $listed.ContainsKey($p)) { throw "the bundle holds windows/$p, which build-info.json does not list" }
               $f = $listed[$p]
               $dest = Join-Path $out (Join-Path 'windows' $p)
@@ -818,7 +924,7 @@ jobs:
           else
             if [ "$SYSTEMS" != macos ]; then
               [ "$WINDOWS_RESULT" = success ] || { echo "::error::the Windows job did not run"; exit 1; }
-              for f in bin/6529-ai.exe bin/6529-ai-cli.exe kubo/ipfs.exe; do has "windows/$f"; done
+              for f in bin/6529-ai.exe bin/6529-ai-cli.exe bin/openvmm.exe kubo/ipfs.exe; do has "windows/$f"; done
               for b in cpu vulkan; do for e in llama whisper sd; do has "windows/engines/$b/$e-server.exe"; done; done
               [ "$(grep -cE '^windows/uninstaller/uninst-[^/]+\.e32$' <<< "$names" || true)" = 1 ] || { echo "::error::SHA256SUMS does not list one uninstaller"; exit 1; }
             fi
