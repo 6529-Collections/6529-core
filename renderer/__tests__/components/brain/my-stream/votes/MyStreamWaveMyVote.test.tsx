@@ -10,6 +10,12 @@ import {
 
 const mockMediaDisplay = jest.fn();
 const mockIsCurationWave = jest.fn(() => false);
+const mockPush = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  ...jest.requireActual("next/navigation"),
+  useRouter: () => ({ push: mockPush }),
+}));
 
 jest.mock("@/components/drops/view/item/content/media/MediaDisplay", () => ({
   __esModule: true,
@@ -75,6 +81,7 @@ describe("MyStreamWaveMyVote", () => {
 
   beforeEach(() => {
     mockMediaDisplay.mockClear();
+    mockPush.mockClear();
     mockIsCurationWave.mockReset();
     mockIsCurationWave.mockReturnValue(false);
     (globalThis.getSelection as any) = () => ({ toString: () => "" });
@@ -354,7 +361,6 @@ describe("MyStreamWaveMyVote", () => {
   it("keeps the profile link separate from submission navigation", () => {
     const onDropClick = jest.fn();
     const onToggleCheck = jest.fn();
-    const openProfile = jest.spyOn(window, "open").mockReturnValue(null);
     render(
       <MyStreamWaveMyVote
         drop={drop}
@@ -365,10 +371,9 @@ describe("MyStreamWaveMyVote", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "alice" }));
 
-    expect(openProfile).toHaveBeenCalledWith("/alice", "_blank");
+    expect(mockPush).toHaveBeenCalledWith("/alice");
     expect(onDropClick).not.toHaveBeenCalled();
     expect(onToggleCheck).not.toHaveBeenCalled();
-    openProfile.mockRestore();
   });
 
   it("keeps the media tooltip separate from submission navigation", () => {
