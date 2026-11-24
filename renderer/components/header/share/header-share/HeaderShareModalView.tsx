@@ -34,12 +34,18 @@ import { openInExternalBrowser } from "@/helpers";
 import { t, type MessageKey } from "@/i18n/messages";
 import {
   HEADER_SHARE_LOCALE,
+  isDesktopConnectionTarget,
   Mode,
   PageShareTarget,
   SubMode,
 } from "./constants";
 import type { HeaderShareModalViewProps } from "./HeaderShareModalView.types";
-import { buildSocialShareUrls, type ConnectionShareStatus } from "./shareUtils";
+import {
+  buildNavigateDeepLinkUrl,
+  buildSocialShareUrls,
+  getDesktopConnectionShareScheme,
+  type ConnectionShareStatus,
+} from "./shareUtils";
 import { FarcasterLogo, XLogo } from "./SocialShareIcons";
 import { useSystemShare } from "./useSystemShare";
 import { useAndroidBackLayer } from "@/hooks/useAndroidBackLayer";
@@ -71,9 +77,11 @@ function getModalTitleKey(
 ): MessageKey {
   if (mode !== Mode.CONNECT) return "headerShare.shareModal.title";
   if (!hasSelectedConnectionMode) return "headerShare.connectModal.title";
-  return activeSubTab === SubMode.DESKTOP
-    ? "headerShare.connectModal.desktopTitle"
-    : "headerShare.connectModal.mobileTitle";
+  if (activeSubTab === SubMode.DESKTOP)
+    return "headerShare.connectModal.newDesktopTitle";
+  if (activeSubTab === SubMode.DESKTOP_CLASSIC)
+    return "headerShare.connectModal.desktopTitle";
+  return "headerShare.connectModal.mobileTitle";
 }
 
 /** Show the share flow, including the secure Desktop link or Mobile QR code. */
@@ -96,7 +104,7 @@ export function HeaderShareModalView({
   setPageShareTarget,
   shareConnectionSrc,
   shareConnectionAppUrl,
-  shareConnectionCoreUrl,
+  shareConnectionDesktopPath,
   mobileConnectionShareStatus,
   desktopConnectionShareStatus,
   terminalConnectionShareFailuresRef,
@@ -118,6 +126,11 @@ export function HeaderShareModalView({
     if (open || connectionMode === "secure") setConnectionMode(null);
   }
   const isConnectMode = mode === Mode.CONNECT;
+  const isDesktopTarget = isDesktopConnectionTarget(activeSubTab);
+  const isClassicTarget = activeSubTab === SubMode.DESKTOP_CLASSIC;
+  const activeConnectionShareStatus = isDesktopTarget
+    ? desktopConnectionShareStatus
+    : mobileConnectionShareStatus;
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     isAvailable: isSystemShareAvailable,
@@ -202,10 +215,6 @@ export function HeaderShareModalView({
   };
 
   const getShareContent = () => {
-    const activeConnectionShareStatus =
-      activeSubTab === SubMode.DESKTOP
-        ? desktopConnectionShareStatus
-        : mobileConnectionShareStatus;
     if (activeConnectionShareStatus !== "ready") {
       return {
         content: renderConnectionShareNotice(activeConnectionShareStatus),
@@ -213,10 +222,14 @@ export function HeaderShareModalView({
       };
     }
 
-    if (activeSubTab === SubMode.DESKTOP) {
+    if (isDesktopConnectionTarget(activeSubTab)) {
+      const url = buildNavigateDeepLinkUrl({
+        scheme: getDesktopConnectionShareScheme(activeSubTab),
+        routerPath: shareConnectionDesktopPath,
+      });
       return {
-        content: <DesktopConnectionLink url={shareConnectionCoreUrl} />,
-        url: shareConnectionCoreUrl,
+        content: <DesktopConnectionLink url={url} classic={isClassicTarget} />,
+        url,
       };
     }
 
@@ -551,10 +564,6 @@ export function HeaderShareModalView({
 
   function renderActiveContent() {
     const { content, url } = getDisplayContent();
-    const activeConnectionShareStatus =
-      activeSubTab === SubMode.DESKTOP
-        ? desktopConnectionShareStatus
-        : mobileConnectionShareStatus;
     const pageShareQrSize = isSystemShareAvailable ? "14.25rem" : "10.75rem";
     const qrContent = (
       <div
@@ -563,7 +572,7 @@ export function HeaderShareModalView({
           isConnectMode
             ? "tw-w-full"
             : "tw-w-48 sm:tw-w-[var(--page-share-qr-size)]"
-        } ${isConnectMode && activeSubTab === SubMode.DESKTOP ? "tw-h-56" : "tw-aspect-square"} ${
+        } ${isConnectMode && isDesktopTarget ? "tw-h-56" : "tw-aspect-square"} ${
           isConnectMode && activeConnectionShareStatus === "ready"
             ? "tw-animate-fadeIn motion-reduce:tw-animate-none"
             : ""
@@ -608,17 +617,11 @@ export function HeaderShareModalView({
       );
     }
 
-    return renderConnectContent(
-      qrContent,
-      activeConnectionShareStatus,
-      content,
-      url
-    );
+    return renderConnectContent(qrContent, content, url);
   }
 
   function renderConnectContent(
     qrContent: ReactNode,
-    activeConnectionShareStatus: ConnectionShareStatus,
     content: ReactNode,
     url: string
   ) {
@@ -632,7 +635,7 @@ export function HeaderShareModalView({
       return (
         <DeviceConnectionShare
           key={activeSubTab}
-          target={activeSubTab === SubMode.DESKTOP ? "desktop" : "native"}
+          subMode={activeSubTab}
           renderLink={(link, refresh, loading) => (
             <>
               <h3 className="tw-m-0 tw-break-words tw-text-sm tw-font-semibold tw-text-iron-50">
@@ -640,8 +643,12 @@ export function HeaderShareModalView({
                   name,
                 })}
               </h3>
-              {activeSubTab === SubMode.DESKTOP ? (
-                <DesktopConnectionLink url={link.url} showVersionNotice />
+              {isDesktopTarget ? (
+                <DesktopConnectionLink
+                  url={link.url}
+                  classic={isClassicTarget}
+                  showVersionNotice
+                />
               ) : (
                 <div className="tw-aspect-square tw-w-full tw-overflow-hidden tw-rounded-lg">
                   {renderQRCodeImage(
@@ -703,7 +710,7 @@ export function HeaderShareModalView({
           >
             <div
               className={
-                activeSubTab === SubMode.DESKTOP
+                isDesktopTarget
                   ? "tw-h-56 tw-w-full"
                   : "tw-aspect-square tw-w-full"
               }
@@ -730,10 +737,9 @@ export function HeaderShareModalView({
     return null;
   }
 
-  let modalMaxWidthClassName = "tw-max-w-sm sm:tw-max-w-2xl";
-  if (isConnectMode) {
-    modalMaxWidthClassName = "tw-max-w-md";
-  }
+  const modalMaxWidthClassName = isConnectMode
+    ? "tw-max-w-md"
+    : "tw-max-w-sm sm:tw-max-w-2xl";
 
   return (
     <div
