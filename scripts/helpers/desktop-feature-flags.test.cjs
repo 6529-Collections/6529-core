@@ -29,6 +29,7 @@ test("both backend targets enable the same approved desktop features", () => {
   for (const backendTarget of ["live", "test"]) {
     assert.deepEqual(getDesktopFeatureFlags(backendTarget), {
       NEXT_PUBLIC_E2EE_DM_ENABLED: "true",
+      NEXT_PUBLIC_E2EE_READ_SYNC: "false",
       NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES: "true",
       NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: "true",
     });
@@ -57,20 +58,23 @@ test("distribution builds bake the flags of their backend target", () => {
   withEnv(
     {
       STAGING_API_KEY: STAGING_KEY_FIXTURE,
-      // Stale shell flags must not disable the approved desktop feature set.
+      // Stale shell flags must not change the desktop rollout policy.
       NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: "",
       NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES: "",
       NEXT_PUBLIC_E2EE_DM_ENABLED: "",
+      NEXT_PUBLIC_E2EE_READ_SYNC: "true",
     },
     () => {
       const live = getBuildEnvironment(config, "live");
       assert.equal(live.NEXT_PUBLIC_E2EE_DM_ENABLED, "true");
+      assert.equal(live.NEXT_PUBLIC_E2EE_READ_SYNC, "false");
       assert.equal(live.NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES, "true");
       assert.equal(live.NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS, "true");
       assert.equal(live.STAGING_API_KEY, "");
 
       const testBackend = getBuildEnvironment(config, "test");
       assert.equal(testBackend.NEXT_PUBLIC_E2EE_DM_ENABLED, "true");
+      assert.equal(testBackend.NEXT_PUBLIC_E2EE_READ_SYNC, "false");
       assert.equal(testBackend.NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES, "true");
       assert.equal(testBackend.NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS, "true");
     },
@@ -90,16 +94,22 @@ test("production builds keep the live flags", () => {
 });
 
 test("dev runs bake the same flags as builds for each backend", () => {
-  withEnv({ STAGING_API_KEY: STAGING_KEY_FIXTURE }, () => {
-    for (const backendTarget of ["live", "test"]) {
-      const env = getDevEnvironment(backendTarget);
-      for (const [key, value] of Object.entries(
-        getDesktopFeatureFlags(backendTarget),
-      )) {
-        assert.equal(env[key], value, `${backendTarget} ${key}`);
+  withEnv(
+    {
+      STAGING_API_KEY: STAGING_KEY_FIXTURE,
+      NEXT_PUBLIC_E2EE_READ_SYNC: "true",
+    },
+    () => {
+      for (const backendTarget of ["live", "test"]) {
+        const env = getDevEnvironment(backendTarget);
+        for (const [key, value] of Object.entries(
+          getDesktopFeatureFlags(backendTarget),
+        )) {
+          assert.equal(env[key], value, `${backendTarget} ${key}`);
+        }
       }
-    }
-  });
+    },
+  );
 });
 
 test("packaging passes the target OS to the Electron asset build", () => {
