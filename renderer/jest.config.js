@@ -30,6 +30,7 @@ const config = {
     "^@/(.*)\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
     // Regular CSS under @
     "^@/(.*)\\.(css|sass|scss)$": "<rootDir>/__mocks__/styleMock.js",
+    "^@/shared/memes-calendar/(.*)$": "<rootDir>/shared/memes-calendar/$1",
     // Core-owned shared modules live outside the renderer subtree.
     "^@/shared/(.*)$": "<rootDir>/../shared/$1",
     // Everything else under @
