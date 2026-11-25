@@ -1,7 +1,10 @@
 "use client";
 
 import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
+import { PHONE_WAVES_LAYOUT_QUERY } from "@/constants/waves-layout";
 import { useSearch } from "@/contexts/SearchContext";
+import { getWaveIdFromPathname } from "@/helpers/navigation.helpers";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { usePathname } from "next/navigation";
 import type { CSSProperties, RefObject } from "react";
 import { type ReactNode, useEffect, useMemo } from "react";
@@ -35,6 +38,9 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
   const searchContainerRef: RefObject<HTMLDivElement | null> =
     searchContext.containerRef;
   const pathname = usePathname();
+  const isPhoneWidth = useMediaQuery(PHONE_WAVES_LAYOUT_QUERY);
+  const showSiteHeader =
+    isSmall && !(isPhoneWidth && getWaveIdFromPathname(pathname));
   const smallWebOverflow =
     pathname === "/the-memes" || /^\/the-memes\/\d+\/?$/.test(pathname)
       ? "tw-overflow-x-clip"
@@ -87,7 +93,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
       data-sidebar-ready={isSidebarReady}
     >
       <SmallScreenLayoutHeader
-        active={isSmall}
+        active={showSiteHeader}
         onMenuToggle={toggleCollapsed}
         isMenuOpen={isOffcanvasOpen}
         style={isSmall ? titlebarInset : undefined}
