@@ -13,7 +13,7 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-from provenance import NoRedirects, verify_artifact
+from provenance import NoRedirects, source_pull_request, verify_artifact
 
 
 WORK = Path(os.environ["RUNNER_TEMP"]) / "companion-signing"
@@ -94,10 +94,12 @@ def unpack(inputs, archive, dest):
                 or not isinstance(info.get("programs"), list)
                 or not all(isinstance(entry, dict) for entry in info["programs"])):
             raise ValueError("Invalid signing catalog structure.")
-        source = {"ref": "refs/heads/main", "commit": inputs["commit"]}
-        if (info["source"] != source or info["product"] != "6529 Validator Companion" or info["schema"] != 1
+        source = info["source"]
+        if (not isinstance(source, dict) or set(source) != {"ref", "commit"} or source["commit"] != inputs["commit"]
+                or info["product"] != "6529 Validator Companion" or info["schema"] != 1
                 or any(info[key] != inputs[key] for key in ("version", "channel", "target"))):
             raise ValueError("Signing input metadata does not match the requested release.")
+        source_pull_request(source["ref"], inputs["channel"])
         platform, arch = inputs["target"].split("-", 1)
         expected_platform = "macos" if platform == "mac" else platform
         if (info["platform"], info["architecture"]) != (expected_platform, arch):
@@ -145,7 +147,7 @@ def receive(inputs):
     installer_digest = None
     if inputs["phase"] == "installer":
         installer_digest = digest(extracted / info["installer"]["path"])
-    verify_artifact(inputs, build_run_id, installer_digest, WORK, openssl)
+    verify_artifact(inputs, info["source"]["ref"], build_run_id, installer_digest, WORK, openssl)
     (WORK / "build-info.json").write_text(json.dumps(info), encoding="utf-8")
 
 
@@ -156,6 +158,7 @@ def send(inputs):
     if sorted(path.relative_to(output).as_posix() for path in output.rglob("*") if path.is_file()) != sorted(paths):
         raise ValueError("Signing output paths do not match the release contract.")
     result = {key: inputs[key] for key in ("channel", "version", "target", "phase", "commit", "handoff_id", "bundle_sha256")}
+    result["source"] = json.loads((WORK / "build-info.json").read_text(encoding="utf-8"))["source"]
     result["files"] = [{"path": path, "size": (output / path).stat().st_size, "sha256": digest(output / path)}
                        for path in sorted(paths)]
     receipt = WORK / "signed.json"
