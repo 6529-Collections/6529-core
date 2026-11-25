@@ -61,7 +61,7 @@ plist_value() { plutil -extract "$1" raw -o - "$plist"; }
 bundle="$(plist_value CFBundleIdentifier)"
 case "$CHANNEL:$bundle" in
   stable:io.6529.validator.companion.iroh.preview|test:io.6529.validator.companion.iroh.preview) ;;
-  test:io.6529.validator.companion.iroh.test)
+  test:io.6529.validator.companion.test)
     if [[ "$app" != "$test_app" ]]; then
       printf 'Unexpected app name for the Companion Test bundle identifier.\n' >&2
       exit 1
