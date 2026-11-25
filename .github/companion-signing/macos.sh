@@ -27,15 +27,20 @@ hdiutil resize -size "$(( (bytes + 1048575) / 1048576 + 16 ))m" "$scratch"
 hdiutil attach "$scratch" -nobrowse -noautoopen -mountpoint "$mount"
 mounted=true
 app="$mount/6529 Validator Companion.app"
+test_app="$mount/6529 Validator Companion Test.app"
+# Keep older Test artifacts signable while accepting the new side-by-side bundle.
+if [[ "$CHANNEL" == test && -e "$test_app" ]]; then
+  app="$test_app"
+fi
 plist="$app/Contents/Info.plist"
 bundle=io.6529.validator.companion.iroh.preview
 [[ "$(readlink "$mount/Applications")" == /Applications ]]
-python3 - "$mount" <<'PY'
+python3 - "$app" <<'PY'
 from pathlib import Path
 import sys
 
-mount = Path(sys.argv[1])
-app = mount / "6529 Validator Companion.app"
+app = Path(sys.argv[1])
+mount = app.parent
 volume = {".DS_Store", ".VolumeIcon.icns", ".background.tiff", ".fseventsd", ".Trashes",
           ".Spotlight-V100", ".metadata_never_index", "Applications", app.name}
 if not app.is_dir() or app.is_symlink() or set(item.name for item in mount.iterdir()) - volume:

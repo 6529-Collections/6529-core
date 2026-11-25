@@ -3,6 +3,7 @@
 import base64
 import json
 from pathlib import Path
+import re
 import subprocess
 import time
 from urllib.request import build_opener, HTTPRedirectHandler
@@ -61,7 +62,17 @@ def github_key(key_id):
     return matches[0]
 
 
-def verify_claims(claims, inputs, build_run_id, installer_digest, now):
+def source_pull_request(ref, channel):
+    if ref == "refs/heads/main":
+        return None
+    match = re.fullmatch(r"refs/pull/([1-9][0-9]*)/head", ref) if isinstance(ref, str) else None
+    if channel != "test" or match is None:
+        raise ValueError("Only Test releases may use a Companion pull request as source.")
+    return match[1]
+
+
+def verify_claims(claims, inputs, source_ref, build_run_id, installer_digest, now):
+    pull_request = source_pull_request(source_ref, inputs["channel"])
     expected = {
         "iss": ISSUER,
         "repository": REPO,
@@ -70,17 +81,29 @@ def verify_claims(claims, inputs, build_run_id, installer_digest, now):
         "runner_environment": "github-hosted",
     }
     if inputs["phase"] == "payload":
+        checksum = inputs["bundle_sha256"]
+        audience = f"{AUDIENCE}:build:{checksum}"
+        if pull_request is None:
+            # Both Test and Stable can use main. The main receipt binds the
+            # whole catalog by digest and pins the workflow SHA to its commit.
+            expected["sha"] = inputs["commit"]
+        else:
+            audience = (f"{AUDIENCE}:test-pr-build:{pull_request}:{inputs['commit']}:"
+                        f"{inputs['version']}:{inputs['channel']}:{checksum}")
         expected |= {
             "workflow_ref": f"{REPO}/.github/workflows/build-desktop.yml@refs/heads/main",
-            "aud": f"{AUDIENCE}:build:{inputs['bundle_sha256']}",
-            "sha": inputs["commit"],
+            "aud": audience,
             "run_id": build_run_id,
         }
     else:
+        audience = (f"{AUDIENCE}:windows-assembly:{build_run_id}:{inputs['commit']}:"
+                    f"{inputs['version']}:{inputs['channel']}:{installer_digest}")
+        if pull_request is not None:
+            audience = (f"{AUDIENCE}:test-pr-windows-assembly:{build_run_id}:{pull_request}:"
+                        f"{inputs['commit']}:{inputs['version']}:{inputs['channel']}:{installer_digest}")
         expected |= {
             "workflow_ref": f"{REPO}/.github/workflows/assemble-windows.yml@refs/heads/main",
-            "aud": (f"{AUDIENCE}:windows-assembly:{build_run_id}:{inputs['commit']}:"
-                    f"{inputs['version']}:{inputs['channel']}:{installer_digest}"),
+            "aud": audience,
         }
     if any(claims.get(field) != value for field, value in expected.items()):
         raise ValueError("GitHub did not attest this artifact from the expected Companion workflow.")
@@ -92,7 +115,7 @@ def verify_claims(claims, inputs, build_run_id, installer_digest, now):
         raise ValueError("The GitHub artifact receipt is outside its accepted build age.")
 
 
-def verify_artifact(inputs, build_run_id, installer_digest, work: Path, openssl):
+def verify_artifact(inputs, source_ref, build_run_id, installer_digest, work: Path, openssl):
     receipt = inputs["artifact_attestation"]
     if not isinstance(receipt, str) or len(receipt) > 16384:
         raise ValueError("Expected a bounded GitHub artifact receipt.")
@@ -115,4 +138,4 @@ def verify_artifact(inputs, build_run_id, installer_digest, work: Path, openssl)
     claims = json.loads(decode(payload))
     if not isinstance(claims, dict):
         raise ValueError("Invalid GitHub artifact receipt claims.")
-    verify_claims(claims, inputs, build_run_id, installer_digest, int(time.time()))
+    verify_claims(claims, inputs, source_ref, build_run_id, installer_digest, int(time.time()))
