@@ -84,9 +84,12 @@ def verify_claims(claims, inputs, source_ref, build_run_id, installer_digest, no
         checksum = inputs["bundle_sha256"]
         audience = f"{AUDIENCE}:build:{checksum}"
         if pull_request is None:
+            # Both Test and Stable can use main. The main receipt binds the
+            # whole catalog by digest and pins the workflow SHA to its commit.
             expected["sha"] = inputs["commit"]
         else:
-            audience = f"{AUDIENCE}:test-pr-build:{pull_request}:{inputs['commit']}:{inputs['version']}:{checksum}"
+            audience = (f"{AUDIENCE}:test-pr-build:{pull_request}:{inputs['commit']}:"
+                        f"{inputs['version']}:{inputs['channel']}:{checksum}")
         expected |= {
             "workflow_ref": f"{REPO}/.github/workflows/build-desktop.yml@refs/heads/main",
             "aud": audience,
@@ -97,7 +100,7 @@ def verify_claims(claims, inputs, source_ref, build_run_id, installer_digest, no
                     f"{inputs['version']}:{inputs['channel']}:{installer_digest}")
         if pull_request is not None:
             audience = (f"{AUDIENCE}:test-pr-windows-assembly:{build_run_id}:{pull_request}:"
-                        f"{inputs['commit']}:{inputs['version']}:{installer_digest}")
+                        f"{inputs['commit']}:{inputs['version']}:{inputs['channel']}:{installer_digest}")
         expected |= {
             "workflow_ref": f"{REPO}/.github/workflows/assemble-windows.yml@refs/heads/main",
             "aud": audience,

@@ -152,13 +152,16 @@ def receive(inputs):
 
 
 def send(inputs):
+    catalog = WORK / "build-info.json"
+    if not catalog.is_file():
+        raise ValueError("Verify and unpack the signing input before sending signed files.")
     installer, programs = expected_paths(inputs)
     paths = programs if inputs["target"] == "windows-x64" and inputs["phase"] == "payload" else {installer}
     output = WORK / "out"
     if sorted(path.relative_to(output).as_posix() for path in output.rglob("*") if path.is_file()) != sorted(paths):
         raise ValueError("Signing output paths do not match the release contract.")
     result = {key: inputs[key] for key in ("channel", "version", "target", "phase", "commit", "handoff_id", "bundle_sha256")}
-    result["source"] = json.loads((WORK / "build-info.json").read_text(encoding="utf-8"))["source"]
+    result["source"] = json.loads(catalog.read_text(encoding="utf-8"))["source"]
     result["files"] = [{"path": path, "size": (output / path).stat().st_size, "sha256": digest(output / path)}
                        for path in sorted(paths)]
     receipt = WORK / "signed.json"
