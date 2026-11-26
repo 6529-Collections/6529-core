@@ -1335,6 +1335,24 @@ export const FR_FR_MESSAGES = {
   "desktop.profiles.saveError": "Impossible d’enregistrer vos profils. Réessayez avant de quitter pour conserver vos modifications.",
   "desktop.profiles.saveRetrying": "Nouvelle tentative d’enregistrement des profils…",
   "desktop.profiles.retry": "Réessayer",
+  "e2ee.list.pinned": "Épinglée",
+  "e2ee.list.pinnedChat": "{title}, discussion épinglée",
+  "e2ee.list.pinChat": "Épingler {title} en haut",
+  "e2ee.list.pinDragInstructions":
+    "Appuyez sur Espace pour saisir cette discussion. Utilisez les flèches pour la déplacer, Espace pour la déposer ou Échap pour annuler.",
+  "e2ee.list.pinDragStarted": "Discussion épinglée saisie.",
+  "e2ee.list.pinDragPosition": "Position {position}.",
+  "e2ee.list.pinDragCancelled": "Réorganisation annulée.",
+  "e2ee.list.pinOrderSaved": "Ordre des discussions épinglées enregistré.",
+  "e2ee.list.pinOrderError":
+    "Impossible d’enregistrer l’ordre des discussions épinglées. Réessayez.",
+  "e2ee.info.pin": "Épingler en haut",
+  "e2ee.info.unpin": "Désépingler la discussion",
+  "e2ee.info.pinSyncHelp":
+    "Les discussions épinglées se synchronisent de façon privée avec vos autres appareils de confiance.",
+  "e2ee.info.pinLocalHelp":
+    "Les discussions épinglées restent sur cet appareil jusqu’à ce que la synchronisation chiffrée soit disponible.",
+  "e2ee.info.pinFailed": "Impossible de modifier l’épingle. Réessayez.",
   "e2ee.message.taskChecked": "Tâche cochée",
   "e2ee.message.taskUnchecked": "Tâche non cochée",
   "e2ee.message.imageLink": "Lien vers l’image",

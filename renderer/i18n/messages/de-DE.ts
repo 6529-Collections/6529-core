@@ -1323,6 +1323,25 @@ export const DE_DE_MESSAGES = {
   "desktop.profiles.saveError": "Deine Profile konnten nicht gespeichert werden. Versuche es vor dem Beenden erneut, um deine Änderungen zu behalten.",
   "desktop.profiles.saveRetrying": "Profile werden erneut gespeichert…",
   "desktop.profiles.retry": "Erneut versuchen",
+  "e2ee.list.pinned": "Angeheftet",
+  "e2ee.list.pinnedChat": "{title}, angehefteter Chat",
+  "e2ee.list.pinChat": "{title} oben anheften",
+  "e2ee.list.pinDragInstructions":
+    "Drücke die Leertaste, um diesen Chat aufzunehmen. Verschiebe ihn mit den Pfeiltasten und drücke die Leertaste zum Ablegen oder die Esc-Taste zum Abbrechen.",
+  "e2ee.list.pinDragStarted": "Angehefteten Chat aufgenommen.",
+  "e2ee.list.pinDragPosition": "Position {position}.",
+  "e2ee.list.pinDragCancelled": "Sortierung abgebrochen.",
+  "e2ee.list.pinOrderSaved": "Reihenfolge der angehefteten Chats gespeichert.",
+  "e2ee.list.pinOrderError":
+    "Die Reihenfolge der angehefteten Chats konnte nicht gespeichert werden. Versuche es erneut.",
+  "e2ee.info.pin": "Oben anheften",
+  "e2ee.info.unpin": "Anheftung aufheben",
+  "e2ee.info.pinSyncHelp":
+    "Angeheftete Chats werden privat mit deinen anderen vertrauenswürdigen Geräten synchronisiert.",
+  "e2ee.info.pinLocalHelp":
+    "Angeheftete Chats bleiben auf diesem Gerät, bis die verschlüsselte Synchronisierung verfügbar ist.",
+  "e2ee.info.pinFailed":
+    "Die Anheftung konnte nicht geändert werden. Versuch es erneut.",
   "e2ee.message.taskChecked": "Markierte Aufgabe",
   "e2ee.message.taskUnchecked": "Nicht markierte Aufgabe",
   "e2ee.message.imageLink": "Bildlink",
