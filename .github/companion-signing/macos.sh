@@ -33,7 +33,6 @@ if [[ "$CHANNEL" == test && -e "$test_app" ]]; then
   app="$test_app"
 fi
 plist="$app/Contents/Info.plist"
-bundle=io.6529.validator.companion.iroh.preview
 [[ "$(readlink "$mount/Applications")" == /Applications ]]
 python3 - "$app" <<'PY'
 from pathlib import Path
@@ -59,8 +58,18 @@ for path in app.rglob("*"):
 PY
 # The packaged app points at the public update feed. Signing inputs use a different private bucket.
 plist_value() { plutil -extract "$1" raw -o - "$plist"; }
-[[ "$(plist_value CFBundleIdentifier)" == "$bundle" &&
-   "$(plist_value CFBundleExecutable)" == CompanionIroh &&
+bundle="$(plist_value CFBundleIdentifier)"
+case "$CHANNEL:$bundle" in
+  stable:io.6529.validator.companion|stable:io.6529.validator.companion.iroh.preview|test:io.6529.validator.companion.iroh.preview) ;;
+  test:io.6529.validator.companion.test)
+    if [[ "$app" != "$test_app" ]]; then
+      printf 'Unexpected app name for the Companion Test bundle identifier.\n' >&2
+      exit 1
+    fi
+    ;;
+  *) printf 'Unexpected Companion bundle identifier for %s.\n' "$CHANNEL" >&2; exit 1 ;;
+esac
+[[ "$(plist_value CFBundleExecutable)" == CompanionIroh &&
    "$(plist_value CFBundleShortVersionString)" == "$VERSION" &&
    "$(plist_value CompanionUpdateChannel)" == "$CHANNEL" &&
    "$(plist_value CompanionUpdateBaseURL)" == 'https://6529bucket.s3.eu-west-1.amazonaws.com/6529-validator-companion/' &&
