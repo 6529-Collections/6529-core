@@ -69,10 +69,27 @@ case "$CHANNEL:$bundle" in
     ;;
   *) printf 'Unexpected Companion bundle identifier for %s.\n' "$CHANNEL" >&2; exit 1 ;;
 esac
+
+update_base="$(plist_value CompanionUpdateBaseURL)"
+s3_base='https://6529bucket.s3.eu-west-1.amazonaws.com/6529-validator-companion/'
+stable_arns_base='https://releases_6529-validator-companion.ar.io/'
+test_arns_base='https://test-releases_6529-validator-companion.ar.io/'
+case "$CHANNEL:$update_base" in
+  "stable:$s3_base"|"test:$s3_base"|"stable:$stable_arns_base"|"test:$test_arns_base") ;;
+  *) printf 'Unexpected Companion update feed for %s.\n' "$CHANNEL" >&2; exit 1 ;;
+esac
+catalog_base="$(python3 - "$work/build-info.json" "$s3_base" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as catalog:
+    print(json.load(catalog).get("updateBase", sys.argv[2]))
+PY
+)"
 [[ "$(plist_value CFBundleExecutable)" == CompanionIroh &&
    "$(plist_value CFBundleShortVersionString)" == "$VERSION" &&
    "$(plist_value CompanionUpdateChannel)" == "$CHANNEL" &&
-   "$(plist_value CompanionUpdateBaseURL)" == 'https://6529bucket.s3.eu-west-1.amazonaws.com/6529-validator-companion/' &&
+   "$update_base" == "$catalog_base" &&
    "$(plist_value LSMinimumSystemVersion)" == 13.0 ]]
 arch=arm64
 if [[ "$TARGET" == mac-x64 ]]; then arch=x86_64; fi
