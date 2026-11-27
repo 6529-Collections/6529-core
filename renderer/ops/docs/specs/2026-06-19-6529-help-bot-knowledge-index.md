@@ -64,6 +64,11 @@ for Additional Media and Promo Video in submission details. Additional Media
 keeps original video downloads deferred until Play; Promo Video retains metadata
 preloading.
 
+The `waves.about-sections` record describes the widest Total summary block,
+followed by separate Positive, Negative and Your REP blocks, category search and
+contributors, and the activity rows with signed changes, rating transitions,
+timestamps and optional reasons.
+
 The `waves.native-competitions` record covers optional anonymous submissions,
 their default-off creation setting, publication lock, per-entry winner reveal,
 continued anonymity across later draws, own-entry access, and submitters'
@@ -358,9 +363,14 @@ fixtures do not ship as page data.
 These remain frontend-owned facts published through the existing
 help-index sync and consumed by the existing backend loader.
 
-The `waves.notification-controls` record describes the notification subview inside the About sheet
-on phone layouts, dismissal back to About, and the anchored keyboard-accessible
-menu in desktop and tablet sidebars.
+The `waves.notification-controls` record describes one bell menu, neutral when
+unmuted and rose-toned when muted, with
+three label-only single-choice levels and Mute/Unmute below a divider, no row
+descriptions or hints, disabled saved levels while muted,
+Retry inside the menu, the shared picker sheet on smaller screens and anchored
+desktop/tablet menu.
+Muted wave rows use an icon-only iron bell-slash on the avatar, separate from
+scores and numbers; unread counts stay hidden and muted waves sort last.
 
 The `network.identities-leaderboard` record describes the mobile filter's vertical
 criteria list, individual editors, Back navigation, preserved drafts, and
