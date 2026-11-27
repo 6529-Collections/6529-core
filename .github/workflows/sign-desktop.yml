@@ -16,8 +16,8 @@
 #                   so are its logs and run artifacts
 #   notarize        false to codesign without notarizing (default true)
 #   kind            app (default) or installer.
-#   platforms       all (default) or windows: windows skips the macOS job of a
-#                   kind app run (Windows-only test builds; a release signs both)
+#   platforms       all (default), windows or macos: sign both platforms or
+#                   only the requested platform for a private test build
 #
 # kind app: what goes inside the installers. The zip holds
 #   build-info.json     the build's facts (the desktop repository's
@@ -122,12 +122,13 @@ on:
           - installer
         default: app
       platforms:
-        description: "all: Windows and macOS; windows: no macOS job (Windows-only test builds)"
+        description: "all: Windows and macOS; windows or macos: sign only that platform"
         required: false
         type: choice
         options:
           - all
           - windows
+          - macos
         default: all
 
 permissions:
@@ -526,6 +527,8 @@ jobs:
 
   windows:
     name: Windows (AzureSignTool)
+    # Installers are Windows-only; a macOS app test needs no Windows inputs.
+    if: inputs.kind == 'installer' || inputs.platforms != 'macos'
     runs-on: windows-latest
     timeout-minutes: 45
     env:
@@ -807,11 +810,14 @@ jobs:
   sums:
     name: SHA256SUMS
     needs: [macos, windows]
-    # kind installer and platforms windows have no macOS job.
+    # Each selected platform must succeed; only unselected platforms may skip.
     if: >-
-      always() && needs.windows.result == 'success'
-      && (needs.macos.result == 'success'
-          || ((inputs.kind == 'installer' || inputs.platforms == 'windows') && needs.macos.result == 'skipped'))
+      always()
+      && ((needs.windows.result == 'success'
+           && (needs.macos.result == 'success'
+               || ((inputs.kind == 'installer' || inputs.platforms == 'windows') && needs.macos.result == 'skipped')))
+          || (inputs.kind != 'installer' && inputs.platforms == 'macos'
+              && needs.macos.result == 'success' && needs.windows.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -843,10 +849,14 @@ jobs:
             else
               [ "$(grep -cE '^macos/[^/]+\.dmg$' <<< "$names" || true)" = 1 ] || { echo "::error::SHA256SUMS does not list one disk image"; exit 1; }
             fi
-            for f in windows/engine/c6529.exe windows/engine/client-signer.exe; do
-              grep -qxF "$f" <<< "$names" || { echo "::error::SHA256SUMS does not list $f"; exit 1; }
-            done
-            [ "$(grep -cE '^windows/[^/]+\.exe$' <<< "$names" || true)" = 1 ] || { echo "::error::SHA256SUMS does not list one app program"; exit 1; }
+            if [ "$PLATFORMS" = macos ]; then
+              [ "$(grep -cE '^windows/' <<< "$names" || true)" = 0 ] || { echo "::error::a macOS-only run lists Windows files"; exit 1; }
+            else
+              for f in windows/engine/c6529.exe windows/engine/client-signer.exe; do
+                grep -qxF "$f" <<< "$names" || { echo "::error::SHA256SUMS does not list $f"; exit 1; }
+              done
+              [ "$(grep -cE '^windows/[^/]+\.exe$' <<< "$names" || true)" = 1 ] || { echo "::error::SHA256SUMS does not list one app program"; exit 1; }
+            fi
           fi
           cat "$s"
           {
