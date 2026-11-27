@@ -12,8 +12,10 @@ import { useWaveNameTruncation } from "./hooks/useWaveNameTruncation";
 import { formatWaveName } from "./utils/formatWaveName";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import type { MinimalWave } from "@/contexts/wave/hooks/useEnhancedWavesListCore";
+import type { SidebarSubwaveRowProps } from "../../waves/SidebarSubwavesToggle";
+import { hasUnreadWaveDrops } from "../../waves/sidebarWaveListUtils";
 
-interface WebBrainLeftSidebarWaveProps {
+interface WebBrainLeftSidebarWaveProps extends SidebarSubwaveRowProps {
   readonly scoreDetailsDisabled?: boolean | undefined;
   readonly isAnnouncement?: boolean | undefined;
   readonly wave: MinimalWave;
@@ -21,12 +23,7 @@ interface WebBrainLeftSidebarWaveProps {
   readonly showPin?: boolean | undefined;
   readonly basePath?: string | undefined;
   readonly collapsed?: boolean | undefined;
-  readonly depth?: 0 | 1 | undefined;
-  readonly canExpand?: boolean | undefined;
-  readonly hasUnreadSubwaves?: boolean | undefined;
-  readonly isLastSubwave?: boolean | undefined;
-  readonly showSubwaveConnector?: boolean | undefined;
-  readonly onPrefetchSubwaves?: ((waveId: string) => void) | undefined;
+  readonly onExpandSubwaves?: ((waveId: string) => void) | undefined;
 }
 
 const TOOLTIP_PLACEMENT = "right" as const;
@@ -42,9 +39,14 @@ const WebBrainLeftSidebarWave = ({
   depth = 0,
   canExpand = false,
   hasUnreadSubwaves = false,
+  subwavesExpanded,
+  subwavesLoading,
+  unreadSubwaveDropsCount,
   isLastSubwave = false,
   showSubwaveConnector = false,
+  onExpandSubwaves,
   onPrefetchSubwaves,
+  onToggleSubwaves,
 }: WebBrainLeftSidebarWaveProps) => {
   const { activeWave } = useMyStream();
   const pathname = usePathname();
@@ -64,6 +66,7 @@ const WebBrainLeftSidebarWave = ({
       waveId: wave.id,
       hasTouchScreen,
       firstUnreadDropSerialNo: wave.firstUnreadDropSerialNo,
+      onOpen: onExpandSubwaves,
     });
 
   const formattedWaveName = useMemo(
@@ -81,7 +84,7 @@ const WebBrainLeftSidebarWave = ({
   });
 
   const isDropWave = wave.type !== ApiWaveType.Chat;
-  const haveNewDrops = wave.newDropsCount.count > 0;
+  const haveNewDrops = hasUnreadWaveDrops(wave);
   const tooltipId = `wave-collapsed-${wave.id}`;
   const expandedTooltipId = `wave-expanded-${wave.id}`;
   const showCollapsedTooltip = collapsed && !hasTouchScreen;
@@ -116,6 +119,7 @@ const WebBrainLeftSidebarWave = ({
       href={href}
       isActive={isActive}
       isAnnouncement={isAnnouncement}
+      isDirectMessage={basePath === "/messages"}
       isDropWave={isDropWave}
       latestDropTimestamp={wave.newDropsCount.latestDropTimestamp}
       nameRef={nameRef}
@@ -133,9 +137,13 @@ const WebBrainLeftSidebarWave = ({
       depth={depth}
       canExpand={canExpand}
       hasUnreadSubwaves={hasUnreadSubwaves}
+      subwavesExpanded={subwavesExpanded}
+      subwavesLoading={subwavesLoading}
+      unreadSubwaveDropsCount={unreadSubwaveDropsCount}
       isLastSubwave={isLastSubwave}
       showSubwaveConnector={showSubwaveConnector}
       onPrefetchSubwaves={hasTouchScreen ? undefined : onPrefetchSubwaves}
+      onToggleSubwaves={onToggleSubwaves}
     />
   );
 };

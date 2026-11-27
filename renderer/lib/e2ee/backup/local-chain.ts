@@ -46,13 +46,45 @@ export function startNewChain(local: BackupLocalState): void {
   local.chain = { ...local.chain, restart: true };
   local.groupPrints = {};
   local.messagePrints = {};
+  local.readsSent = {};
+  local.pinIds = {};
 }
 
-/** Records whose fingerprint differs from what this device uploaded. */
+const pinRankKey = (thread: string): string => `rank:${thread}`;
+
+export function backupPinIds({
+  pins = [],
+  pinRanks = [],
+}: Pick<BackupHistory, "pins" | "pinRanks">): Record<string, string> {
+  return Object.fromEntries([
+    ...pins.map(([thread, , id]) => [thread, id] as const),
+    ...pinRanks.map(([[thread], , id]) => [pinRankKey(thread), id] as const),
+  ]);
+}
+
+/**
+ * Records whose fingerprint differs from what this device uploaded, and,
+ * with `withReads`, read positions further than the ones it uploaded.
+ */
 export function changedHistory(
   history: BackupHistory,
-  local: BackupLocalState
+  local: BackupLocalState,
+  withReads: boolean
 ): BackupHistory {
+  const sent = local.readsSent ?? {};
+  const reads = withReads
+    ? Object.fromEntries(
+        Object.entries(history.reads ?? {}).filter(
+          ([g, seq]) => seq > (sent[g] ?? 0)
+        )
+      )
+    : {};
+  const pins = (history.pins ?? []).filter(
+    ([thread, , id]) => local.pinIds?.[thread] !== id
+  );
+  const pinRanks = (history.pinRanks ?? []).filter(
+    ([[thread], , id]) => local.pinIds?.[pinRankKey(thread)] !== id
+  );
   return {
     groups: history.groups.filter(
       (group) => local.groupPrints[group.g] !== fingerprint(group)
@@ -62,5 +94,8 @@ export function changedHistory(
         local.messagePrints[messageKey(message.g, message.id)] !==
         fingerprint(message)
     ),
+    ...(Object.keys(reads).length > 0 ? { reads } : {}),
+    ...(pins.length > 0 ? { pins } : {}),
+    ...(pinRanks.length > 0 ? { pinRanks } : {}),
   };
 }

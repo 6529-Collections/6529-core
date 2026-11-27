@@ -13,6 +13,19 @@ Open **Decisions**, then **+ Decision** beside its filter pills, or use
 
 ## Entry Points
 
+On phones, **+ Decision** is the shared text action at the right end of the
+Decisions filter row, at 13px with a 44px touch area. It aligns with **+ Curation**
+at the end of the wave tab row. The chips scroll beside it without edge fades. The action remains visible
+when the list is empty and requires the existing decision creation permission.
+Below 768px it opens the setup editor in a bottom sheet with its own title,
+Close control and fixed navigation actions. Wider screens keep the inline
+editor. The action is not in **More wave actions**.
+
+In the app and web views below 768px, the selected collection filter stays
+visible beside **More**. The menu contains the other permitted filters, including
+**Completed**, **Drafts** for administrators, and **All**. Dismissing it keeps the
+selection. Wider web views show all available filters directly.
+
 Creating a wave opens its shared
 chat without creating a decision. Wave administrators can add decisions
 afterward; decision setup is separate from wave creation.
@@ -23,17 +36,30 @@ The **Decisions** tab follows the selected decision's **Settings** tab and prece
 1. Open **Decisions**, then **+ Decision**, with decision creation permission.
 2. Choose Rank or Approve and configure eligibility, dates, submission
    requirements, voting credits, result rules, outcomes and presentation. Outcomes are optional and describe rewards fulfilled manually.
+   **Decision name** is required and marked with an asterisk. **Decision type**
+   starts with Rank selected, and **Description** is optional. If Next finds an
+   invalid name, the field is highlighted and focused.
    **Decision type** opens a dropdown on desktop and a bottom sheet on
    smaller screens, including the app. The current choice is marked; choosing
    another type closes the picker. Dismissing it leaves the choice unchanged.
    In the app, the setup editor keeps the focused name or description field
    above the keyboard and action bar. Closing the keyboard restores the editor's
    full height.
+   On phones, a segmented progress line follows the steps available for this
+   decision, and the navigation actions stay at the bottom while you scroll.
+   Decision on/off settings use matching switches on phones and larger screens.
+   The desktop editor uses **Close editor** without a duplicate **All decisions**
+   link. If **Next** finds incomplete required settings,
+   the validation message appears above the phone navigation actions.
+   **Text preview limit** and **Image on summary card** share one group under
+   **Appearance and labels**.
 3. Changes save automatically. Incomplete settings are retained on this device;
    valid drafts sync to the server and are visible to wave administrators.
    Opening a draft returns directly to the setup wizard with saved settings
    prefilled. **Close editor** returns to the decision list without publishing
    and preserves your draft.
+   When editing a saved draft on a phone, **Archive** remains available inside
+   the editor sheet and keeps its name-confirmation step.
 4. The final step has **Previous**, **Close editor** and **Publish**. Review and
    publish it. A scheduled first result must be in the future,
    and participation or voting periods must not already have ended.
@@ -86,8 +112,9 @@ The **Decisions** tab follows the selected decision's **Settings** tab and prece
 - A published decision cannot change between Rank and Approve.
 - For newer decisions, after the first accepted entry, credit, signing, submission, timing, result
   and outcome rules are fixed. Approve threshold and hold duration remain editable in Settings. Participation and voting access, title, description
-  and presentation remain editable while the decision is published.
-- Original decisions in older waves retain their existing administration permissions after entries arrive. Their type, identity strategy and outcome definitions stay fixed. Voting credit source, scope and negative-vote rules stay fixed after the first vote, including votes later reset or deleted. An existing vote cap may only increase or become unlimited. Schedule changes must leave the next result in the future and cannot replace an unresolved due result; winner limits cannot fall below completed results.
+  and presentation remain editable while the decision is published. The
+  editor says so at the top once entries exist, and leaves out the fixed steps.
+- Original decisions in older waves retain their existing administration permissions after entries arrive. Their type, identity strategy and outcome definitions stay fixed. Voting credit source, scope and negative-vote rules stay fixed after the first vote, including votes later reset or deleted; the voting step then explains why those controls are disabled. An existing vote cap may only increase or become unlimited. Schedule changes must leave the next result in the future and cannot replace an unresolved due result; winner limits cannot fall below completed results.
 - A stale editing form is rejected if another administrator saved a newer
   version. For inline settings, cancel and reopen the section to edit the latest version. The draft setup editor also supports saving a separate draft copy.
 - Terminal decisions cannot reopen. A clone has its own identity, entries,

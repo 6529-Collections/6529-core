@@ -1,5 +1,6 @@
 "use client";
 
+import DesktopWalletTransactionGate from "@/components/desktop/DesktopWalletTransactionGate";
 import {
   useCallback,
   useEffect,
@@ -47,6 +48,11 @@ import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { formatDecimalString, formatInteger } from "@/i18n/format";
 import { t } from "@/i18n/messages";
 import { formatSubscriptionEth } from "./coverage/subscriptionCoverage.helpers";
+import {
+  getAuthoritativeSubscriptionDeadline,
+  subscriptionCoverageTimestamp,
+} from "./coverage/subscriptionCoverageSummary.helpers";
+import { useSubscriptionCoverageClock } from "./coverage/useSubscriptionCoverageClock";
 
 const MEMES_MINT_PRICE_WEI = parseEther(MEMES_MINT_PRICE.toString());
 // Hash target of the notification and header top-up links.
@@ -170,6 +176,45 @@ interface TopUpSelectionInput {
   readonly optionCounts: Readonly<Record<string, number>>;
 }
 
+function hasCurrentCoverageProjections(
+  coverage: ApiSubscriptionCoverage | undefined,
+  isStale: boolean,
+  now: number
+): boolean {
+  if (isStale) return false;
+  const deadline = getAuthoritativeSubscriptionDeadline(coverage);
+  if (deadline === undefined) return true;
+  return now > 0 && now < deadline;
+}
+
+function isCoverageChoice(
+  option: string | null
+): option is "minimum" | "recommended" {
+  return option === "minimum" || option === "recommended";
+}
+
+function getProjectionFingerprint(
+  coverage: ApiSubscriptionCoverage | undefined,
+  option: string | null
+): string | null {
+  if (!isCoverageChoice(option)) return null;
+  const projection =
+    option === "minimum"
+      ? coverage?.minimum_top_up
+      : coverage?.recommended_top_up;
+  if (!projection) return null;
+  return JSON.stringify([
+    option,
+    projection.amount_eth,
+    projection.additional_mints,
+    projection.projected_through.token_id,
+    subscriptionCoverageTimestamp(projection.projected_through.mint_at),
+    "target_fully_funded_drops" in projection
+      ? projection.target_fully_funded_drops
+      : projection.resulting_fully_funded_drops,
+  ]);
+}
+
 function getTopUpSelection({
   coverage,
   customCount,
@@ -280,6 +325,7 @@ function CoverageTopUpOptions({
 
 type TopUpProps = Readonly<{
   coverage?: ApiSubscriptionCoverage | undefined;
+  isCoverageStale?: boolean;
   onTransactionConfirmed?: (() => void) | undefined;
   onCancel?: (() => void) | undefined;
   expanded?: boolean;
@@ -294,12 +340,23 @@ export default function UserPageSubscriptionsTopUp(props: TopUpProps) {
 }
 
 function SubscriptionTopUpForm({
-  coverage,
+  coverage: sourceCoverage,
+  isCoverageStale = false,
   onTransactionConfirmed,
   onCancel,
   expanded = true,
 }: TopUpProps) {
   const locale = useBrowserLocale();
+  const suppliedDeadline = getAuthoritativeSubscriptionDeadline(sourceCoverage);
+  const now = useSubscriptionCoverageClock(
+    !isCoverageStale && suppliedDeadline !== undefined,
+    suppliedDeadline
+  );
+  const coverage =
+    sourceCoverage &&
+    !hasCurrentCoverageProjections(sourceCoverage, isCoverageStale, now)
+      ? { ...sourceCoverage, minimum_top_up: null, recommended_top_up: null }
+      : sourceCoverage;
   const selectionDescriptionId = useId();
   const [memeCount, setMemeCount] = useState<string>("");
   const sendTransaction = useSendTransaction();
@@ -332,13 +389,20 @@ function SubscriptionTopUpForm({
   const [showDeep, setShowDeep] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState<string | null>(null);
   const [topUpCardCount, setTopUpCardCount] = useState<number | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{
+    option: string | null;
+    fingerprint: string | null;
+  }>({ option: null, fingerprint: null });
+  const selectedOption = selection.option;
+  const setSelectedOption = useCallback((option: string | null) => {
+    setSelection({ option, fingerprint: null });
+  }, []);
   const otherInputRef = useRef<HTMLInputElement | null>(null);
   const handleSelectOther = useCallback(() => {
     setSelectedOption("other");
     setError("");
     otherInputRef.current?.focus();
-  }, []);
+  }, [setSelectedOption]);
   const confirmedHashRef = useRef<string | undefined>(undefined);
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -371,15 +435,32 @@ function SubscriptionTopUpForm({
     era: remainingMintsForEra,
     eon: remainingMintsForEon,
   };
+  const currentFingerprint = getProjectionFingerprint(coverage, selectedOption);
+  const currentChoice =
+    !isCoverageChoice(selectedOption) ||
+    (currentFingerprint !== null &&
+      currentFingerprint === selection.fingerprint);
   const selectedTopUp = getTopUpSelection({
     coverage,
     customCount: memeCount,
-    option: selectedOption,
+    option: currentChoice ? selectedOption : null,
     optionCounts,
   });
 
-  function handleSend(): void {
+  function handleSend(submittedAt: number): void {
     setError("");
+    if (
+      isCoverageChoice(selectedOption) &&
+      !hasCurrentCoverageProjections(
+        sourceCoverage,
+        isCoverageStale,
+        submittedAt
+      )
+    ) {
+      setSelectedOption(null);
+      setError(t(locale, "subscriptions.topUp.validation.selectOption"));
+      return;
+    }
     if (selectedTopUp === null) {
       setError(t(locale, "subscriptions.topUp.validation.selectOption"));
       return;
@@ -450,7 +531,7 @@ function SubscriptionTopUpForm({
       setSelectedOption(null);
       setMemeCount("");
     }
-  }, [transactionModal.closable, sendTransaction]);
+  }, [transactionModal.closable, sendTransaction, setSelectedOption]);
 
   let modalSubtitle: string | undefined;
   if (topUpAmount !== null && topUpCardCount !== null) {
@@ -465,6 +546,14 @@ function SubscriptionTopUpForm({
   }
 
   const isSending = sendTransaction.isPending || waitSendTransaction.isLoading;
+  if (
+    isCoverageChoice(selectedOption) &&
+    !currentChoice &&
+    !isSending &&
+    transactionModal.status === null
+  ) {
+    setSelectedOption(null);
+  }
   const selectedAmount = selectedTopUp?.amountEth ?? null;
   const isSendDisabled = selectedTopUp === null;
   const submitLabel =
@@ -474,7 +563,10 @@ function SubscriptionTopUpForm({
           amount: formatSubscriptionEth(locale, selectedAmount),
         });
   const selectCoverageTopUp = (option: "minimum" | "recommended"): void => {
-    setSelectedOption(option);
+    setSelection({
+      option,
+      fingerprint: getProjectionFingerprint(coverage, option),
+    });
     setMemeCount("");
     setError("");
   };
@@ -511,7 +603,7 @@ function SubscriptionTopUpForm({
       <div className="tw-grid tw-grid-cols-1 tw-gap-2">
         <CoverageTopUpOptions
           coverage={coverage}
-          selectedOption={selectedOption}
+          selectedOption={currentChoice ? selectedOption : null}
           onSelect={selectCoverageTopUp}
         />
         <CardCountOption
@@ -628,20 +720,24 @@ function SubscriptionTopUpForm({
         {t(locale, "subscriptions.topUp.chooseAmount")}
       </p>
       {topUpContent}
-      <Button
-        type="button"
-        variant="primary"
-        size="lg"
-        loading={isSending}
-        disabled={isSendDisabled}
-        onClick={handleSend}
-        aria-label={submitLabel}
-        fullWidth
-        className="tw-mt-5 !tw-text-[15px] md:!tw-text-sm"
-      >
-        <BoltIcon className="tw-size-4" aria-hidden="true" />
-        {submitLabel}
-      </Button>
+      <div className="tw-mt-5">
+        <DesktopWalletTransactionGate forwardable>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            loading={isSending}
+            disabled={isSendDisabled}
+            onClick={() => handleSend(Date.now())}
+            aria-label={submitLabel}
+            fullWidth
+            className="!tw-text-[15px] md:!tw-text-sm"
+          >
+            <BoltIcon className="tw-size-4" aria-hidden="true" />
+            {submitLabel}
+          </Button>
+        </DesktopWalletTransactionGate>
+      </div>
       <div className="tw-mb-0 tw-mt-3 tw-flex tw-flex-wrap tw-items-center tw-justify-center tw-gap-1 tw-text-meta tw-font-normal tw-leading-5 tw-text-iron-500">
         {t(locale, "subscriptions.topUp.sendingTo")}{" "}
         <span className="tw-font-semibold tw-text-iron-300">

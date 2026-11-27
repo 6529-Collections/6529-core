@@ -8,10 +8,7 @@ import {
   type DropReplyThreadTarget,
 } from "@/services/api/drop-reply-thread-target-api";
 import WaveDropsScrollingOverlay from "@/components/waves/drops/WaveDropsScrollingOverlay";
-import {
-  UnreadDividerProvider,
-  useUnreadDivider,
-} from "@/contexts/wave/UnreadDividerContext";
+import { UnreadDividerProvider } from "@/contexts/wave/UnreadDividerContext";
 import { useWaveChatScrollOptional } from "@/contexts/wave/WaveChatScrollContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiWave } from "@/generated/models/ApiWave";
@@ -116,7 +113,11 @@ interface WaveDropsAllProps {
   readonly isVotingControlsLocked?: boolean | undefined;
 }
 
-const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
+type WaveDropsAllInnerProps = Omit<WaveDropsAllProps, "dividerSerialNo"> & {
+  readonly markReadEnabled?: boolean;
+};
+
+const WaveDropsAllInner: React.FC<WaveDropsAllInnerProps> = ({
   waveId,
   wave,
   dropId,
@@ -124,7 +125,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
   activeDrop,
   initialDrop,
   initialThreadReply,
-  dividerSerialNo,
+  markReadEnabled = true,
   unreadCount,
   onDropContentClick,
   bottomPaddingClassName,
@@ -137,7 +138,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
   const router = useRouter();
   const { removeWaveDeliveredNotifications } = useNotificationsContext();
   const { connectedProfile } = useAuth();
-  const { isAppleMobile, isMobileDevice } = useDeviceInfo();
+  const { isAppleMobile, isMobileDevice, isApp } = useDeviceInfo();
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Render-window reduction applies to all mobile webviews; isAppleMobile below
   // only gates the iOS-specific newest-drop deferral behavior.
@@ -147,8 +148,6 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
 
   const { waveMessages, fetchNextPage, waitAndRevealDrop } =
     useVirtualizedWaveDrops(waveId, dropId, wave, virtualizedDropsPageSize);
-
-  const { setUnreadDividerSerialNo } = useUnreadDivider();
 
   const [boostedDropsDisplayPreference] = useBoostedDropsDisplayPreference();
   const shouldRenderInsertedBoostedDrops =
@@ -180,7 +179,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
 
   useWaveDropsNotificationRead({
     waveId,
-    enabled: Boolean(connectedProfile?.handle),
+    enabled: Boolean(connectedProfile?.handle) && markReadEnabled,
     isDirectMessage: isWaveDirectMessage(waveId, wave),
     latestSerialNo,
     removeWaveDeliveredNotifications,
@@ -190,16 +189,6 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
     containerRef,
     drops: dropsForClipboard,
   });
-
-  const initializedWaveRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (initializedWaveRef.current === waveId) {
-      return;
-    }
-    initializedWaveRef.current = waveId;
-    setUnreadDividerSerialNo(dividerSerialNo ?? null);
-  }, [waveId, dividerSerialNo, setUnreadDividerSerialNo]);
 
   const {
     renderedWaveMessages,
@@ -410,6 +399,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
         className="tw-relative tw-flex tw-h-full tw-flex-col tw-justify-end tw-overflow-hidden tw-bg-iron-950"
       >
         <WaveDropsContent
+          topFade={isApp ? "overlay" : "mask"}
           waveMessages={renderedWaveMessagesWithFullWave}
           dropId={dropId}
           scrollContainerRef={scrollContainerRef}
@@ -450,9 +440,10 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
   );
 };
 
-export const WaveDropsAllWithoutProvider: React.FC<WaveDropsAllProps> =
-  WaveDropsAllInner;
+export const WaveDropsAllWithoutProvider = WaveDropsAllInner;
 
+// Standalone threads keep their divider local. The routed chat owns its
+// history-backed provider above the message list.
 const WaveDropsAll: React.FC<WaveDropsAllProps> = ({
   waveId,
   wave,
@@ -483,7 +474,6 @@ const WaveDropsAll: React.FC<WaveDropsAllProps> = ({
         onReply={onReply}
         activeDrop={activeDrop}
         initialDrop={initialDrop}
-        dividerSerialNo={dividerSerialNo}
         unreadCount={unreadCount}
         onDropContentClick={onDropContentClick}
         bottomPaddingClassName={bottomPaddingClassName}

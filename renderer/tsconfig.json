@@ -44,6 +44,7 @@
     "paths": {
       "@/*": ["./*"],
       "@/electron-constants": ["../electron-constants.ts"],
+      "@/shared/memes-calendar/*": ["./shared/memes-calendar/*"],
       "@/shared/*": ["../shared/*"]
     },
     // ==========================================================================

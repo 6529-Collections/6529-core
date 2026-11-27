@@ -2,7 +2,6 @@ import { BOOKMARK_MESSAGES } from "@/i18n/messages/bookmarks";
 import { NOTIFICATIONS_INBOX_MESSAGES } from "@/i18n/messages/notifications-inbox";
 import { VOTING_CREDIT_RETURN_MESSAGES } from "@/i18n/messages/voting-credit-returns";
 import { MEME_COLLABORATION_MESSAGES } from "@/i18n/messages/meme-collaborations";
-import emmaMessages from "@/i18n/messages/emma.en-US.json";
 import additionalActionMessages from "@/i18n/messages/additionalAction.en-US.json";
 import { EN_SUBMISSION_DISCOVERY_MESSAGES } from "@/i18n/messages/submission-discovery";
 import waveCreationMessages from "@/i18n/messages/wave-creation.en-US.json";
@@ -43,12 +42,15 @@ import delegationTapGuideMessages from "@/i18n/messages/delegationTapGuide.en-US
 import pageMetadataMessages from "@/i18n/messages/pageMetadata.en-US.json";
 import toolsMessages from "@/i18n/messages/tools.en-US.json";
 import utcScheduleMessages from "@/i18n/messages/utcSchedule.en-US.json";
+import identityMoveMessages from "@/i18n/messages/identityMove.en-US.json";
 import displayTimeZoneMessages from "@/i18n/messages/displayTimeZone.en-US.json";
 import shareDropsImageMessages from "@/i18n/messages/shareDropsImage.en-US.json";
 import worldTimeZonesMessages from "@/i18n/messages/worldTimeZones.en-US.json";
 import wavesRightPanelMessages from "@/i18n/messages/wavesRightPanel.en-US.json";
+import wavesMoveMessages from "@/i18n/messages/wavesMove.en-US.json";
 import { QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
 import { CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
+import { DEVICES_SECURITY_MESSAGES } from "@/i18n/messages/devices-security";
 import { E2EE_MESSAGES } from "@/i18n/messages/e2ee";
 import { LEGACY_BROWSER_MESSAGES } from "@/i18n/messages/legacy-browser";
 import { EN_US_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
@@ -169,7 +171,7 @@ const USER_COLLECTED_STATS_MESSAGES = namespaceMessages(
 
 const USER_BRAIN_SIDEBAR_MESSAGES = objectMessages("user.brain.sidebar", {
   createdHeading: "Created Waves",
-  createdMobileHeading: "Created",
+  createdMobileHeading: "Created waves",
   recentlyActiveHeading: "Recently Active In",
   lastPost: "Last post {time}",
   noPostsByProfile: "No posts by this profile",
@@ -282,7 +284,6 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
   "search.label": "Search REP categories",
   "search.placeholder": "Type a category name",
   "search.resultsLabel": "REP category search results",
-  "helpBotReserved.error": "{category} is managed by help6529.",
   "edit.loading": "Loading your Rep allowance…",
   "edit.loadError": "Couldn't load your Rep allowance.",
   "edit.retry": "Try again",
@@ -396,6 +397,7 @@ const REP_CATEGORY_VALIDATION_MESSAGES = objectMessages(
   "rep.categories.validation",
   {
     errorTitle: "That category name won't work",
+    unavailable: "This category name is unavailable. Try a different name.",
     required: "Rep category is required.",
     tooShort: "Use at least {min} characters.",
     tooLong: "It's {length} characters long — the maximum is {max}.",
@@ -571,6 +573,7 @@ const WAVE_NAVIGATION_MESSAGES = objectMessages("wave.navigation", {
   loadingSection: "Loading section…",
   about: "About",
   waveSections: "Wave sections",
+  more: "More",
   appSections: "App sections",
   loadingSections: "Loading wave sections",
   fallbackCuration: "Curation",
@@ -647,6 +650,14 @@ const MEMES_SUBMISSION_MESSAGES = objectMessages("memes.submission", {
   "traits.invalidBoolean": "Choose Yes or No.",
   "media.missingUpload": "Select artwork or choose Interactive HTML.",
   "media.missingInteractive": "Enter a valid hash or choose Upload File.",
+  "media.gifPreview.guide":
+    "GIFs get an animated preview in Waves and the leaderboard when each frame has at most {pixels} pixels (for example {exampleWidth} × {exampleHeight}), at most {frames} frames, and at most {totalPixels} pixels across all frames.",
+  "media.gifPreview.framePixels":
+    "This GIF is {width} × {height} ({pixels} pixels per frame). Animated previews need at most {limit} pixels per frame, so in Waves and the leaderboard it will show as a still image until someone opens it in HD. You can still submit it, or reduce its dimensions to keep the preview animated.",
+  "media.gifPreview.frames":
+    "This GIF has {frames} frames. Animated previews need at most {limit} frames, so in Waves and the leaderboard it will show as a still image until someone opens it in HD. You can still submit it, or reduce the number of frames to keep the preview animated.",
+  "media.gifPreview.totalPixels":
+    "This GIF has {frames} frames of {width} × {height}, {pixels} pixels in total. Animated previews need at most {limit} pixels across all frames, so in Waves and the leaderboard it will show as a still image until someone opens it in HD. You can still submit it, or reduce its dimensions or frames to keep the preview animated.",
   "identity.connectPrompt":
     "Connect a wallet to confirm the profile submitting this artwork.",
   "identity.unknownProfile": "Unknown profile",
@@ -701,6 +712,8 @@ const MEMES_SUBMISSION_MESSAGES = objectMessages("memes.submission", {
     "Read-only preview of how your submission may appear in different views.",
   "additionalInfo.description":
     "Complete the following details for distribution and storytelling purposes.",
+  "documentation.notLinked":
+    "Your notes aren't linked to this entry. Find them under My artwork documentation.",
 } as const);
 
 const MEMES_WAVE_FOOTER_MESSAGES = objectMessages("memes.waveFooter", {
@@ -1012,6 +1025,8 @@ const WAVE_MY_VOTES_MESSAGES = objectMessages("waves.myVotes", {
   votesGivenNow: "Votes given now",
   projectedAtDecision: "Projected vote count at result time",
   yourVotes: "Your votes",
+  yourVotesInCredit: "Your votes in {credit}",
+  maxRating: "{label} {value}",
   inCredit: "in {credit}",
   vote: "Vote",
   submitVote: "Submit vote",
@@ -1022,6 +1037,8 @@ const WAVE_MY_VOTES_MESSAGES = objectMessages("waves.myVotes", {
   "limit.maximum": "{label} is {value} {credit}.",
   "limit.minimum": "Minimum is {value} {credit}.",
   selectAll: "Select all",
+  select: "Select",
+  doneSelecting: "Done",
   deselectAll: "Deselect all",
   resetVotes: "Reset votes",
   resetting: "Resetting…",
@@ -1511,67 +1528,17 @@ const FOLLOWERS_MESSAGES = objectMessages("followers", {
   "profile.avatarAlt": "{handle}'s profile image",
 } as const);
 
-const WAVES_SIDEBAR_MESSAGES = objectMessages("waves.sidebar", {
-  "pinControl.pinTooltip": "Pin",
-  "pinControl.unpinTooltip": "Unpin",
-  "pinControl.pinAriaLabel": "Pin wave",
-  "pinControl.unpinAriaLabel": "Unpin wave",
-  "pinControl.pinErrorTitle": "Couldn't pin this wave.",
-  "pinControl.unpinErrorTitle": "Couldn't unpin this wave.",
-  "pinControl.retryDescription": PLEASE_TRY_AGAIN,
-  "pinControl.limitMessage": "Maximum {count} pinned waves allowed",
-  "pinControl.limitTooltip":
-    "Max {count} pinned waves. Unpin another wave first.",
-  "pinControl.viewerChanged": "The active profile changed. Please try again.",
-  dragInstructions:
-    "While focused on the wave, press Space to pick it up. Use the arrow keys to move it, Space to drop, or Escape to cancel.",
-  dragStarted: "Picked up wave.",
-  dragPosition: "Position {position}.",
-  dragCancelled: "Reordering cancelled.",
-  pinsRetryLabel: "Retry loading pinned waves",
-  pinOrderSaved: "Pinned wave order saved.",
-  pinOrderSaveError: "Couldn’t save the pinned wave order. Please try again.",
-  pinsLoadError: "Couldn’t load pinned waves.",
-  highlyRated: "Worth Checking Out",
-  highlyRatedInfoTooltip: "Highly rated waves you don’t follow yet.",
-  "highlyRatedPreviewOpenAriaLabel.none": "Open {waveName}",
-  "highlyRatedPreviewOpenAriaLabel.withScore": "Open {waveName}, score {score}",
-  highlyRatedPreviewScore: "Score {score}",
-  pinned: "Pinned",
-  allWaves: "All Waves",
-  all: "All",
-  filterAriaLabel: "Wave list filter",
-  filterAll: "All",
-  filterJoined: "Joined",
-  joinedEmptyMessage: "No joined waves to display",
-  joinedLoadError: "Some joined waves could not be loaded.",
-  joinedRetry: "Retry",
-  joinedRetryLabel: "Retry loading joined waves",
-  joinedLoadMore: "Load more joined waves",
-  allLoadError: "Some waves could not be loaded.",
-  allRetryLabel: "Retry loading all waves",
-  allLoadMore: "Load more waves",
-  announcementWavesAriaLabel: "Announcement waves",
-  highlyRatedAriaLabel: "Worth checking out waves",
-  pinnedAriaLabel: "Pinned waves",
-  followingListAriaLabel: "Following waves list",
-  allRecentActivityAriaLabel: "All recent waves list",
-  allQualityRankedAriaLabel: "All quality-ranked waves list",
-  directMessagesAriaLabel: "Direct message conversations",
-  expandControlExpandAriaLabel: "Expand {waveName} subwaves",
-  expandControlCollapseAriaLabel: "Collapse {waveName} subwaves",
-  expandControlLoadingAriaLabel: "Loading {waveName} subwaves",
-  subwavesToggleView: "View subwaves",
-  subwavesToggleViewCountOne: "View {count} subwave",
-  subwavesToggleViewCountMany: "View {count} subwaves",
-  subwavesToggleHide: "Hide subwaves",
-  subwavesToggleLoading: "Loading subwaves",
-  subwavesToggleUnreadBadge: "{count} new",
-  subwavesToggleViewAriaLabel: "View {waveName} subwaves",
-  subwavesToggleViewCountOneAriaLabel: "View {count} subwave for {waveName}",
-  subwavesToggleViewCountManyAriaLabel: "View {count} subwaves for {waveName}",
-  subwavesToggleHideAriaLabel: "Hide {waveName} subwaves",
-  subwavesToggleLoadingAriaLabel: "Loading {waveName} subwaves",
+const PROFILE_FOLLOW_MESSAGES = objectMessages("profile.follow", {
+  sendDirectMessage: "Send direct message",
+  followBack: "Follow back",
+  mutualStatus: "You follow each other",
+  unfollow: "Unfollow",
+  unblock: "Unblock",
+  unblockProfile: "Unblock {handle}",
+  "error.follow": "Couldn't follow this profile.",
+  "error.unfollow": "Couldn't unfollow this profile.",
+  "error.authenticate": "Couldn't verify your sign-in.",
+  "error.retry": "Please try again.",
 } as const);
 
 const QUICK_DM_MESSAGES = objectMessages("quickDm", {
@@ -1699,6 +1666,25 @@ const WAVE_JOIN_MESSAGES = objectMessages("waves.join", {
 } as const);
 
 const WAVE_DROP_ELIGIBILITY_MESSAGES = objectMessages("waves.dropEligibility", {
+  howToSubmit: "How to Submit",
+  closed: "Submissions Closed",
+  openSoon: "Submissions Open Soon",
+  limitReached: "Submission Limit Reached",
+  unavailable: "Submission Unavailable",
+  closedAt: "Submissions closed on {date}",
+  closedReason: "Submissions are closed",
+  opensAt: "Submissions open on {date}",
+  opensSoonReason: "Submissions will open soon",
+  limitOneReason:
+    "You have already submitted the maximum allowed (1 submission)",
+  limitManyReason:
+    "You have already submitted the maximum allowed ({count} submissions)",
+  unavailableReason: "You cannot submit at this time",
+  submitMeme: "Submit Meme",
+  submitMemeClosingSoon: "Submit Meme (Closes Soon!)",
+  submitWorkToMemes: "Submit Work to The Memes",
+  submitWork: "Submit Work",
+  approvalLocked: "Approval controls are locked",
   loginRequired: "Please log in to make submissions",
   ended: "Submission period has ended",
 } as const);
@@ -1708,19 +1694,18 @@ const WAVE_NOTIFICATION_SETTINGS_MESSAGES = namespaceMessages(
   [
     ["trigger.tooltip", "Notification settings"],
     ["trigger.ariaLabel", "Open notification settings"],
-    ["broadcastMentions.label", "Broadcast mentions"],
-    [
-      "broadcastMentions.ariaLabel",
-      "Receive @all and @contributors notifications",
-    ],
+    ["levels.ariaLabel", "Notification level"],
+    ["broadcastMentions.label", "Mentions and @all"],
+    ["mentionsOnly.label", "Mentions only"],
+    ["mentionsOnly.ariaLabel", "Mentions only"],
+    ["broadcastMentions.ariaLabel", "Mentions and @all"],
     ["allMessages.label", "All messages"],
-    ["allMessages.ariaLabel", "Receive notifications for all messages"],
+    ["allMessages.ariaLabel", "All messages"],
     ["mute.label", "Mute"],
     ["mute.activeLabel", "Muted"],
+    ["mute.unmuteLabel", "Unmute"],
     ["mute.ariaLabel", "Mute wave"],
     ["mute.unmuteAriaLabel", "Unmute wave"],
-    ["mute.tooltip.enable", "Click to mute this wave"],
-    ["mute.tooltip.disable", "Click to unmute this wave"],
     ["mute.error.muteTitle", "Couldn't mute this wave."],
     ["mute.error.unmuteTitle", "Couldn't unmute this wave."],
     ["mute.error.description", PLEASE_TRY_AGAIN],
@@ -1944,7 +1929,6 @@ const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
   "members.countUnavailable": "Current audience unavailable",
   "members.view": "View members",
   "members.previewDraft": "Preview matches",
-  "members.dialogTitle": "{role}: {group}",
   "members.dynamicDescription":
     "This is a live preview based on current profile, reputation, and ownership data. Membership can change over time.",
   "members.criteriaSummary": "Why these identities qualify",
@@ -2133,6 +2117,7 @@ const WAVE_CREATE_ACTIONS_MESSAGES = objectMessages("waves.create.actions", {
   complete: "Complete",
   create: "Create",
   createMenuHeader: "Create",
+  curation: "Curation",
   curationDescription: "Collect drops in a custom view",
   subwaveDescription: "Start a separate space within this wave",
   next: "Next",
@@ -2265,6 +2250,8 @@ const WAVE_CREATE_RULES_MESSAGES = objectMessages("waves.create.rules", {
 const WAVE_CREATE_VOTING_MESSAGES = objectMessages("waves.create.voting", {
   title: "How Drops are Voted",
   ratingTitle: "How Drops are Rated",
+  creditsLocked:
+    "This decision already has votes, so its voting credit, scope and negative-vote settings can no longer change.",
   rankAdvancedSummary: "Vote limits and behavior",
   approveAdvancedSummary: "Vote limits, behavior, and timing",
   "timeUnit.minutes": "Minutes",
@@ -2427,6 +2414,26 @@ const WAVE_CHAT_MESSAGES = objectMessages("waves.chat", {
     "It will appear in a moment. If it doesn't, refresh the page.",
   repliesOnlyPlaceholder:
     "Only chat members can start new drops here. You can reply to any drop.",
+  proxySessionPlaceholder:
+    "You're signed in as a proxy for another profile, so you can't post here. To post as yourself, switch back to your own profile, or sign out and connect again.",
+  "restriction.slowMode":
+    "Slow mode is active. Please wait before posting again",
+  "restriction.noChatPermission":
+    "You don't have permission to chat in this wave",
+  "restriction.chatDisabled": "Chat is currently disabled for this wave",
+  "restriction.noSubmitPermission":
+    "You don't have permission to submit in this wave",
+  "restriction.submissionsNotStarted": "Submissions haven't started yet",
+  "restriction.submissionsEnded": "Submission period has ended",
+  "restriction.maxDropsReached":
+    "You have reached the maximum number of drops allowed",
+  "restriction.cannotParticipate":
+    "You cannot participate in this wave at the moment",
+  "restriction.unavailable": "Action not available",
+  "profileSetup.link": "Create a profile",
+  "profileSetup.chat": "{link} to participate in chat",
+  "profileSetup.submission": "{link} to submit in this wave",
+  "profileSetup.wave": "{link} to participate in this wave",
   "replyThread.showOne": "Show 1 reply",
   "replyThread.showMany": "Show {count} replies",
   "replyThread.hide": "Hide replies",
@@ -2509,7 +2516,6 @@ const WAVE_STORM_COMPOSER_MESSAGES = objectMessages("waves.stormComposer", {
 
 const WAVE_CHAT_SETTINGS_MESSAGES = objectMessages("waves.chatSettings", {
   "access.public": "Public",
-  "access.inspectGroup": "Inspect {groupName} group criteria and members",
   "access.label": "Chat access",
   "access.privateGroup": "Private group",
   "access.unavailableGroup": "Group unavailable",
@@ -2803,6 +2809,7 @@ const WAVE_REP_DETAILS_MESSAGES = objectMessages("waves.rep.details", {
   "activity.title": "Wave REP activity",
   "activity.description": "Recent edits across all categories",
   "activity.unknownRater": "Unknown",
+  "activity.to": "to",
   "activity.error": "Could not load Wave REP activity.",
   "activity.empty": "No Wave REP activity yet.",
   "activity.loadMoreError": "Could not load more activity.",
@@ -3120,6 +3127,8 @@ const COMMON_MESSAGES = objectMessages("common", {
   clearFilters: "Clear filters",
   close: "Close",
   expandEditor: "Expand editor",
+  expandSheet: "Expand sheet",
+  collapseSheet: "Collapse sheet",
 } as const);
 
 const IDENTITY_FILTER_MESSAGES = objectMessages("identityFilter", {
@@ -3148,7 +3157,24 @@ const XTDH_COLLECTION_MESSAGES = objectMessages("xtdh.collections", {
 } as const);
 
 const XTDH_GRANT_MESSAGES = objectMessages("xtdh.grant", {
+  createAction: "Grant",
+  createHeading: "Create New Grant",
+  actions: "Grant actions",
+  stopAction: "Stop Grant",
+  revokeAction: "Revoke Grant",
   "lastGrant.label": "Last grant",
+  statusTabsLabel: "Select tab",
+} as const);
+
+const XTDH_STATS_MESSAGES = objectMessages("xtdh.stats", {
+  generating: "Generating",
+  inbound: "Inbound",
+  outbound: "Outbound",
+  net: "Net",
+  perDay: "/day",
+  grantedRate: "Granted rate",
+  grantedRateLabel: "Granted Rate",
+  actionTitle: "Action",
 } as const);
 
 const WAVE_SLOW_MODE_NOTICE_MESSAGES = objectMessages("waves.slowMode.notice", {
@@ -3630,10 +3656,21 @@ export const EN_US_ROOT_MESSAGES = {
   "header.menu.open": "Open menu",
   "header.menu.close": "Close menu",
   "header.navigation.loading": "Loading navigation…",
+  "messages.loading": "Loading messages",
   // The header and the drop actions menu link to artwork documentation from
   // any page; the rest of its copy is @/i18n/namespaces/artwork-documentation.
   "artworkDocumentation.title": "Artwork documentation",
   "artworkDocumentation.myWorks": "My artwork documentation",
+  "waves.information.avatarLabel": "Open wave details",
+  "waves.information.members": "Members",
+  "waves.information.discardMessage": "Your unsaved changes will be lost.",
+  "waves.information.discardTitle": "Discard changes?",
+  "waves.information.turnOffChat": "Turn off chat?",
+  "waves.information.turnOffChatMessage":
+    "Members will no longer be able to send chat messages. You can turn chat back on here.",
+  "waves.information.turnOffChatAction": "Turn off chat",
+  "waves.information.choosePicture": "Choose photo",
+  "waves.information.picturePreview": "Wave picture preview",
   "waves.information.open": "About {name}",
   ...EN_SUBMISSION_DISCOVERY_MESSAGES,
   ...additionalActionMessages,
@@ -3824,14 +3861,17 @@ export const EN_US_ROOT_MESSAGES = {
   "profilePreferences.loading": "Loading profile preferences",
   "profilePreferences.loadError":
     "Couldn’t load profile preferences. Please try again.",
-  "profilePreferences.save": "Save Changes",
+  "profilePreferences.save": "Save",
   "profilePreferences.saving": "Saving…",
   "profilePreferences.saveSuccess": "Profile preferences saved.",
+  "profilePreferences.saveProfileChanged":
+    "The active profile changed during the save. Check your profile and try again.",
   "profilePreferences.saveError":
     "Couldn’t save profile preferences. Please try again.",
   "profilePreferences.dm.heading": "Who can start a direct message with me?",
+  "profilePreferences.dm.linkLabel": "Message preferences",
   "profilePreferences.dm.description":
-    "This only affects new conversations. Existing direct messages and group messages stay available.",
+    "This controls who can start a conversation with you or add you to an encrypted group. You can still use chats you already share.",
   "profilePreferences.dm.EVERYONE.label": "Everyone",
   "profilePreferences.dm.EVERYONE.description":
     "Any profile can start a new conversation with you.",
@@ -3841,33 +3881,27 @@ export const EN_US_ROOT_MESSAGES = {
   "profilePreferences.dm.NOBODY.label": "Nobody",
   "profilePreferences.dm.NOBODY.description":
     "No one can start a new conversation with you.",
-  "profilePreferences.dm.GROUP_MEMBERS.label": "Members of a group I choose",
+  "profilePreferences.dm.GROUP_MEMBERS.label": "People who meet my criteria",
   "profilePreferences.dm.GROUP_MEMBERS.description":
-    "Only members of a group you pick, for example by level, TDH, REP or NIC, can start a new conversation with you.",
+    "Set rules such as level, TDH, REP, NIC, NFT ownership or specific profiles.",
   "profilePreferences.dm.blockNote":
     "Profiles you block can never start a new conversation with you, whichever option you choose.",
-  "profilePreferences.dm.group.label": "Group",
-  "profilePreferences.dm.group.none": "No group chosen",
-  "profilePreferences.dm.group.loading": "Loading group…",
-  "profilePreferences.dm.group.unavailableName": "Group no longer available",
-  "profilePreferences.dm.group.loadError": "Couldn’t load the group details.",
-  "profilePreferences.dm.group.retry": "Try again",
-  "profilePreferences.dm.group.viewMembers": "View members of {groupName}",
-  "profilePreferences.dm.group.choose": "Choose group",
-  "profilePreferences.dm.group.change": "Change group",
-  "profilePreferences.dm.group.required": "Choose a group to save this option.",
+  "profilePreferences.dm.group.setCriteria": "Set criteria",
+  "profilePreferences.dm.group.editCriteria": "Edit criteria",
+  "profilePreferences.dm.group.done": "Done",
+  "profilePreferences.dm.group.required": "Add criteria to save this option.",
   "profilePreferences.dm.group.unavailable":
-    "The group you chose was deleted or hidden. Until you choose another group, only people you follow can start a new conversation with you.",
+    "Your saved criteria are unavailable. Until you save new criteria, only people you follow can start a new conversation with you.",
   "profilePreferences.dm.group.allowFollowed":
     "People I follow can always message me",
   "profilePreferences.dm.group.allowFollowedDescription":
-    "Profiles you follow can start a conversation even if they aren’t in the group.",
+    "Profiles you follow can start a conversation even if they don’t meet your criteria.",
   "profilePreferences.dm.group.dialogTitle": "Who can message you",
   "profilePreferences.dm.group.dialogDescription":
-    "Use an existing group or build one from level, TDH, REP, NIC, NFTs and specific profiles.",
+    "Set the criteria people need to meet to contact you.",
   "profilePreferences.dm.group.suggestedName": "Can message me",
-  "profilePreferences.dm.group.membersRoleLabel": "Can message me",
-  "profilePreferences.dm.group.createErrorTitle": "Couldn’t create this group.",
+  "profilePreferences.dm.group.createErrorTitle":
+    "Couldn’t save your criteria.",
   "profilePreferences.dm.group.createError": PLEASE_TRY_AGAIN,
   "directMessageAdmission.notAccepting":
     "@{handle} doesn’t accept new direct messages.",
@@ -3875,12 +3909,11 @@ export const EN_US_ROOT_MESSAGES = {
     "@{handle} only accepts new direct messages from people they follow.",
   "directMessageAdmission.groupMembersOnly":
     "@{handle} only accepts new direct messages from members of a group they chose.",
-  "directMessageAdmission.groupMembersOnlyWithGroup":
-    "@{handle} only accepts new direct messages from members of the group “{groupName}”.",
   "directMessageAdmission.senderBlockedRecipient":
     "You blocked @{handle}. Unblock them to start a new direct message.",
   "profilePreferences.dm.createRetry": PLEASE_TRY_AGAIN,
   "profilePreferences.notifications.heading": "Notifications",
+  "profilePreferences.notifications.linkLabel": "Notification preferences",
   "profilePreferences.notifications.description":
     "Choose between All and Essential notifications.",
   "profilePreferences.notifications.ALL.label": "All",
@@ -3922,6 +3955,7 @@ export const EN_US_ROOT_MESSAGES = {
   ...IDENTITY_FILTER_MESSAGES,
   ...XTDH_COLLECTION_MESSAGES,
   ...XTDH_GRANT_MESSAGES,
+  ...XTDH_STATS_MESSAGES,
   ...WAVE_SLOW_MODE_NOTICE_MESSAGES,
   ...COLLECTION_DELEGATION_MESSAGES,
   ...DELEGATION_EXPIRY_MESSAGES,
@@ -4157,7 +4191,8 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.shareModal.backdropAriaLabel": "Dismiss share modal",
   "headerShare.connectModal.title": "Connect Device",
   "headerShare.connectModal.mobileTitle": "Connect 6529 Mobile",
-  "headerShare.connectModal.desktopTitle": "Connect 6529 Desktop",
+  "headerShare.connectModal.newDesktopTitle": "Connect 6529 Desktop",
+  "headerShare.connectModal.desktopTitle": "Connect 6529 Desktop Classic",
   "headerShare.connectModal.chooseApp": "Which app are you connecting?",
   "headerShare.connectModal.only": "Connect only",
   "headerShare.connectModal.secure":
@@ -4166,7 +4201,7 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.connectModal.asSecure":
     "Connect as {name} with Post Signing & DM Encryption",
   "headerShare.connectModal.desktopMinimumVersion":
-    "Requires 6529 Desktop {version} or later.",
+    "Requires 6529 Desktop Classic {version} or later.",
   "headerShare.connectModal.back": "Back",
   "headerShare.connectModal.oneTime":
     "Use only on a device you own. This code works once.",
@@ -4178,8 +4213,9 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.menu.qrTarget": "QR code target",
   "headerShare.menu.browser": "Browser",
   "headerShare.menu.app": "App",
-  "headerShare.menu.mobile": "6529 Mobile",
-  "headerShare.menu.desktop": "6529 Desktop",
+  "headerShare.menu.mobile": "Mobile",
+  "headerShare.menu.desktop": "Desktop",
+  "headerShare.menu.desktopClassic": "Desktop Classic",
   "desktopNotifications.someone": "Someone",
   "desktopNotifications.followed": "{handle} is now following you",
   "desktopNotifications.viewProfile": "View profile",
@@ -4236,6 +4272,34 @@ export const EN_US_ROOT_MESSAGES = {
   "desktop.appInfo.version": "Version",
   "desktop.appInfo.environment": "Environment",
   "desktop.appInfo.checkUpdates": "Check for updates",
+  "desktop.titleStrip.appInfoState": "App info ({label})",
+  "desktop.update.heading": "Updates",
+  "desktop.update.lastChecked": "Last checked {time}.",
+  "desktop.update.checkNow": "Check now",
+  "desktop.update.updateNow": "Update now",
+  "desktop.update.restart": "Restart to update",
+  "desktop.update.tryAgain": "Try again",
+  "desktop.update.notNow": "Not now",
+  "desktop.update.releaseNotes": "Release notes for {version} on 6529.io",
+  "desktop.update.notesHeading": "What's in {version}",
+  "desktop.busy.uploading": "A file is still uploading",
+  "desktop.busy.sending": "A drop is still being sent",
+  "desktop.update.requested": "6529 Desktop is checking the release list.",
+  "desktop.update.downloadPage": "Download page on 6529.io",
+  "desktop.update.settingCheck": "Check for new releases",
+  "desktop.update.settingAuto": "Install updates automatically",
+  "desktop.update.settingAutoNeedsCheck":
+    "Turn on Check for new releases first.",
+  "desktop.update.settingsFailed":
+    "The setting could not be changed. Try again.",
+  "desktop.update.restartFailed": "6529 Desktop can't restart to update now.",
+  "desktop.update.restartFailedReason":
+    "6529 Desktop can't restart to update now. {reason}",
+  "desktop.update.updateNotStarted":
+    "6529 Desktop didn't start the update. Try again in a moment.",
+  "desktop.appInfo.checkingUpdates": "Checking for updates…",
+  "desktop.appInfo.noUpdates": "No updates found.",
+  "desktop.appInfo.checkFailed": "Couldn’t check for updates. Try again.",
   "desktopConnect.title": "Connect a wallet",
   "desktopConnect.intro":
     "6529 Desktop Classic cannot use browser extensions directly. Choose how to connect:",
@@ -4256,6 +4320,7 @@ export const EN_US_ROOT_MESSAGES = {
   "desktopConnect.status.walletConnectFailed":
     "Could not open WalletConnect. Try again.",
   "desktopWalletRequest.title": "Signature request",
+  "desktopWalletRequest.transactionTitle": "Transaction",
   "desktopWalletRequest.waiting":
     "Your browser opened a page to sign with your wallet. Finish there; this waits for two minutes.",
   "desktopWalletRequest.code":
@@ -4283,6 +4348,8 @@ export const EN_US_ROOT_MESSAGES = {
     "Trading is not available in 6529 Desktop Classic with a browser wallet. Continue on {site} in your browser.",
   "desktopWalletRequest.notForwarded":
     "6529 Desktop Classic does not send this kind of signature to your browser wallet. Continue on {site} in your browser, where your wallet signs it directly.",
+  "desktopWalletRequest.transactionNotForwarded":
+    "6529 Desktop Classic does not send this transaction to your browser wallet. Continue on {site} in your browser, where your wallet sends it directly.",
   "browserConnector.title": "Sign in to 6529 Desktop Classic",
   "browserConnector.description":
     "Sign in to 6529 Desktop Classic with a browser wallet.",
@@ -4358,6 +4425,229 @@ export const EN_US_ROOT_MESSAGES = {
     "Submit an entry to a 6529 decision.",
   "browserConnector.wallet.refusal.unknown-typed-data":
     "This page will not ask your wallet to sign this request: it is a kind of request 6529 Desktop Classic does not send from here. Continue on {site} in your browser instead.",
+  "browserConnector.tx.intro":
+    "6529 Desktop Classic asks {address} to send this transaction:",
+  "browserConnector.tx.title.delegation.register": "Register a delegation",
+  "browserConnector.tx.title.delegation.registerAsManager":
+    "Register a delegation as a delegation manager",
+  "browserConnector.tx.title.delegation.update": "Update a delegation",
+  "browserConnector.tx.title.delegation.batchRegister":
+    "Register several delegations",
+  "browserConnector.tx.title.delegation.revoke": "Revoke a delegation",
+  "browserConnector.tx.title.delegation.revokeAsManager":
+    "Revoke a delegation as a delegation manager",
+  "browserConnector.tx.title.delegation.batchRevoke":
+    "Revoke several delegations",
+  "browserConnector.tx.title.delegation.lockCollection":
+    "Lock or unlock a collection for delegations",
+  "browserConnector.tx.title.delegation.lockUseCase":
+    "Lock or unlock a use case for delegations",
+  "browserConnector.tx.title.memes.mint": "Mint a The Memes card",
+  "browserConnector.tx.title.memes.mintBatch": "Mint The Memes cards",
+  "browserConnector.tx.title.memes.mintProxy":
+    "Mint The Memes cards for another wallet",
+  "browserConnector.tx.title.nextgen.mint": "Mint NextGen tokens",
+  "browserConnector.tx.title.subscriptions.topUp":
+    "Top up your Memes subscription balance",
+  "browserConnector.tx.title.nft.transfer721": "Transfer an NFT",
+  "browserConnector.tx.title.nft.transfer1155": "Transfer NFTs",
+  "browserConnector.tx.title.nft.batchTransfer1155": "Transfer several NFTs",
+  "browserConnector.tx.title.provenance.openRelease":
+    "Open a 6529 Provenance release",
+  "browserConnector.tx.title.provenance.publish":
+    "Publish records to 6529 Provenance",
+  "browserConnector.tx.title.provenance.sealRelease":
+    "Seal a 6529 Provenance release",
+  "browserConnector.tx.contract": "Contract",
+  "browserConnector.tx.contract.delegation": "6529 delegation contract",
+  "browserConnector.tx.contract.memes": "Manifold claim contract for The Memes",
+  "browserConnector.tx.contract.nextgen": "NextGen minter contract",
+  "browserConnector.tx.contract.subscriptions":
+    "6529 subscriptions wallet (seize.6529.eth)",
+  "browserConnector.tx.contract.nft": "6529 NFT contract",
+  "browserConnector.tx.contract.provenance": "6529 Provenance registry",
+  "browserConnector.tx.transfer.recipient":
+    "Recipient: the NFTs go to this address",
+  "browserConnector.tx.transfer.identity": "6529 profile: {name}",
+  "browserConnector.tx.transfer.identityChecking":
+    "Looking up the 6529 profile for this address…",
+  "browserConnector.tx.transfer.identityNone":
+    "No 6529 profile was found for this address.",
+  "browserConnector.tx.transfer.identityUnavailable":
+    "The 6529 profile for this address could not be looked up.",
+  "browserConnector.tx.transfer.identityNote":
+    "The profile comes from 6529 profile data. It is not part of the transaction: check the address itself.",
+  "browserConnector.tx.transfer.contract":
+    "This address is a contract. If it cannot handle NFTs, they can be lost. Send only if you know this contract accepts them.",
+  "browserConnector.tx.transfer.codeUnavailable":
+    "It could not be checked whether this address is a contract.",
+  "browserConnector.tx.transfer.confirm":
+    "I checked that this is the right recipient. Transfers cannot be undone.",
+  "browserConnector.tx.sender.checking":
+    "Checking that this wallet may publish to this registry…",
+  "browserConnector.tx.sender.ok":
+    "Checked: this wallet may publish to this registry.",
+  "browserConnector.tx.sender.denied":
+    "This wallet is neither a publisher nor the owner of this registry, so the transaction would fail. Start again from 6529 Desktop with an authorized wallet.",
+  "browserConnector.tx.sender.unavailable":
+    "It could not be checked whether this wallet may publish. You can check again or send it anyway.",
+  "browserConnector.tx.provenance.none": "None",
+  "browserConnector.tx.provenance.digest": "Hash",
+  "browserConnector.tx.provenance.digestValue": "{algorithm} {digest}",
+  "browserConnector.tx.provenance.manifestCid": "Manifest CID",
+  "browserConnector.tx.provenance.rootCid": "Root CID",
+  "browserConnector.tx.provenance.arweaveId": "Arweave ID",
+  "browserConnector.tx.provenance.sourceCommit": "Source commit",
+  "browserConnector.tx.provenance.label": "Label",
+  "browserConnector.tx.provenance.release": "Release",
+  "browserConnector.tx.provenance.expectedCount": "Expected record count",
+  "browserConnector.tx.provenance.record": "Record {position}",
+  "browserConnector.tx.provenance.subject": "Subject ID",
+  "browserConnector.tx.provenance.recordType": "Record type ID",
+  "browserConnector.tx.provenance.schema": "Schema ID",
+  "browserConnector.tx.provenance.cid": "CID",
+  "browserConnector.tx.provenance.expectedVersion":
+    "Versions before this record",
+  "browserConnector.tx.provenance.newSubject": "0 (a new subject)",
+  "browserConnector.tx.provenance.effectiveAt": "Effective time",
+  "browserConnector.tx.provenance.effectiveAtValue":
+    "{time} UTC, as the publisher states it",
+  "browserConnector.tx.network": "Network",
+  "browserConnector.tx.network.mainnet": "Ethereum",
+  "browserConnector.tx.network.sepolia": "Sepolia test network",
+  "browserConnector.tx.count": "Number",
+  "browserConnector.tx.value": "Amount",
+  "browserConnector.tx.valueAmount":
+    "{amount} ETH, plus the network fee your wallet sets",
+  "browserConnector.tx.highImpact": "Check this carefully before you send it.",
+  "browserConnector.tx.effect.delegate":
+    "{delegate} can act for this wallet for use case {useCase}.",
+  "browserConnector.tx.effect.onBehalfOf":
+    "You act on behalf of {delegator} as its delegation manager.",
+  "browserConnector.tx.effect.recipient":
+    "You pay, and what you mint goes to {recipient}.",
+  "browserConnector.tx.effect.mintAsDelegate":
+    "You mint as a delegate of {delegator}.",
+  "browserConnector.tx.effect.largeValue": "This sends more than 1 ETH.",
+  "browserConnector.tx.understand": "I understand",
+  "browserConnector.tx.details":
+    "Everything this transaction sends ({function})",
+  "browserConnector.tx.data": "Call data",
+  "browserConnector.tx.proof": "allowlist proof ({count} hashes)",
+  "browserConnector.tx.proofs": "allowlist proofs ({count})",
+  "browserConnector.tx.quoted": "“{text}”",
+  "browserConnector.tx.field": "{name}: {value}",
+  "browserConnector.tx.useCase": "{id} ({name})",
+  "browserConnector.tx.plainTransfer": "plain ETH transfer",
+  "browserConnector.tx.yes": "Yes",
+  "browserConnector.tx.no": "No",
+  "browserConnector.tx.check.checking":
+    "Checking that this transaction would go through…",
+  "browserConnector.tx.check.ok":
+    "Checked: this transaction would go through now.",
+  "browserConnector.tx.check.reverted": "This transaction would fail: {reason}",
+  "browserConnector.tx.check.unavailable":
+    "This transaction could not be checked right now. You can check again or send it anyway.",
+  "browserConnector.tx.check.details": "Details",
+  "browserConnector.tx.check.again": "Check again",
+  "browserConnector.tx.check.sendAnyway": "Send anyway",
+  "browserConnector.tx.price.checking": "Checking the current price…",
+  "browserConnector.tx.price.ok": "The amount matches the current price.",
+  "browserConnector.tx.price.mismatch":
+    "The amount does not match the current price. Start again from 6529 Desktop Classic.",
+  "browserConnector.tx.price.unavailable":
+    "The current price could not be read. Check that the amount is right before you send.",
+  "browserConnector.tx.tooLate":
+    "Less than a minute is left for this request. Start again from 6529 Desktop Classic.",
+  "browserConnector.tx.safety":
+    "6529 never asks for your recovery phrase or password. Your wallet shows the network fee before you confirm.",
+  "browserConnector.tx.send": "Send in wallet",
+  "browserConnector.tx.failed":
+    "Your wallet did not send the transaction. Try again, or decline.",
+  "browserConnector.tx.sent":
+    "Sent. Return to 6529 Desktop Classic. Transaction {hash}",
+  "browserConnector.tx.explorer": "View the transaction on Etherscan",
+  "desktopWalletRequest.transactionWaiting":
+    "Your browser opened a page to send this transaction with your wallet. Finish there; this waits for five minutes.",
+  "desktopWalletRequest.transactionUpdate":
+    "This version of 6529 Desktop Classic cannot send this transaction from your browser wallet. Update 6529 Desktop Classic, or continue on {site} in your browser.",
+  "desktopWalletRequest.transactionUnverified":
+    "Your wallet reports it sent the transaction {hash}. 6529 Desktop Classic could not confirm it yet. Check it in a block explorer before you try again.",
+  "desktopWalletRequest.transactionMismatch":
+    "The transaction {hash} on chain is not the one 6529 Desktop Classic asked for. Check it in a block explorer and in your wallet.",
+  "desktopWalletRequest.lateTransaction":
+    "A transaction you approved after its request ended was sent: {hash}. Check it in a block explorer before you try again.",
+  "desktopWalletRequest.explorer": "View on Etherscan",
+  "browserConnector.wallet.refusal.unknown-transaction":
+    "This page will not ask your wallet to send this transaction: 6529 Desktop Classic does not send it from here. Continue on {site} in your browser instead.",
+  "browserConnector.wallet.refusal.safe-tx-rule":
+    "This page will not ask your wallet to sign this Safe transaction: its details are outside what 6529 Desktop Classic sends from here. Nothing was signed. Continue on {site} in your browser instead.",
+  "desktopWalletRequest.safeTxUpdate":
+    "This version of 6529 Desktop Classic cannot ask your browser wallet to sign this Safe transaction. Update 6529 Desktop Classic, or continue on {site} in your browser.",
+  "browserConnector.safeTx.title":
+    "Approve a 6529 Provenance governance action as a signer of this Safe",
+  "browserConnector.safeTx.signatureOnly":
+    "This is a signature, not a transaction. It does not cost gas. The action happens when enough signers approve and someone executes it.",
+  "browserConnector.safeTx.safe": "Safe",
+  "browserConnector.safeTx.safeName": "6529 Provenance test Safe",
+  "browserConnector.safeTx.safeThreshold":
+    "6529 Provenance test Safe ({threshold} of {owners} signers)",
+  "browserConnector.safeTx.nonce": "Safe transaction number (nonce)",
+  "browserConnector.safeTx.queued":
+    "(queued: the Safe is at {current}; earlier ones must run first)",
+  "browserConnector.safeTx.callTitle": "{position}. {action}",
+  "browserConnector.safeTx.registry.provenanceTest":
+    "6529 Provenance test registry",
+  "browserConnector.safeTx.registry.museumCatalog":
+    "6529 Network Museum catalog registry (test)",
+  "browserConnector.safeTx.call.governance.registerCanonicalization":
+    "Register a canonicalization",
+  "browserConnector.safeTx.call.governance.registerRecordType":
+    "Register a record type",
+  "browserConnector.safeTx.call.governance.registerSchema":
+    "Register a schema (by hash and CID)",
+  "browserConnector.safeTx.call.governance.setPublisher":
+    "Grant or revoke a publisher key",
+  "browserConnector.safeTx.call.governance.deleteVersion":
+    "Delete a record version",
+  "browserConnector.safeTx.call.governance.deleteVersions":
+    "Delete a range of record versions",
+  "browserConnector.safeTx.call.governance.deleteSubject":
+    "Delete a subject and all its versions",
+  "browserConnector.safeTx.call.governance.freeze":
+    "Freeze the registry for good",
+  "browserConnector.safeTx.call.governance.declareSuccessor":
+    "Declare a successor registry (this also freezes it)",
+  "browserConnector.safeTx.call.governance.transferOwnership":
+    "Start transferring ownership of the registry",
+  "browserConnector.safeTx.call.governance.acceptOwnership":
+    "Accept ownership of the registry for this Safe",
+  "browserConnector.safeTx.high":
+    "This grants a key the right to publish records in the registry. Check the key before you sign.",
+  "browserConnector.safeTx.critical":
+    "This changes who controls the registry, freezes it or removes records. It cannot be undone once executed. Check every value before you sign.",
+  "browserConnector.safeTx.understand":
+    "I checked this action and want to approve it",
+  "browserConnector.safeTx.check.finished": "Checks finished.",
+  "browserConnector.safeTx.check.blocked": "Not offered for signing: {reason}",
+  "browserConnector.safeTx.check.checking":
+    "Checking the Safe and the registry on chain…",
+  "browserConnector.safeTx.check.ok":
+    "Checked: the Safe owns the registry, your wallet is one of its signers, and the transaction number is not used.",
+  "browserConnector.safeTx.check.okPendingOwner":
+    "Checked: the Safe is the registry's pending owner, your wallet is one of its signers, and the transaction number is not used.",
+  "browserConnector.safeTx.check.unavailable":
+    "The Safe and the registry could not be checked right now, so nothing is offered to sign. Check again.",
+  "browserConnector.safeTx.check.notOwner":
+    "The registry {registry} is not owned by this Safe, so nothing is offered to sign.",
+  "browserConnector.safeTx.check.notPendingOwner":
+    "This Safe is not the pending owner of the registry {registry}, so it cannot accept ownership.",
+  "browserConnector.safeTx.check.notSigner":
+    "Your wallet is not one of this Safe's signers, so nothing is offered to sign.",
+  "browserConnector.safeTx.check.usedNonce":
+    "The Safe has already used this transaction number (it is at {nonce}). Start again from 6529 Desktop Classic.",
+  "browserConnector.wallet.refusal.transaction-rule":
+    "This page will not ask your wallet to send this transaction: its details are outside what 6529 Desktop Classic sends from here. Nothing was sent. Continue on {site} in your browser instead.",
   "browserConnector.wallet.refusal.wrong-wallet":
     "This page will not ask your wallet to sign this request: it names a different wallet than the one asked to sign.",
   "browserConnector.wallet.refusal.wrong-origin":
@@ -4389,8 +4679,8 @@ export const EN_US_ROOT_MESSAGES = {
   "headerShare.qr.browserAlt": "Current page QR code",
   "headerShare.qr.mobileAlt": "Mobile App Link - QR Code",
   "headerShare.qr.shareConnectionAlt": "Connect 6529 Mobile QR code",
-  "headerShare.core.alt": "6529 Desktop",
-  "headerShare.core.open": "Open in 6529 Desktop",
+  "headerShare.core.alt": "6529 Desktop Classic",
+  "headerShare.core.open": "Open in 6529 Desktop Classic",
   "headerShare.connectionNotice.legacyTitle": "Update Authentication",
   "headerShare.connectionNotice.loadingTitle": "Preparing Device Connection",
   "headerShare.connectionNotice.errorTitle": "Device Connection Unavailable",
@@ -4636,6 +4926,40 @@ export const EN_US_ROOT_MESSAGES = {
   "subscriptions.history.emptyLogs": "No logs found",
   "subscriptions.history.emptyTopups": "No Top Ups found",
   "subscriptions.history.loading": "Loading {title}",
+  "subscriptions.coverage.summary.nextFundedDrops": "Next {count} drops funded",
+  "subscriptions.coverage.summary.fundedDropsAbout":
+    "About {count} drops funded",
+  "subscriptions.coverage.summary.fundedDropsAtLeast":
+    "At least {count} drops funded",
+  "subscriptions.coverage.summary.currentSettingsNote":
+    "At the current mint price and current subscription settings.",
+  "subscriptions.coverage.summary.paidTitle": "Subscription paid",
+  "subscriptions.coverage.summary.paid":
+    "The subscription for {meme} is already paid.",
+  "subscriptions.coverage.summary.forecastSnapshot": "Last forecast: {funded}.",
+  "subscriptions.coverage.summary.paymentUnavailable":
+    "This subscription could not be checked. It will be checked again shortly.",
+  "subscriptions.coverage.summary.uncoveredToday": "Today’s mint isn’t covered",
+  "subscriptions.coverage.summary.uncovered":
+    "The Memes #{token} isn’t covered",
+  "subscriptions.coverage.summary.partiallyCoveredToday":
+    "Today’s mint isn’t fully covered",
+  "subscriptions.coverage.summary.partiallyCovered":
+    "The Memes #{token} isn’t fully covered",
+  "subscriptions.coverage.summary.partialEditions":
+    "{funded} of {total} editions funded",
+  "subscriptions.coverage.summary.partialDeadline.one":
+    "Top up by {deadline} to receive the remaining {count} edition of The Memes #{token}.",
+  "subscriptions.coverage.summary.partialDeadline.many":
+    "Top up by {deadline} to receive the remaining {count} editions of The Memes #{token}.",
+  "subscriptions.coverage.summary.deadlinePassed": "Deadline passed",
+  "subscriptions.coverage.summary.expiredDeadline":
+    "Top-up deadline: {deadline}.",
+  "subscriptions.coverage.summary.viewHistory": "View history",
+  "subscriptions.coverage.summary.topUpFutureDrops": "Top up for future drops",
+  "subscriptions.coverage.summary.lastKnown": "Last known coverage",
+  "subscriptions.coverage.summary.lastUpdated":
+    "Last updated {time}. May be out of date.",
   "subscriptions.coverage.title": "Subscription coverage",
   "subscriptions.coverage.loading": "Loading subscription coverage",
   "subscriptions.coverage.unavailable":
@@ -4683,7 +5007,9 @@ export const EN_US_ROOT_MESSAGES = {
   "subscriptions.coverage.basis":
     "Projected from current eligibility, settings, balance, and the published Meme schedule.",
   "subscriptions.coverage.fundedThrough": "Funded through",
+  "subscriptions.coverage.fundedAtLeastThrough": "Funded at least through",
   "subscriptions.coverage.nextUnfunded": "Next unfunded",
+  "subscriptions.coverage.summary.nextDrop": "Next drop",
   "subscriptions.coverage.projected": "Projected",
   "subscriptions.coverage.memeToken": "The Memes #{token}",
   "subscriptions.coverage.topUpBy":
@@ -4714,6 +5040,8 @@ export const EN_US_ROOT_MESSAGES = {
     "One selected drop is fully funded. Add funds to cover more upcoming drops.",
   "subscriptions.coverage.header.through":
     "{status} · through The Memes #{token}, {date}",
+  "subscriptions.coverage.header.atLeastThrough":
+    "{status} · at least through The Memes #{token}, {date}",
   "subscriptions.coverage.header.noFundedThrough": "{status}",
   "subscriptions.page.title": "Subscription minting",
   "subscriptions.page.settingsTitle": "Minting settings",
@@ -4850,6 +5178,38 @@ export const EN_US_ROOT_MESSAGES = {
   "theMemes.mint.transaction.success": "SEIZED!",
   "theMemes.mint.transaction.error": "Transaction failed",
   "theMemes.mint.transaction.errorDetails": "{message}",
+  "theMemes.mint.phaseCard.statusLabel": "Status",
+  "theMemes.mint.phaseCard.status.upcoming": "UPCOMING",
+  "theMemes.mint.phaseCard.status.active": "ACTIVE",
+  "theMemes.mint.phaseCard.status.completed": "COMPLETED",
+  "theMemes.mint.phaseCard.started": "Started",
+  "theMemes.mint.phaseCard.ends": "Ends",
+  "theMemes.mint.phaseCard.ended": "Ended",
+  "theMemes.mint.phaseCard.expectedStart": "Expected start",
+  "theMemes.mint.phaseCard.expectedEnd": "Expected end",
+  "theMemes.mint.phaseCard.airdrops": "Airdrops: x{count}",
+  "theMemes.mint.phaseEligibility.unlimited": "Unlimited spots",
+  "theMemes.mint.phaseEligibility.loading": "Loading eligibility...",
+  "theMemes.mint.phaseEligibility.unavailable": "Eligibility unavailable",
+  "theMemes.mint.phaseEligibility.none": "No eligible spots",
+  "theMemes.mint.phaseEligibility.allowlist.one": "{allowlist} eligible spot",
+  "theMemes.mint.phaseEligibility.allowlist.many": "{allowlist} eligible spots",
+  "theMemes.mint.phaseEligibility.airdrop":
+    "{airdrop}x Airdrop · nothing to mint",
+  "theMemes.mint.phaseEligibility.mixed":
+    "{allowlist}x Allowlist · {airdrop}x Airdrop",
+  "theMemes.mint.subscriptionAirdrop.phase.phase0": "Phase 0",
+  "theMemes.mint.subscriptionAirdrop.phase.phase1": "Phase 1",
+  "theMemes.mint.subscriptionAirdrop.phase.phase2": "Phase 2",
+  "theMemes.mint.subscriptionAirdrop.phase.public": "Public phase",
+  "theMemes.mint.subscriptionAirdrop.pending.one":
+    "{phase}: your subscription covers 1 card. It will be airdropped to {address}, so you do not need to mint it here.",
+  "theMemes.mint.subscriptionAirdrop.pending.many":
+    "{phase}: your subscription covers {count} cards. They will be airdropped to {address}, so you do not need to mint them here.",
+  "theMemes.mint.subscriptionAirdrop.airdropped.one":
+    "{phase}: your subscription card has been airdropped to {address}.",
+  "theMemes.mint.subscriptionAirdrop.airdropped.many":
+    "{phase}: your {count} subscription cards have been airdropped to {address}.",
   "theMemes.card.linkAriaLabel": "View {name}, card #{tokenId}",
   "theMemes.card.metric.unavailable": "-",
   "theMemes.card.metric.editionSize": "Edition Size: {value}",
@@ -5517,8 +5877,11 @@ export const EN_US_ROOT_MESSAGES = {
   ...USER_PROFILE_HEADER_MESSAGES,
   ...USER_CIC_TYPE_MESSAGES,
   ...FOLLOWERS_MESSAGES,
-  ...WAVES_SIDEBAR_MESSAGES,
+  ...PROFILE_FOLLOW_MESSAGES,
+  "waves.sidebar.pinControl.viewerChanged":
+    "The active profile changed. Please try again.",
   ...wavesRightPanelMessages,
+  ...wavesMoveMessages,
   ...QUICK_DM_MESSAGES,
   ...NOTIFICATIONS_FOLLOW_BUTTON_MESSAGES,
   ...NOTIFICATIONS_WAVE_CREATED_MESSAGES,
@@ -5574,18 +5937,20 @@ export const EN_US_ROOT_MESSAGES = {
   ...WAVE_REP_DETAILS_MESSAGES,
   ...PROFILE_ACTIVITY_RATE_MESSAGES,
   "profileActivity.heading": "Activity Log",
+  "profileActivity.types": "Activity types",
+  "profileActivity.filterTypesLabel": "Filter activity types: {title}",
   "profileActivity.loading": "Loading activity log",
   "profileActivity.loadError": "Unable to load activity log.",
   "profileActivity.retry": "Retry",
   ...USER_RATE_MESSAGES,
   ...aboutMessages,
   ...emmaSnapshotsMessages,
-  ...emmaMessages,
   ...safeCollectingMessages,
   ...delegationTapGuideMessages,
   ...pageMetadataMessages,
   ...toolsMessages,
   ...utcScheduleMessages,
+  ...identityMoveMessages,
   ...displayTimeZoneMessages,
   ...shareDropsImageMessages,
   ...worldTimeZonesMessages,
@@ -5668,6 +6033,7 @@ export const EN_US_ROOT_MESSAGES = {
   ...THE_MEMES_MINT_PROGRESS_MESSAGES,
   ...CONTENT_MODERATION_MESSAGES,
   ...SIGNED_MESSAGES_MESSAGES,
+  ...DEVICES_SECURITY_MESSAGES,
   ...MODERATION_CHECK_MESSAGES,
   ...EN_US_RECEIPT_MESSAGES,
   "collect.selection.processing": "Processing",
@@ -5721,6 +6087,8 @@ export const EN_US_ROOT_MESSAGES = {
   "waves.discovery.votingOpen": "Voting open",
   "waves.discovery.votingEnds": "Voting ends {date}",
   "waves.discovery.nextDecision": "Next result {date}",
+  "waves.discovery.activeSubmissions.one": "{count} active submission",
+  "waves.discovery.activeSubmissions.other": "{count} active submissions",
   "waves.discovery.emptyVotes": "No active TDH votes right now.",
   "waves.discovery.emptyRecommendations": "No recommendations right now.",
   "waves.discovery.loadingRecommendations": "Loading recommendations…",

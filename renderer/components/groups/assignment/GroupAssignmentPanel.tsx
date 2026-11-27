@@ -1,7 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Button from "@/components/utils/button/Button";
 import GroupCriteriaRulePanel from "@/components/groups/assignment/GroupCriteriaRulePanel";
+import { useMobilePageDraft } from "@/components/mobile-navigation/MobilePageContext";
 import { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { ActionButton } from "@/components/waves/create-wave/groups/CreateWaveInlineGroupButtons";
@@ -20,16 +22,26 @@ import GroupCriteriaEditor from "./GroupCriteriaEditor";
 import CreateWaveInlineGroupSearch from "@/components/waves/create-wave/groups/CreateWaveInlineGroupSearch";
 import CreateWaveInlineGroupActions from "@/components/waves/create-wave/groups/CreateWaveInlineGroupActions";
 import {
-  type CreateWaveGroupInlinePanelProps,
+  type GroupInlinePanelOptions,
   useCreateWaveGroupInlinePanel,
 } from "@/components/waves/create-wave/groups/useCreateWaveGroupInlinePanel";
 import GroupMembersPreviewDialog from "@/components/groups/members/GroupMembersPreviewDialog";
 import GroupMembersPreviewTrigger from "@/components/groups/members/GroupMembersPreviewTrigger";
 import type { GroupMembersPreviewTarget } from "@/services/api/group-members-api";
+import type { CreateWaveInlineGroupBuilderState } from "@/components/waves/create-wave/groups/createWaveInlineGroupBuilder";
+
+const GROUP_ASSIGNMENT_PANEL_CLASS_NAME =
+  "tw-relative tw-flex tw-flex-col tw-gap-4 tw-rounded-xl tw-border tw-border-solid tw-border-white/10 tw-bg-black/30 tw-p-4 tw-shadow-none sm:tw-p-5";
 
 type GroupAssignmentPanelStartMode = "actions" | "existing" | "criteria";
 
-type GroupAssignmentPanelProps = CreateWaveGroupInlinePanelProps & {
+export type GroupAssignmentDraftOptions = {
+  readonly initial?: CreateWaveInlineGroupBuilderState | undefined;
+  readonly onApply: (draft: CreateWaveInlineGroupBuilderState) => void;
+};
+
+type GroupAssignmentPanelProps = GroupInlinePanelOptions & {
+  readonly criteriaDraft?: GroupAssignmentDraftOptions | undefined;
   readonly presentation?: "default" | "quiet" | "embedded";
   readonly startMode?: GroupAssignmentPanelStartMode;
   readonly showChooseGroup?: boolean;
@@ -104,12 +116,14 @@ interface GroupAssignmentPanelViewProps {
 }
 
 function GroupAssignmentCriteriaPanel({
+  alwaysExpanded = false,
   disabled,
   isWaveAccessEditor,
   mobileNavigation,
   simplifyCriteriaCopy,
   panelState,
 }: {
+  readonly alwaysExpanded?: boolean;
   readonly disabled: boolean;
   readonly isWaveAccessEditor: boolean;
   readonly mobileNavigation: boolean;
@@ -164,7 +178,11 @@ function GroupAssignmentCriteriaPanel({
         mobileNavigation ? () => setShowMobileCategories(true) : undefined
       }
       disabled={disabled}
-      onClose={isWaveAccessEditor ? undefined : panelState.returnToCriteria}
+      onClose={
+        isWaveAccessEditor || alwaysExpanded
+          ? undefined
+          : panelState.returnToCriteria
+      }
       onViewChange={(next) => {
         setShowMobileCategories(false);
         if (next === "identities") togglePanel("identity", false);
@@ -207,6 +225,47 @@ function GroupAssignmentCriteriaPanel({
           </GroupCriteriaRulePanel>
         ))}
     </GroupCriteriaEditor>
+  );
+}
+
+function GroupAssignmentDraftEditor({
+  disabled,
+  options,
+  panelState,
+  children,
+}: {
+  readonly disabled: boolean;
+  readonly options: GroupAssignmentDraftOptions;
+  readonly panelState: GroupAssignmentPanelState;
+  readonly children: ReactNode;
+}) {
+  const locale = useBrowserLocale();
+  const mobileNavigation = useMediaQuery(
+    "(max-width: 1023px), (any-pointer: coarse)"
+  );
+  return (
+    <div className={GROUP_ASSIGNMENT_PANEL_CLASS_NAME}>
+      <GroupAssignmentCriteriaPanel
+        alwaysExpanded
+        disabled={disabled}
+        isWaveAccessEditor={false}
+        mobileNavigation={mobileNavigation}
+        simplifyCriteriaCopy={false}
+        panelState={panelState}
+      />
+      <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-end tw-gap-3">
+        {children}
+        <Button
+          type="button"
+          variant="action"
+          size="sm"
+          disabled={disabled || !panelState.isDraftValid}
+          onClick={() => options.onApply(panelState.displayedBuilder)}
+        >
+          {t(locale, "profilePreferences.dm.group.done")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -371,6 +430,7 @@ function SharedGroupAssignmentPanel({
   const {
     canReplaceCriteria,
     currentGroupLabel,
+    currentGroupNamePending,
     isCriteriaReplacementActive,
     isSearchPanel,
     onClearAll,
@@ -405,7 +465,7 @@ function SharedGroupAssignmentPanel({
         className={
           quiet || presentation === "embedded"
             ? "tw-relative tw-flex tw-min-w-0 tw-flex-col tw-gap-4"
-            : "tw-relative tw-flex tw-flex-col tw-gap-4 tw-rounded-xl tw-border tw-border-solid tw-border-white/10 tw-bg-black/30 tw-p-4 tw-shadow-none sm:tw-p-5"
+            : GROUP_ASSIGNMENT_PANEL_CLASS_NAME
         }
       >
         <div className="tw-relative tw-flex tw-flex-col tw-gap-4">
@@ -415,6 +475,7 @@ function SharedGroupAssignmentPanel({
             >
               <CreateWaveInlineGroupHeader
                 currentGroupLabel={currentGroupLabel}
+                currentGroupNamePending={currentGroupNamePending}
                 showCurrentGroupTitle={
                   isCriteriaReplacementActive && !simplifyCriteriaCopy
                 }
@@ -486,7 +547,6 @@ function SharedGroupAssignmentPanel({
 }
 
 export default function GroupAssignmentPanel(props: GroupAssignmentPanelProps) {
-  const locale = useBrowserLocale();
   const {
     defaultMembersPreviewTarget,
     disabled = false,
@@ -496,8 +556,17 @@ export default function GroupAssignmentPanel(props: GroupAssignmentPanelProps) {
   } = props;
   const [previewTarget, setPreviewTarget] =
     useState<GroupMembersPreviewTarget | null>(null);
-  const panelState = useCreateWaveGroupInlinePanel(props);
+  const panelState = useCreateWaveGroupInlinePanel({
+    ...props,
+    initialCriteriaDraft: props.criteriaDraft?.initial,
+    ...(props.criteriaDraft ? { startMode: "criteria" } : {}),
+  });
   const { displayedBuilder, draftSummary, isDraftValid } = panelState;
+  const [initialDraft] = useState(() => JSON.stringify(displayedBuilder.draft));
+  useMobilePageDraft(
+    JSON.stringify(displayedBuilder.draft) !== initialDraft,
+    panelState.isCreating
+  );
 
   const currentMembersTarget: GroupMembersPreviewTarget | null = selectedGroup
     ? { kind: "saved", group: selectedGroup }
@@ -517,9 +586,6 @@ export default function GroupAssignmentPanel(props: GroupAssignmentPanelProps) {
       ? {
           kind: "draft",
           group: displayedBuilder.draft.group,
-          name:
-            props.suggestedName.trim() ||
-            t(locale, "waves.create.groups.defaultGroupName"),
           summary: draftSummary,
         }
       : null;
@@ -548,6 +614,21 @@ export default function GroupAssignmentPanel(props: GroupAssignmentPanelProps) {
     panelState,
     savedMembersPreview,
   };
+
+  if (props.criteriaDraft) {
+    return (
+      <>
+        <GroupAssignmentDraftEditor
+          disabled={disabled}
+          options={props.criteriaDraft}
+          panelState={panelState}
+        >
+          {draftMembersPreview}
+        </GroupAssignmentDraftEditor>
+        {membersDialog}
+      </>
+    );
+  }
 
   return <SharedGroupAssignmentPanel {...viewProps} />;
 }

@@ -1,7 +1,31 @@
 export const PROFILE_CURATION_MESSAGES = {
   "profileCuration.editor.createTitle": "Create curation",
   "profileCuration.editor.editTitle": "Edit curation",
-  "profileCuration.editor.groupBack": "Back to selected group",
+  "profileCuration.editor.name": "Name",
+  "profileCuration.editor.namePlaceholder": "Create your own custom...",
+  "profileCuration.editor.preset.art": "Art",
+  "profileCuration.editor.preset.favourites": "Favourites",
+  "profileCuration.editor.preset.marketplace": "Marketplace",
+  "profileCuration.editor.preset.important": "Important",
+  "profileCuration.editor.save": "Save",
+  "profileCuration.editor.saving": "Saving...",
+  "profileCuration.editor.creating": "Creating...",
+  "profileCuration.editor.created": "Curation created.",
+  "profileCuration.editor.updated": "Curation updated.",
+  "profileCuration.editor.createFailed": "Failed to create curation.",
+  "profileCuration.editor.updateFailed": "Failed to update curation.",
+  "profileCuration.editor.duplicate":
+    "A curation with this name already exists in this wave. Choose another name.",
+  "profileCuration.editor.createForbidden":
+    "You don't have permission to create a curation.",
+  "profileCuration.editor.updateForbidden":
+    "You don't have permission to update this curation.",
+  "profileCuration.editor.authCancelled": "Authentication was cancelled.",
+  "profileCuration.editor.whoCanCurate": "Who can curate?",
+  "profileCuration.editor.editCriteria": "Edit criteria",
+  "profileCuration.editor.curators": "Eligible curators",
+  "profileCuration.editor.criteriaRequired": "No criteria set",
+  "profileCuration.editor.criteriaUnavailable": "Current criteria unavailable",
   "profileCuration.setup.title": "Create a Curation",
   "profileCuration.setup.intro": "Give your Curation a name to get started.",
   "profileCuration.setup.nameLabel": "Curation name",
@@ -42,6 +66,7 @@ export const PROFILE_CURATION_MESSAGES = {
   "profileCuration.entry.existingWave": "Use an existing Wave instead",
   "profileCuration.entry.startTitle": "Create your profile Curation",
   "profileCuration.header.fallbackTitle": "Curation",
+  "profileCuration.header.addPost": "Add post",
   "profileCuration.header.source": "Source Wave:",
   "profileCuration.header.openSourceAria": "Open source Wave {waveName}",
   "profileCuration.header.controlsAria": "Curation source controls",
@@ -106,7 +131,7 @@ export const PROFILE_CURATION_MESSAGES = {
     "Refresh the page and try again.",
   "profileCuration.permissions.advanced": "Advanced permissions",
   "profileCuration.permissions.description":
-    "Choose the Group whose members can manage this Curation.",
+    "Set the criteria for who can manage this Curation.",
   "profileCuration.actions.openOriginal": "Open original Wave",
   "profileCuration.actions.editPost": "Edit post",
   "profileCuration.actions.remove": "Remove from Curation",
@@ -140,6 +165,10 @@ export const PROFILE_CURATION_MESSAGES = {
   "profileCuration.actions.removeConfirm": "Remove",
   "profileCuration.actions.authorOnly":
     "Only the post author can edit this post.",
+  "profileCuration.actions.winnerNotEditable":
+    "A winning entry can't be edited here.",
+  "profileCuration.quickPost.title": "Add post",
+  "profileCuration.quickPost.subtitle": "to {curationName}",
   "profileCuration.quickPost.retrySuccess": "Post added to Curation.",
   "profileCuration.quickPost.retryError":
     "The post still could not be added. Try again.",

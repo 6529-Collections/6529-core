@@ -10,8 +10,13 @@ import {
   useState,
 } from "react";
 
+export const WAVE_NAME_EDIT_VIEW = "wave-name-edit";
+export const WAVE_PICTURE_EDIT_VIEW = "wave-picture-edit";
+export const WAVE_OPTIONS_VIEW = "wave-options";
+
 /** Editors share the information sheet's surface, focus trap and Back history. */
 export const WaveInformationPanelContext = createContext<{
+  readonly isPhone?: boolean;
   readonly view: string;
   readonly contentId: string;
   readonly container: HTMLDivElement | null;
@@ -20,9 +25,15 @@ export const WaveInformationPanelContext = createContext<{
   readonly prepareNavigation?: (destination: string) => void;
 } | null>(null);
 
-export function useWaveInformationPanel(title: string) {
-  const sheet = useContext(WaveInformationPanelContext);
-  const id = useId();
+export function useWaveInformationPanel(
+  title: string,
+  viewId?: string,
+  presentation: "page" | "modal" = "page"
+) {
+  const context = useContext(WaveInformationPanelContext);
+  const sheet = context?.isPhone && presentation === "modal" ? null : context;
+  const generatedId = useId();
+  const id = viewId ?? generatedId;
   const [standaloneOpen, setStandaloneOpen] = useState(false);
   const isOpen = sheet ? sheet.view === id : standaloneOpen;
   const opener = useRef<HTMLElement | null>(null);
@@ -49,9 +60,10 @@ export function useWaveInformationPanel(title: string) {
     const restoreFocus = wasOpen.current && !isOpen;
     wasOpen.current = isOpen;
     if (!restoreFocus) return;
+    const trigger = opener.current;
+    opener.current = null;
     const frame = requestAnimationFrame(() => {
-      if (opener.current?.isConnected)
-        opener.current.focus({ preventScroll: true });
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
@@ -61,6 +73,7 @@ export function useWaveInformationPanel(title: string) {
     open,
     close,
     isInSheet: sheet !== null,
+    isPhone: sheet?.isPhone === true,
     container: sheet?.container,
     contentId: sheet?.contentId ?? id,
   };

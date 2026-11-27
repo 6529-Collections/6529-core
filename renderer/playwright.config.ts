@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as dotenv from "dotenv";
+import { CHROMIUM_SANDBOX } from "./tests/support/chromiumSandbox";
 
 dotenv.config(); // Loads variables from .env
 dotenv.config({ path: ".env.test" }); // Overrides or adds variables from .env
@@ -61,6 +62,7 @@ const config = defineConfig({
   use: {
     baseURL,
     trace: isRemoteReadonlyBaseURL ? "off" : "on-first-retry",
+    launchOptions: { chromiumSandbox: CHROMIUM_SANDBOX },
   },
   projects: [
     {
@@ -103,6 +105,7 @@ const config = defineConfig({
           command: webServerCommand,
           env: {
             PORT: webServerPort,
+            PLAYWRIGHT_HOME_DROP_CLIENT_FIXTURES: "1",
             // Log the cause when the dev server worker dies mid-run instead of
             // leaving only refused connections (see scripts/dev-with-fallback.cjs).
             DEV_SERVER_PORT_WATCHDOG: "1",

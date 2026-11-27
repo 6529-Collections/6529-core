@@ -17,6 +17,9 @@ import {
 } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import * as commonApi from "@/services/api/common-api";
 import { SingleWaveDropVoteSubmissionMode } from "@/components/waves/drop/SingleWaveDropVote.types";
+import { isChainIdentityActive } from "@/lib/chain-identity/active";
+import { chainGateway } from "@/lib/chain-identity/gateway";
+import { identityOfWallet } from "@/lib/chain-waves/signing";
 
 // Mock dependencies
 jest.mock("@mojs/core", () => ({
@@ -51,6 +54,13 @@ jest.mock("@/services/api/common-api", () => ({
   commonApiPost: jest.fn(),
 }));
 
+jest.mock("@/lib/chain-identity/active", () => ({
+  ...jest.requireActual("@/lib/chain-identity/active"),
+  isChainIdentityActive: jest.fn(() => false),
+}));
+jest.mock("@/components/chain-waves/useChainWavesWriters", () => ({
+  useChainWavesWriters: jest.fn(() => null),
+}));
 // Mock CSS module
 jest.mock("@/components/waves/drop/VoteButton.module.css", () => ({
   buttonContent: "buttonContent",
@@ -142,7 +152,7 @@ describe("SingleWaveDropVoteSubmit", () => {
       },
     });
 
-    return render(
+    const content = (nextProps: typeof props) => (
       <QueryClientProvider client={queryClient}>
         <AuthContext.Provider value={mockAuthContext as any}>
           <ReactQueryWrapperContext.Provider
@@ -152,12 +162,18 @@ describe("SingleWaveDropVoteSubmit", () => {
               drop={mockDrop}
               newRating={100}
               voteLabel={defaultVoteLabel}
-              {...props}
+              {...nextProps}
             />
           </ReactQueryWrapperContext.Provider>
         </AuthContext.Provider>
       </QueryClientProvider>
     );
+    const view = render(content(props));
+    return {
+      ...view,
+      rerenderWithProps: (nextProps: typeof props) =>
+        view.rerender(content({ ...props, ...nextProps })),
+    };
   };
 
   beforeEach(() => {
@@ -180,14 +196,16 @@ describe("SingleWaveDropVoteSubmit", () => {
     renderComponent();
 
     expect(screen.getByRole("button")).toBeInTheDocument();
-    expect(screen.getByText(defaultIdleButtonLabel)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: defaultIdleButtonLabel })
+    ).toBeInTheDocument();
   });
 
-  it("applies correct styling based on drop rank", () => {
+  it("uses the shared positive vote action styling", () => {
     renderComponent();
 
     const button = screen.getByRole("button");
-    expect(button).toHaveClass("voteButton");
+    expect(button).toHaveClass("tw-bg-emerald-500", "tw-w-full");
   });
 
   it("handles button click and shows loading state", async () => {
@@ -201,9 +219,122 @@ describe("SingleWaveDropVoteSubmit", () => {
 
     // Should show loading spinner
     await waitFor(() => {
-      expect(screen.getByText(defaultIdleButtonLabel)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: defaultIdleButtonLabel })
+      ).toBeInTheDocument();
     });
   });
+
+  it.each([
+    {
+      newRating: 100,
+      voteLabel: "Rep",
+      label: "Vote +100 Rep",
+    },
+    {
+      newRating: -1500,
+      voteLabel: "TDH",
+      label: "Vote -1,500 TDH",
+    },
+    {
+      newRating: 100,
+      voteLabel: "Rep",
+      submitLabelOverride: "Vote +100 Rep + reply",
+      label: "Vote +100 Rep + reply",
+    },
+  ])(
+    "keeps $label accessible while authentication and saving are pending",
+    async ({ label, ...props }) => {
+      let finishAuth!: (result: { success: boolean }) => void;
+      mockAuthContext.requestAuth.mockReturnValue(
+        new Promise((resolve) => {
+          finishAuth = resolve;
+        })
+      );
+      jest
+        .mocked(commonApi.commonApiPost)
+        .mockReturnValue(new Promise<ApiDrop>(() => undefined));
+      renderComponent(props);
+      const button = screen.getByRole("button", { name: label });
+
+      fireEvent.click(button);
+      await advanceTimers(300);
+
+      expect(mockAuthContext.requestAuth).toHaveBeenCalledTimes(1);
+      expect(commonApi.commonApiPost).not.toHaveBeenCalled();
+      expect(button.querySelector(".buttonText")).not.toBeInTheDocument();
+      expect(button.querySelector(".spinner")).toBeInTheDocument();
+      expect(button).toHaveAccessibleName(label);
+
+      await act(async () => {
+        finishAuth({ success: true });
+        await flushMicrotasks();
+      });
+
+      await waitFor(() => {
+        expect(commonApi.commonApiPost).toHaveBeenCalledTimes(1);
+      });
+      expect(button.querySelector(".buttonText")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: label })).toBe(button);
+    }
+  );
+
+  it.each([
+    {
+      submitted: 100,
+      edited: -50,
+      label: "Vote +100 Rep",
+      color: "tw-bg-emerald-500",
+    },
+    {
+      submitted: -100,
+      edited: 50,
+      label: "Vote -100 Rep",
+      color: "tw-bg-rose-600",
+    },
+  ])(
+    "keeps pending feedback for submitted $submitted while the draft changes",
+    async ({ submitted, edited, label, color }) => {
+      let finishSave!: (value: ApiDrop) => void;
+      jest.mocked(commonApi.commonApiPost).mockReturnValue(
+        new Promise((resolve) => {
+          finishSave = resolve;
+        })
+      );
+      const { rerenderWithProps } = renderComponent({ newRating: submitted });
+      const button = screen.getByRole("button", { name: label });
+      fireEvent.click(button);
+      rerenderWithProps({
+        newRating: edited,
+        submitLabelOverride: "Edited draft + reply",
+      });
+      expect(button).toHaveAccessibleName(label);
+      expect(button).toHaveClass(color);
+
+      await advanceTimers(300);
+      expect(button.querySelector(".buttonText")).not.toBeInTheDocument();
+      expect(button).toHaveAccessibleName(label);
+      expect(button).toHaveClass(color);
+      expect(commonApi.commonApiPost).toHaveBeenCalledWith({
+        endpoint: `drops/${mockDrop.id}/ratings`,
+        body: { rating: submitted, category: "Rep" },
+      });
+
+      await act(async () => {
+        finishSave(mockDrop);
+        await flushMicrotasks();
+      });
+      await advanceTimers(300);
+      expect(button).toHaveAccessibleName("Voted");
+      expect(button).toHaveClass(color);
+      await advanceTimers(4200);
+      await advanceTimers(300);
+      expect(button).toHaveAccessibleName("Edited draft + reply");
+      expect(button).toHaveClass(
+        edited > 0 ? "tw-bg-emerald-500" : "tw-bg-rose-600"
+      );
+    }
+  );
 
   it("calls requestAuth when button is clicked", async () => {
     const mockCommonApiPost = jest.mocked(commonApi.commonApiPost);
@@ -243,6 +374,130 @@ describe("SingleWaveDropVoteSubmit", () => {
         },
       });
     });
+  });
+
+  it("sends the vote to the 6529 Network once waves have moved there", async () => {
+    const writers = jest.requireMock(
+      "@/components/chain-waves/useChainWavesWriters"
+    );
+    const vote = jest.fn().mockResolvedValue(undefined);
+    writers.useChainWavesWriters.mockReturnValue({ vote });
+    try {
+      const mockCommonApiPost = jest.mocked(commonApi.commonApiPost);
+      renderComponent({ newRating: 150 });
+
+      fireEvent.click(screen.getByRole("button"));
+      await advanceTimers(300);
+
+      await waitFor(() => {
+        expect(vote).toHaveBeenCalledWith({ dropId: mockDrop.id, amount: 150 });
+      });
+      expect(mockAuthContext.requestAuth).not.toHaveBeenCalled();
+      expect(mockCommonApiPost).not.toHaveBeenCalled();
+    } finally {
+      writers.useChainWavesWriters.mockReturnValue(null);
+    }
+  });
+
+  describe("a wallet with no identity on the 6529 Network", () => {
+    /** The vote stops where the chain writer looks up the wallet. */
+    const voteWithoutIdentity = () => {
+      jest.spyOn(chainGateway, "getIdentityByWallet").mockResolvedValue(null);
+      return identityOfWallet(`0x${"12".repeat(20)}`).then(() => undefined);
+    };
+
+    const failedToast = async () => {
+      const writers = jest.requireMock(
+        "@/components/chain-waves/useChainWavesWriters"
+      );
+      writers.useChainWavesWriters.mockReturnValue({
+        vote: jest.fn(voteWithoutIdentity),
+      });
+      try {
+        renderComponent({ newRating: 150 });
+        fireEvent.click(screen.getByRole("button"));
+        await advanceTimers(300);
+        await waitFor(() => {
+          expect(mockAuthContext.setToast).toHaveBeenCalledWith(
+            expect.objectContaining({ title: "Couldn't submit your vote." })
+          );
+        });
+        return mockAuthContext.setToast.mock.calls.at(-1)?.[0] as {
+          readonly description: React.ReactNode;
+        };
+      } finally {
+        writers.useChainWavesWriters.mockReturnValue(null);
+      }
+    };
+
+    afterEach(() => {
+      jest.mocked(isChainIdentityActive).mockReturnValue(false);
+      jest.mocked(chainGateway.getIdentityByWallet).mockRestore();
+    });
+
+    it("points to the identity page once it takes changes", async () => {
+      jest.mocked(isChainIdentityActive).mockReturnValue(true);
+      const toast = await failedToast();
+      render(<p data-testid="description">{toast.description}</p>);
+      expect(screen.getByTestId("description")).toHaveTextContent(
+        "This wallet has no identity on the 6529 Network yet. Create one on your identity page."
+      );
+      expect(
+        screen.getByRole("link", { name: "your identity page" })
+      ).toHaveAttribute("href", "/network/identity");
+    });
+
+    it("keeps the plain line while the identity page can't help", async () => {
+      const toast = await failedToast();
+      expect(toast.description).toBe(
+        "This wallet has no identity on the 6529 Network yet."
+      );
+    });
+  });
+
+  it("waits for the wallet and the block on the 6529 Network before it closes", async () => {
+    const writers = jest.requireMock(
+      "@/components/chain-waves/useChainWavesWriters"
+    );
+    let resolveVote!: () => void;
+    const vote = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveVote = resolve;
+        })
+    );
+    writers.useChainWavesWriters.mockReturnValue({ vote });
+    const onVoteRequestStarted = jest.fn();
+    const onVoteApplied = jest.fn();
+    try {
+      renderComponent({
+        onVoteApplied,
+        onVoteRequestStarted,
+        submissionMode: SingleWaveDropVoteSubmissionMode.BACKGROUND_AFTER_AUTH,
+      });
+      fireEvent.click(screen.getByRole("button"));
+      await advanceTimers(300);
+      await waitFor(() => expect(vote).toHaveBeenCalled());
+
+      // Background mode would close here; on the chain the vote isn't in yet.
+      await advanceTimers(backgroundModalCloseDelayMs);
+      expect(onVoteRequestStarted).not.toHaveBeenCalled();
+      expect(onVoteApplied).not.toHaveBeenCalled();
+
+      await act(async () => {
+        resolveVote();
+        await flushMicrotasks();
+      });
+      await waitFor(() => expect(onVoteApplied).toHaveBeenCalled());
+
+      // Once the vote is in, the dialog closes, so a second click can't send
+      // it again.
+      await advanceTimers(300);
+      await advanceTimers(1000);
+      expect(onVoteRequestStarted).toHaveBeenCalledTimes(1);
+    } finally {
+      writers.useChainWavesWriters.mockReturnValue(null);
+    }
   });
 
   it("warns when a direct negative rating is submitted to a no-negative wave", () => {
@@ -472,7 +727,9 @@ describe("SingleWaveDropVoteSubmit", () => {
     expect(onVoteRequestStarted).not.toHaveBeenCalled();
     expect(onVoteApplied).not.toHaveBeenCalled();
     await waitFor(() => {
-      expect(screen.getByText(defaultIdleButtonLabel)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: defaultIdleButtonLabel })
+      ).toBeInTheDocument();
     });
 
     await advanceTimers(backgroundModalCloseDelayMs);
@@ -621,7 +878,9 @@ describe("SingleWaveDropVoteSubmit", () => {
     });
 
     // Button should show initial text
-    expect(screen.getByText(defaultIdleButtonLabel)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: defaultIdleButtonLabel })
+    ).toBeInTheDocument();
     expect(onVoteApplied).not.toHaveBeenCalled();
     expect(invalidateQueriesSpy).not.toHaveBeenCalled();
   });
@@ -660,7 +919,9 @@ describe("SingleWaveDropVoteSubmit", () => {
 
     const button = screen.getByRole("button");
     expect(button).toBeInTheDocument();
-    expect(screen.getByText(defaultIdleButtonLabel)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: defaultIdleButtonLabel })
+    ).toBeInTheDocument();
   });
 
   it("exposes handleClick method through ref", () => {

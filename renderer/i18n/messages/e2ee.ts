@@ -49,8 +49,13 @@ export const E2EE_MESSAGES = {
   "e2ee.section.encrypted": "Encrypted",
   "e2ee.section.plaintext": "Direct messages",
   "e2ee.action.newChat": "New encrypted chat",
-  "e2ee.action.devices": "Devices",
+  "e2ee.action.devices": "Devices & security",
   "e2ee.action.retry": "Try again",
+  "e2ee.gate.session.title": "Sign in again to continue",
+  "e2ee.gate.session.body":
+    "Your sign-in is no longer valid. Sign in again to continue setting up encrypted messages. Your chats stay on this device.",
+  "e2ee.gate.session.action": "Sign in again",
+  "e2ee.gate.session.failed": "Sign-in did not finish. Please try again.",
   "e2ee.action.cancel": "Cancel",
   "e2ee.action.close": "Close",
   "e2ee.action.dismiss": "Dismiss",
@@ -107,7 +112,7 @@ export const E2EE_MESSAGES = {
   "e2ee.enroll.identityUnknown":
     "You’ll sign with the wallet connected to this profile.",
   "e2ee.enroll.manage":
-    "You can revoke these permissions in Preferences → Device Permissions.",
+    "You can revoke these permissions in Preferences → Devices & security.",
   "e2ee.gate.noWallet":
     "Connect the wallet for this profile to use encrypted messages.",
 
@@ -120,9 +125,9 @@ export const E2EE_MESSAGES = {
   "e2ee.enroll.point.privacy":
     "6529 cannot read your encrypted messages. It only delivers them.",
   "e2ee.enroll.point.noBackup":
-    "Your history is stored on your devices. If you lose all of them or clear this browser’s data, you lose it, unless you turn on encrypted backup in Devices.",
+    "Your history is stored on your devices. If you lose all of them or clear this browser’s data, you lose it, unless you turn on encrypted backup in Preferences → Devices & security.",
   "e2ee.enroll.point.noBackupApp":
-    "Your history is stored on your devices. If you lose all of them or clear the app data on the last device that holds your history, you lose it unless you turn on encrypted backup in Encrypted messages → Devices.",
+    "Your history is stored on your devices. If you lose all of them or clear the app data on the last device that holds your history, you lose it unless you turn on encrypted backup in Preferences → Devices & security.",
   "e2ee.enroll.safari":
     "Safari can delete this site’s data if you don’t open 6529 for 7 days. Visit regularly, or use another browser or the 6529 app, to keep your history.",
   "e2ee.enroll.button": "Enable encryption (one\u00a0signature)",
@@ -150,6 +155,7 @@ export const E2EE_MESSAGES = {
   "e2ee.enroll.unavailable":
     "Open Encrypted messages to check whether this device can be set up.",
   "e2ee.enroll.waiting": "Waiting for your wallet signature…",
+  "e2ee.enroll.finishing": "Finishing encrypted message setup…",
   "e2ee.enroll.rejected": "Signature cancelled.",
   "e2ee.enroll.failed": "Couldn’t turn on encrypted messages. Try again.",
   "e2ee.enroll.revocationUnverified":
@@ -174,7 +180,7 @@ export const E2EE_MESSAGES = {
 
   "e2ee.deviceLimit.title": "Too many devices",
   "e2ee.deviceLimit.body":
-    "Your profile already has the maximum of {max} devices for encrypted messages. On a device you already use, open Devices and revoke one you no longer need, then turn on this device.",
+    "Your profile already has the maximum of {max} devices for encrypted messages. On a device you already use, open Preferences → Devices & security and revoke one you no longer need, then turn on this device.",
   "e2ee.deviceLimit.listTitle": "Devices on your profile",
   "e2ee.deviceLimit.signature":
     "Turning on this device is one wallet signature. It moves no funds and costs nothing.",
@@ -195,16 +201,14 @@ export const E2EE_MESSAGES = {
     "You cancelled the signature. This device keeps access until {date}.",
   "e2ee.renew.failed": "Couldn’t renew access. Try again.",
 
-  "e2ee.devices.title": "Devices for encrypted messages",
-  "e2ee.devices.description":
-    "Every active device listed here can read your encrypted messages. Revoke any device you don’t recognize.",
   "e2ee.devices.thisDevice": "This device",
   "e2ee.devices.platform.web": "Browser",
   "e2ee.devices.platform.desktop": "6529 Desktop",
   "e2ee.devices.platform.phone": "6529 app",
   "e2ee.devices.created": "Added {date}",
-  "e2ee.devices.lastSeen": "Last seen {date}",
-  "e2ee.devices.lastSeenNever": "Not seen yet",
+  "e2ee.devices.activeNow": "Active now",
+  "e2ee.devices.lastActive": "Last active {date}",
+  "e2ee.devices.lastActiveNever": "Not active yet",
   "e2ee.devices.expires": "Expires {date}",
   "e2ee.devices.expired": "Expired {date}",
   "e2ee.devices.revokedOn": "Revoked {date}",
@@ -224,14 +228,26 @@ export const E2EE_MESSAGES = {
   "e2ee.devices.revokeConfirmTitle": "Revoke {label}?",
   "e2ee.devices.revokeConfirmBody":
     "It will stop receiving encrypted messages and be removed from all your encrypted chats.",
+  "e2ee.devices.revokeThisTitle": "Revoke this browser?",
   "e2ee.devices.revokeThisConfirmBody":
-    "This device will stop receiving encrypted messages. To use them here again, you’ll need to turn them on with a new signature.",
+    "{label} is the browser you’re using now.",
+  "e2ee.devices.revokeThisPosts":
+    "Posts from here won’t be signed until you turn signed posts back on.",
+  "e2ee.devices.revokeThisDms":
+    "This browser stops receiving encrypted DMs, and the encrypted chats saved here are deleted.",
+  "e2ee.devices.revokeThisBackupOn":
+    "Only messages included in your last backup can be restored.",
+  "e2ee.devices.revokeThisBackupOff":
+    "Backup is off. The encrypted chats in this browser can’t be restored after this.",
+  "e2ee.devices.revokeThisBackupUnknown":
+    "This browser may not be backed up. If it isn’t, the encrypted chats saved here can’t be restored after this.",
+  "e2ee.devices.revokeThisSetUpBackup": "Set up backup first",
+  "e2ee.devices.revokeThisCheckBackup": "Check backup first",
+  "e2ee.devices.revokeThisConfirm": "Revoke this browser",
   "e2ee.devices.revokeConfirm": "Revoke device",
   "e2ee.devices.revokeFailed": "Couldn’t revoke the device. Try again.",
-  "e2ee.devices.revokeDone": "Device revoked.",
   "e2ee.devices.empty": "No devices yet.",
   "e2ee.devices.revokedSection": "Revoked devices",
-  "e2ee.devices.rename.action": "Rename device",
   "e2ee.devices.rename.label": "Device name",
   "e2ee.devices.rename.save": "Save name",
   "e2ee.devices.rename.saved": "Device name saved.",
@@ -239,9 +255,19 @@ export const E2EE_MESSAGES = {
   "e2ee.devices.newDevice":
     "New device added {date}: {label} ({platform}). It can read your encrypted messages. If this wasn’t you, revoke it.",
   "e2ee.devices.newDeviceRevoke": "Revoke {label}",
-  "e2ee.devices.open": "Devices for encrypted messages",
+  "e2ee.devices.open": "Devices & security",
 
   "e2ee.list.subtitle": "End-to-end encrypted chats on this device.",
+  "e2ee.list.loading": "Loading encrypted chats…",
+  "e2ee.list.waiting": "Waiting for encrypted chats to sync to this device…",
+  "e2ee.list.delayed": "Encrypted chats are taking longer to sync",
+  "e2ee.list.error": "Couldn’t load encrypted chats.",
+  "e2ee.list.awaitingInvitation.title":
+    "No encrypted chats available on this device yet",
+  "e2ee.list.awaitingInvitation.body":
+    "Existing chats can appear after a trusted device in the chat adds this one.",
+  "e2ee.list.awaitingInvitation.action": "Check device setup",
+  "e2ee.list.checkAgain": "Check again",
   "e2ee.list.empty.title": "No encrypted chats yet",
   "e2ee.list.empty.body":
     "Start an encrypted chat with one person or a group. Only the people in the chat can read it.",
@@ -256,6 +282,16 @@ export const E2EE_MESSAGES = {
   "e2ee.list.mentions.other": "{count} mentions",
   "e2ee.list.status.invalid": "Paused",
   "e2ee.list.muted": "Muted",
+  "e2ee.list.pinned": "Pinned",
+  "e2ee.list.pinnedChat": "{title}, pinned",
+  "e2ee.list.pinChat": "Pin {title} to top",
+  "e2ee.list.pinDragInstructions":
+    "Press Space to pick up this chat. Use the arrow keys to move it, Space to drop, or Escape to cancel.",
+  "e2ee.list.pinDragStarted": "Picked up pinned chat.",
+  "e2ee.list.pinDragPosition": "Position {position}.",
+  "e2ee.list.pinDragCancelled": "Reordering canceled.",
+  "e2ee.list.pinOrderSaved": "Pinned chat order saved.",
+  "e2ee.list.pinOrderError": "Couldn’t save the pinned chat order. Try again.",
   "e2ee.list.status.left": "You left",
   "e2ee.list.status.removed": "Removed",
   "e2ee.list.status.restored": "From backup",
@@ -337,10 +373,11 @@ export const E2EE_MESSAGES = {
   "e2ee.conversation.intro.encrypted":
     "Messages in this chat are end-to-end encrypted. Only the people in it can read them.",
   "e2ee.conversation.intro.deviceHistory":
-    "This device shows messages from when it joined the chat. There’s no message backup yet, so earlier messages stay on the devices that received them.",
+    "This device shows messages from when it joined the chat. Restore your encrypted backup to bring earlier messages here.",
   "e2ee.conversation.day.today": "Today",
   "e2ee.conversation.day.yesterday": "Yesterday",
   "e2ee.conversation.older": "Load older messages",
+  "e2ee.conversation.noOlder": "No older messages on this device.",
   "e2ee.conversation.search.previous": "Previous results",
   "e2ee.conversation.search.next": "Next results",
   "e2ee.conversation.newer": "Load newer messages",
@@ -473,6 +510,7 @@ export const E2EE_MESSAGES = {
   "e2ee.composer.placeholder": "Write an encrypted message",
   "e2ee.composer.send": "Send",
   "e2ee.composer.attach": "Attach files",
+  "e2ee.composer.attachShort": "Attach",
   "e2ee.composer.gifPrivacy":
     "GIF searches and previews connect to GIPHY and are not end-to-end encrypted. The GIF you send is encrypted as an attachment.",
   "e2ee.composer.gifDownloading": "Downloading GIF…",
@@ -495,6 +533,19 @@ export const E2EE_MESSAGES = {
   "e2ee.composer.blocked":
     "Sending is paused until the group change goes through.",
   "e2ee.composer.unavailable": "You can’t send messages in this chat.",
+  "e2ee.poll.create": "Create poll",
+  "e2ee.poll.post": "Post poll",
+  "e2ee.poll.question": "Question",
+  "e2ee.poll.title": "Poll",
+  "e2ee.poll.open": "Open",
+  "e2ee.poll.vote": "Vote",
+  "e2ee.poll.updateVote": "Update vote",
+  "e2ee.poll.clearSelection": "Clear selection",
+  "e2ee.poll.voteQueued": "Vote queued",
+  "e2ee.poll.end": "End poll",
+  "e2ee.poll.endConfirm":
+    "Everyone can still see the results. Voting will close.",
+  "e2ee.poll.closed": "Poll ended",
   "e2ee.composer.sendFailed": "Couldn’t send. Try again.",
   "e2ee.composer.uploading.one": "Encrypting and sending {count} file…",
   "e2ee.composer.uploading.other": "Encrypting and sending {count} files…",
@@ -543,6 +594,12 @@ export const E2EE_MESSAGES = {
   "e2ee.info.safetyCodeHelp":
     "Compare this code with the other members in person or in another app you trust. If everyone sees the same code, everyone sees the same people and devices in this chat. Check the wallet shown with each device to know whose it is.",
   "e2ee.info.mute": "Mute on this device",
+  "e2ee.info.pin": "Pin to top",
+  "e2ee.info.unpin": "Unpin chat",
+  "e2ee.info.pinSyncHelp": "Pins sync privately to your other trusted devices.",
+  "e2ee.info.pinLocalHelp":
+    "Pins stay on this device until encrypted sync is available.",
+  "e2ee.info.pinFailed": "Couldn’t update the pin. Try again.",
   "e2ee.info.unmute": "Unmute on this device",
   "e2ee.info.muteHelp":
     "Muted chats don’t show unread counts or notify you here.",
@@ -556,7 +613,7 @@ export const E2EE_MESSAGES = {
   "e2ee.info.encryption.postQuantum":
     "Keys are agreed with hybrid post-quantum key exchange, designed to keep messages private even if quantum computers can one day break today’s classical encryption.",
   "e2ee.info.encryption.devices":
-    "Each of your devices holds its own keys. A new device sees only messages sent after it joins; there’s no history backup yet.",
+    "Each of your devices holds its own keys. A new device sees messages sent after it joins. Restore your encrypted backup to bring earlier messages to it.",
   "e2ee.info.actionFailed": "Couldn’t complete that. Try again.",
   "e2ee.info.kind.dm": "Direct message",
   "e2ee.info.kind.group": "Group",
@@ -621,22 +678,33 @@ export const E2EE_MESSAGES = {
   "e2ee.backup.status.lastBackup": "Last backed up {time}.",
   "e2ee.backup.status.usage": "{used} of {quota} used",
   "e2ee.backup.status.error": "Couldn’t check your backup.",
-  "e2ee.backup.action.turnOn": "Turn on backup",
+  "e2ee.backup.action.turnOn": "Set up backup",
   "e2ee.backup.action.restore": "Restore messages",
-  "e2ee.backup.action.replace": "Start a new backup",
+  "e2ee.backup.action.lostCode": "Lost your recovery code?",
   "e2ee.backup.action.backupNow": "Back up now",
-  "e2ee.backup.action.newCode": "Create new recovery code",
+  "e2ee.backup.action.newCode": "Replace recovery code",
   "e2ee.backup.action.turnOff": "Turn off backup",
+  "e2ee.backup.action.turnOffMenu": "Turn off backup…",
   "e2ee.backup.action.retry": "Try again",
-  "e2ee.backup.backedUp": "Backed up",
-  "e2ee.backup.revokedWarning":
-    "You removed a device after this backup was set up. Create a new recovery code so the backup key that device held stops working.",
+  "e2ee.backup.more": "More backup options",
+  "e2ee.backup.upToDate": "Backup is up to date.",
+  "e2ee.backup.startOver.title": "Start a new backup without restoring?",
+  "e2ee.backup.startOver.body":
+    "Without the code, your current backup can’t be opened. Starting over deletes it, including messages that aren’t on this browser. You can’t undo this.",
+  "e2ee.backup.startOver.confirm": "Delete old backup and start over",
+  "e2ee.backup.rotate.title": "Replace your recovery code",
+  "e2ee.backup.rotate.one":
+    "You revoked {label} on {date}, after this backup was set up. If it ever restored the backup, it may still hold its key. A new code makes that key useless.",
+  "e2ee.backup.rotate.many.one":
+    "You revoked {count} device after this backup was set up. If it ever restored the backup, it may still hold its key. A new code makes that key useless.",
+  "e2ee.backup.rotate.many.other":
+    "You revoked {count} devices after this backup was set up. If any of them ever restored the backup, it may still hold its key. A new code makes that key useless.",
   "e2ee.backup.code.title": "Save your recovery code",
   "e2ee.backup.code.newTitle": "Save your new recovery code",
   "e2ee.backup.code.description":
     "This code is the only way to restore your messages on a new device. Store it somewhere safe, like a password manager. It’s shown only once, and 6529 can’t recover it for you.",
   "e2ee.backup.code.replaceNote":
-    "Your current recovery code stops working once the new backup finishes uploading.",
+    "When the new backup finishes uploading, your old code stops working. Messages that are in your backup but not on this browser won’t be in the new backup.",
   "e2ee.backup.code.label": "Recovery code",
   "e2ee.backup.code.copy": "Copy code",
   "e2ee.backup.code.copied": "Recovery code copied.",
@@ -662,7 +730,7 @@ export const E2EE_MESSAGES = {
     "Restore finished. This device already had every message in the backup.",
   "e2ee.backup.turnOff.title": "Turn off backup?",
   "e2ee.backup.turnOff.body":
-    "This deletes your encrypted backup from 6529 and your recovery code stops working. Messages on your devices stay.",
+    "This deletes your encrypted backup from 6529 and your recovery code stops working. Messages on your devices stay. If this browser clears its data later, those messages can’t be restored.",
   "e2ee.backup.error.codeFormat":
     "That doesn’t look like a recovery code. Check for typos and try again.",
   "e2ee.backup.error.wrongCode": "That recovery code doesn’t open this backup.",
@@ -672,7 +740,7 @@ export const E2EE_MESSAGES = {
   "e2ee.backup.error.replaced":
     "Backup was turned off or replaced on another device. To back up this device too, restore with the current recovery code.",
   "e2ee.backup.error.quota":
-    "Your backup storage is full. Create a new recovery code to start a compact backup.",
+    "Your backup storage is full. Replace your recovery code to start a compact backup.",
   "e2ee.backup.error.notReady":
     "Set up encrypted messages on this device first.",
   "e2ee.backup.error.rateLimited": "Too many backup requests. Try again later.",
@@ -763,10 +831,9 @@ export const E2EE_MESSAGES = {
   "e2ee.legacy.file.unknownAuthor": "Unknown",
   "e2ee.deviceStatus.proofLine": "Signed Posts: {status}",
   "e2ee.deviceStatus.encryptionLine": "Encrypted DMs: {status}",
-  "e2ee.deviceStatus.enableBoth": "Post Signing & DM Encryption",
-  "e2ee.deviceStatus.enableProof": "Enable Signed Posts",
-  "e2ee.deviceStatus.enableEncryption": "Enable Encrypted DMs",
-  "e2ee.devices.managePermission": "Manage access to encrypted DMs",
+  "e2ee.deviceStatus.enableBoth": "Turn on signed posts and encrypted DMs",
+  "e2ee.deviceStatus.enableProof": "Turn on signed posts",
+  "e2ee.deviceStatus.enableEncryption": "Turn on encrypted DMs",
   "e2ee.devices.permission": "Encrypted DMs",
   "e2ee.devices.combinedPermissions":
     "Signed Posts and Encrypted DMs (shared grant)",
@@ -776,12 +843,6 @@ export const E2EE_MESSAGES = {
     "Revoke access to encrypted DMs for {label}?",
   "e2ee.devices.revokeHistory":
     "That device stops receiving encrypted messages. It deletes its saved chat history once it confirms the revocation came from a device of yours it trusts; otherwise the history stays on it until it’s removed there. An encrypted backup can restore the history it contains.",
-  "e2ee.devices.revokeHistoryThis":
-    "The encrypted chat history and keys saved in this browser are deleted right away. An encrypted backup can restore the history it contains.",
-  "e2ee.devices.revokeHistoryUnsigned":
-    "That device stops receiving encrypted messages. Its saved chat history stays on it until it’s removed there, because encrypted messages aren’t on in this browser to confirm the revocation.",
-  "e2ee.devices.revokeUnsignedNotice":
-    "{label} was revoked, but this browser couldn’t sign the revocation of its encrypted messages. Its saved chat history stays on that device until it’s removed there.",
   "e2ee.deviceStatus.summary":
     "This device: signed posts {proof}; encrypted DMs {encryption}.",
   "e2ee.deviceStatus.expiring": " · expires {time}",

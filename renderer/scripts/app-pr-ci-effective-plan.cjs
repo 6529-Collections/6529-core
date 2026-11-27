@@ -110,8 +110,14 @@ function applyEffectiveAppPrCiPlan(plan) {
         "components/brain/my-stream/tabs/MainStageNominationPopover.tsx" ||
       file === "i18n/messages/identityGettingStarted.en-US.json" ||
       file.startsWith("components/user/rep/") ||
+      file.startsWith("components/user/xtdh/") ||
+      file.startsWith("components/xtdh/") ||
       file.startsWith("components/user/user-page-header/about/") ||
       file === "components/user/user-page-header/UserPageHeaderClient.tsx" ||
+      file === "components/user/brain/UserPageBrainSidebarMobileStrip.tsx" ||
+      file.startsWith("components/user/waves/") ||
+      file === "components/waves/WaveChip.tsx" ||
+      file === "components/utils/button/iconButtonLayouts.ts" ||
       file.startsWith(
         "components/user/user-page-header/UserPageHeaderEditProfile"
       ) ||
@@ -123,7 +129,8 @@ function applyEffectiveAppPrCiPlan(plan) {
       file === "components/react-query-wrapper/ReactQueryWrapper.tsx" ||
       file === "hooks/useRepAllocation.ts" ||
       file === "tests/social/profile-rep-edit-sandbox.spec.ts" ||
-      file === "tests/social/profile-about-sandbox.spec.ts"
+      file === "tests/social/profile-about-sandbox.spec.ts" ||
+      file === "tests/social/profile-xtdh-sandbox.spec.ts"
   );
 
   const playwrightDropReactions = files.some(
@@ -146,6 +153,9 @@ function applyEffectiveAppPrCiPlan(plan) {
 
   const playwrightNativeCompetition = files.some(
     (file) =>
+      /^(?:components\/brain\/my-stream\/votes\/|__tests__\/components\/brain\/my-stream\/votes\/|helpers\/vote-haptics\.ts$)/u.test(
+        file
+      ) ||
       /^(?:components\/competitions\/|hooks\/competitions\/|__tests__\/competitions\/|app\/waves\/\[wave\]\/decisions\/|components\/waves\/create-wave\/|components\/waves\/leaderboard\/|__tests__\/components\/waves\/leaderboard\/|generated\/models\/ApiCompetition)/u.test(
         file
       ) ||
@@ -203,6 +213,15 @@ function applyEffectiveAppPrCiPlan(plan) {
         "tests/social/mobile-gestures-sandbox.spec.ts",
         "hooks/useAndroidBackLayer.ts",
         "hooks/useHorizontalSwipe.ts",
+        "hooks/useWaveRowTouchGestures.ts",
+        "hooks/useSidebarWavePin.ts",
+        "components/brain/left-sidebar/waves/SidebarWaveTouchActions.tsx",
+        "components/brain/left-sidebar/waves/PinnedWaveTouchSensor.ts",
+        "components/brain/left-sidebar/waves/pinnedRowDrag.ts",
+        "components/brain/left-sidebar/waves/SidebarPinnedWaves.tsx",
+        "components/brain/left-sidebar/waves/BrainLeftSidebarWave.tsx",
+        "components/brain/left-sidebar/web/WebBrainLeftSidebarWave/index.tsx",
+        "components/brain/left-sidebar/web/WebBrainLeftSidebarWave/subcomponents/ExpandedWave.tsx",
         "hooks/useLongPressClickSuppression.ts",
         "hooks/useSwipeToReply.ts",
         "helpers/waves/drop-reply-eligibility.ts",
@@ -212,6 +231,15 @@ function applyEffectiveAppPrCiPlan(plan) {
         "components/navigation/AndroidBackNavigation.tsx",
         "services/capacitor/android-back-layers.ts",
         "components/brain/mobile/useWaveListSwipeBack.ts",
+        "components/mobile-navigation/PhoneNavigationStack.tsx",
+        "components/mobile-navigation/PhoneListLayoutProvider.tsx",
+        "contexts/PhoneNavigationScreenContext.tsx",
+        "helpers/waves/phone-navigation-route.ts",
+        "lib/motion/phone-navigation.ts",
+        "components/brain/mobile/useWaveNavigationTransition.ts",
+        "helpers/waves/wave-navigation-transition.ts",
+        "styles/wave-navigation-transition.css",
+        "components/community-curations/CommunityCurationsMasonry.tsx",
         "components/brain/my-stream/MyStreamWaveChat.tsx",
         "components/waves/drops/wave-drops-all/hooks/useWaveDropsSerialScroll.ts",
         "hooks/useNativeKeyboard.ts",
@@ -232,6 +260,12 @@ function applyEffectiveAppPrCiPlan(plan) {
         "components/brain/my-stream/MyStreamWavePending.tsx",
         "components/header/AppHeader.tsx",
         "components/brain/mobile/WaveInformationSheet.tsx",
+        "components/brain/my-stream/tabs/PhoneWaveTabs.tsx",
+        "components/mobile-navigation/MobileNavigationView.tsx",
+        "components/mobile-navigation/SpringNavigationSurface.tsx",
+        "components/mobile-navigation/MobilePageContext.tsx",
+        "components/mobile-navigation/useMobileFormHistory.ts",
+        "components/waves/specs/WaveSettingSwitch.tsx",
         "components/waves/specs/WaveNotificationSettings.tsx",
         "components/waves/specs/wave-notification-settings/WaveNotificationPreferenceButtons.tsx",
         "components/brain/mobile/WaveInformationPanelContext.ts",
@@ -260,6 +294,7 @@ function applyEffectiveAppPrCiPlan(plan) {
         "__tests__/components/waves/drops/ArtistActiveSubmissionContent.test.tsx",
         "components/utils/tooltip/BodyPortalTooltip.tsx",
         "components/waves/header/WaveJoinCta.tsx",
+        "components/waves/header/WaveHeaderTrustStats.tsx",
         "components/brain/left-sidebar/waves/BrainLeftSidebarWavePin.tsx",
         "tests/packs.manifest.cjs",
         "openapi.yaml",
@@ -354,13 +389,26 @@ function applyEffectiveAppPrCiPlan(plan) {
     ].includes(file)
   );
 
+  const backNavigationBrowser = files.some((file) =>
+    [
+      "contexts/NavigationHistoryContext.tsx",
+      "helpers/navigation-scroll-restoration.ts",
+      "components/navigation/BackButton.tsx",
+      "components/community/CommunityMembers.tsx",
+      "components/community/members-table/CommunityMembersTable.tsx",
+      "tests/critical-shell/profile-navigation-readonly.spec.ts",
+    ].includes(file)
+  );
+
   const checks = {
     ...plan.checks,
     playwright_critical_shell:
-      playwrightProfileDialogs || membershipNavigationBrowser
+      playwrightProfileDialogs ||
+      membershipNavigationBrowser ||
+      backNavigationBrowser
         ? check(
             true,
-            "Profile editing and membership navigation changes require their browser regression packs."
+            "Profile editing, membership and Back navigation changes require their browser regression packs."
           )
         : baseChecks.playwright_critical_shell,
     playwright_profile_nic: check(

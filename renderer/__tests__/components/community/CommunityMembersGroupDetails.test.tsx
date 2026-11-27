@@ -80,6 +80,7 @@ function createInspectableGroup({
     created_by: { handle: "creator" } as ApiGroupFull["created_by"],
     visible: true,
     is_private: isPrivate,
+    stays_on_site: isPrivate,
     group: {
       tdh: {
         min: null,
@@ -247,25 +248,23 @@ describe("CommunityMembersGroupDetails", () => {
       />
     );
 
-    expect(screen.getByText("Selected group")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Artists and curators" })
-    ).toBeInTheDocument();
-    expect(screen.getByTestId("group-criteria")).toHaveTextContent("group-1");
-    expect(screen.getByTestId("group-criteria")).toHaveAttribute(
-      "data-quiet",
-      "true"
-    );
-    expect(
-      screen.getByRole("button", {
-        name: "REP everyone matching criteria",
-      })
-    ).toHaveClass("tw-bg-white/[0.07]");
-    expect(
-      screen.getByRole("button", {
-        name: "NIC everyone matching criteria",
-      })
-    ).toHaveClass("tw-bg-white/[0.07]");
+    const details = screen.getByRole("region", { name: "Selected group" });
+    expect(details).not.toHaveTextContent("Selected group");
+    expect(details).not.toHaveTextContent("Artists and curators");
+    const criteria = screen.getByTestId("group-criteria");
+    expect(details).toContainElement(criteria);
+    expect(criteria).toHaveTextContent("group-1");
+    expect(criteria).toHaveAttribute("data-quiet", "true");
+    const repButton = screen.getByRole("button", {
+      name: "REP everyone matching criteria",
+    });
+    const nicButton = screen.getByRole("button", {
+      name: "NIC everyone matching criteria",
+    });
+    expect(criteria).toAppearBefore(repButton);
+    expect(criteria).toAppearBefore(nicButton);
+    expect(repButton).toHaveClass("tw-bg-white/[0.07]");
+    expect(nicButton).toHaveClass("tw-bg-white/[0.07]");
     fireEvent.click(
       screen.getByRole("button", { name: "Clear selected group" })
     );

@@ -1,7 +1,26 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import CommunityCurations from "@/components/community-curations/CommunityCurations";
+import { PhoneNavigationScreenContext } from "@/contexts/PhoneNavigationScreenContext";
+import { ReadonlyURLSearchParams } from "next/navigation";
 
 const mockUseCommunityCurationsDrops = jest.fn();
+const mockCommitWaveNavigationContent = jest.fn();
+let mockIsApp = false;
+let mockRestoreScrollOffset = () => true;
+const mockGetPosition = jest.fn(() => 240);
+jest.mock("@/contexts/ScrollPositionContext", () => ({
+  useScrollPositionContext: () => ({ getPosition: mockGetPosition }),
+}));
+
+jest.mock("@/helpers/waves/wave-navigation-transition", () => ({
+  commitWaveNavigationContent: (...args: unknown[]) =>
+    mockCommitWaveNavigationContent(...args),
+}));
+
+jest.mock("@/hooks/useDeviceInfo", () => ({
+  __esModule: true,
+  default: () => ({ isApp: mockIsApp }),
+}));
 
 jest.mock("@/components/brain/my-stream/layout/LayoutContext", () => ({
   useLayout: () => ({ waveViewStyle: { height: "600px" } }),
@@ -21,7 +40,14 @@ jest.mock("@/components/token-list/hooks/usePersistentScrollOffset", () => ({
 
 jest.mock("@/components/community-curations/CommunityCurationsMasonry", () => ({
   __esModule: true,
-  default: () => <div data-testid="profile-feed-masonry" />,
+  default: ({
+    restoreScrollOffset,
+  }: {
+    restoreScrollOffset: () => boolean;
+  }) => {
+    mockRestoreScrollOffset = restoreScrollOffset;
+    return <div data-testid="profile-feed-masonry" />;
+  },
 }));
 
 const loadingState = {
@@ -46,6 +72,8 @@ describe("CommunityCurations", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsApp = false;
+    mockGetPosition.mockReturnValue(240);
     mockUseCommunityCurationsDrops.mockReturnValue(loadingState);
   });
 
@@ -72,5 +100,108 @@ describe("CommunityCurations", () => {
 
     expect(screen.getByTestId("profile-feed-masonry")).toBeInTheDocument();
     expect(scrollTo).toHaveBeenCalledWith({ top: 240 });
+  });
+
+  it("keeps a native feed return destination on Discover Waves", () => {
+    mockIsApp = true;
+    render(<CommunityCurations />);
+    const href = screen
+      .getByRole("link", { name: "Discover Waves" })
+      .getAttribute("href");
+    const destination = new URL(href!, "http://localhost");
+    expect(destination.pathname).toBe("/discover");
+    expect(destination.searchParams.get("returnTo")).toBe(
+      "/waves?view=profile-feed"
+    );
+  });
+
+  it("retries a clamped saved offset as later Feed rows grow, then stops", () => {
+    let availableTop = 100;
+    scrollTo.mockImplementation(function (
+      this: HTMLElement,
+      { top }: ScrollToOptions
+    ) {
+      this.scrollTop = Math.min(top ?? 0, availableTop);
+    });
+    const drop = { stableKey: "drop-1" };
+    mockUseCommunityCurationsDrops.mockReturnValue({
+      ...loadingState,
+      allDrops: [drop],
+      drops: [drop],
+      isLoading: false,
+    });
+    const { container } = render(<CommunityCurations />);
+    expect(mockRestoreScrollOffset()).toBe(false);
+    availableTop = 500;
+    expect(mockRestoreScrollOffset()).toBe(true);
+    const scroll = container.querySelector("section")!;
+    expect(scroll.scrollTop).toBe(240);
+    scroll.scrollTop = 200;
+    expect(mockRestoreScrollOffset()).toBe(true);
+    expect(scroll.scrollTop).toBe(200);
+    scrollTo.mockReset();
+  });
+
+  it.each(["pointerDown", "wheel", "keyDown"] as const)(
+    "gives a pending Feed restore to the reader on %s",
+    (input) => {
+      const drop = { stableKey: "drop-1" };
+      mockUseCommunityCurationsDrops.mockReturnValue({
+        ...loadingState,
+        allDrops: [drop],
+        drops: [drop],
+        isLoading: false,
+      });
+      const { container } = render(<CommunityCurations />);
+      const scroll = container.querySelector("section")!;
+      expect(mockRestoreScrollOffset()).toBe(false);
+      fireEvent[input](scroll);
+      scrollTo.mockClear();
+      expect(mockRestoreScrollOffset()).toBe(true);
+      expect(scrollTo).not.toHaveBeenCalled();
+    }
+  );
+
+  it("releases a pagination-only Feed without waiting for absent cards", () => {
+    mockUseCommunityCurationsDrops.mockReturnValue({
+      ...loadingState,
+      isLoading: false,
+      hasNextPage: true,
+      isFetchingNextPage: true,
+    });
+    render(<CommunityCurations />);
+    expect(screen.getByTestId("profile-feed-masonry")).toBeInTheDocument();
+    expect(mockCommitWaveNavigationContent).toHaveBeenCalledWith("feed");
+  });
+
+  it("applies a fresh Feed entry reset to the same retained scrollport", () => {
+    const screen = {
+      pathname: "/waves",
+      searchParams: new ReadonlyURLSearchParams("view=profile-feed"),
+    };
+    const view = (active: boolean) => (
+      <PhoneNavigationScreenContext.Provider value={{ ...screen, active }}>
+        <CommunityCurations />
+      </PhoneNavigationScreenContext.Provider>
+    );
+    const { container, rerender } = render(view(true));
+    const feed = container.querySelector("section");
+    rerender(view(false));
+    scrollTo.mockClear();
+    mockGetPosition.mockReturnValue(0);
+    rerender(view(true));
+    expect(container.querySelector("section")).toBe(feed);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+    const drop = { stableKey: "drop-after-fresh-entry" };
+    mockUseCommunityCurationsDrops.mockReturnValue({
+      ...loadingState,
+      allDrops: [drop],
+      drops: [drop],
+      isLoading: false,
+    });
+    scrollTo.mockClear();
+    rerender(view(true));
+    expect(mockRestoreScrollOffset()).toBe(true);
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });

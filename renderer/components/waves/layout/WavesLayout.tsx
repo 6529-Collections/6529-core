@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
+import { usePhoneNavigationScreen } from "@/contexts/PhoneNavigationScreenContext";
 import { isCompetitionPathname } from "@/helpers/competition.helpers";
 import { getWaveIdFromPathname } from "@/helpers/navigation.helpers";
 import { useEffect, type ReactNode } from "react";
@@ -16,6 +17,8 @@ import WavesRouteLoading from "../WavesRouteLoading";
 import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
+import clsx from "clsx";
+import styles from "./WavesLayout.module.css";
 
 type WavesBranchProps = {
   readonly children: ReactNode;
@@ -141,10 +144,11 @@ function getWavesContent({
 // Main layout content that uses the Layout context
 function WavesLayoutContent({ children }: { readonly children: ReactNode }) {
   const { contentState } = useAuthenticatedContent();
-  const pathname = usePathname();
-  const hasRouteWave =
-    Boolean(getWaveIdFromPathname(pathname)) &&
-    !isCompetitionPathname(pathname);
+  const currentPathname = usePathname();
+  const retainedScreen = usePhoneNavigationScreen();
+  const pathname = retainedScreen?.pathname ?? currentPathname;
+  const isWaveView = Boolean(getWaveIdFromPathname(pathname));
+  const hasRouteWave = isWaveView && !isCompetitionPathname(pathname);
   const { isApp } = useDeviceInfo();
 
   // The chat/feed views manage their own internal scroll, so WavesLayout locks
@@ -204,14 +208,14 @@ function WavesLayoutContent({ children }: { readonly children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!hasVisibleLaunchContent) {
+    if (retainedScreen?.active === false || !hasVisibleLaunchContent) {
       return;
     }
 
     markMobileLaunchStep("waves_first_content_visible");
     markMobileLaunchStep("route_first_useful_content");
     scheduleMobileLaunchFlush("waves_content_visible", 250);
-  }, [hasVisibleLaunchContent]);
+  }, [hasVisibleLaunchContent, retainedScreen?.active]);
 
   useEffect(() => {
     if (!isResolvedWavesContentState(contentState)) {
@@ -222,7 +226,13 @@ function WavesLayoutContent({ children }: { readonly children: ReactNode }) {
   }, [contentState]);
 
   return (
-    <div className="tailwind-scope tw-flex tw-flex-col tw-overflow-hidden tw-bg-black">
+    <div
+      data-wave-view={isWaveView || undefined}
+      className={clsx(
+        "tailwind-scope tw-flex tw-flex-col tw-overflow-hidden tw-bg-black",
+        isWaveView && styles["waveView"]
+      )}
+    >
       {content}
     </div>
   );

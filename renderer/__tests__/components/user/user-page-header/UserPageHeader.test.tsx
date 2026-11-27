@@ -3,6 +3,7 @@ import {
   act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -12,6 +13,11 @@ import { renderToString } from "react-dom/server";
 import type { CicStatement } from "@/entities/IProfile";
 import { STATEMENT_GROUP, STATEMENT_TYPE } from "@/helpers/Types";
 import UserPageHeaderClient from "@/components/user/user-page-header/UserPageHeaderClient";
+import {
+  PROFILE_MESSAGE_PREFILL_PARAM,
+  useE2eeComposePrefill,
+} from "@/components/e2ee/e2eeComposePrefill";
+import { isE2eeEnabled } from "@/config/e2eeEnv";
 import { AuthContext } from "@/components/auth/Auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
@@ -24,6 +30,7 @@ import { useContentModeratorAccess } from "@/hooks/content-moderation/useContent
 let mockIsSuspended = false;
 let mockIsModerator = false;
 
+jest.mock("@/config/e2eeEnv", () => ({ isE2eeEnabled: jest.fn() }));
 jest.mock("next/dynamic", () => () => () => <div />);
 jest.mock(
   "@/components/user/user-page-header/banner/UserPageHeaderBanner",
@@ -127,6 +134,7 @@ jest.mock("@/components/user/utils/UserFollowBtn", () => ({
     showFollowButton = true,
     showMuteButton = true,
     beforeFollowAction,
+    afterFollowAction,
   }: {
     readonly onDirectMessage?: (() => void) | undefined;
     readonly blocked?: boolean | undefined;
@@ -134,9 +142,14 @@ jest.mock("@/components/user/utils/UserFollowBtn", () => ({
     readonly showFollowButton?: boolean | undefined;
     readonly showMuteButton?: boolean | undefined;
     readonly beforeFollowAction?: React.ReactNode | undefined;
+    readonly afterFollowAction?: React.ReactNode | undefined;
   }) => (
     <div data-testid="profile-actions">
-      {onDirectMessage ? <button type="button">Direct Message</button> : null}
+      {onDirectMessage ? (
+        <button type="button" onClick={onDirectMessage}>
+          Direct Message
+        </button>
+      ) : null}
       {showMuteButton ? <button type="button">Mute</button> : null}
       {beforeFollowAction}
       {showFollowButton ? (
@@ -148,6 +161,7 @@ jest.mock("@/components/user/utils/UserFollowBtn", () => ({
           {blocked ? "Unblock" : "Follow"}
         </button>
       ) : null}
+      {afterFollowAction}
     </div>
   ),
 }));
@@ -203,7 +217,7 @@ useRouterMock.mockReturnValue({ push: jest.fn() });
 (useIdentity as jest.Mock).mockReturnValue({ profile });
 
 const auth = {
-  connectedProfile: { handle: "alice" },
+  connectedProfile: { id: "profile-alice", handle: "alice" },
   activeProfileProxy: null,
   requestAuth: jest.fn().mockResolvedValue({ success: true }),
   setToast: jest.fn(),
@@ -224,6 +238,7 @@ describe("UserPageHeader", () => {
     mockIsSuspended = false;
     mockIsModerator = false;
     jest.clearAllMocks();
+    jest.mocked(isE2eeEnabled).mockReturnValue(false);
     (useContentModeratorAccess as jest.Mock).mockImplementation(() => ({
       data: { moderator: mockIsModerator },
     }));
@@ -395,6 +410,48 @@ describe("UserPageHeader", () => {
     expect(screen.queryByTestId("subscription-status")).not.toBeInTheDocument();
   });
 
+  it.each([
+    { proxy: true, wallet: "", showsMessage: false },
+    { proxy: false, wallet: "", showsMessage: true },
+    { proxy: true, wallet: "0xbob", showsMessage: true },
+  ])(
+    "checks whether a proxy can message this recipient (proxy: $proxy, wallet: $wallet)",
+    ({ proxy, wallet, showsMessage }) => {
+      jest.mocked(isE2eeEnabled).mockReturnValue(true);
+      const recipient = {
+        ...profile,
+        id: "profile-bob",
+        primary_wallet: wallet,
+      };
+      (useIdentity as jest.Mock).mockReturnValue({ profile: recipient });
+
+      render(
+        <AuthContext.Provider
+          value={{
+            ...auth,
+            activeProfileProxy: proxy ? { id: "proxy-1" } : null,
+          }}
+        >
+          <UserPageHeaderClient
+            profile={recipient}
+            handleOrWallet="bob"
+            fallbackMainAddress="0x1"
+            defaultBanner1="#000000"
+            defaultBanner2="#111111"
+            initialStatements={[]}
+            profileEnabledAt={null}
+            followersCount={5}
+            cmsWebsiteHref={null}
+          />
+        </AuthContext.Provider>
+      );
+
+      expect(
+        screen.queryAllByRole("button", { name: "Direct Message" })
+      ).toHaveLength(showsMessage ? 1 : 0);
+    }
+  );
+
   it("keeps DM available, moves Unblock into the action row, and confirms it", async () => {
     const unblock = jest.fn().mockResolvedValue(undefined);
     (useIdentity as jest.Mock).mockReturnValue({
@@ -435,9 +492,23 @@ describe("UserPageHeader", () => {
     );
 
     expect(screen.getByTestId("follow")).toHaveTextContent("Unblock");
-    expect(
-      screen.getByRole("button", { name: "Direct Message" })
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Direct Message" }));
+    const href = new URL(
+      useRouterMock().push.mock.calls[0][0],
+      "https://6529.io"
+    );
+    expect(href.pathname).toBe("/messages/new");
+    const { result } = renderHook(() =>
+      useE2eeComposePrefill(
+        "profile",
+        href.searchParams.get(PROFILE_MESSAGE_PREFILL_PARAM)
+      )
+    );
+    expect(result.current).toMatchObject({
+      ownerProfileId: "profile-alice",
+      people: [{ profileId: "profile-bob", handle: "bob", wallet: "0xbob" }],
+      source: "profile",
+    });
     expect(
       screen.queryByRole("button", { name: "Mute" })
     ).not.toBeInTheDocument();
@@ -592,11 +663,13 @@ describe("UserPageHeader", () => {
     const preferencesButtons = screen.getAllByRole("link", {
       name: "Preferences",
     });
-    expect(preferencesButtons).toHaveLength(3);
+    expect(preferencesButtons).toHaveLength(2);
     expect(preferencesButtons[0]).toHaveClass(
       "tw-size-11",
-      "!tw-bg-transparent",
-      "min-[840px]:tw-hidden"
+      "!tw-bg-transparent"
+    );
+    expect(screen.getByTestId("banner").parentElement).toContainElement(
+      preferencesButtons[0]!
     );
     preferencesButtons.slice(1).forEach((preferencesButton) => {
       expect(preferencesButton).toHaveClass(
@@ -759,9 +832,13 @@ describe("UserPageHeader", () => {
       </AuthContext.Provider>
     );
 
-    expect(
-      screen.getByRole("link", { name: "Open bob website" })
-    ).toHaveAttribute("href", "/bob/index.html");
+    const websiteLinks = screen.getAllByRole("link", {
+      name: "Open bob website",
+    });
+    expect(websiteLinks).toHaveLength(2);
+    for (const websiteLink of websiteLinks) {
+      expect(websiteLink).toHaveAttribute("href", "/bob/index.html");
+    }
   });
 
   it("does not render profile website link without a primary CMS site", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import NftPurchasingGate from "@/components/common/NftPurchasingGate";
+import { useAuth } from "@/components/auth/Auth";
 
 import type { UserPageStatsInitialData } from "@/components/user/stats/userPageStats.types";
 import { SEARCH_PARAM_ACTIVITY } from "@/components/user/stats/activity/activity.helpers";
@@ -12,7 +13,10 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { buildCollectedStatsViewModel } from "./stats/helpers";
 import { CollectedStatsDetailsPanel } from "./stats/subcomponents/CollectedStatsDetailsPanel";
-import { CollectedStatsHeader } from "./stats/subcomponents/CollectedStatsHeader";
+import {
+  CollectedStatsHeader,
+  CollectedStatsDetailsToggle,
+} from "./stats/subcomponents/CollectedStatsHeader";
 import { CollectedStatsSeasons } from "./stats/subcomponents/CollectedStatsSeasons";
 import type { DisplaySeason } from "./stats/types";
 import { useCollectedStatsData } from "./stats/useCollectedStatsData";
@@ -90,6 +94,20 @@ export default function UserPageCollectedStats({
   onCollectionShortcut,
   onSeasonShortcut,
 }: Readonly<UserPageCollectedStatsProps>) {
+  const {
+    connectedProfile,
+    isAuthenticated,
+    isDirectProfileSession,
+    fetchingProfile,
+    activeProfileProxy,
+  } = useAuth();
+  const canManageCollection =
+    isAuthenticated === true &&
+    isDirectProfileSession === true &&
+    !fetchingProfile &&
+    !activeProfileProxy &&
+    !!connectedProfile?.id &&
+    connectedProfile.id === profile.id;
   const { hasTouchScreen, isApp } = useDeviceInfo();
   const searchParams = useSearchParams();
   const details = searchParams.get("details");
@@ -199,21 +217,17 @@ export default function UserPageCollectedStats({
   return (
     <section
       data-profile-section="Collection summary"
-      className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-solid tw-border-iron-800 tw-bg-black"
+      className={`${isDetailsOpen ? "tw-overflow-visible" : "tw-overflow-hidden"} tw-rounded-xl tw-border tw-border-solid tw-border-iron-800 tw-bg-black`}
     >
       <div
         data-profile-section-anchor={
           mainMetrics.length > 0 ? "Collection summary" : undefined
         }
-        className="tw-px-3 tw-py-2 md:tw-p-5"
+        className="tw-px-3 tw-py-3 md:tw-px-5 md:tw-py-4"
       >
         <CollectedStatsHeader
           metrics={mainMetrics}
           activeCollection={activeCollection}
-          isDetailsOpen={isDetailsOpen}
-          detailsId={detailsId}
-          locale={locale}
-          onToggleDetails={handleToggleDetails}
           onCollectionShortcut={onCollectionShortcut}
         />
       </div>
@@ -245,55 +259,66 @@ export default function UserPageCollectedStats({
 
       <div ref={detailsScrollTargetRef} className="tw-scroll-mt-24">
         <NftPurchasingGate>
-          <div
-            data-testid="collected-purchase-actions"
-            className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2 tw-px-3 tw-py-3 md:tw-px-5"
-          >
-            <span data-profile-action="Complete my set" className="tw-contents">
-              <CollectEntryLink
-                collection="memes"
-                intent={activeSeasonNumber === null ? "full_set" : "season"}
-                definitionId={
-                  activeSeasonNumber === null
-                    ? undefined
-                    : String(activeSeasonNumber)
-                }
-                locale={locale}
-                complete
-                profileActivityKey={isApp ? "complete-set" : undefined}
-                className={getButtonClasses({
-                  variant: "tertiary",
-                  size: "sm",
-                  className: `${COLLECTED_ACTION_CLASS} !tw-min-h-9 !tw-px-3 !tw-text-xs tw-no-underline hover:tw-no-underline`,
-                })}
-              />
-            </span>
-            {isApp ? (
-              <ProfileCollectedActivityLink
-                data-profile-action="Manage orders"
-                href="/collect/orders"
-                activityKey="manage-orders"
-                className={getButtonClasses({
-                  variant: "tertiary",
-                  size: "sm",
-                  className: `${COLLECTED_ACTION_CLASS} tw-no-underline hover:tw-no-underline`,
-                })}
+          {canManageCollection && (
+            <div
+              data-testid="collected-purchase-actions"
+              className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2 tw-px-3 tw-py-3 md:tw-px-5"
+            >
+              <span
+                data-profile-action="Complete my set"
+                className="tw-contents"
               >
-                {t(locale, "collect.entry.manage")}
-              </ProfileCollectedActivityLink>
-            ) : (
-              <ButtonLink
-                data-profile-action="Manage orders"
-                href="/collect/orders"
-                variant="tertiary"
-                size="sm"
-                className={COLLECTED_ACTION_CLASS}
-              >
-                {t(locale, "collect.entry.manage")}
-              </ButtonLink>
-            )}
-          </div>
+                <CollectEntryLink
+                  collection="memes"
+                  intent={activeSeasonNumber === null ? "full_set" : "season"}
+                  definitionId={
+                    activeSeasonNumber === null
+                      ? undefined
+                      : String(activeSeasonNumber)
+                  }
+                  locale={locale}
+                  complete
+                  profileActivityKey={isApp ? "complete-set" : undefined}
+                  className={getButtonClasses({
+                    variant: "tertiary",
+                    size: "sm",
+                    className: `${COLLECTED_ACTION_CLASS} !tw-min-h-9 !tw-px-3 !tw-text-xs tw-no-underline hover:tw-no-underline`,
+                  })}
+                />
+              </span>
+              {isApp ? (
+                <ProfileCollectedActivityLink
+                  data-profile-action="Manage orders"
+                  href="/collect/orders"
+                  activityKey="manage-orders"
+                  className={getButtonClasses({
+                    variant: "tertiary",
+                    size: "sm",
+                    className: `${COLLECTED_ACTION_CLASS} tw-no-underline hover:tw-no-underline`,
+                  })}
+                >
+                  {t(locale, "collect.entry.manage")}
+                </ProfileCollectedActivityLink>
+              ) : (
+                <ButtonLink
+                  data-profile-action="Manage orders"
+                  href="/collect/orders"
+                  variant="tertiary"
+                  size="sm"
+                  className={COLLECTED_ACTION_CLASS}
+                >
+                  {t(locale, "collect.entry.manage")}
+                </ButtonLink>
+              )}
+            </div>
+          )}
         </NftPurchasingGate>
+        <CollectedStatsDetailsToggle
+          isDetailsOpen={isDetailsOpen}
+          detailsId={detailsId}
+          locale={locale}
+          onToggleDetails={handleToggleDetails}
+        />
         <CollectedStatsDetailsPanel
           isOpen={isDetailsOpen}
           isLoading={isDetailsLoading}

@@ -110,6 +110,19 @@ export async function applySummary(
       identity: leaf.identity,
     });
   }
+  if (record.members.length > 0 && record.epoch !== summary.epoch) {
+    const previous = {
+      ...record.previousPollRosters,
+      [String(record.epoch)]: record.members.map((member) =>
+        member.deviceKey.toLowerCase()
+      ),
+    };
+    // OpenMLS only keeps the two previous application-message epochs.
+    const epochs = Object.keys(previous).sort((left, right) => +right - +left);
+    record.previousPollRosters = Object.fromEntries(
+      epochs.slice(0, 2).map((epoch) => [epoch, previous[epoch] ?? []])
+    );
+  }
   record.members = members;
   record.epoch = summary.epoch;
   record.epochFp = summary.epoch_fp;
@@ -160,6 +173,10 @@ export function addNotices(
   seq: number,
   serverTs: number
 ): void {
+  // A self group has no timeline (D175, P60).
+  if (runtime.record.metadata.kind === "self") {
+    return;
+  }
   const onlySafety =
     notices.length === 1 && notices[0]?.type === "safety_code_changed";
   if (onlySafety) {

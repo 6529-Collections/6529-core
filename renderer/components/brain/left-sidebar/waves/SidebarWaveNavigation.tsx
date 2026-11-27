@@ -1,4 +1,8 @@
 "use client";
+
+import "@/i18n/namespaces/wave-sidebar";
+import IconButton from "@/components/utils/button/IconButton";
+
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { COMPACT_ACTION_TOUCH_TARGET_CLASS } from "@/components/utils/button/compactActionButtonStyles";
 
@@ -34,6 +38,7 @@ export function SidebarWaveNavigationControls({
   readonly isCollectionLoading?: boolean;
 }) {
   const locale = useBrowserLocale();
+  const { isApp } = useDeviceInfo();
   const inputId = useId();
   const { ref: featureUsageRef } = useWaveFeatureUsage("sidebar");
   const hasHydrated = useHasHydrated();
@@ -55,12 +60,14 @@ export function SidebarWaveNavigationControls({
   const searchLoading =
     navigation.searching &&
     navigation.queryText.trim().length >= 3 &&
-    (!navigation.queryEnabled || navigation.results.isFetching);
+    (!navigation.hasMatchingSearch ||
+      navigation.results.isPending ||
+      navigation.results.isFetching);
   return (
     <>
       <div
         ref={featureUsageRef}
-        className="tailwind-scope tw-sticky tw-top-0 tw-z-30 tw-bg-[var(--wave-sidebar-background,#000)] tw-px-4 tw-py-2"
+        className={`tailwind-scope tw-sticky tw-top-0 tw-z-30 tw-bg-[var(--wave-sidebar-background,#000)] tw-py-2 ${isApp ? "tw-px-2 sm:tw-px-4" : "tw-px-4"}`}
       >
         {searchOpen ? (
           <>
@@ -99,14 +106,16 @@ export function SidebarWaveNavigationControls({
                 autoComplete="off"
                 className="tw-w-full tw-min-w-0 tw-border-0 tw-bg-transparent tw-py-1.5 tw-text-xs tw-leading-5 tw-text-white tw-outline-none tw-ring-0 placeholder:tw-text-iron-400 focus:tw-ring-0 touch-only:tw-text-base [&::-webkit-search-cancel-button]:tw-appearance-none"
               />
-              <button
+              <IconButton
                 type="button"
                 onClick={closeSearch}
                 aria-label={t(locale, "waves.sidebar.closeSearch")}
-                className={`${COMPACT_ACTION_TOUCH_TARGET_CLASS} tw-flex tw-size-8 tw-shrink-0 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-0 tw-text-iron-300 tw-transition-colors tw-duration-150 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 desktop-hover:hover:tw-bg-iron-900 desktop-hover:hover:tw-text-white motion-reduce:tw-transition-none`}
+                size={32}
+                variant="ghost"
+                expandTouchTarget
               >
                 <XMarkIcon className="tw-size-4" />
-              </button>
+              </IconButton>
             </div>
           </>
         ) : (
@@ -124,7 +133,7 @@ export function SidebarWaveNavigationControls({
                     aria-label={t(locale, COLLECTION_LABELS[tab])}
                     aria-pressed={navigation.collection === tab}
                     onClick={() => navigation.setCollection(tab)}
-                    className={`${COMPACT_ACTION_TOUCH_TARGET_CLASS} ${getConnectedTabButtonClasses(
+                    className={`${COMPACT_ACTION_TOUCH_TARGET_CLASS} ${tab !== "pinned" || navigation.collection === tab ? "!tw-font-medium" : ""} ${getConnectedTabButtonClasses(
                       {
                         isActive: navigation.collection === tab,
                         fill: true,
@@ -138,11 +147,11 @@ export function SidebarWaveNavigationControls({
                 ))}
               </fieldset>
             ) : (
-              <span className="tw-min-w-0 tw-text-sm tw-font-semibold tw-text-iron-300">
+              <span className="tw-min-w-0 tw-text-sm tw-font-semibold tw-text-iron-300 [@media(any-hover:none)]:tw-text-[13px] [@media(any-hover:none)]:tw-font-medium">
                 {t(locale, "waves.sidebar.allWaves")}
               </span>
             )}
-            <button
+            <IconButton
               ref={toggleRef}
               {...waveFeatureAttributes("sidebar_entry", "search")}
               type="button"
@@ -151,12 +160,11 @@ export function SidebarWaveNavigationControls({
               title={findWaveLabel}
               aria-expanded={false}
               onClick={() => setSearchOpen(true)}
-              className={`${COMPACT_ACTION_TOUCH_TARGET_CLASS} tw-group tw-ml-auto tw-flex tw-size-9 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-0 tw-text-iron-300 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 desktop-hover:hover:tw-text-white touch-only:tw-size-11`}
+              layout="sidebar-search"
+              className="tw-ml-auto"
             >
-              <span className="tw-flex tw-size-full tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-transparent desktop-hover:group-hover:tw-bg-iron-900 touch-only:tw-size-10">
-                <MagnifyingGlassIcon className="tw-size-4" aria-hidden="true" />
-              </span>
-            </button>
+              <MagnifyingGlassIcon className="tw-size-4" aria-hidden="true" />
+            </IconButton>
           </div>
         )}
       </div>
@@ -182,8 +190,8 @@ export function SidebarWaveSearchResults({
   const { isApp } = useDeviceInfo();
   const locale = useBrowserLocale();
   const { activeWave } = useMyStream();
-  const { queryText, queryEnabled, results, resultWaves } = navigation;
-  const loading = !queryEnabled || results.isPending;
+  const { queryText, hasMatchingSearch, results, resultWaves } = navigation;
+  const loading = !hasMatchingSearch || results.isPending;
   const showResults = queryText.trim().length >= 3 && !loading;
   let feedback = t(locale, "waves.sidebar.searchHint");
   if (queryText.trim().length >= 3) {

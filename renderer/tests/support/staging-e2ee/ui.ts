@@ -1,5 +1,6 @@
 import type { Locator, Page, Request } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { DEVICES_SECURITY_MESSAGES } from "../../../i18n/messages/devices-security";
 
 import {
   ENCRYPTED_ROUTE,
@@ -247,37 +248,44 @@ export async function imagePixels(image: Locator): Promise<number[]> {
   });
 }
 
-/** Active rows on `/messages/encrypted/devices`. */
-export function activeDeviceRows(page: Page): Locator {
+/** Other devices with access to encrypted messages. */
+function otherEncryptedDeviceRows(page: Page): Locator {
   return page
-    .getByRole("main")
+    .getByRole("region", { name: "Devices", exact: true })
     .getByRole("listitem")
-    .filter({ has: page.getByRole("button", { name: /^Revoke / }) });
+    .filter({ has: page.getByText("Encrypted DMs", { exact: true }) });
 }
 
-/** From the devices page, revokes this person's other active device. */
+/** From Devices & security, revokes the other encrypted messaging device. */
 export async function revokeOtherDevice(session: StagingE2eeSession) {
   const { page } = session;
-  await gotoStaging(page, `${ENCRYPTED_ROUTE}/devices`);
-  const active = activeDeviceRows(page);
+  await gotoStaging(page, "/preferences?tab=security");
+  const main = page.getByRole("main");
   await expect(
-    active,
-    `${session.label} should list both of this person's devices`
-  ).toHaveCount(2, { timeout: UI_TIMEOUT_MS });
-  const thisDevice = page.getByText("This device", { exact: true });
-  await expect(active.filter({ has: thisDevice })).toHaveCount(1);
-  await active
-    .filter({ hasNot: thisDevice })
-    .getByRole("button", { name: /^Revoke / })
-    .click();
-  await page
-    .getByRole("dialog", { name: /^Revoke .+\?$/u })
-    .getByRole("button", { name: "Revoke device" })
-    .click();
-  await expect(activeDeviceRows(page)).toHaveCount(1, {
-    timeout: UI_TIMEOUT_MS,
-  });
+    main.getByText("This device", { exact: true }),
+    `${session.label} should pin this browser`
+  ).toHaveCount(1, { timeout: UI_TIMEOUT_MS });
+  // The backup action appears once this browser can sign the revocation.
   await expect(
-    page.getByRole("heading", { name: "Revoked devices" })
+    main
+      .getByRole("region", { name: /^Encrypted backup/u })
+      .getByRole("button", { name: "Set up backup", exact: true })
+  ).toBeVisible({ timeout: FIRST_LOAD_TIMEOUT_MS });
+  const otherDevice = otherEncryptedDeviceRows(page);
+  await expect(
+    otherDevice,
+    `${session.label} should list the second encrypted messaging device`
+  ).toHaveCount(1, { timeout: UI_TIMEOUT_MS });
+  await otherDevice.getByRole("button", { name: /^Revoke /u }).click();
+  const dialog = page.getByRole("dialog", { name: /^Revoke .+\?$/u });
+  await expect(dialog).toContainText(
+    DEVICES_SECURITY_MESSAGES["devicesSecurity.revoke.bothSigned"]
+  );
+  await dialog.getByRole("button", { name: "Revoke device" }).click();
+  await expect(otherDevice).toHaveCount(0, { timeout: UI_TIMEOUT_MS });
+  await expect(
+    page.getByRole("button", {
+      name: /^Revoked or expired in the last 30 days/u,
+    })
   ).toBeVisible({ timeout: UI_TIMEOUT_MS });
 }

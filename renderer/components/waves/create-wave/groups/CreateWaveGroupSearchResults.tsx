@@ -1,8 +1,16 @@
+import {
+  DROPDOWN_CHECKMARK_CLASSES,
+  getDropdownOptionStateClasses,
+} from "@/components/utils/select/dropdown/dropdownTriggerStyles";
+import { CheckIcon } from "@heroicons/react/24/outline";
 import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
 import CircleLoader, {
   CircleLoaderSize,
 } from "@/components/distribution-plan-tool/common/CircleLoader";
 import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
+import { isChainGroupNamePending } from "@/lib/waves-move/chainGroupName";
 
 export type CreateWaveGroupSearchResultsLayout = "popover" | "inline";
 
@@ -89,16 +97,6 @@ function HighlightedText({
   );
 }
 
-function getOptionStateClasses(isActive: boolean, isSelected: boolean): string {
-  if (isActive) {
-    return "tw-bg-iron-800 tw-text-white tw-ring-2 tw-ring-inset tw-ring-primary-400";
-  }
-  if (isSelected) {
-    return "tw-bg-iron-800 tw-text-white";
-  }
-  return "tw-text-white hover:tw-bg-iron-800";
-}
-
 function CreateWaveGroupSearchResultOption({
   group,
   index,
@@ -118,22 +116,30 @@ function CreateWaveGroupSearchResultOption({
   readonly onHover: (index: number) => void;
   readonly onSelect: (group: ApiGroupFull) => void;
 }) {
-  const optionStateClasses = getOptionStateClasses(isActive, isSelected);
+  const locale = useBrowserLocale();
+  const optionStateClasses = getDropdownOptionStateClasses(
+    isActive || isSelected
+  );
 
   return (
     <li
       id={`${listboxId}-option-${index}`}
       role="option"
       aria-selected={isSelected}
-      className={`tw-relative tw-flex tw-w-full tw-select-none tw-items-center tw-justify-between tw-rounded-lg tw-px-2 tw-py-2 tw-text-sm tw-font-medium ${optionStateClasses}`}
+      className={`tw-relative tw-flex tw-w-full tw-select-none tw-items-center tw-justify-between tw-rounded-lg tw-px-2 tw-py-2 tw-text-sm tw-font-medium ${optionStateClasses} ${isActive ? "tw-ring-2 tw-ring-inset tw-ring-iron-500" : ""}`}
       onMouseEnter={() => onHover(index)}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onSelect(group)}
     >
-      <div className="tw-flex tw-w-full tw-flex-col tw-gap-y-1">
+      <div className="tw-flex tw-min-w-0 tw-flex-1 tw-flex-col tw-gap-y-1">
         <span className="tw-truncate tw-text-sm tw-font-semibold tw-text-iron-50">
           <HighlightedText text={group.name} query={searchCriteria} />
         </span>
+        {isChainGroupNamePending(group) && (
+          <span className="tw-text-xs tw-font-normal tw-text-iron-400">
+            {t(locale, "wavesMove.groupNamePending")}
+          </span>
+        )}
         <span className="tw-truncate tw-text-xs tw-text-iron-400">
           <HighlightedText
             text={`@${group.created_by.handle ?? "unknown"}`}
@@ -141,6 +147,12 @@ function CreateWaveGroupSearchResultOption({
           />
         </span>
       </div>
+      {isSelected && (
+        <CheckIcon
+          aria-hidden="true"
+          className={`tw-ml-2 tw-size-4 tw-shrink-0 ${DROPDOWN_CHECKMARK_CLASSES}`}
+        />
+      )}
     </li>
   );
 }
@@ -247,12 +259,12 @@ export default function CreateWaveGroupSearchResults({
 }) {
   const wrapperClasses =
     layout === "inline"
-      ? "tw-mt-1.5 tw-w-full tw-rounded-lg tw-bg-iron-800 tw-shadow-xl tw-ring-1 tw-ring-black tw-ring-opacity-5"
-      : "tw-absolute tw-z-50 tw-mt-1.5 tw-w-full tw-rounded-lg tw-bg-iron-800 tw-shadow-xl tw-ring-1 tw-ring-black tw-ring-opacity-5";
+      ? "tw-mt-1.5 tw-w-full tw-rounded-lg tw-bg-iron-900 tw-shadow-xl tw-ring-1 tw-ring-black tw-ring-opacity-5"
+      : "tw-absolute tw-z-50 tw-mt-1.5 tw-w-full tw-rounded-lg tw-bg-iron-900 tw-shadow-xl tw-ring-1 tw-ring-black tw-ring-opacity-5";
   const panelClasses =
     layout === "inline"
-      ? "tw-w-full tw-overflow-hidden tw-rounded-md tw-bg-iron-800 tw-shadow-2xl tw-ring-1 tw-ring-white/10"
-      : "tw-absolute tw-w-full tw-overflow-hidden tw-rounded-md tw-bg-iron-800 tw-shadow-2xl tw-ring-1 tw-ring-white/10";
+      ? "tw-w-full tw-overflow-hidden tw-rounded-md tw-bg-iron-900 tw-shadow-2xl tw-ring-1 tw-ring-white/10"
+      : "tw-absolute tw-w-full tw-overflow-hidden tw-rounded-md tw-bg-iron-900 tw-shadow-2xl tw-ring-1 tw-ring-white/10";
 
   return (
     <LazyMotion features={domAnimation}>

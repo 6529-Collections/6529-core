@@ -40,6 +40,7 @@ import {
   getDropQueryKey,
 } from "@/services/api/drop-api";
 import {
+  AnimatePresence,
   domAnimation,
   LazyMotion,
   m,
@@ -254,7 +255,7 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
                     layout={!prefersReducedMotion}
                     layoutDependency={isInlineRightOpen}
                     transition={{ layout: chatLayoutTransition }}
-                    className="tw-flex tw-h-full tw-min-h-0 tw-min-w-0 tw-flex-grow tw-flex-col tw-border-y-0 tw-border-l-0 tw-border-r tw-border-solid tw-border-iron-800 tw-will-change-transform"
+                    className={`tw-flex tw-h-full tw-min-h-0 tw-min-w-0 tw-flex-grow tw-flex-col tw-border-y-0 tw-border-l-0 tw-will-change-transform ${isInlineRightOpen ? "" : "tw-border-r tw-border-solid tw-border-iron-800"}`}
                   >
                     <div
                       className="tw-flex tw-h-full tw-min-h-0 tw-flex-1 tw-flex-col"
@@ -307,13 +308,15 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
           profile={connectedProfile}
         />
       )}
-      {informationOpen && informationWave.wave?.id === waveId && (
-        <WaveInformationSheet
-          key={information.request.id}
-          wave={informationWave.wave}
-          onClose={information.close}
-        />
-      )}
+      <AnimatePresence>
+        {informationOpen && informationWave.wave?.id === waveId && (
+          <WaveInformationSheet
+            key={information.request.id}
+            wave={informationWave.wave}
+            onClose={information.close}
+          />
+        )}
+      </AnimatePresence>
     </WaveChatScrollProvider>
   );
 };

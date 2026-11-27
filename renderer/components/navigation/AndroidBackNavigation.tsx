@@ -13,6 +13,7 @@ import {
   isEncryptedMessagesPathname,
 } from "@/helpers/navigation.helpers";
 import { closeDropInCurrentUrl } from "@/helpers/waves/close-drop.helpers";
+import { isProfileWavesFeed } from "@/helpers/waves/profile-feed-navigation";
 import { useNativeKeyboard } from "@/hooks/useNativeKeyboard";
 import { dismissAndroidBackLayer } from "@/services/capacitor/android-back-layers";
 import { App } from "@capacitor/app";
@@ -21,6 +22,7 @@ import { Keyboard } from "@capacitor/keyboard";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useExitActiveWave } from "./useExitActiveWave";
+import { runPhoneChevronBackTransition } from "@/helpers/waves/wave-navigation-transition";
 
 const ROOT_ROUTES = new Set([
   "/",
@@ -104,14 +106,16 @@ export default function AndroidBackNavigation() {
       pathname: url.pathname,
       searchParams: url.searchParams,
     });
-    if (waveId) {
+    if (waveId || isProfileWavesFeed(url.pathname, url.searchParams)) {
       if (myStream) exitActiveWave(isDirectMessage);
       else router.replace(getWaveHomeRoute({ isDirectMessage, isApp: true }));
       return;
     }
     const parentRoute = getParentRoute(url);
     if (parentRoute) {
-      router.replace(parentRoute);
+      runPhoneChevronBackTransition(parentRoute, () =>
+        router.replace(parentRoute)
+      );
       return;
     }
     if (history.canGoBack) {

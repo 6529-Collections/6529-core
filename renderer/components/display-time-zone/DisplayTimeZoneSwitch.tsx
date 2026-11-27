@@ -1,5 +1,7 @@
 "use client";
 
+import IconButton from "@/components/utils/button/IconButton";
+
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import { ChevronRightIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { XMarkIcon } from "@heroicons/react/20/solid";
@@ -20,10 +22,6 @@ import {
 } from "@/hooks/useDisplayTimeZone";
 import type { SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
-import {
-  WAVE_HEADER_ACTION_CLASSES,
-  WAVE_HEADER_ACTION_SURFACE_CLASSES,
-} from "@/components/brain/left-sidebar/waves/WaveHeaderActions";
 import {
   getTimeZoneCityName,
   LOCAL_TIME_ZONE_PREFERENCE,
@@ -273,14 +271,13 @@ export default function DisplayTimeZoneSwitch({
           <PopoverButton
             aria-label={switchLabel}
             {...tooltipProps}
-            className={WAVE_HEADER_ACTION_CLASSES}
+            layout="toolbar"
+            as={IconButton}
           >
-            <span className={WAVE_HEADER_ACTION_SURFACE_CLASSES}>
-              <ClockIcon
-                aria-hidden="true"
-                className="tw-size-4 tw-flex-shrink-0"
-              />
-            </span>
+            <ClockIcon
+              aria-hidden="true"
+              className="tw-size-4 tw-flex-shrink-0"
+            />
           </PopoverButton>
         )}
         <PopoverPanel
@@ -308,13 +305,21 @@ function AnnouncementRegion({ text }: { readonly text: string }) {
  * tap switches to UTC (or local time) for this tab, a second tap switches
  * back.
  */
-export function useDisplayTimeZoneMenuItem(): CompactMenuItem {
+export function useDisplayTimeZoneMenuItem({
+  checkable = false,
+}: { readonly checkable?: boolean } = {}): CompactMenuItem {
   const locale = useBrowserLocale();
   const state = useDisplayTimeZoneState();
   const { setting, alternative, isOverridden } = getSwitchChoices(
     state,
     locale
   );
+  const toggleState = checkable
+    ? {
+        label: t(locale, "displayTimeZone.menu.useUtc"),
+        checked: state.effectivePreference === UTC_TIME_ZONE_PREFERENCE,
+      }
+    : {};
 
   if (isOverridden) {
     return {
@@ -322,6 +327,7 @@ export function useDisplayTimeZoneMenuItem(): CompactMenuItem {
       label: t(locale, "displayTimeZone.menu.reset", { zone: setting.name }),
       icon: <ClockIcon className="tw-h-4 tw-w-4 tw-flex-shrink-0" />,
       onSelect: () => state.setOverride(null),
+      ...toggleState,
     };
   }
   return {
@@ -334,5 +340,6 @@ export function useDisplayTimeZoneMenuItem(): CompactMenuItem {
     ),
     icon: <ClockIcon className="tw-h-4 tw-w-4 tw-flex-shrink-0" />,
     onSelect: () => state.setOverride(alternative.preference),
+    ...toggleState,
   };
 }

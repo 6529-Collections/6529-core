@@ -1,13 +1,10 @@
 import type { ApiDeviceSignature } from "@/generated/models/ApiDeviceSignature";
+import type { IndexedDbOperation } from "@/lib/storage/idb-keyval";
 import {
   getStructuredApiErrorCode,
   getStructuredApiErrorStatus,
 } from "@/services/api/common-api";
-import { isDirectProfileAuthSession } from "@/components/auth/auth-session-scope";
-import {
-  getConnectedWalletAccounts,
-  getWalletAddress,
-} from "@/services/auth/auth.utils";
+import { getWalletAddress } from "@/services/auth/auth.utils";
 import {
   recordDeviceSigningEvent,
   reportSignedWriteFallback,
@@ -23,6 +20,7 @@ import {
 import { isEd25519Supported, signEventId } from "./ed25519";
 import { isSignedMessagesEnabled } from "./feature";
 import { readDeviceGrantHint } from "./grant-hint";
+import { isOwnProfileSession } from "./own-profile-session";
 import {
   computeInterimEventId,
   DEVICE_EVENT_KIND_SCOPE,
@@ -102,29 +100,6 @@ const ACTION_BY_KIND: Readonly<Record<DeviceEventKind, SignedWriteAction>> = {
 
 const now = (): number => performance.now();
 
-/**
- * Whether the active session acts as the wallet's own profile. The server
- * returns the caller's own profile id as the session role, so a role alone
- * does not mean a proxy; a proxy session's role is another profile's id.
- * Unknown profile ids fail safe: the write goes unsigned.
- */
-function isOwnProfileSession(
-  address: string,
-  ownProfileId: string | null | undefined
-): boolean {
-  const account = getConnectedWalletAccounts().find(
-    (candidate) => candidate.address.toLowerCase() === address.toLowerCase()
-  );
-  if (account === undefined) {
-    return false;
-  }
-  return isDirectProfileAuthSession({
-    authRole: account.role,
-    profileId: account.profileId ?? ownProfileId,
-    hasActiveProxy: false,
-  });
-}
-
 /** Where an attempt is, so a timeout or error can say where time went. */
 interface SigningProgress {
   phase: Exclude<SigningPhase, "send">;
@@ -132,6 +107,7 @@ interface SigningProgress {
   grantFound: boolean | null;
   readonly startedAt: number;
   lockedAt: number | null;
+  storageOperation?: IndexedDbOperation | undefined;
 }
 
 type LocalFailureReason = Extract<
@@ -145,6 +121,7 @@ interface SigningFailure {
   readonly phase: SigningProgress["phase"];
   readonly elapsedMs: number;
   readonly lockWaitMs: number | undefined;
+  readonly storageOperation?: IndexedDbOperation | undefined;
 }
 
 type SigningAttempt =
@@ -168,9 +145,14 @@ async function signWrite(
   write: DeviceSignedWrite,
   progress: SigningProgress
 ): Promise<SigningAttempt> {
-  const allocation = await allocateDeviceSeq(address, Date.now(), () => {
-    progress.phase = "storage";
-    progress.lockedAt = now();
+  const allocation = await allocateDeviceSeq(address, Date.now(), {
+    onLocked() {
+      progress.phase = "storage";
+      progress.lockedAt = now();
+    },
+    onStorageFailure(operation) {
+      progress.storageOperation = operation;
+    },
   });
   progress.grantFound = allocation !== null;
   if (!allocation) {
@@ -289,6 +271,8 @@ async function attemptSignature(
     phase: progress.phase,
     elapsedMs,
     lockWaitMs,
+    storageOperation:
+      failure === "storage-error" ? progress.storageOperation : undefined,
   };
 }
 
@@ -409,6 +393,7 @@ const reportFallback = (
     phase: failure?.phase ?? "send",
     elapsedMs: failure?.elapsedMs,
     lockWaitMs: failure?.lockWaitMs,
+    storageOperation: failure?.storageOperation,
   });
 
 /** A finished write, or a request to sign it again. */

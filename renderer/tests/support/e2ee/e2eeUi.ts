@@ -4,6 +4,7 @@ import { escapeRegExp } from "lodash";
 import { dismissNextDevTools } from "../localSandbox";
 import {
   e2eeExactMessages,
+  e2eeMessage,
   NO_BACKUP_WARNING,
   NO_BACKUP_WARNING_APP,
 } from "./e2eeCopy";
@@ -19,6 +20,15 @@ import {
  */
 
 export const ENCRYPTED_ROUTE = "/messages/encrypted";
+
+export async function openComposerActions(page: Page) {
+  const show = page.getByRole("button", {
+    name: "Show composer actions",
+    exact: true,
+  });
+  if (await show.isVisible()) await show.click();
+}
+
 const CONVERSATION_URL = /\/messages\/encrypted\/(0x[0-9a-f]{64})$/u;
 /** First visit compiles routes and loads the MLS WebAssembly module. */
 const FIRST_LOAD_TIMEOUT_MS = 120_000;
@@ -89,7 +99,7 @@ export async function enroll(
     timeout: E2EE_UI_TIMEOUT_MS,
   });
   await expect(
-    page.getByRole("link", { name: "Devices for encrypted messages" })
+    page.getByRole("link", { name: e2eeMessage("e2ee.devices.open") })
   ).toBeVisible();
   expect(session.signatureCount()).toBe(before + 1);
 }

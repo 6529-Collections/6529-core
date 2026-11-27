@@ -3,6 +3,7 @@
 import { isAuthResolving } from "@/components/auth/authResolution";
 import AuthLoadingPlaceholder from "@/components/auth/AuthLoadingPlaceholder";
 import { E2eeMessagesSection } from "@/components/e2ee/sidebar/E2eeMessagesSection";
+import PreferencesGearLink from "@/components/preferences/PreferencesGearLink";
 import { isE2eeEnabled } from "@/config/e2eeEnv";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
@@ -168,9 +169,15 @@ const WebDirectMessagesList: React.FC<WebDirectMessagesListProps> = ({
             }`}
           >
             {!isCollapsed && (
-              <span className="tw-text-xl tw-font-semibold tw-text-iron-50">
-                {t(locale, "quickDm.listTitle")}
-              </span>
+              <div className="tw-flex tw-min-w-0 tw-items-center tw-gap-1">
+                <span className="tw-break-words tw-text-xl tw-font-semibold tw-text-iron-50">
+                  {t(locale, "quickDm.listTitle")}
+                </span>
+                <PreferencesGearLink
+                  tab="messages"
+                  label={t(locale, "profilePreferences.dm.linkLabel")}
+                />
+              </div>
             )}
             {shouldRenderCreateDirectMessage && (
               <div

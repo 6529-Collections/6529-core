@@ -3,10 +3,15 @@ import type { ApiE2eeLogItem } from "../api-types";
 import { base64ToBytes } from "../bytes";
 import { parseCredentialIdentity } from "../grant";
 import { MlsError } from "../mls-adapter";
-import { decodePayload } from "../payload";
+import { decodePayload, isPollEvent } from "../payload";
 import type { WasmProposalSummary, WasmStagedSummary } from "../wasm-types";
 import { finalizeOwnCommit } from "./commit";
-import { ownDeviceKey, requireMls, type EngineContext } from "./context";
+import {
+  checkpoint,
+  ownDeviceKey,
+  requireMls,
+  type EngineContext,
+} from "./context";
 import { RetryableError } from "./errors";
 import {
   addNotices,
@@ -19,6 +24,8 @@ import {
   touchActivity,
 } from "./groups";
 import { applyPayload, placeholderMessage, undecryptableId } from "./messages";
+import type { StoredOutboxItem } from "../records";
+import { pollAttemptKey, pollRosterHash } from "./poll-roster";
 import { credentialWallets, deriveCommitNotices } from "./notices";
 import { isStrictRemoval, mayBeIdle, type MemberRef } from "./required-changes";
 import type { GroupRuntime } from "./store";
@@ -414,13 +421,78 @@ async function processEntryItem(
   }
 }
 
+async function applyOwnPoll(
+  ctx: EngineContext,
+  runtime: GroupRuntime,
+  item: ApiE2eeLogItem,
+  entry: StoredOutboxItem,
+  attempt: string
+): Promise<void> {
+  const roster = entry.pollAttemptRosters?.[String(item.epoch)];
+  const payload =
+    entry.payload.t === "poll" && roster
+      ? { ...entry.payload, rosterHash: pollRosterHash(roster) }
+      : entry.payload;
+
+  await preparePayload(ctx, runtime, payload);
+  const applied = applyPayload(runtime, payload, {
+    g: runtime.record.g,
+    seq: item.seq,
+    serverTs: item.created_at,
+    senderProfileId: ctx.profileId,
+    senderDeviceKey: ownDeviceKey(ctx),
+    sigOk: true,
+    epoch: item.epoch,
+    body: null,
+    sig: null,
+    pending: false,
+    ownPollRoster: roster,
+  });
+  if (!applied && payload.t === "poll" && !runtime.messages.has(payload.id)) {
+    ctx.store.error = "E2EE_SEND_FAILED";
+  }
+
+  // If multiple submissions landed, only the earliest log entry applies.
+  const superseded = Object.keys(entry.pollAttempts ?? {}).filter(
+    (hash) => hash !== attempt
+  );
+  if (superseded.length > 0) {
+    runtime.record.sentPollAttempts = [
+      ...(runtime.record.sentPollAttempts ?? []),
+      ...superseded,
+    ].slice(-512);
+  }
+  runtime.outbox.delete(entry.id);
+  runtime.record.cursor = item.seq;
+  runtime.record.updatedAt = Math.max(
+    runtime.record.updatedAt,
+    item.created_at
+  );
+  await checkpoint(ctx, { groups: [runtime], deleteOutbox: [entry.id] });
+}
+
 async function markOutboxSent(
   ctx: EngineContext,
   runtime: GroupRuntime,
   item: ApiE2eeLogItem
 ): Promise<boolean> {
-  for (const entry of runtime.outbox.values()) {
-    if (entry.sealed?.data === item.data) {
+  const sentPollAttempts = runtime.record.sentPollAttempts;
+  const entries = [...runtime.outbox.values()];
+  const hasPollAttempts =
+    (sentPollAttempts?.length ?? 0) > 0 ||
+    entries.some((entry) => entry.pollAttempts !== undefined);
+  const attempt = hasPollAttempts ? pollAttemptKey(item.data) : "";
+  const superseded = sentPollAttempts?.indexOf(attempt) ?? -1;
+  if (sentPollAttempts && superseded >= 0) {
+    sentPollAttempts.splice(superseded, 1);
+    return true;
+  }
+  for (const entry of entries) {
+    if (entry.pollAttempts?.[attempt] === item.epoch) {
+      await applyOwnPoll(ctx, runtime, item, entry, attempt);
+      return true;
+    }
+    if (entry.sealed?.data === item.data && !isPollEvent(entry.payload)) {
       runtime.outbox.delete(entry.id);
       const message = await loadMessage(ctx, runtime, entry.id);
       if (message && entry.payload.t === "msg") {
@@ -482,7 +554,19 @@ async function processMessageItem(
     if (!(error instanceof MlsError)) {
       throw error;
     }
-    return placeholder();
+    // A self group's items are never chat messages (D175, P60).
+    return record.metadata.kind === "self" ? null : placeholder();
+  }
+  if (record.metadata.kind === "self") {
+    if (!decrypted.sig_ok) {
+      return null;
+    }
+    ctx.readSync?.receive(
+      runtime,
+      base64ToBytes(decrypted.body),
+      decrypted.sender.device_key.toLowerCase()
+    );
+    return null;
   }
   checkEpochFp(
     runtime,
@@ -495,11 +579,12 @@ async function processMessageItem(
   }
   const senderDeviceKey = decrypted.sender.device_key.toLowerCase();
   if (!(await preparePayload(ctx, runtime, payload))) return payload.id;
+  const senderProfileId = await profileOfLeaf(ctx, senderDeviceKey);
   applyPayload(runtime, payload, {
     g: record.g,
     seq: item.seq,
     serverTs: item.created_at,
-    senderProfileId: await profileOfLeaf(ctx, senderDeviceKey),
+    senderProfileId,
     senderDeviceKey,
     sigOk: decrypted.sig_ok,
     epoch: decrypted.epoch,
@@ -508,6 +593,15 @@ async function processMessageItem(
     pending: false,
   });
   record.updatedAt = Math.max(record.updatedAt, item.created_at);
+  // P60: replying from another device marks the chat read up to the reply.
+  if (
+    payload.t === "msg" &&
+    !payload.imp &&
+    senderProfileId === ctx.profileId &&
+    decrypted.sig_ok
+  ) {
+    ctx.readSync?.ownMessage(runtime, item.seq);
+  }
   return payload.id;
 }
 

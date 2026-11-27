@@ -4,10 +4,14 @@ import {
   getSubmissionCount,
   getTrophyArtworkCount,
 } from "@/helpers/artist-activity.helpers";
+import { useProfileDirectMessage } from "@/hooks/useProfileDirectMessage";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import UserFollowBtn from "../utils/UserFollowBtn";
 import ProfileBlockActionMenu from "./ProfileBlockActionMenu";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import useIsMobileLayoutViewport from "@/hooks/useIsMobileLayoutViewport";
+import { PROFILE_MOBILE_ACTION_CLASS } from "./user-page-header-surface";
 
 export type ProfileAction = "block" | "unblock" | "suspend" | "reinstate";
 
@@ -23,15 +27,11 @@ export type ProfileModerationControls = Readonly<{
   onSelectAction: (action: ProfileAction) => void;
 }>;
 
-export default function ProfileHeaderRelationshipActions({
-  directMessageLoading,
+function ProfileHeaderActionMenu({
   moderationControls,
-  onCreateDirectMessage,
   profile,
 }: Readonly<{
-  directMessageLoading: boolean;
   moderationControls: ProfileModerationControls;
-  onCreateDirectMessage: (primaryWallet: string | undefined) => void;
   profile: ApiIdentity;
 }>) {
   const { connectedProfile } = useAuth();
@@ -39,9 +39,6 @@ export default function ProfileHeaderRelationshipActions({
     return null;
   }
 
-  const directMessageAction = profile.primary_wallet
-    ? () => onCreateDirectMessage(profile.primary_wallet)
-    : undefined;
   const moderationKind = moderationControls.isSuspended
     ? ("reinstate" as const)
     : ("suspend" as const);
@@ -59,7 +56,7 @@ export default function ProfileHeaderRelationshipActions({
       }
     : undefined;
 
-  const actionMenu = (
+  return (
     <ProfileBlockActionMenu
       handle={profile.handle}
       hasArtistActivity={
@@ -78,6 +75,27 @@ export default function ProfileHeaderRelationshipActions({
       onBlock={() => moderationControls.onSelectAction("block")}
     />
   );
+}
+
+export default function ProfileHeaderRelationshipActions({
+  moderationControls,
+  profile,
+}: Readonly<{
+  moderationControls: ProfileModerationControls;
+  profile: ApiIdentity;
+}>) {
+  const { connectedProfile } = useAuth();
+  const onDirectMessage = useProfileDirectMessage(profile);
+  const { isApp } = useDeviceInfo();
+  const isMobileViewport = useIsMobileLayoutViewport();
+  const isCompact = isApp || isMobileViewport;
+  const actionMenu = (
+    <ProfileHeaderActionMenu
+      moderationControls={moderationControls}
+      profile={profile}
+    />
+  );
+  if (!profile.handle) return null;
   if (!connectedProfile?.handle) return actionMenu;
 
   return (
@@ -91,9 +109,10 @@ export default function ProfileHeaderRelationshipActions({
       showMuteButton={false}
       unblockPending={moderationControls.isUnblocking}
       onUnblock={() => moderationControls.onSelectAction("unblock")}
-      onDirectMessage={directMessageAction}
-      directMessageLoading={directMessageLoading}
-      beforeFollowAction={actionMenu}
+      onDirectMessage={onDirectMessage}
+      afterFollowAction={actionMenu}
+      buttonClassName={isCompact ? PROFILE_MOBILE_ACTION_CLASS : undefined}
+      directMessageButtonLayout={isCompact ? "profile-menu" : undefined}
     />
   );
 }

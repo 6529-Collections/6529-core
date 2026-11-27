@@ -42,6 +42,8 @@ const nextMintResult: ReturnType<typeof useNextMintDrop> = {
   isSettingsLoaded: true,
   isFetching: false,
   isLoading: false,
+  isError: false,
+  isFetchedAfterMount: true,
 };
 
 // Include malformed API mappings at this fixture boundary to test rejection.
@@ -288,6 +290,21 @@ describe("UserPageSubscriptionsUpcoming", () => {
     expect(screen.queryByText("The Memes #4")).not.toBeInTheDocument();
     expect(mockRequestAuth).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
+  });
+
+  it("says funded at least through when funding reaches the forecast end", () => {
+    renderComponent({
+      coverage: {
+        funded_through: { token_id: 3 },
+        next_unfunded: null,
+        fully_funded_drops: 24,
+        forecast: { forecast_truncated: true, horizon_end_token_id: 3 },
+      },
+    });
+    expect(screen.getByText("Funded at least through")).toHaveClass(
+      "tw-text-amber-200"
+    );
+    expect(screen.queryByText("Funded through")).not.toBeInTheDocument();
   });
 
   it("places one amber funded boundary after its drop in both list views", () => {

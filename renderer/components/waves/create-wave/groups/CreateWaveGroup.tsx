@@ -23,6 +23,7 @@ import {
   getInlineGroupIdentityFromProfile,
 } from "./createWaveInlineGroupBuilder";
 import CreateWaveGroupInlinePanel from "./CreateWaveGroupInlinePanel";
+import { CREATE_WAVE_FORM_STYLES } from "../utils/createWaveFormStyles";
 
 function getSelectedGroupWallets({
   selectedGroup,
@@ -242,7 +243,6 @@ export default function CreateWaveGroup({
       ? {
           kind: "draft" as const,
           group: getOnlyMeGroupDescription(connectedProfile.primary_wallet),
-          name: defaultLabel,
           summary: defaultLabel,
         }
       : undefined;
@@ -273,10 +273,7 @@ export default function CreateWaveGroup({
       tabIndex={hasError ? -1 : undefined}
     >
       <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-3">
-        <h3
-          id={labelId}
-          className="tw-m-0 tw-text-base tw-font-semibold tw-text-iron-100"
-        >
+        <h3 id={labelId} className={CREATE_WAVE_FORM_STYLES.sectionTitle}>
           {groupLabel}
         </h3>
         {isNotChatWave && groupType === CreateWaveGroupConfigType.CAN_CHAT && (

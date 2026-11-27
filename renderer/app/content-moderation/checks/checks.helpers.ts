@@ -1,17 +1,16 @@
-import { DROPDOWN_FIELD_CLASSES } from "@/components/utils/select/dropdown/dropdownTriggerStyles";
+import { getDropdownTriggerClasses } from "@/components/utils/select/dropdown/dropdownTriggerStyles";
 import type { SupportedLocale } from "@/i18n/locales";
 import { ApiModerationAction } from "@/generated/models/ApiModerationAction";
 import { t, type MessageKey } from "@/i18n/messages";
 import type { ModerationCheckFilters } from "@/services/api/moderation-checks-api";
 
 export const CHECK_FILTER_OPTIONS = {
-  subject_type: ["REP_CATEGORY", "PROFILE_BIO", "GROUP_NAME", "DROP"],
+  subject_type: ["REP_CATEGORY", "PROFILE_BIO", "DROP"],
   outcome: ["ALLOW", "REJECT", "ERROR", "PENDING"],
   policy_family: ["PUBLIC_FIELDS", "WAVE_CONTENT"],
   review_status: ["NEEDS_REVIEW", "REVIEWED"],
   trigger: [
     "PUBLIC_FIELD",
-    "KNOWN_SAFE_PERSONAL_NAME",
     "PROFILE_SUSPENDED",
     "MANUAL_OVERRIDE",
     "REPEATED_IDENTICAL_CONTENT",
@@ -32,7 +31,6 @@ const VALUE_KEYS: Record<string, MessageKey> = {
   CLASSIFY: "checks.operation.CLASSIFY",
   PROFILE_STATUS: "checks.profileStatus",
   PUBLIC_FIELD: "checks.trigger.PUBLIC_FIELD",
-  KNOWN_SAFE_PERSONAL_NAME: "checks.trigger.KNOWN_SAFE_PERSONAL_NAME",
   PROFILE_SUSPENDED: "checks.trigger.PROFILE_SUSPENDED",
   MANUAL_OVERRIDE: "checks.trigger.MANUAL_OVERRIDE",
   REPEATED_IDENTICAL_CONTENT: "checks.trigger.REPEATED_IDENTICAL_CONTENT",
@@ -45,7 +43,6 @@ const VALUE_KEYS: Record<string, MessageKey> = {
   NO_SIGNAL: "checks.trigger.NO_SIGNAL",
   REP_CATEGORY: "checks.subject.REP_CATEGORY",
   PROFILE_BIO: "checks.subject.PROFILE_BIO",
-  GROUP_NAME: "checks.subject.GROUP_NAME",
   DROP: "checks.subject.DROP",
   ALLOW: "checks.outcome.ALLOW",
   REJECT: "checks.outcome.REJECT",
@@ -131,7 +128,7 @@ export function navigateChecks(params: URLSearchParams): void {
 
 export const checkControlClass =
   "tw-min-h-11 tw-w-full tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-950 tw-px-3 tw-py-2 tw-text-sm tw-text-iron-100 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 disabled:tw-opacity-50";
-export const checkSelectClass = `${DROPDOWN_FIELD_CLASSES} tw-min-h-11 tw-w-full tw-px-3 tw-py-2 tw-text-sm`;
+export const checkSelectClass = `${getDropdownTriggerClasses({ variant: "form", metrics: { minHeight: 44, x: 12, y: 8, text: "sm" } })} tw-w-full`;
 
 export const checkButtonClass =
   "tw-min-h-11 tw-cursor-pointer tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-900 tw-px-4 tw-py-2 tw-text-sm tw-font-semibold tw-text-iron-100 hover:tw-bg-iron-800 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 disabled:tw-cursor-default disabled:tw-opacity-50";

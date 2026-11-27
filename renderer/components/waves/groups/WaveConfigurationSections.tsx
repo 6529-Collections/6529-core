@@ -3,6 +3,7 @@
 import { useWaveConfiguration } from "@/hooks/waves/useWaveConfiguration";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import WaveAdminDropDeletion from "@/components/waves/specs/WaveAdminDropDeletion";
 import WaveChatReplies from "@/components/waves/specs/WaveChatReplies";
 import WaveChatStatus from "@/components/waves/specs/WaveChatStatus";
 import WaveDisableLinks from "@/components/waves/specs/WaveDisableLinks";
@@ -28,15 +29,12 @@ export default function WaveConfigurationSections({
   const showChatSection = showChatStatus || showChatSettings;
 
   return (
-    <div className="tw-divide-x-0 tw-divide-y tw-divide-solid tw-divide-iron-800 tw-pb-4">
+    <div className="tw-divide-x-0 tw-divide-y tw-divide-solid tw-divide-white/[0.06] tw-pb-4">
       <WavePanelSection
         title={waveRightPanelText("waves.sidebar.rightPanel.settings.access")}
       >
-        <WaveAccessGroups
-          wave={wave}
-          display="members"
-          includeCompetition={false}
-        />
+        <WaveAccessGroups wave={wave} includeCompetition={false} />
+        <WaveAdminDropDeletion wave={wave} />
       </WavePanelSection>
 
       {showChatSection && (

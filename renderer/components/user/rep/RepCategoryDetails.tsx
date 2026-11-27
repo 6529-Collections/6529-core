@@ -3,7 +3,6 @@
 import { AuthContext } from "@/components/auth/Auth";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import Button from "@/components/utils/button/Button";
-import { isHelpBotCreditRepCategory } from "@/components/utils/input/rep-category/repCategoryConstants";
 import useKeyboardFocusScroll from "@/components/waves/create-wave/hooks/useKeyboardFocusScroll";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
@@ -11,6 +10,7 @@ import type { ApiRepCategory } from "@/generated/models/ApiRepCategory";
 import type { ApiRepContributorsPage } from "@/generated/models/ApiRepContributorsPage";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { chainRatingBlockedText } from "@/components/chain-identity/chainErrorMessage";
 import { useRepAllocation } from "@/hooks/useRepAllocation";
 import { formatInteger } from "@/i18n/format";
 import { t, tRich } from "@/i18n/messages";
@@ -55,21 +55,17 @@ type Contributor = {
 
 function canEditCategory(
   direction: RepDirection,
-  category: string,
   profile: ApiIdentity,
   viewer: ApiIdentity | null,
   proxy: ApiProfileProxy | null
 ) {
   if (direction === "given")
     return canManageGivenRatings(profile, viewer, proxy);
-  return (
-    !isHelpBotCreditRepCategory(category) &&
-    getCanEditRep({
-      myProfile: viewer,
-      targetProfile: profile,
-      activeProfileProxy: proxy,
-    })
-  );
+  return getCanEditRep({
+    myProfile: viewer,
+    targetProfile: profile,
+    activeProfileProxy: proxy,
+  });
 }
 
 function getOwnContributor(
@@ -122,11 +118,11 @@ function ContributorIdentity({
       href={`/${encodeURIComponent(identity)}`}
       className="tw-flex tw-min-h-11 tw-min-w-0 tw-flex-1 tw-items-center tw-gap-2 tw-rounded-lg tw-text-sm tw-font-medium tw-text-iron-100 tw-no-underline tw-transition-colors hover:tw-text-iron-400 focus-visible:tw-text-iron-400 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 lg:tw-min-h-0"
     >
-      <span
-        aria-hidden="true"
-        className="tw-flex tw-size-6 tw-shrink-0 tw-items-center tw-justify-center tw-overflow-hidden tw-rounded-full tw-bg-iron-700 tw-text-xs"
-      >
-        {row.profile.pfp ? (
+      {row.profile.pfp && (
+        <span
+          aria-hidden="true"
+          className="tw-flex tw-size-6 tw-shrink-0 tw-items-center tw-justify-center tw-overflow-hidden tw-rounded-full tw-bg-iron-700 tw-text-xs"
+        >
           <Image
             unoptimized
             width={24}
@@ -135,10 +131,8 @@ function ContributorIdentity({
             alt=""
             className="tw-size-full tw-object-cover"
           />
-        ) : (
-          identity.charAt(0).toUpperCase()
-        )}
-      </span>
+        </span>
+      )}
       <span id={labelId} className="tw-truncate">
         {you ? t(locale, "rep.categories.panel.you") : identity}
       </span>
@@ -308,7 +302,6 @@ export default function RepCategoryDetails({
     activeProfileProxy?.created_by.primary_address;
   const canEdit = canEditCategory(
     direction,
-    category.category,
     profile,
     connectedProfile,
     activeProfileProxy
@@ -347,6 +340,7 @@ export default function RepCategoryDetails({
     heroAvailableRep,
     minMaxValues,
     isError,
+    chainError,
     isFetching,
     retry,
   } = useRepAllocation({
@@ -715,15 +709,19 @@ export default function RepCategoryDetails({
       )}
       {canEdit && isError && (
         <p role="alert" className="tw-px-2.5 tw-text-sm tw-text-iron-300">
-          {t(locale, "rep.categories.edit.loadError")}{" "}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={retry}
-            loading={isFetching}
-          >
-            {t(locale, "rep.categories.edit.retry")}
-          </Button>
+          {chainRatingBlockedText(locale, chainError) ?? (
+            <>
+              {t(locale, "rep.categories.edit.loadError")}{" "}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={retry}
+                loading={isFetching}
+              >
+                {t(locale, "rep.categories.edit.retry")}
+              </Button>
+            </>
+          )}
         </p>
       )}
       {query.isFetchNextPageError && (

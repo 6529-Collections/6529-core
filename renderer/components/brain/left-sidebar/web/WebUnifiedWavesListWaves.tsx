@@ -1,4 +1,5 @@
 "use client";
+import "@/i18n/namespaces/wave-sidebar";
 import { SidebarAnnouncementSkeleton } from "@/components/brain/left-sidebar/waves/SidebarDiscoverySkeletons";
 import { SidebarDiscovery } from "@/components/brain/left-sidebar/waves/SidebarDiscovery";
 import {
@@ -8,7 +9,12 @@ import {
 import { useSidebarWaveNavigation } from "@/hooks/useSidebarWaveNavigation";
 
 import Button from "@/components/utils/button/Button";
-import { COMPACT_ACTION_TOUCH_TARGET_CLASS } from "@/components/utils/button/compactActionButtonStyles";
+import {
+  COMPACT_ACTION_BUTTON_SIZE_CLASS,
+  COMPACT_ACTION_ICON_CLASS,
+  COMPACT_ACTION_ICON_STROKE_WIDTH,
+  COMPACT_ACTION_TOUCH_TARGET_CLASS,
+} from "@/components/utils/button/compactActionButtonStyles";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import useCreateModalState from "@/hooks/useCreateModalState";
 import useIsTouchDevice from "@/hooks/useIsTouchDevice";
@@ -19,20 +25,16 @@ import { useRevealActiveSidebarWave } from "@/hooks/useRevealActiveSidebarWave";
 import { usePrefetchWaveData } from "@/hooks/usePrefetchWaveData";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import React, { useCallback, useMemo, useRef } from "react";
-import { Tooltip as ReactTooltip } from "react-tooltip";
+import BodyPortalTooltip from "@/components/utils/tooltip/BodyPortalTooltip";
 import type { VirtualItem } from "../../../../hooks/useVirtualizedWaves";
 import { useVirtualizedWaves } from "../../../../hooks/useVirtualizedWaves";
 import {
   buildHighlyRatedWavePreviewItems,
   getHighlyRatedPreviewWaves,
 } from "../waves/HighlyRatedWavesToggle";
-import {
-  SIDEBAR_TOOLTIP_BORDER,
-  SIDEBAR_TOOLTIP_STYLE,
-} from "../waves/SidebarCategoryLabel";
+import { TOOLTIP_STYLES } from "@/helpers/tooltip.helpers";
 import { usePinnedSidebarList } from "../waves/SidebarPinnedWaves";
 import { SidebarWaveRowsSection } from "../waves/SidebarWaveRowsSection";
-import { SidebarSubwavesToggle } from "../waves/SidebarSubwavesToggle";
 import SectionHeader from "../waves/SectionHeader";
 import { SidebarWaveTreeRowTransition } from "../waves/SidebarWaveTreeRowTransition";
 import WebBrainLeftSidebarWave from "./WebBrainLeftSidebarWave";
@@ -68,13 +70,7 @@ const WAVE_ROW_HEIGHT_COLLAPSED = 44 as const;
 const DIRECT_MESSAGE_ROW_HEIGHT_COLLAPSED = 52 as const;
 const SUBWAVE_ROW_HEIGHT = 48 as const;
 const COLLAPSING_SUBWAVE_ROW_HEIGHT = 1 as const;
-const SUBWAVE_TOGGLE_ROW_HEIGHT = 38 as const;
-const COLLAPSED_SUBWAVE_TOGGLE_ROW_HEIGHT = 42 as const;
 const SIDEBAR_LOCALE = DEFAULT_LOCALE;
-const TOOLTIP_STYLE = {
-  ...SIDEBAR_TOOLTIP_STYLE,
-  zIndex: 10000,
-} as const satisfies React.CSSProperties;
 
 function getVirtualizedAriaLabel({
   isDirectMessage,
@@ -146,18 +142,21 @@ function CreateWaveButton({
   return (
     <Button
       variant="primary"
-      size={compact ? null : "xs"}
+      size={null}
       onClick={onClick}
       aria-label={label}
+      data-wave-typography="preserve"
       data-tooltip-id="create-wave-tooltip"
       data-tooltip-content={label}
       className={`${COMPACT_ACTION_TOUCH_TARGET_CLASS} ${
-        compact ? "tw-size-8 tw-p-0" : "tw-py-0"
+        compact
+          ? "tw-size-8 tw-p-0"
+          : `${COMPACT_ACTION_BUTTON_SIZE_CLASS} tw-py-0`
       }`}
     >
       <PlusIcon
-        className="tw-size-4 tw-flex-shrink-0"
-        strokeWidth={2}
+        className={COMPACT_ACTION_ICON_CLASS}
+        strokeWidth={COMPACT_ACTION_ICON_STROKE_WIDTH}
         aria-hidden="true"
       />
       {!compact && <span>{label}</span>}
@@ -186,7 +185,7 @@ function WebWavesListHeader({
     }
 
     return (
-      <div className="tw-flex tw-h-11 tw-shrink-0 tw-items-center tw-justify-center tw-px-2">
+      <div className="tw-mt-5 tw-flex tw-h-11 tw-shrink-0 tw-items-center tw-justify-center tw-px-2">
         <CreateWaveButton onClick={onCreateWave} compact />
       </div>
     );
@@ -258,14 +257,15 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
     activeWaveId,
     activeParentWaveId
   );
-  const { topLevelWaves, getRows, toggleParent } = useSidebarWaveTree({
-    waves,
-    activeWaveId: activeWave.id,
-    activeParentWaveId: effectiveActiveParentWaveId,
-    loadingSubwaveParentIds: streamWaves.loadingSubwaveParentIds,
-    onParentExpand: streamWaves.loadSubwavesForParent,
-    showExpandedSubwaves: !isCollapsed,
-  });
+  const { topLevelWaves, getRows, expandParent, toggleParent } =
+    useSidebarWaveTree({
+      waves,
+      activeWaveId: activeWave.id,
+      activeParentWaveId: effectiveActiveParentWaveId,
+      loadingSubwaveParentIds: streamWaves.loadingSubwaveParentIds,
+      onParentExpand: streamWaves.loadSubwavesForParent,
+      showExpandedSubwaves: !isCollapsed,
+    });
   useLoadActiveSidebarParentSubwaves({
     activeParentWaveId: effectiveActiveParentWaveId,
     waves,
@@ -362,12 +362,6 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
   const isMessageBasePath = basePath === "/messages";
   const getSidebarRowHeight = useCallback(
     (row: AnimatedSidebarWaveTreeRow) => {
-      if (row.rowType === "subwaves-toggle") {
-        return row.isExpanded
-          ? SUBWAVE_TOGGLE_ROW_HEIGHT
-          : COLLAPSED_SUBWAVE_TOGGLE_ROW_HEIGHT;
-      }
-
       if (row.depth === 1 && row.animationState === "exiting") {
         return COLLAPSING_SUBWAVE_ROW_HEIGHT;
       }
@@ -424,12 +418,14 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
         handleHover: handleHighlyRatedPreviewHover,
         hasTouchScreen: isTouchDevice,
         isDirectMessage: isMessageBasePath,
+        onOpen: expandParent,
         setActiveWave,
         waves: highlyRatedPreviewWaves,
       }),
     [
       activeParentWaveId,
       activeWaveId,
+      expandParent,
       getHighlyRatedPreviewHref,
       handleHighlyRatedPreviewHover,
       highlyRatedPreviewWaves,
@@ -478,21 +474,6 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
   ) => {
     const showConnectedSubwaves = parentsWithVisibleSubwaves.has(row.wave.id);
 
-    if (row.rowType === "subwaves-toggle") {
-      return (
-        <SidebarSubwavesToggle
-          isExpanded={row.isExpanded}
-          isLoading={row.isLoadingSubwaves}
-          knownSubwavesCount={row.knownSubwavesCount}
-          layoutVariant="web"
-          onClick={() => toggleParent(row.wave.id)}
-          parentWaveName={row.wave.name}
-          showConnector={showConnectedSubwaves}
-          unreadDropsCount={row.unreadSubwaveDropsCount}
-        />
-      );
-    }
-
     return (
       <WebBrainLeftSidebarWave
         scoreDetailsDisabled={navigation.searchOpen}
@@ -505,11 +486,18 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
         depth={row.depth}
         canExpand={row.canExpand && !isCollapsed}
         hasUnreadSubwaves={row.hasUnreadSubwaves && !row.isExpanded}
+        subwavesExpanded={row.isExpanded}
+        subwavesLoading={row.isLoadingSubwaves}
+        unreadSubwaveDropsCount={row.unreadSubwaveDropsCount}
         isLastSubwave={row.isLastSubwave}
         showSubwaveConnector={
           row.depth === 0 && showConnectedSubwaves && !isCollapsed
         }
+        onExpandSubwaves={row.canExpand ? expandParent : undefined}
         onPrefetchSubwaves={streamWaves.prefetchSubwavesForParent}
+        onToggleSubwaves={
+          row.canExpand && !isCollapsed ? toggleParent : undefined
+        }
       />
     );
   };
@@ -684,22 +672,20 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
 
       {!isTouchDevice && (
         <>
-          <ReactTooltip
+          <BodyPortalTooltip
             id="create-wave-tooltip"
             place="bottom"
             offset={8}
             opacity={1}
-            style={TOOLTIP_STYLE}
-            border={SIDEBAR_TOOLTIP_BORDER}
+            style={TOOLTIP_STYLES}
           />
           {shouldShowProfileFeedShortcut && (
-            <ReactTooltip
+            <BodyPortalTooltip
               id={PROFILE_FEED_TOOLTIP_ID}
               place={isCollapsed ? "right" : "bottom"}
               offset={8}
               opacity={1}
-              style={TOOLTIP_STYLE}
-              border={SIDEBAR_TOOLTIP_BORDER}
+              style={TOOLTIP_STYLES}
             />
           )}
         </>

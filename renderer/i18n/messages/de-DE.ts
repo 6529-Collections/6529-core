@@ -30,7 +30,11 @@ import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.de-DE.jso
 const RETRY_LABEL = "Erneut versuchen";
 
 export const DE_DE_MESSAGES = {
+  "rep.categories.validation.unavailable":
+    "Dieser Kategoriename ist nicht verfügbar. Versuche es mit einem anderen Namen.",
   "waves.drops.searchModal.result.emoji": "Emoji {shortcode}",
+  "waves.discovery.activeSubmissions.one": "{count} aktive Einreichung",
+  "waves.discovery.activeSubmissions.other": "{count} aktive Einreichungen",
   "waves.historyGap.load": "Weitere Nachrichten laden",
   "waves.historyGap.loaded": "Weitere Nachrichten geladen",
   "waves.historyGap.loading": "Weitere Nachrichten werden geladen…",
@@ -38,6 +42,10 @@ export const DE_DE_MESSAGES = {
     "Nachrichten konnten nicht geladen werden. Erneut versuchen",
 
   "waves.myVotes.sort": "Sortieren nach",
+  "waves.myVotes.select": "Auswählen",
+  "waves.myVotes.yourVotesInCredit": "Deine Stimmen in {credit}",
+  "waves.myVotes.maxRating": "{label} {value}",
+  "waves.myVotes.doneSelecting": "Fertig",
   "waves.myVotes.sort.voteAmount": "Deine Stimmenzahl",
   "waves.myVotes.sort.leaderboard": "Ranglistenposition",
   "waves.myVotes.sort.lastVoted": "Zuletzt abgestimmt",
@@ -905,7 +913,6 @@ export const DE_DE_MESSAGES = {
     "Aktuelle Zielgruppe nicht verfügbar",
   "waves.create.groups.members.view": "Mitglieder anzeigen",
   "waves.create.groups.members.previewDraft": "Treffer ansehen",
-  "waves.create.groups.members.dialogTitle": "{role}: {group}",
   "waves.create.groups.members.dynamicDescription":
     "Diese Live-Vorschau basiert auf aktuellen Profil-, Reputations- und Besitzdaten. Die Mitgliedschaft kann sich ändern.",
   "waves.create.groups.members.criteriaSummary":
@@ -1316,6 +1323,25 @@ export const DE_DE_MESSAGES = {
   "desktop.profiles.saveError": "Deine Profile konnten nicht gespeichert werden. Versuche es vor dem Beenden erneut, um deine Änderungen zu behalten.",
   "desktop.profiles.saveRetrying": "Profile werden erneut gespeichert…",
   "desktop.profiles.retry": "Erneut versuchen",
+  "e2ee.list.pinned": "Angeheftet",
+  "e2ee.list.pinnedChat": "{title}, angehefteter Chat",
+  "e2ee.list.pinChat": "{title} oben anheften",
+  "e2ee.list.pinDragInstructions":
+    "Drücke die Leertaste, um diesen Chat aufzunehmen. Verschiebe ihn mit den Pfeiltasten und drücke die Leertaste zum Ablegen oder die Esc-Taste zum Abbrechen.",
+  "e2ee.list.pinDragStarted": "Angehefteten Chat aufgenommen.",
+  "e2ee.list.pinDragPosition": "Position {position}.",
+  "e2ee.list.pinDragCancelled": "Sortierung abgebrochen.",
+  "e2ee.list.pinOrderSaved": "Reihenfolge der angehefteten Chats gespeichert.",
+  "e2ee.list.pinOrderError":
+    "Die Reihenfolge der angehefteten Chats konnte nicht gespeichert werden. Versuche es erneut.",
+  "e2ee.info.pin": "Oben anheften",
+  "e2ee.info.unpin": "Anheftung aufheben",
+  "e2ee.info.pinSyncHelp":
+    "Angeheftete Chats werden privat mit deinen anderen vertrauenswürdigen Geräten synchronisiert.",
+  "e2ee.info.pinLocalHelp":
+    "Angeheftete Chats bleiben auf diesem Gerät, bis die verschlüsselte Synchronisierung verfügbar ist.",
+  "e2ee.info.pinFailed":
+    "Die Anheftung konnte nicht geändert werden. Versuch es erneut.",
   "e2ee.message.taskChecked": "Markierte Aufgabe",
   "e2ee.message.taskUnchecked": "Nicht markierte Aufgabe",
   "e2ee.message.imageLink": "Bildlink",

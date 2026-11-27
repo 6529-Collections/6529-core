@@ -1,9 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import PhoneNavigationStack from "@/components/mobile-navigation/PhoneNavigationStack";
+import { getPhoneNavigationRoute } from "@/helpers/waves/phone-navigation-route";
 import type { CSSProperties, ReactNode } from "react";
 import { Suspense, useCallback, useMemo, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { isUserProfilePage } from "../user/layout/userTabs.config";
 import BottomNavigation from "../navigation/BottomNavigation";
 import { getActiveViewFromUrl } from "../navigation/ViewContext";
 import BrainMobileWaves from "../brain/mobile/BrainMobileWaves";
@@ -13,6 +16,7 @@ import {
 } from "../brain/mobile/useWaveNavigationTransition";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import HeaderPlaceholder from "../header/HeaderPlaceholder";
+import MessagesRouteLoading from "../messages/MessagesRouteLoading";
 import { useHeaderContext } from "@/contexts/HeaderContext";
 import { useDeepLinkNavigation } from "@/hooks/useDeepLinkNavigation";
 import { useEditingDrop } from "@/contexts/EditingDropContext";
@@ -59,24 +63,10 @@ const streamRouteLoadingReserveVisibleStyle: StreamRouteLoadingReserveStyle = {
     STREAM_ROUTE_LOADING_HEADER_FALLBACK_RESERVE,
 };
 
-const mobileBranchLoadingStyle: CSSProperties = {
-  minHeight: `calc(100dvh - var(${STREAM_ROUTE_LOADING_HEADER_RESERVE}) - var(${STREAM_ROUTE_LOADING_BOTTOM_RESERVE}))`,
-};
-
-function MobileBranchLoadingFallback() {
-  return (
-    <div
-      data-mobile-bottom-nav-scroll-target="true"
-      className="tw-bg-black"
-      style={mobileBranchLoadingStyle}
-    />
-  );
-}
-
 const BrainMobileMessages = dynamic(
   () => import("../brain/mobile/BrainMobileMessages"),
   {
-    loading: () => <MobileBranchLoadingFallback />,
+    loading: () => <MessagesRouteLoading />,
   }
 );
 
@@ -137,10 +127,12 @@ function AppLayoutContent({ children }: Props) {
   const headerRef = useRef<HTMLDivElement | null>(null);
   const pullContentRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
+  const params = useParams();
+  const hasProfileShell = isUserProfilePage(pathname, params["user"]);
   // This content-height wrapper is not a scrollport on collection pages.
   // Clip horizontally without trapping sticky descendants or document scrolling.
   const overflowClassName =
-    pathname === "/the-memes"
+    pathname === "/the-memes" || hasProfileShell
       ? "tw-overflow-x-clip"
       : "tw-overflow-y-auto tw-overflow-x-hidden";
   // react-doctor-disable-next-line react-doctor/nextjs-no-use-search-params-without-suspense
@@ -151,13 +143,27 @@ function AppLayoutContent({ children }: Props) {
     activeWaveId: waveParam,
     searchParams,
   });
-  const waveNavigationScreen = getWaveNavigationScreen(pathname, waveParam);
-  const waveNavigationRef = useWaveNavigationTransition(waveNavigationScreen);
+  const { isApp } = useDeviceInfo();
+  const phoneRoute = isApp
+    ? getPhoneNavigationRoute(
+        pathname,
+        new URLSearchParams(searchParams.toString()),
+        waveParam
+      )
+    : null;
+  const waveNavigationScreen = getWaveNavigationScreen(
+    pathname,
+    waveParam,
+    isApp && searchParams.get("view") === "profile-feed"
+  );
+  const waveNavigationRef = useWaveNavigationTransition(
+    phoneRoute ? null : waveNavigationScreen,
+    pathname
+  );
   const shouldHideBottomNavForRoute = hidesMobileBottomNavigation({
     pathname,
   });
   const { editingDropId } = useEditingDrop();
-  const { isApp } = useDeviceInfo();
   const { isVisible: isKeyboardVisible } = useNativeKeyboard();
   const isEditingOnMobile = isApp && editingDropId !== null;
   const isLayoutKeyboardVisible = isKeyboardVisible && !isViewportLocked;
@@ -194,9 +200,10 @@ function AppLayoutContent({ children }: Props) {
       }),
       [isNavVisible, routeLoadingHeaderReserve, shouldUseContentBottomClearance]
     );
+  // The iPhone chat composer already reserves the bottom safe area inside its height.
   const safeAreaClass =
     !isNavVisible && !isLayoutKeyboardVisible
-      ? "tw-pb-[env(safe-area-inset-bottom,0px)]"
+      ? "tw-pb-[env(safe-area-inset-bottom,0px)] has-[[data-ios-chat-composer]]:tw-pb-0"
       : "";
   let activeContent: ReactNode;
 
@@ -208,7 +215,7 @@ function AppLayoutContent({ children }: Props) {
     activeContent = <main>{children}</main>;
   }
 
-  return (
+  const page = (
     <>
       <div
         data-mobile-bottom-nav-scroll-target="true"
@@ -220,18 +227,20 @@ function AppLayoutContent({ children }: Props) {
           ref={pullContentRef}
           {...{ [PULL_TO_REFRESH_TRANSFORM_ROOT_ATTRIBUTE]: "true" }}
         >
-          <div ref={headerWrapperRef}>
-            <TouchDeviceHeader />
-          </div>
-          <div
-            ref={waveNavigationRef}
-            data-testid="wave-navigation-content"
-            data-wave-navigation-screen={waveNavigationScreen ?? undefined}
-          >
-            {activeContent}
-            {isNavVisible && !shouldUseContentBottomClearance && (
-              <div className="tw-h-[104px] tw-w-full" />
-            )}
+          <div data-wave-swipe-page>
+            <div ref={headerWrapperRef}>
+              <TouchDeviceHeader />
+            </div>
+            <div
+              ref={waveNavigationRef}
+              data-testid="wave-navigation-content"
+              data-wave-navigation-screen={waveNavigationScreen ?? undefined}
+            >
+              {activeContent}
+              {isNavVisible && !shouldUseContentBottomClearance && (
+                <div className="tw-h-[104px] tw-w-full" />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -244,6 +253,13 @@ function AppLayoutContent({ children }: Props) {
         />
       )}
     </>
+  );
+  return phoneRoute ? (
+    <PhoneNavigationStack key={phoneRoute.family} route={phoneRoute}>
+      {page}
+    </PhoneNavigationStack>
+  ) : (
+    page
   );
 }
 

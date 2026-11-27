@@ -23,6 +23,7 @@ import {
 } from "./snapshot-collections";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
+import "@/i18n/namespaces/emma";
 interface CreateSnapshotFormValues {
   collectionId: string | null;
   name: string;

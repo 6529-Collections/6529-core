@@ -4,7 +4,7 @@ import type { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/Ap
 
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { useContext, useMemo, useState, type ReactNode } from "react";
+import { useContext, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { AuthContext } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
@@ -14,18 +14,15 @@ import ButtonLink from "@/components/utils/button/ButtonLink";
 import type { CicStatement } from "@/entities/IProfile";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { amIUser } from "@/helpers/Helpers";
-import { navigateToDirectMessage } from "@/helpers/navigation.helpers";
-import { getToastErrorDetails } from "@/helpers/toast.helpers";
 import { PROFILE_PREFERENCES_HREF } from "@/helpers/preferences-navigation";
 import { STATEMENT_GROUP, STATEMENT_TYPE } from "@/helpers/Types";
-import { createDirectMessageWave } from "@/helpers/waves/waves.helpers";
-import { getDirectMessageAdmissionErrorMessage } from "@/helpers/waves/direct-message-admission.helpers";
 import { getBannerColorValue } from "@/helpers/profile-banner.helpers";
 import { useContentModeratorAccess } from "@/hooks/content-moderation/useContentModeratorAccess";
 import { useProfileBlockState } from "@/hooks/content-moderation/useProfileBlockState";
 import { usePublicProfileModerationStatus } from "@/hooks/content-moderation/usePublicProfileModerationStatus";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useHasHydrated } from "@/hooks/useHasHydrated";
+import { useIdentityEditingPaused } from "@/hooks/useIdentityMovePhase";
 import { useIdentity } from "@/hooks/useIdentity";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
@@ -49,11 +46,9 @@ import ProfileHeaderRelationshipActions, {
   type ProfileModerationControls,
 } from "./ProfileHeaderRelationshipActions";
 import SuspendedProfileHeaderIndicator from "./SuspendedProfileHeaderIndicator";
+import { getUserProfileHeaderDisplayName } from "./user-page-header.messages";
 import {
-  getUserProfileHeaderDisplayName,
-  getUserProfileHeaderMessage,
-} from "./user-page-header.messages";
-import {
+  PROFILE_MOBILE_ACTION_CLASS,
   USER_PAGE_HEADER_INTERACTIVE_SURFACE_CLASS,
   USER_PAGE_HEADER_SURFACE_CLASS,
   USER_PAGE_HEADER_TOUCH_TARGET_CLASS,
@@ -72,6 +67,7 @@ type Props = {
 };
 
 const PROFILE_PREFERENCES_BUTTON_KEY = "profilePreferences.button";
+const PROFILE_MOBILE_ONLY_CLASS = "lg:tw-hidden";
 const ABOUT_STATEMENT_TYPE: CicStatement["statement_type"] = STATEMENT_TYPE.BIO;
 
 type WebsiteAction = Readonly<{
@@ -91,7 +87,28 @@ function getAboutStatement(
   );
 }
 
-function ProfilePreferencesButton() {
+function ProfilePreferencesButton({
+  iconOnly = false,
+}: {
+  readonly iconOnly?: boolean;
+}) {
+  if (iconOnly) {
+    return (
+      <ButtonLink
+        variant="tertiary"
+        size={null}
+        href={PROFILE_PREFERENCES_HREF}
+        aria-label={t(DEFAULT_LOCALE, PROFILE_PREFERENCES_BUTTON_KEY)}
+        title={t(DEFAULT_LOCALE, PROFILE_PREFERENCES_BUTTON_KEY)}
+        className="tw-group tw-size-11 !tw-rounded-full !tw-border-transparent !tw-bg-transparent !tw-p-1 !tw-shadow-none focus-visible:!tw-outline-none active:!tw-bg-transparent desktop-hover:hover:!tw-border-transparent desktop-hover:hover:!tw-bg-transparent"
+      >
+        <span className="tw-box-border tw-inline-flex tw-size-9 tw-flex-none tw-items-center tw-justify-center tw-rounded-full tw-border tw-border-solid tw-border-white/15 tw-bg-black/75 tw-text-iron-100 tw-shadow-[0_8px_24px_rgba(0,0,0,0.32)] tw-transition-colors group-focus-visible:tw-ring-2 group-focus-visible:tw-ring-primary-400 group-focus-visible:tw-ring-offset-2 group-focus-visible:tw-ring-offset-black desktop-hover:group-hover:tw-bg-black/90 motion-reduce:tw-transition-none">
+          <Cog6ToothIcon className="tw-size-[1.125rem]" aria-hidden="true" />
+        </span>
+      </ButtonLink>
+    );
+  }
+
   return (
     <ButtonLink
       variant="tertiary"
@@ -106,79 +123,23 @@ function ProfilePreferencesButton() {
   );
 }
 
-type ProfileHeaderControlsProps = Readonly<{
-  editProfileButton: ReactNode;
-  canManageProfilePreferences: boolean;
-  hasTouchScreen: boolean;
-}>;
-
-function ProfileHeaderControls({
-  editProfileButton,
-  canManageProfilePreferences,
-  hasTouchScreen,
-}: ProfileHeaderControlsProps) {
-  if (editProfileButton === null && !canManageProfilePreferences) {
-    return null;
-  }
-
-  return (
-    <div
-      className={`tw-absolute tw-right-4 tw-top-3 tw-z-20 tw-flex tw-items-center tw-gap-1 sm:tw-right-6 sm:tw-top-4 md:tw-right-8 ${hasTouchScreen ? "min-[840px]:tw-hidden" : "sm:tw-hidden"}`}
-    >
-      {editProfileButton}
-      {canManageProfilePreferences ? (
-        <ButtonLink
-          variant="tertiary"
-          size={null}
-          href={PROFILE_PREFERENCES_HREF}
-          aria-label={t(DEFAULT_LOCALE, PROFILE_PREFERENCES_BUTTON_KEY)}
-          title={t(DEFAULT_LOCALE, PROFILE_PREFERENCES_BUTTON_KEY)}
-          className={`tw-group tw-size-11 !tw-rounded-full !tw-border-transparent !tw-bg-transparent !tw-p-1 !tw-shadow-none focus-visible:!tw-outline-none active:!tw-bg-transparent desktop-hover:hover:!tw-border-transparent desktop-hover:hover:!tw-bg-transparent sm:tw-size-10 sm:!tw-p-0.5 min-[840px]:tw-hidden ${USER_PAGE_HEADER_TOUCH_TARGET_CLASS}`}
-        >
-          <span className="tw-box-border tw-inline-flex tw-size-9 tw-flex-none tw-items-center tw-justify-center tw-rounded-full tw-border tw-border-solid tw-border-white/15 tw-bg-black/75 tw-text-iron-100 tw-shadow-[0_8px_24px_rgba(0,0,0,0.32)] tw-transition-[background-color,border-color,color,transform] tw-duration-200 tw-ease-out group-focus-visible:tw-ring-2 group-focus-visible:tw-ring-primary-400 group-focus-visible:tw-ring-offset-2 group-focus-visible:tw-ring-offset-black group-active:tw-scale-95 group-active:tw-bg-black desktop-hover:group-hover:tw-border-white/25 desktop-hover:group-hover:tw-bg-black/90 desktop-hover:group-hover:tw-text-white motion-reduce:tw-transform-none motion-reduce:tw-transition-none">
-            <Cog6ToothIcon className="tw-size-[1.125rem]" aria-hidden="true" />
-          </span>
-        </ButtonLink>
-      ) : null}
-    </div>
-  );
-}
-
-function SmallScreenPreferencesButton({
-  show,
-  editProfileButton,
-}: Readonly<{ show: boolean; editProfileButton: ReactNode }>) {
-  if (!show) {
-    return null;
-  }
-
-  return (
-    <div className="tw-hidden tw-flex-none sm:tw-absolute sm:tw-right-0 sm:tw-top-6 sm:tw-flex sm:tw-items-center sm:tw-gap-2 min-[840px]:tw-hidden">
-      {editProfileButton}
-      <ProfilePreferencesButton />
-    </div>
-  );
-}
-
 type ProfileHeaderActionColumnProps = Readonly<{
+  isApp: boolean;
   editProfileButton: ReactNode;
   canManageProfilePreferences: boolean;
-  directMessageLoading: boolean;
   followHandle: string | null;
   moderationControls: ProfileModerationControls;
-  onCreateDirectMessage: (primaryWallet: string | undefined) => void;
   profile: ApiIdentity;
   showSubscriptionStatus: boolean;
   websiteAction: WebsiteAction | null;
 }>;
 
 function ProfileHeaderActionColumn({
+  isApp,
   editProfileButton,
   canManageProfilePreferences,
-  directMessageLoading,
   followHandle,
   moderationControls,
-  onCreateDirectMessage,
   profile,
   showSubscriptionStatus,
   websiteAction,
@@ -188,17 +149,26 @@ function ProfileHeaderActionColumn({
   }
 
   const topPaddingClass = canManageProfilePreferences
-    ? "md:tw-pt-0"
-    : "md:tw-pt-5";
-  const visibilityClass =
-    websiteAction || followHandle ? "tw-flex" : "tw-hidden min-[840px]:tw-flex";
+    ? "lg:tw-pt-0"
+    : "lg:tw-pt-5";
+  let visibilityClass = isApp ? "tw-hidden" : "tw-hidden lg:tw-flex";
+  if (followHandle) visibilityClass = "tw-flex";
+  const desktopLayoutClass = isApp
+    ? ""
+    : `lg:tw-col-start-2 lg:tw-row-span-2 lg:tw-row-start-1 lg:tw-w-auto lg:tw-flex-none lg:tw-self-start lg:tw-pb-2 lg:tw-pt-0 ${topPaddingClass}`;
   return (
     <div
-      className={`tw-w-full tw-flex-col tw-items-start tw-gap-4 md:tw-w-auto md:tw-flex-none md:tw-items-end md:tw-pb-2 lg:tw-col-start-2 lg:tw-row-span-2 lg:tw-row-start-1 lg:tw-self-start lg:tw-pt-0 ${topPaddingClass} ${visibilityClass}`}
+      className={`tw-col-start-2 tw-row-start-1 tw-flex-col tw-items-end tw-gap-4 tw-justify-self-end ${desktopLayoutClass} ${visibilityClass}`}
     >
       <div className="tw-flex tw-w-full tw-flex-wrap tw-items-end tw-gap-2 md:tw-w-auto md:tw-justify-end">
         {canManageProfilePreferences ? (
-          <div className="tw-hidden tw-items-center tw-gap-2 min-[840px]:tw-flex">
+          <div
+            className={
+              isApp
+                ? "tw-hidden"
+                : "tw-hidden lg:tw-flex lg:tw-items-center lg:tw-gap-2"
+            }
+          >
             {editProfileButton}
             <ProfilePreferencesButton />
           </div>
@@ -206,6 +176,7 @@ function ProfileHeaderActionColumn({
         {websiteAction ? (
           <ButtonLink
             variant="secondary"
+            className={isApp ? "tw-hidden" : "tw-hidden lg:tw-inline-flex"}
             href={websiteAction.href}
             aria-label={t(DEFAULT_LOCALE, "profileCms.header.openWebsite", {
               handle: websiteAction.handle,
@@ -217,15 +188,13 @@ function ProfileHeaderActionColumn({
         ) : null}
         {followHandle ? (
           <ProfileHeaderRelationshipActions
-            directMessageLoading={directMessageLoading}
             moderationControls={moderationControls}
-            onCreateDirectMessage={onCreateDirectMessage}
             profile={profile}
           />
         ) : null}
       </div>
       {showSubscriptionStatus ? (
-        <div className="tw-hidden min-[840px]:tw-block">
+        <div className={isApp ? "tw-hidden" : "tw-hidden lg:tw-block"}>
           <UserPageHeaderSubscriptionStatus profile={profile} layout="subtle" />
         </div>
       ) : null}
@@ -234,19 +203,17 @@ function ProfileHeaderActionColumn({
 }
 
 type ProfileHeaderContentProps = Readonly<{
+  isApp: boolean;
   editProfileButton: ReactNode;
   aboutStatement: CicStatement | null;
   banner1Color: string;
   banner2Color: string;
   canManageProfilePreferences: boolean;
-  directMessageLoading: boolean;
   followHandle: string | null;
   followersCount: number | null;
-  hasTouchScreen: boolean;
   mainAddress: string;
   moderationControls: ProfileModerationControls;
   normalizedHandleOrWallet: string;
-  onCreateDirectMessage: (primaryWallet: string | undefined) => void;
   profile: ApiIdentity;
   profileEnabledAt: string | null;
   profileLabel: string;
@@ -256,19 +223,17 @@ type ProfileHeaderContentProps = Readonly<{
 }>;
 
 function ProfileHeaderContent({
+  isApp,
   editProfileButton,
   aboutStatement,
   banner1Color,
   banner2Color,
   canManageProfilePreferences,
-  directMessageLoading,
   followHandle,
   followersCount,
-  hasTouchScreen,
   mainAddress,
   moderationControls,
   normalizedHandleOrWallet,
-  onCreateDirectMessage,
   profile,
   profileEnabledAt,
   profileLabel,
@@ -276,19 +241,21 @@ function ProfileHeaderContent({
   showSubscriptionStatus,
   websiteAction,
 }: ProfileHeaderContentProps) {
-  const identityPaddingClass =
-    canManageProfilePreferences && !hasTouchScreen
-      ? "sm:tw-pr-60 min-[840px]:tw-pr-0"
-      : "";
-
   return (
     <div className="tw-relative tw-z-20 tw-bg-black">
-      <div className="tw-relative tw-z-10 tw-px-4 tw-pt-3.5 sm:tw-px-6 md:tw-px-8 lg:tw-grid lg:tw-grid-cols-[minmax(0,1fr)_auto] lg:tw-gap-x-6">
-        <div className="tw-relative tw-mb-6 tw-flex tw-flex-col tw-items-start tw-gap-4 sm:tw-mb-4 md:tw-flex-row md:tw-justify-between md:tw-gap-6 lg:tw-contents">
+      <div
+        className={`tw-relative tw-z-10 tw-px-4 tw-pt-3.5 sm:tw-px-6 md:tw-px-8 ${isApp ? "" : "lg:tw-grid lg:tw-grid-cols-[minmax(0,1fr)_auto] lg:tw-gap-x-6"}`}
+      >
+        <div
+          className={`tw-relative tw-mb-4 tw-grid tw-grid-cols-[auto_minmax(0,1fr)] tw-items-start tw-gap-3 ${isApp ? "" : "lg:tw-contents"}`}
+        >
           <div
-            className={`tw-flex tw-w-full tw-min-w-0 tw-flex-col tw-items-start tw-gap-3 sm:tw-relative sm:tw-min-h-16 sm:tw-flex-row sm:tw-items-end sm:tw-gap-4 sm:tw-pt-16 md:tw-flex-1 md:tw-gap-5 lg:tw-col-start-1 lg:tw-row-start-1 lg:tw-pl-[132px] lg:tw-pt-0 ${identityPaddingClass}`}
+            className={`tw-contents ${isApp ? "" : "lg:tw-col-start-1 lg:tw-row-start-1 lg:tw-flex lg:tw-w-full lg:tw-min-w-0 lg:tw-flex-1 lg:tw-flex-row lg:tw-items-start lg:tw-gap-4"}`}
           >
-            <div className="tw-relative -tw-mt-10 tw-flex-shrink-0 sm:tw-absolute sm:-tw-top-14 sm:tw-left-0 sm:tw-mt-0">
+            <div
+              data-profile-avatar
+              className={`tw-relative -tw-mt-10 tw-flex-shrink-0 ${isApp ? "" : "lg:-tw-mt-14"}`}
+            >
               <UserPageHeaderPfpWrapper
                 profile={profile}
                 canEdit={false}
@@ -303,7 +270,9 @@ function ProfileHeaderContent({
               </UserPageHeaderPfpWrapper>
             </div>
 
-            <div className="tw-min-w-0 tw-flex-1 tw-pb-1 sm:tw-pb-2 sm:tw-pt-2 lg:tw-pt-1">
+            <div
+              className={`tw-col-span-2 tw-row-start-2 tw-min-w-0 tw-flex-1 tw-pb-1 ${isApp ? "" : "lg:tw-pb-2 lg:tw-pt-1"}`}
+            >
               <UserPageHeaderName
                 profile={profile}
                 canEdit={false}
@@ -328,26 +297,38 @@ function ProfileHeaderContent({
             </div>
           </div>
 
-          <SmallScreenPreferencesButton
-            editProfileButton={editProfileButton}
-            show={canManageProfilePreferences && !hasTouchScreen}
-          />
-
           <ProfileHeaderActionColumn
+            isApp={isApp}
             editProfileButton={editProfileButton}
             canManageProfilePreferences={canManageProfilePreferences}
-            directMessageLoading={directMessageLoading}
             followHandle={followHandle}
             moderationControls={moderationControls}
-            onCreateDirectMessage={onCreateDirectMessage}
             profile={profile}
             showSubscriptionStatus={showSubscriptionStatus}
             websiteAction={websiteAction}
           />
         </div>
 
+        {websiteAction ? (
+          <div
+            className={`tw-mb-4 tw-flex tw-flex-wrap tw-items-center tw-gap-2 ${isApp ? "" : PROFILE_MOBILE_ONLY_CLASS}`}
+          >
+            <ButtonLink
+              variant="secondary"
+              href={websiteAction.href}
+              className={PROFILE_MOBILE_ACTION_CLASS}
+              aria-label={t(DEFAULT_LOCALE, "profileCms.header.openWebsite", {
+                handle: websiteAction.handle,
+              })}
+            >
+              <WebsiteIcon />
+              <span>{t(DEFAULT_LOCALE, "profileCms.header.website")}</span>
+            </ButtonLink>
+          </div>
+        ) : null}
+
         {showSubscriptionStatus ? (
-          <div className="min-[840px]:tw-hidden">
+          <div className={isApp ? "" : PROFILE_MOBILE_ONLY_CLASS}>
             <UserPageHeaderSubscriptionStatus
               profile={profile}
               layout="wide-row"
@@ -466,19 +447,17 @@ export default function UserPageHeaderClient({
 }: Readonly<Props>) {
   const params = useParams();
   const router = useRouter();
-  const { hasTouchScreen, isApp } = useDeviceInfo();
+  const { isApp } = useDeviceInfo();
+  const headerRef = useRef<HTMLElement>(null);
   const routeHandleOrWallet = params["user"]?.toString().toLowerCase() ?? null;
   const normalizedHandleOrWallet =
     routeHandleOrWallet ?? handleOrWallet.toLowerCase();
 
   const { address } = useSeizeConnectContext();
-  const {
-    connectedProfile,
-    activeProfileProxy,
-    isDirectProfileSession,
-    setToast,
-  } = useContext(AuthContext);
+  const { connectedProfile, activeProfileProxy, isDirectProfileSession } =
+    useContext(AuthContext);
   const hasHydrated = useHasHydrated();
+  const identityEditingPaused = useIdentityEditingPaused();
 
   const { profile: hydratedProfile } = useIdentity({
     handleOrWallet: normalizedHandleOrWallet,
@@ -505,8 +484,6 @@ export default function UserPageHeaderClient({
     [profile, mainAddress]
   );
 
-  const [directMessageLoading, setDirectMessageLoading] =
-    useState<boolean>(false);
   const [profileBlockConfirmation, setProfileBlockConfirmation] =
     useState<ProfileAction | null>(null);
 
@@ -525,7 +502,8 @@ export default function UserPageHeaderClient({
     isDirectProfileSession === true &&
     profile.handle &&
     isMyProfile &&
-    !activeProfileProxy
+    !activeProfileProxy &&
+    !identityEditingPaused
   );
 
   const { statements, profileEnabledAt, cmsWebsiteHref, followersCount } =
@@ -568,41 +546,6 @@ export default function UserPageHeaderClient({
   const canManageProfilePreferences =
     hasHydrated && isMyProfile && !activeProfileProxy;
   const showSubscriptionStatus = canManageProfilePreferences;
-
-  const handleCreateDirectMessage = async (
-    primaryWallet: string | undefined
-  ) => {
-    if (!primaryWallet) {
-      return;
-    }
-
-    setDirectMessageLoading(true);
-
-    try {
-      const wave = await createDirectMessageWave({
-        addresses: [primaryWallet],
-      });
-      navigateToDirectMessage({ waveId: wave.id, router, isApp });
-    } catch (error) {
-      console.error(error);
-      const errorMessage =
-        getDirectMessageAdmissionErrorMessage(DEFAULT_LOCALE, error) ??
-        getToastErrorDetails(error);
-      setToast({
-        type: "error",
-        title: getUserProfileHeaderMessage(
-          "user.profileHeader.dm.createFailed.title"
-        ),
-        description:
-          errorMessage ??
-          getUserProfileHeaderMessage(
-            "user.profileHeader.dm.createFailed.description"
-          ),
-      });
-    } finally {
-      setDirectMessageLoading(false);
-    }
-  };
 
   const isProfileBlockMutationPending =
     profileBlockState.isBlocking || profileBlockState.isUnblocking;
@@ -721,17 +664,42 @@ export default function UserPageHeaderClient({
     statement: aboutStatement,
     defaultBanner1: banner1Color,
     defaultBanner2: banner2Color,
+    onRestoreFocus: () => {
+      const triggers = headerRef.current?.querySelectorAll<HTMLButtonElement>(
+        "[data-profile-edit-trigger]"
+      );
+      Array.from(triggers ?? [])
+        .find((trigger) => trigger.getClientRects().length > 0)
+        ?.focus();
+    },
   };
   const editProfileButton = canEdit ? (
     <UserPageHeaderEditProfileDesktop {...editProfileProps} />
   ) : null;
   const mobileEditProfileButton = canEdit ? (
-    <UserPageHeaderEditProfile {...editProfileProps} />
+    <>
+      <div className={isApp ? PROFILE_MOBILE_ONLY_CLASS : ""}>
+        <UserPageHeaderEditProfile {...editProfileProps} />
+      </div>
+      {isApp ? (
+        <div className="tw-hidden lg:tw-block">{editProfileButton}</div>
+      ) : null}
+    </>
   ) : null;
+  const mobileOwnerControls =
+    canEdit || canManageProfilePreferences ? (
+      <div className="tw-flex tw-items-center">
+        {mobileEditProfileButton}
+        {canManageProfilePreferences ? (
+          <ProfilePreferencesButton iconOnly />
+        ) : null}
+      </div>
+    ) : null;
 
   return (
     <div className="tailwind-scope">
       <section
+        ref={headerRef}
         aria-labelledby="profile-heading"
         className="tw-relative tw-bg-black tw-pb-4 md:tw-pb-8"
       >
@@ -743,27 +711,27 @@ export default function UserPageHeaderClient({
             canEdit={false}
             profileLabel={profileLabel}
           />
-          <ProfileHeaderControls
-            editProfileButton={mobileEditProfileButton}
-            canManageProfilePreferences={canManageProfilePreferences}
-            hasTouchScreen={hasTouchScreen}
-          />
+          {mobileOwnerControls ? (
+            <div
+              className={`tw-absolute tw-right-4 tw-top-3 tw-z-20 sm:tw-right-6 sm:tw-top-4 md:tw-right-8 ${isApp ? "" : PROFILE_MOBILE_ONLY_CLASS}`}
+            >
+              {mobileOwnerControls}
+            </div>
+          ) : null}
         </div>
 
         <ProfileHeaderContent
+          isApp={isApp}
           editProfileButton={editProfileButton}
           aboutStatement={aboutStatement}
           banner1Color={banner1Color}
           banner2Color={banner2Color}
           canManageProfilePreferences={canManageProfilePreferences}
-          directMessageLoading={directMessageLoading}
           followHandle={followHandle}
           followersCount={followersCount}
-          hasTouchScreen={hasTouchScreen}
           mainAddress={mainAddress}
           moderationControls={moderationControls}
           normalizedHandleOrWallet={normalizedHandleOrWallet}
-          onCreateDirectMessage={handleCreateDirectMessage}
           profile={profile}
           profileEnabledAt={profileEnabledAt}
           profileLabel={profileLabel}

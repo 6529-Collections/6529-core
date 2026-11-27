@@ -8,6 +8,47 @@ import {
 } from "../testHelpers";
 
 test.describe("About Pages @smoke @medium @large", () => {
+  test("Desktop version text aligns with the title-strip controls", async ({
+    page,
+  }) => {
+    await page.goto("/about", { waitUntil: "domcontentloaded" });
+    await waitForRouteReady(page);
+    const toolbar = page.getByRole("toolbar", {
+      name: "6529 Desktop window title",
+    });
+
+    for (const height of [28, 34]) {
+      await page.evaluate((stripHeight) => {
+        const root = document.documentElement;
+        root.setAttribute("data-desktop-titlebar", "overlay");
+        root.style.setProperty("--desktop-titlebar-height", `${stripHeight}px`);
+        root.style.setProperty("--desktop-app-version", '"0.1.0-rc.2"');
+      }, height);
+
+      await expect(toolbar).toBeVisible();
+      const geometry = await toolbar
+        .getByText("Version", { exact: true })
+        .locator("..")
+        .evaluate((version) => {
+          const button = version
+            .closest('[role="toolbar"]')
+            ?.querySelector("button");
+          if (!button) throw new Error("Title-strip control is missing");
+          const text = version.getBoundingClientRect();
+          const control = button.getBoundingClientRect();
+          return {
+            textHeight: text.height,
+            centerDifference: Math.abs(
+              text.y + text.height / 2 - control.y - control.height / 2
+            ),
+          };
+        });
+
+      expect(geometry.textHeight).toBeGreaterThan(0);
+      expect(geometry.centerDifference).toBeLessThanOrEqual(0.5);
+    }
+  });
+
   test("shows direct desktop downloads and independent macOS 12 recovery", async ({
     page,
     isMobile,
@@ -61,8 +102,35 @@ test.describe("About Pages @smoke @medium @large", () => {
         });
       }
     );
-    await page.goto("/about/6529-apps", { waitUntil: "domcontentloaded" });
+    const classic = page.getByRole("button", { name: "6529 Desktop Classic" });
+    let releaseScripts = () => {};
+    const scriptsReady = new Promise<void>((resolve) => {
+      releaseScripts = resolve;
+    });
+    await page.route("**/_next/static/**", async (route) => {
+      if (route.request().resourceType() === "script") await scriptsReady;
+      await route.fallback();
+    });
+    try {
+      await page.goto("/about/6529-apps", { waitUntil: "commit" });
+      await expect(classic).toBeDisabled();
+    } finally {
+      releaseScripts();
+    }
     await waitForRouteReady(page);
+    await expect(classic).toBeEnabled();
+    await expect(classic).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      page
+        .getByRole("region", { name: "6529 Desktop Classic" })
+        .locator("#desktop-classic-downloads")
+    ).toHaveCSS("height", "0px");
+    if (isMobile) {
+      await classic.tap();
+    } else {
+      await classic.press("Enter");
+    }
+    await expect(classic).toHaveAttribute("aria-expanded", "true");
     const mac = page.getByRole("group").filter({
       has: page.getByText("macOS", { exact: true }),
     });
@@ -154,6 +222,21 @@ test.describe("About Pages @smoke @medium @large", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expectNoHorizontalOverflow(page);
 
+    await classic.click();
+    await expect(classic).toHaveAttribute("aria-expanded", "false");
+    await classic.focus();
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: "6529 Validator" })
+    ).toBeFocused();
+    await classic.click();
+    await expect(classic).toHaveAttribute("aria-expanded", "true");
+    if (isMobile) {
+      await expect(mac).not.toHaveAttribute("open");
+    } else {
+      await expect(mac).toHaveAttribute("open");
+    }
+
     const validator = page.getByRole("link", {
       name: "6529 Validator",
     });
@@ -172,7 +255,7 @@ test.describe("About Pages @smoke @medium @large", () => {
     );
     // Hit the card padding to verify that the entire section is a link.
     await validator.click({ position: { x: 12, y: 12 } });
-    await expect(page).toHaveURL(/\/validator$/);
+    await expect(page).toHaveURL(/\/validator$/, { timeout: 20_000 });
   });
 
   test("should load the about index page", async ({ page }) => {

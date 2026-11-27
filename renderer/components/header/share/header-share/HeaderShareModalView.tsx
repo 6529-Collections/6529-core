@@ -1,5 +1,7 @@
 "use client";
 
+import IconButton from "@/components/utils/button/IconButton";
+
 import { ConnectionShareNotice } from "./ConnectionShareNotice";
 import {
   ConnectDeviceChoices,
@@ -32,12 +34,18 @@ import { openInExternalBrowser } from "@/helpers";
 import { t, type MessageKey } from "@/i18n/messages";
 import {
   HEADER_SHARE_LOCALE,
+  isDesktopConnectionTarget,
   Mode,
   PageShareTarget,
   SubMode,
 } from "./constants";
 import type { HeaderShareModalViewProps } from "./HeaderShareModalView.types";
-import { buildSocialShareUrls, type ConnectionShareStatus } from "./shareUtils";
+import {
+  buildNavigateDeepLinkUrl,
+  buildSocialShareUrls,
+  getDesktopConnectionShareScheme,
+  type ConnectionShareStatus,
+} from "./shareUtils";
 import { FarcasterLogo, XLogo } from "./SocialShareIcons";
 import { useSystemShare } from "./useSystemShare";
 import { useAndroidBackLayer } from "@/hooks/useAndroidBackLayer";
@@ -69,9 +77,11 @@ function getModalTitleKey(
 ): MessageKey {
   if (mode !== Mode.CONNECT) return "headerShare.shareModal.title";
   if (!hasSelectedConnectionMode) return "headerShare.connectModal.title";
-  return activeSubTab === SubMode.DESKTOP
-    ? "headerShare.connectModal.desktopTitle"
-    : "headerShare.connectModal.mobileTitle";
+  if (activeSubTab === SubMode.DESKTOP)
+    return "headerShare.connectModal.newDesktopTitle";
+  if (activeSubTab === SubMode.DESKTOP_CLASSIC)
+    return "headerShare.connectModal.desktopTitle";
+  return "headerShare.connectModal.mobileTitle";
 }
 
 /** Show the share flow, including the secure Desktop link or Mobile QR code. */
@@ -94,7 +104,7 @@ export function HeaderShareModalView({
   setPageShareTarget,
   shareConnectionSrc,
   shareConnectionAppUrl,
-  shareConnectionCoreUrl,
+  shareConnectionDesktopPath,
   mobileConnectionShareStatus,
   desktopConnectionShareStatus,
   terminalConnectionShareFailuresRef,
@@ -116,6 +126,11 @@ export function HeaderShareModalView({
     if (open || connectionMode === "secure") setConnectionMode(null);
   }
   const isConnectMode = mode === Mode.CONNECT;
+  const isDesktopTarget = isDesktopConnectionTarget(activeSubTab);
+  const isClassicTarget = activeSubTab === SubMode.DESKTOP_CLASSIC;
+  const activeConnectionShareStatus = isDesktopTarget
+    ? desktopConnectionShareStatus
+    : mobileConnectionShareStatus;
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     isAvailable: isSystemShareAvailable,
@@ -200,10 +215,6 @@ export function HeaderShareModalView({
   };
 
   const getShareContent = () => {
-    const activeConnectionShareStatus =
-      activeSubTab === SubMode.DESKTOP
-        ? desktopConnectionShareStatus
-        : mobileConnectionShareStatus;
     if (activeConnectionShareStatus !== "ready") {
       return {
         content: renderConnectionShareNotice(activeConnectionShareStatus),
@@ -211,10 +222,14 @@ export function HeaderShareModalView({
       };
     }
 
-    if (activeSubTab === SubMode.DESKTOP) {
+    if (isDesktopConnectionTarget(activeSubTab)) {
+      const url = buildNavigateDeepLinkUrl({
+        scheme: getDesktopConnectionShareScheme(activeSubTab),
+        routerPath: shareConnectionDesktopPath,
+      });
       return {
-        content: <DesktopConnectionLink url={shareConnectionCoreUrl} />,
-        url: shareConnectionCoreUrl,
+        content: <DesktopConnectionLink url={url} classic={isClassicTarget} />,
+        url,
       };
     }
 
@@ -307,11 +322,13 @@ export function HeaderShareModalView({
           >
             {urlText}
           </div>
-          <button
+          <IconButton
             type="button"
             aria-label={t(HEADER_SHARE_LOCALE, "headerShare.copy.ariaLabel")}
             disabled={!url || loading}
-            className="tw-inline-flex tw-h-8 tw-w-8 tw-flex-shrink-0 tw-items-center tw-justify-center tw-rounded-md tw-border-0 tw-bg-transparent tw-text-iron-400 tw-transition-colors focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 enabled:hover:tw-bg-iron-800 enabled:hover:tw-text-iron-100 disabled:tw-opacity-50"
+            size={32}
+            variant="ghost"
+            shape="compact"
             data-tooltip-id="copy-url-tooltip"
             onClick={() => void copyUrl(url)}
           >
@@ -320,9 +337,9 @@ export function HeaderShareModalView({
               aria-hidden="true"
               className={`tw-size-4 ${urlCopied ? "tw-text-green-500" : ""}`}
             />
-          </button>
+          </IconButton>
         </div>
-        <button
+        <IconButton
           type="button"
           aria-label={refreshLabel}
           title={refreshLabel}
@@ -334,18 +351,16 @@ export function HeaderShareModalView({
               refresh();
             }
           }}
-          className={`tw-inline-flex tw-size-10 tw-flex-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-900 tw-text-iron-400 tw-transition-colors focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:-tw-outline-offset-2 focus-visible:tw-outline-primary-400 ${
-            loading
-              ? "tw-cursor-wait tw-opacity-50"
-              : "hover:tw-bg-iron-800 hover:tw-text-iron-100"
-          }`}
+          size={40}
+          variant="secondary"
+          pending={loading}
         >
           <FontAwesomeSvgIcon
             icon={faRotate}
             aria-hidden="true"
             className={`tw-size-4 ${loading ? "tw-animate-spin motion-reduce:tw-animate-none" : ""}`}
           />
-        </button>
+        </IconButton>
         <Tooltip
           id="copy-url-tooltip"
           place="top-end"
@@ -549,10 +564,6 @@ export function HeaderShareModalView({
 
   function renderActiveContent() {
     const { content, url } = getDisplayContent();
-    const activeConnectionShareStatus =
-      activeSubTab === SubMode.DESKTOP
-        ? desktopConnectionShareStatus
-        : mobileConnectionShareStatus;
     const pageShareQrSize = isSystemShareAvailable ? "14.25rem" : "10.75rem";
     const qrContent = (
       <div
@@ -561,7 +572,7 @@ export function HeaderShareModalView({
           isConnectMode
             ? "tw-w-full"
             : "tw-w-48 sm:tw-w-[var(--page-share-qr-size)]"
-        } ${isConnectMode && activeSubTab === SubMode.DESKTOP ? "tw-h-56" : "tw-aspect-square"} ${
+        } ${isConnectMode && isDesktopTarget ? "tw-h-56" : "tw-aspect-square"} ${
           isConnectMode && activeConnectionShareStatus === "ready"
             ? "tw-animate-fadeIn motion-reduce:tw-animate-none"
             : ""
@@ -606,17 +617,11 @@ export function HeaderShareModalView({
       );
     }
 
-    return renderConnectContent(
-      qrContent,
-      activeConnectionShareStatus,
-      content,
-      url
-    );
+    return renderConnectContent(qrContent, content, url);
   }
 
   function renderConnectContent(
     qrContent: ReactNode,
-    activeConnectionShareStatus: ConnectionShareStatus,
     content: ReactNode,
     url: string
   ) {
@@ -630,7 +635,7 @@ export function HeaderShareModalView({
       return (
         <DeviceConnectionShare
           key={activeSubTab}
-          target={activeSubTab === SubMode.DESKTOP ? "desktop" : "native"}
+          subMode={activeSubTab}
           renderLink={(link, refresh, loading) => (
             <>
               <h3 className="tw-m-0 tw-break-words tw-text-sm tw-font-semibold tw-text-iron-50">
@@ -638,8 +643,12 @@ export function HeaderShareModalView({
                   name,
                 })}
               </h3>
-              {activeSubTab === SubMode.DESKTOP ? (
-                <DesktopConnectionLink url={link.url} showVersionNotice />
+              {isDesktopTarget ? (
+                <DesktopConnectionLink
+                  url={link.url}
+                  classic={isClassicTarget}
+                  showVersionNotice
+                />
               ) : (
                 <div className="tw-aspect-square tw-w-full tw-overflow-hidden tw-rounded-lg">
                   {renderQRCodeImage(
@@ -701,7 +710,7 @@ export function HeaderShareModalView({
           >
             <div
               className={
-                activeSubTab === SubMode.DESKTOP
+                isDesktopTarget
                   ? "tw-h-56 tw-w-full"
                   : "tw-aspect-square tw-w-full"
               }
@@ -728,10 +737,9 @@ export function HeaderShareModalView({
     return null;
   }
 
-  let modalMaxWidthClassName = "tw-max-w-sm sm:tw-max-w-2xl";
-  if (isConnectMode) {
-    modalMaxWidthClassName = "tw-max-w-md";
-  }
+  const modalMaxWidthClassName = isConnectMode
+    ? "tw-max-w-md"
+    : "tw-max-w-sm sm:tw-max-w-2xl";
 
   return (
     <div
@@ -787,15 +795,16 @@ export function HeaderShareModalView({
               </Link>
             )}
           </div>
-          <button
+          <IconButton
             type="button"
             aria-label={closeAriaLabel}
             title={closeAriaLabel}
             onClick={onClose}
-            className="tw-inline-flex tw-size-9 tw-flex-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-transparent tw-text-iron-400 tw-transition-colors hover:tw-bg-iron-800 hover:tw-text-iron-50 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
+            size={36}
+            variant="ghost"
           >
             <XMarkIcon className="tw-size-5" aria-hidden="true" />
-          </button>
+          </IconButton>
         </div>
         <div
           data-testid="header-share-modal-content"

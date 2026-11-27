@@ -63,8 +63,9 @@ availability. Submission availability is exposed through the Chat tab
   composer, including when submissions are restricted.
 - In ordinary `Rank` and `Approve` Chat headers, activate the unavailable
   `Submit drop` action to see the submission restriction, submission group, and
-  `View submission rules` link to Settings. Public groups link to their
-  criteria and members; hidden and direct-message groups show only `Private group`.
+  `View submission rules` link to Settings. For a public group, the row shows
+  a linked member count with the criteria underneath. Hidden and direct-message
+  groups show `Private group`.
 - Ended submissions keep the lock and show `Submission period has ended`, a
   known closing date, and a compact submission-group row. They do not present
   closure as missing permission. See
@@ -89,6 +90,9 @@ availability. Submission availability is exposed through the Chat tab
   and remains focused for the next message.
 - In the native app, the chat composer's bottom spacing moves with the chat area
   when the keyboard opens or closes, without snapping to its final padding.
+- On iPhone, the Wave or direct-message header stays below the status bar while
+  the chat composer moves above the keyboard. Opening a conversation from its
+  list keeps the composer in place as the header and navigation change.
 - If submission is available, users enter it from `Submit drop` in the Chat tab
   header or app composer area.
 - The standard `Submit drop` dialog follows the app keyboard as it opens and

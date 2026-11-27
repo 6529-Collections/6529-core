@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import PhoneListLayoutProvider from "@/components/mobile-navigation/PhoneListLayoutProvider";
+import React, { StrictMode, useCallback, useEffect, useRef } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import {
   LayoutProvider,
@@ -77,6 +78,75 @@ function TestComponent() {
   );
 }
 
+function ScopedHeaderProbe({
+  name,
+  height,
+}: {
+  readonly name: string;
+  readonly height: number;
+}) {
+  const { registerRef, spaces } = useLayout();
+  const setHeader = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node)
+        node.getBoundingClientRect = () => new DOMRect(0, 0, 400, height);
+      registerRef("header", node);
+    },
+    [height, registerRef]
+  );
+  return (
+    <>
+      <div ref={setHeader} />
+      <output data-testid={name}>{spaces.headerSpace}</output>
+    </>
+  );
+}
+
+it("isolates retained header measurements and keeps a fallback during loading", () => {
+  const view = (height: number, active: boolean) => (
+    <LayoutProvider>
+      <ScopedHeaderProbe name="outer-header" height={100} />
+      <PhoneListLayoutProvider active={active}>
+        <ScopedHeaderProbe name="retained-header" height={height} />
+      </PhoneListLayoutProvider>
+    </LayoutProvider>
+  );
+  const { rerender } = render(view(0, false));
+  expect(screen.getByTestId("outer-header")).toHaveTextContent("100");
+  expect(screen.getByTestId("retained-header")).toHaveTextContent("64");
+  rerender(view(70, true));
+  expect(screen.getByTestId("outer-header")).toHaveTextContent("100");
+  expect(screen.getByTestId("retained-header")).toHaveTextContent("70");
+  rerender(view(0, false));
+  expect(screen.getByTestId("outer-header")).toHaveTextContent("100");
+  expect(screen.getByTestId("retained-header")).toHaveTextContent("70");
+});
+
+function NavigationRegistrationProbe({
+  visible,
+}: {
+  readonly visible: boolean;
+}) {
+  const { registerRef, spaces } = useLayout();
+  const setNavRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node) {
+        node.getBoundingClientRect = () => ({ height: 80 }) as DOMRect;
+      }
+      registerRef("mobileNav", node);
+    },
+    [registerRef]
+  );
+  return (
+    <>
+      {visible && <div ref={setNavRef} />}
+      <output data-testid="registered-nav-height">
+        {spaces.mobileNavSpace}
+      </output>
+    </>
+  );
+}
+
 function MobileWavesTestComponent() {
   const { registerRef, mobileWavesViewStyle } = useLayout();
   const headerRef = useRef<HTMLDivElement>(null);
@@ -108,12 +178,14 @@ function MobileWavesTestComponent() {
 }
 
 function FallbackStyleComponent() {
-  const { contentContainerStyle, waveViewStyle } = useLayout();
+  const { contentContainerStyle, waveViewStyle, myVotesViewStyle } =
+    useLayout();
 
   return (
     <>
       <div data-testid="content-container" style={contentContainerStyle} />
       <div data-testid="wave-view" style={waveViewStyle} />
+      <div data-testid="my-votes-view" style={myVotesViewStyle} />
     </>
   );
 }
@@ -138,6 +210,55 @@ function ViewportLockTestComponent({ isOpen }: { readonly isOpen: boolean }) {
 }
 
 describe("LayoutProvider", () => {
+  it.each([true, false])(
+    "gives the final vote keyboard clearance only in the app (%s)",
+    (isCapacitor) => {
+      mockCapacitorValues = { isCapacitor, isAndroid: isCapacitor };
+      render(
+        <LayoutProvider>
+          <FallbackStyleComponent />
+        </LayoutProvider>
+      );
+      const { style } = screen.getByTestId("my-votes-view");
+      expect(style.height.includes("--native-keyboard-inset-bottom")).toBe(
+        isCapacitor
+      );
+      expect(style.maxHeight).toBe(style.height);
+    }
+  );
+
+  it("updates changed registrations before animation frames without warnings in StrictMode", () => {
+    const originalRequestAnimationFrame = global.requestAnimationFrame;
+    global.requestAnimationFrame = jest.fn(() => 1);
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const view = (visible: boolean) => (
+      <StrictMode>
+        <LayoutProvider>
+          <NavigationRegistrationProbe visible={visible} />
+        </LayoutProvider>
+      </StrictMode>
+    );
+    try {
+      const { rerender, unmount } = render(view(true));
+      expect(screen.getByTestId("registered-nav-height")).toHaveTextContent(
+        /^80$/u
+      );
+      for (const visible of [false, true, false, true]) {
+        rerender(view(visible));
+        expect(screen.getByTestId("registered-nav-height")).toHaveTextContent(
+          visible ? /^80$/u : /^0$/u
+        );
+      }
+      unmount();
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+      global.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  });
+
   it("provides viewport-sized fallback styles before measurement completes", () => {
     const originalRequestAnimationFrame = global.requestAnimationFrame;
     global.requestAnimationFrame = jest.fn(
@@ -409,6 +530,7 @@ describe("LayoutProvider", () => {
   });
 
   it("keeps the viewport locked until the native keyboard is fully hidden", () => {
+    mockCapacitorValues = { isCapacitor: true, isAndroid: false, isIos: true };
     mockKeyboardValues = {
       isVisible: true,
       keyboardHeight: 320,
@@ -436,7 +558,7 @@ describe("LayoutProvider", () => {
     );
 
     mockKeyboardValues = {
-      isVisible: true,
+      isVisible: false,
       keyboardHeight: 0,
       phase: "hiding",
     };
@@ -465,6 +587,93 @@ describe("LayoutProvider", () => {
       "unlocked"
     );
   });
+
+  it.each([
+    { phase: "hiding", reopen: false, reason: "a missing did-hide event" },
+    { phase: "hidden", reopen: false, reason: "an early did-hide event" },
+    { phase: "hiding", reopen: true, reason: "a rapid reopen during hiding" },
+  ] as const)(
+    "restores Android layout safely after $reason",
+    ({ phase, reopen }) => {
+      jest.useFakeTimers();
+      mockCapacitorValues = {
+        isCapacitor: true,
+        isAndroid: true,
+        isIos: false,
+      };
+      const originalHeight = Object.getOwnPropertyDescriptor(
+        globalThis,
+        "innerHeight"
+      );
+      const originalViewport = Object.getOwnPropertyDescriptor(
+        globalThis,
+        "visualViewport"
+      );
+      let height = 800;
+      const viewport = new EventTarget();
+      Object.defineProperty(viewport, "height", { get: () => height });
+      Object.defineProperties(globalThis, {
+        innerHeight: { configurable: true, get: () => height },
+        visualViewport: { configurable: true, value: viewport },
+      });
+      const view = (isOpen: boolean) => (
+        <LayoutProvider>
+          <ViewportLockTestComponent isOpen={isOpen} />
+        </LayoutProvider>
+      );
+      const { rerender, unmount } = render(view(true));
+
+      try {
+        height = 480;
+        mockKeyboardValues = {
+          isVisible: true,
+          keyboardHeight: 320,
+          phase: "visible",
+        };
+        rerender(view(true));
+        rerender(view(false));
+        expect(screen.getByTestId("viewport-lock-state")).toHaveTextContent(
+          "locked"
+        );
+
+        mockKeyboardValues = { isVisible: false, keyboardHeight: 0, phase };
+        rerender(view(false));
+        expect(screen.getByTestId("viewport-lock-state")).toHaveTextContent(
+          "locked"
+        );
+
+        if (reopen) rerender(view(true));
+        act(() => {
+          height = 800;
+          viewport.dispatchEvent(new Event("resize"));
+        });
+        if (reopen) {
+          act(() => jest.advanceTimersByTime(1250));
+          expect(screen.getByTestId("viewport-lock-state")).toHaveTextContent(
+            "locked"
+          );
+          rerender(view(false));
+        }
+
+        expect(screen.getByTestId("viewport-lock-state")).toHaveTextContent(
+          "unlocked"
+        );
+        expect(document.documentElement).not.toHaveAttribute(
+          "data-layout-viewport-locked"
+        );
+        expect(mockKeyboardValues.phase).toBe(phase);
+      } finally {
+        unmount();
+        if (originalHeight)
+          Object.defineProperty(globalThis, "innerHeight", originalHeight);
+        else Reflect.deleteProperty(globalThis, "innerHeight");
+        if (originalViewport)
+          Object.defineProperty(globalThis, "visualViewport", originalViewport);
+        else Reflect.deleteProperty(globalThis, "visualViewport");
+        jest.useRealTimers();
+      }
+    }
+  );
 
   it("refreshes the locked viewport height after device rotation", () => {
     const originalInnerHeight = globalThis.innerHeight;

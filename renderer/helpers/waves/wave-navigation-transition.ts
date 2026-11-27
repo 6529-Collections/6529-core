@@ -1,120 +1,351 @@
+import { Capacitor } from "@capacitor/core";
+import { PHONE_WAVES_LAYOUT_QUERY } from "@/constants/waves-layout";
+import { runPhoneNavigationMotion } from "@/lib/motion/phone-navigation-registry";
+import { spring } from "framer-motion";
+import { MOTION_SPRINGS } from "@/lib/motion/springs";
+
 // The app shell acknowledges the committed screen before the browser captures it.
 // This keeps the outgoing list (including its scroll position) visible during the handoff.
-type WaveScreen = "list" | "wave";
+export type WaveScreen = "list" | "feed" | "wave";
+type TransitionTarget =
+  | WaveScreen
+  | { readonly pathname: string; readonly direction?: "forward" };
+
+interface SwipeHandoff {
+  readonly surface: HTMLElement;
+  readonly distance: number;
+  readonly width: number;
+  readonly onFinish?: () => void;
+}
+
+export function isForwardWaveNavigation(
+  screen: WaveScreen,
+  previous: string | null | undefined
+) {
+  return screen === "wave" || (screen === "feed" && previous === "list");
+}
+
+function getPhoneMotionDirection(target: TransitionTarget): "forward" | "back" {
+  if (typeof target !== "string") return target.direction ?? "back";
+  if (target === "wave") return "forward";
+  const opensFeed =
+    target === "feed" &&
+    globalThis.location.pathname === "/waves" &&
+    !new URLSearchParams(globalThis.location.search).has("wave");
+  return opensFeed ? "forward" : "back";
+}
+
+export function usesFadeOnlyWaveEntry(screen: WaveScreen) {
+  return screen === "wave" && Capacitor.getPlatform() === "ios";
+}
+
 let activeTransition: {
-  readonly screen: WaveScreen;
+  readonly target: TransitionTarget;
+  readonly sourcePathname: string;
   readonly committed: () => void;
   readonly skip: () => void;
+  readonly contentReady: () => void;
 } | null = null;
-let navigatingFromSwipe = false;
-let swipeHandoffUntil = 0;
+let navigatingWithoutAdditionalMotion = false;
+let swipeHandoffPending = false;
+
+function setConversationSpring(root: HTMLElement) {
+  // Clip the near-invisible spring tail so browser snapshots are released promptly.
+  const generator = spring({
+    ...MOTION_SPRINGS.spatial.default,
+    keyframes: [0, 1],
+  });
+  const samples = [0];
+  let time = 0;
+  do {
+    time += 16;
+    samples.push(Math.min(1, Math.max(0, generator.next(time).value)));
+  } while (samples.at(-1)! < 0.999 && time < 1000);
+  samples[samples.length - 1] = 1;
+  root.style.setProperty("--wave-navigation-duration", `${time}ms`);
+  root.style.setProperty(
+    "--wave-navigation-easing",
+    `linear(${samples.join(",")})`
+  );
+}
 
 /** The interactive gesture already animated the outgoing screen. */
 export function navigateAfterWaveSwipe(navigate: () => void) {
   skipWaveNavigationTransition();
-  swipeHandoffUntil = performance.now() + 1000;
-  navigatingFromSwipe = true;
+  navigateWithoutAdditionalMotion(navigate);
+}
+
+function navigateWithoutAdditionalMotion(navigate: () => void) {
+  swipeHandoffPending = true;
+  navigatingWithoutAdditionalMotion = true;
   try {
     navigate();
   } finally {
-    navigatingFromSwipe = false;
+    navigatingWithoutAdditionalMotion = false;
   }
 }
 
+/** Tapped phone Back slides the full page over the supplied destination. */
+export function runPhoneChevronBackTransition(
+  pathname: string,
+  navigate: () => void
+) {
+  runPhoneConversationTransition({ pathname }, navigate);
+}
+
+/** Opening a phone conversation pairs with its full-page Back slide. */
+export function runPhoneConversationEntryTransition(
+  pathname: string,
+  navigate: () => void
+) {
+  runPhoneConversationTransition({ pathname, direction: "forward" }, navigate);
+}
+
+function runPhoneConversationTransition(
+  target: Exclude<TransitionTarget, WaveScreen>,
+  navigate: () => void
+) {
+  if (!window.matchMedia(PHONE_WAVES_LAYOUT_QUERY).matches) {
+    navigate();
+    return;
+  }
+  runWaveNavigationTransition(target, () =>
+    navigateWithoutAdditionalMotion(navigate)
+  );
+}
+
 export function consumeWaveSwipeHandoff() {
-  const pending = performance.now() < swipeHandoffUntil;
-  swipeHandoffUntil = 0;
+  // The destination consumes the handoff when it commits, however long routing takes.
+  const pending = swipeHandoffPending;
+  swipeHandoffPending = false;
   return pending;
 }
 
 export function commitWaveNavigationTransition(
-  screen: WaveScreen | null
+  screen: WaveScreen | null,
+  pathname?: string
 ): boolean {
   if (!activeTransition) return false;
-  if (screen === activeTransition.screen) activeTransition.committed();
-  else activeTransition.skip();
+  const { target } = activeTransition;
+  const reachedTarget =
+    typeof target === "string"
+      ? screen === target
+      : pathname === target.pathname;
+  // Responsive hydration can acknowledge the outgoing page before capture runs.
+  if (
+    !reachedTarget &&
+    typeof target !== "string" &&
+    pathname === activeTransition.sourcePathname
+  )
+    return false;
+  if (!reachedTarget) activeTransition.skip();
+  else activeTransition.committed();
   return true;
 }
 
+/** The virtualized Feed reports when its rows are ready. Chevron exits only wait for the route. */
+export function commitWaveNavigationContent(screen: WaveScreen) {
+  if (activeTransition?.target === screen) activeTransition.contentReady();
+}
+
+export function isWaveNavigationContentPending(screen: WaveScreen) {
+  return (
+    activeTransition?.target === screen &&
+    document.documentElement.dataset["waveNavigationContentPending"] !==
+      undefined
+  );
+}
+
 export function skipWaveNavigationTransition() {
+  swipeHandoffPending = false;
   activeTransition?.skip();
 }
 
-export function runWaveNavigationTransition(
-  screen: WaveScreen,
-  navigate: () => void
+function getTransitionPresentation(
+  target: TransitionTarget,
+  previous: string | undefined
 ) {
-  if (navigatingFromSwipe) {
-    navigate();
-    return;
-  }
-  const surface = document.querySelector<HTMLElement>(
-    "[data-wave-navigation-screen]"
-  );
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  if (
-    !surface ||
-    surface.dataset["waveNavigationScreen"] === screen ||
-    typeof document.startViewTransition !== "function" ||
-    reducedMotion.matches
-  ) {
-    navigate();
-    return;
-  }
+  if (typeof target !== "string")
+    return target.direction === "forward"
+      ? "conversation-entry"
+      : "chevron-back";
+  if (usesFadeOnlyWaveEntry(target)) return "wave-entry";
+  return isForwardWaveNavigation(target, previous) ? "forward" : "back";
+}
 
-  activeTransition?.skip();
-  const root = document.documentElement;
-  let commit = () => {};
-  const committed = new Promise<void>((resolve) => {
-    commit = resolve;
-  });
+function navigateWithoutTransition(
+  navigate: () => void,
+  swipe: SwipeHandoff | undefined
+) {
+  // A swipe caller owns its fallback animation and navigation.
+  if (!swipe) navigate();
+  return false;
+}
+
+function prepareTransitionSurface(
+  root: HTMLElement,
+  surface: HTMLElement,
+  target: TransitionTarget,
+  swipe: SwipeHandoff | undefined
+) {
+  if (typeof target !== "string") setConversationSpring(root);
+  if (target === "feed") root.dataset["waveNavigationContentPending"] = "true";
+  else delete root.dataset["waveNavigationContentPending"];
   root.style.setProperty(
     "--wave-transition-height",
     `${surface.getBoundingClientRect().height}px`
   );
-  surface.style.viewTransitionName = "wave-navigation";
-  root.dataset["waveNavigationTransition"] =
-    screen === "wave" ? "forward" : "back";
+  if (typeof target === "string" || target.direction !== "forward")
+    surface.style.viewTransitionName = "wave-navigation";
+  root.dataset["waveNavigationTransition"] = getTransitionPresentation(
+    target,
+    surface.dataset["waveNavigationScreen"]
+  );
+  if (swipe) {
+    root.dataset["waveNavigationTransition"] = "swipe-back";
+    root.style.setProperty(
+      "--wave-swipe-remainder",
+      `${Math.max(0, swipe.width - swipe.distance)}px`
+    );
+  }
+}
+
+export function runWaveNavigationTransition(
+  target: TransitionTarget,
+  navigate: () => void,
+  swipe?: SwipeHandoff
+) {
+  if (navigatingWithoutAdditionalMotion) {
+    navigate();
+    return false;
+  }
+  if (
+    !swipe &&
+    runPhoneNavigationMotion(getPhoneMotionDirection(target), () =>
+      navigateWithoutAdditionalMotion(navigate)
+    )
+  )
+    return true;
+  swipeHandoffPending = false;
+  const capturesWholePage = typeof target !== "string";
+  const enteringConversation =
+    typeof target !== "string" && target.direction === "forward";
+  const surface = document.querySelector<HTMLElement>(
+    capturesWholePage
+      ? "[data-wave-swipe-page], [data-phone-wave-page]"
+      : "[data-wave-navigation-screen]"
+  );
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (
+    !surface ||
+    surface.dataset["waveNavigationScreen"] === target ||
+    typeof document.startViewTransition !== "function"
+  ) {
+    activeTransition?.skip();
+    return navigateWithoutTransition(navigate, swipe);
+  }
+
+  activeTransition?.skip();
+  const root = document.documentElement;
+  const sourcePathname = globalThis.location.pathname;
+  prepareTransitionSurface(root, surface, target, swipe);
+  let contentPending = target === "feed";
+  let shellCommitted = false;
+  let commit = () => {};
+  const committed = new Promise<void>((resolve) => {
+    commit = resolve;
+  });
+  let namedSurface = surface;
   const clearSurface = () => {
     delete root.dataset["waveNavigationTransition"];
-    surface.style.removeProperty("view-transition-name");
+    delete root.dataset["waveNavigationContentPending"];
+    namedSurface.style.removeProperty("view-transition-name");
     root.style.removeProperty("--wave-transition-height");
+    root.style.removeProperty("--wave-swipe-remainder");
+    root.style.removeProperty("--wave-navigation-duration");
+    root.style.removeProperty("--wave-navigation-easing");
   };
   let transition: ViewTransition;
+  let stopped = false;
+  let superseded = false;
   try {
     transition = document.startViewTransition(async () => {
-      navigate();
+      if (superseded) return;
+      // The old page is captured. Keep the destination in the stationary root
+      // snapshot so its header and content stay visible together in WebKit.
+      if (capturesWholePage && !enteringConversation)
+        surface.style.removeProperty("view-transition-name");
+      // The browser has captured the finger's final position. Prepare the new
+      // screen underneath that snapshot, rather than sliding into an empty shell.
+      swipe?.surface.style.removeProperty("transform");
+      swipe?.surface.style.removeProperty("will-change");
+      if (swipe) navigateWithoutAdditionalMotion(navigate);
+      else navigate();
       await committed;
     });
   } catch {
     // Motion is optional: an engine failure must not prevent navigation.
     clearSurface();
-    navigate();
-    return;
+    return navigateWithoutTransition(navigate, swipe);
   }
-  let stopped = false;
-  const skip = () => {
+  const skip = (cancelNavigation = true) => {
+    superseded ||= cancelNavigation;
     if (stopped) return;
     stopped = true;
     commit();
+    clearSurface();
     transition.skipTransition();
   };
   // A route interruption must never leave the app waiting for a screen that cannot commit.
-  const timeout = window.setTimeout(skip, 500);
+  const skipMotion = () => skip(false);
+  const cancelNavigation = () => skip();
+  const viewportWidth = window.innerWidth;
+  const stopForWidthChange = () => {
+    if (window.innerWidth !== viewportWidth) skipMotion();
+  };
+  const timeout = window.setTimeout(skipMotion, 500);
+  const contentReady = () => {
+    contentPending = false;
+    delete root.dataset["waveNavigationContentPending"];
+    if (shellCommitted) window.clearTimeout(timeout);
+  };
   const pending = {
-    screen,
+    target,
+    sourcePathname,
     committed: () => {
-      window.clearTimeout(timeout);
+      if (enteringConversation && !stopped) {
+        namedSurface =
+          document.querySelector<HTMLElement>(
+            "[data-wave-swipe-page], [data-phone-wave-page]"
+          ) ?? surface;
+        namedSurface.style.viewTransitionName = "wave-navigation";
+      }
+      // Finish the DOM update so the virtual list can run its normal layout
+      // frames. Keep the opaque old snapshot still until visible cards are ready.
+      shellCommitted = true;
+      if (!contentPending) window.clearTimeout(timeout);
       commit();
     },
+    contentReady,
     skip,
   };
   activeTransition = pending;
-  reducedMotion.addEventListener("change", skip, { once: true });
+  reducedMotion.addEventListener("change", skipMotion, { once: true });
+  if (capturesWholePage) {
+    document.addEventListener("pointerdown", skipMotion, { capture: true });
+    window.addEventListener("popstate", cancelNavigation);
+    window.addEventListener("resize", stopForWidthChange);
+  }
   const cleanup = () => {
     stopped = true;
     window.clearTimeout(timeout);
-    reducedMotion.removeEventListener("change", skip);
+    reducedMotion.removeEventListener("change", skipMotion);
+    if (capturesWholePage) {
+      document.removeEventListener("pointerdown", skipMotion, true);
+      window.removeEventListener("popstate", cancelNavigation);
+      window.removeEventListener("resize", stopForWidthChange);
+    }
+    swipe?.onFinish?.();
     if (activeTransition !== pending) return;
     activeTransition = null;
     clearSurface();
@@ -122,4 +353,5 @@ export function runWaveNavigationTransition(
   // Skipping a transition rejects ready but still runs the navigation callback.
   void transition.ready.catch(() => {});
   void transition.finished.then(cleanup, cleanup);
+  return true;
 }

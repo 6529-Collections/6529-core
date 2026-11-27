@@ -6,7 +6,8 @@ import { useAuth } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import ProfilePreferencesSettings from "@/components/header/ProfilePreferencesSettings";
 import ContentPreferencesSettings from "@/components/preferences/ContentPreferencesSettings";
-import DevicesPreferencesSettings from "@/components/preferences/DevicesPreferencesSettings";
+import DevicesSecuritySettings from "@/components/preferences/devices-security/DevicesSecuritySettings";
+import { isDevicesSecurityEnabled } from "@/components/preferences/devices-security/devicesSecurityFeature";
 import ReportsPreferencesSettings from "@/components/preferences/ReportsPreferencesSettings";
 import TimeZonePreferencesSettings from "@/components/preferences/TimeZonePreferencesSettings";
 import UserSetUpProfileCta from "@/components/user/utils/set-up-profile/UserSetUpProfileCta";
@@ -17,15 +18,16 @@ import {
   type PreferencesRouteTab,
 } from "@/helpers/preferences-navigation";
 import { t } from "@/i18n/messages";
-import { isSignedMessagesEnabled } from "@/lib/device-signing/feature";
+import { useE2eeBackupOff } from "@/hooks/e2ee/useE2eeBackup";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 
 export type PreferencesTab =
   | "notifications"
+  | "messages"
   | "blocked-profiles"
   | "reports"
-  | "devices"
+  | "security"
   | "time-zone";
 
 const TABS: ReadonlyArray<{
@@ -33,15 +35,21 @@ const TABS: ReadonlyArray<{
   readonly routeTab: PreferencesRouteTab | undefined;
   readonly labelKey:
     | "preferences.tabs.notifications"
+    | "preferences.tabs.messages"
     | "preferences.tabs.blockedProfiles"
     | "preferences.tabs.reports"
-    | "preferences.tabs.devices"
+    | "preferences.tabs.security"
     | "preferences.tabs.timeZone";
 }> = [
   {
     id: "notifications",
     routeTab: undefined,
     labelKey: "preferences.tabs.notifications",
+  },
+  {
+    id: "messages",
+    routeTab: "messages",
+    labelKey: "preferences.tabs.messages",
   },
   {
     id: "blocked-profiles",
@@ -54,9 +62,9 @@ const TABS: ReadonlyArray<{
     labelKey: "preferences.tabs.reports",
   },
   {
-    id: "devices",
-    routeTab: "devices",
-    labelKey: "preferences.tabs.devices",
+    id: "security",
+    routeTab: "security",
+    labelKey: "preferences.tabs.security",
   },
   {
     id: "time-zone",
@@ -65,9 +73,11 @@ const TABS: ReadonlyArray<{
   },
 ];
 
-/** The Devices tab exists only while signed messages are enabled. */
+/** Devices & security exists while signed posts or encrypted DMs are enabled. */
 const getVisibleTabs = () =>
-  isSignedMessagesEnabled() ? TABS : TABS.filter((tab) => tab.id !== "devices");
+  isDevicesSecurityEnabled()
+    ? TABS
+    : TABS.filter((tab) => tab.id !== "security");
 
 export default function PreferencesPageClient({
   activeTab,
@@ -77,6 +87,8 @@ export default function PreferencesPageClient({
   readonly returnToProfile?: boolean | undefined;
 }) {
   const locale = useBrowserLocale();
+  // A dot on Devices & security while encrypted backup is off.
+  const backupOff = useE2eeBackupOff();
   const { isCapacitor } = useCapacitor();
   const { connectedProfile, fetchingProfile } = useAuth();
   const { connectionState, hasValidWalletAuth } = useSeizeConnectContext();
@@ -138,6 +150,17 @@ export default function PreferencesPageClient({
                 )}`}
               >
                 {t(locale, tab.labelKey)}
+                {tab.id === "security" && backupOff ? (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="tw-ml-1.5 tw-inline-block tw-size-2 tw-shrink-0 tw-rounded-full tw-bg-amber-400"
+                    />
+                    <span className="tw-sr-only">
+                      {`, ${t(locale, "devicesSecurity.tab.backupOff")}`}
+                    </span>
+                  </>
+                ) : null}
               </Link>
             );
           })}
@@ -182,15 +205,17 @@ export default function PreferencesPageClient({
             />
           ) : null}
           {canManagePreferences &&
-          activeTab === "devices" &&
-          isSignedMessagesEnabled() ? (
-            <DevicesPreferencesSettings
+          activeTab === "security" &&
+          isDevicesSecurityEnabled() ? (
+            <DevicesSecuritySettings
               key={connectedProfile?.id ?? "signed-out"}
             />
           ) : null}
-          {canManagePreferences && activeTab === "notifications" ? (
+          {canManagePreferences &&
+          (activeTab === "notifications" || activeTab === "messages") ? (
             <ProfilePreferencesSettings
               key={connectedProfile?.id ?? "signed-out"}
+              activeTab={activeTab}
             />
           ) : null}
         </div>

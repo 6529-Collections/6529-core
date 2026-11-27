@@ -20,36 +20,42 @@ const MyStreamWaveMyVoteVotes: React.FC<MyStreamWaveMyVoteVotesProps> = ({
     typeof winningThreshold === "number" && winningThreshold > 0;
 
   return (
-    <div className="tw-flex tw-min-h-6 tw-items-center tw-gap-x-1.5 tw-text-sm tw-leading-5">
+    <div className="tw-flex tw-min-h-6 tw-items-center tw-gap-x-1.5 tw-text-[13px] tw-leading-5 [&_span]:!tw-text-[13px]">
       <span className="tw-text-iron-400">
         {t(locale, "waves.myVotes.total")}
       </span>
       <span
+        data-wave-typography="preserve"
         className={`tw-font-semibold tw-tabular-nums tw-tracking-identity ${voteClass}`}
       >
         {formatInteger(locale, drop.rating)}
       </span>
 
-      <DropVoteProgressing
-        current={drop.rating}
-        projected={
-          hasWinningThreshold ? drop.realtime_rating : drop.rating_prediction
-        }
-        projectedLabel={formatInteger(
-          locale,
-          hasWinningThreshold ? drop.realtime_rating : drop.rating_prediction
-        )}
-        tooltipLabel={
-          hasWinningThreshold
-            ? t(locale, "waves.myVotes.votesGivenNow")
-            : t(locale, "waves.myVotes.projectedAtDecision")
-        }
-        subtle={true}
-        visualVariant="memes"
-        numberFont="sans"
-        numberSize="sm"
-        numberWeight="semibold"
-      />
+      <div
+        data-wave-typography="preserve"
+        className="tw-font-semibold empty:tw-hidden"
+      >
+        <DropVoteProgressing
+          current={drop.rating}
+          projected={
+            hasWinningThreshold ? drop.realtime_rating : drop.rating_prediction
+          }
+          projectedLabel={formatInteger(
+            locale,
+            hasWinningThreshold ? drop.realtime_rating : drop.rating_prediction
+          )}
+          tooltipLabel={
+            hasWinningThreshold
+              ? t(locale, "waves.myVotes.votesGivenNow")
+              : t(locale, "waves.myVotes.projectedAtDecision")
+          }
+          subtle={true}
+          visualVariant="memes"
+          numberFont="sans"
+          numberSize="sm"
+          numberWeight="semibold"
+        />
+      </div>
     </div>
   );
 };

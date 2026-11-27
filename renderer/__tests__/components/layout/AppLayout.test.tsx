@@ -20,9 +20,13 @@ let mockLayoutSpaces = {
   measurementsComplete: false,
 };
 
+jest.mock("@/components/mobile-navigation/PhoneNavigationStack", () => ({
+  __esModule: true,
+  default: ({ children }: { readonly children: React.ReactNode }) => children,
+}));
+
 jest.mock("next/dynamic", () => (loader: () => Promise<unknown>) => {
   const loaderSource = loader.toString();
-
   if (loaderSource.includes("../header/AppHeader")) {
     const MockDynamicHeader = () => <div data-testid="header" />;
     MockDynamicHeader.displayName = "MockDynamicHeader";
@@ -109,6 +113,7 @@ jest.mock("@/hooks/useDeepLinkNavigation", () => ({
   useDeepLinkNavigation: jest.fn(),
 }));
 jest.mock("next/navigation", () => ({
+  useParams: () => ({}),
   usePathname: () => usePathname(),
   useSearchParams: () => getSearchParams(),
 }));
@@ -216,12 +221,18 @@ describe("AppLayout", () => {
       `[${PULL_TO_REFRESH_TRANSFORM_ROOT_ATTRIBUTE}="true"]`
     );
     const bottomNav = screen.getByTestId("bottom-nav");
+    const swipePage = container.querySelector("[data-wave-swipe-page]");
 
     expect(scrollTarget).toBeInTheDocument();
     expect(transformRoot).toBeInTheDocument();
     expect(scrollTarget).toContainElement(transformRoot as HTMLElement);
     expect(scrollTarget).not.toContainElement(bottomNav);
     expect(transformRoot).not.toContainElement(bottomNav);
+    expect(transformRoot).toContainElement(swipePage as HTMLElement);
+    expect(swipePage).not.toBe(transformRoot);
+    expect(swipePage).toContainElement(screen.getByTestId("header"));
+    expect(swipePage).toContainElement(screen.getByText("child"));
+    expect(swipePage).not.toContainElement(bottomNav);
     expect(mockPullToRefresh).toHaveBeenCalledWith(
       expect.objectContaining({
         contentRef: expect.objectContaining({ current: transformRoot }),

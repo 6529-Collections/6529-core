@@ -6,35 +6,13 @@ import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
 import Link from "next/link";
 import React from "react";
-import {
-  WAVE_HEADER_ACTION_CLASSES,
-  WAVE_HEADER_ACTION_SURFACE_CLASSES,
-} from "../waves/WaveHeaderActions";
+import { getIconButtonClasses } from "@/components/utils/button/iconButtonStyles";
+import { getIconButtonLayoutSurfaceClasses } from "@/components/utils/button/iconButtonLayouts";
 import { useWaveFeatureUsage } from "@/hooks/useWaveFeatureUsage";
 import { waveFeatureAttributes } from "@/services/analytics/waveFeatureUsage";
+import ProfileWavesFeedIcon from "@/components/common/icons/ProfileWavesFeedIcon";
 
 export const PROFILE_FEED_TOOLTIP_ID = "profile-feed-shortcut-tooltip";
-
-function MasonryGridIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="tw-size-4 tw-flex-shrink-0"
-    >
-      <rect width="7" height="9" x="3" y="3" rx="1" />
-      <rect width="7" height="5" x="14" y="3" rx="1" />
-      <rect width="7" height="9" x="14" y="12" rx="1" />
-      <rect width="7" height="5" x="3" y="16" rx="1" />
-    </svg>
-  );
-}
 
 function isModifiedClick(event: React.MouseEvent<HTMLAnchorElement>) {
   return (
@@ -85,12 +63,12 @@ export function WebProfileFeedShortcut({
           onClick={handleClick}
           aria-label={profileFeedLabel}
           aria-current={isActive ? "page" : undefined}
-          className={WAVE_HEADER_ACTION_CLASSES}
+          className={getIconButtonClasses({ layout: "toolbar-filled" })}
           data-tooltip-id={PROFILE_FEED_TOOLTIP_ID}
           data-tooltip-content={t(locale, "waves.sidebar.openProfileFeed")}
         >
-          <span className="tw-inline-flex tw-size-full tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-900 tw-transition-colors tw-duration-150 desktop-hover:group-hover:tw-bg-iron-800 touch-only:tw-size-10 motion-reduce:tw-transition-none">
-            <MasonryGridIcon />
+          <span className={getIconButtonLayoutSurfaceClasses("toolbar-filled")}>
+            <ProfileWavesFeedIcon />
           </span>
         </Link>
       </div>
@@ -106,12 +84,12 @@ export function WebProfileFeedShortcut({
       onClick={handleClick}
       aria-label={profileFeedLabel}
       aria-current={isActive ? "page" : undefined}
-      className={WAVE_HEADER_ACTION_CLASSES}
+      className={getIconButtonClasses({ layout: "toolbar" })}
       data-tooltip-id={PROFILE_FEED_TOOLTIP_ID}
       data-tooltip-content={t(locale, "waves.sidebar.openProfileFeed")}
     >
-      <span className={WAVE_HEADER_ACTION_SURFACE_CLASSES}>
-        <MasonryGridIcon />
+      <span className={getIconButtonLayoutSurfaceClasses("toolbar")}>
+        <ProfileWavesFeedIcon />
       </span>
     </Link>
   );

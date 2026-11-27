@@ -1,5 +1,7 @@
 "use client";
 
+import IconButton from "@/components/utils/button/IconButton";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarAlt,
@@ -19,7 +21,10 @@ import { calculateLastDecisionTime } from "@/helpers/waves/create-wave.helpers";
 import { CREATE_WAVE_VALIDATION_ERROR } from "@/helpers/waves/create-wave.validation";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
-import { CREATE_WAVE_FORM_STYLES } from "../utils/createWaveFormStyles";
+import {
+  CREATE_WAVE_FORM_STYLES,
+  DECISION_EDITOR_MOBILE_STYLES,
+} from "../utils/createWaveFormStyles";
 
 interface RollingEndDateProps {
   readonly dates: CreateWaveDatesConfig;
@@ -133,6 +138,8 @@ export default function RollingEndDate({
   return (
     <div className="tw-relative">
       <CollapsibleCard
+        headerClassName={DECISION_EDITOR_MOBILE_STYLES.disclosureHeader}
+        titleClassName={DECISION_EDITOR_MOBILE_STYLES.heading}
         title={
           <span className="tw-text-iron-100">
             {t(locale, "waves.create.dates.rank.end.optionalTitle")}
@@ -142,7 +149,9 @@ export default function RollingEndDate({
         onToggle={() => setIsExpanded(!shouldShowExpandedContent)}
         collapsedContent={collapsedContent}
       >
-        <div className="tw-px-5 tw-pb-5 tw-pt-2">
+        <div
+          className={`tw-px-5 tw-pb-5 tw-pt-2 ${DECISION_EDITOR_MOBILE_STYLES.panelInlinePadding}`}
+        >
           {/* Date and Time Selection Container */}
           <div className="tw-col-span-2">
             <div className="tw-mb-3 tw-flex tw-flex-col tw-gap-3 sm:tw-flex-row sm:tw-items-start sm:tw-justify-between">
@@ -167,17 +176,19 @@ export default function RollingEndDate({
                       : formatDate(selectedEndDate, locale)}
                   </p>
                   {hasSelectedEndDate && (
-                    <button
+                    <IconButton
                       type="button"
                       aria-label={t(
                         locale,
                         "waves.create.dates.rank.end.clearAriaLabel"
                       )}
                       onClick={handleClearEndDate}
-                      className="tw-flex tw-size-6 tw-items-center tw-justify-center tw-rounded-full tw-border tw-border-solid tw-border-iron-600 tw-bg-iron-800 tw-text-iron-300 tw-transition tw-duration-300 hover:tw-border-primary-400 hover:tw-text-primary-300"
+                      size={24}
+                      variant="ghost"
+                      shape="circle"
                     >
                       <FontAwesomeIcon icon={faXmark} className="tw-size-3" />
-                    </button>
+                    </IconButton>
                   )}
                 </div>
               </div>

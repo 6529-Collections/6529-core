@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   QueryKey,
@@ -28,6 +35,8 @@ export default function UserPageXtdhGrantedList({
   isSelf = false,
 }: Readonly<UserPageXtdhGrantedListProps>) {
   const enabled = Boolean(grantor);
+  const statusTabsId = useId();
+  const statusPanelId = `${statusTabsId}-panel`;
   const {
     activeTab,
     activeSubFilter,
@@ -99,14 +108,15 @@ export default function UserPageXtdhGrantedList({
         <div className="tw-flex tw-items-center tw-justify-between tw-gap-2">
           <div className="tw-min-w-0 tw-flex-1">
             <UserPageXtdhGrantedListTabs
+              idPrefix={statusTabsId}
+              panelId={statusPanelId}
               activeTab={activeTab}
               onTabChange={handleTabChange}
-              fill={false}
               pendingCount={pendingCount}
             />
           </div>
           {activeTab === "ACTIVE" && (
-            <div className="tw-w-auto tw-shrink-0 [&_button[aria-haspopup]:not(:focus)]:tw-ring-0 [&_button[aria-haspopup]]:tw-h-8 [&_button[aria-haspopup]]:tw-border [&_button[aria-haspopup]]:tw-border-solid [&_button[aria-haspopup]]:tw-border-white/[0.06] [&_button[aria-haspopup]]:tw-bg-transparent [&_button[aria-haspopup]]:tw-py-1 [&_button[aria-haspopup]]:tw-text-[13px] [&_button[aria-haspopup]]:tw-font-medium [&_button[aria-haspopup]]:tw-text-iron-300 [&_button[aria-haspopup]]:tw-shadow-none">
+            <div className="tw-w-auto tw-shrink-0">
               <UserPageXtdhGrantedListSubFilters
                 activeSubFilter={activeSubFilter}
                 onSubFilterChange={handleSubFilterChange}
@@ -115,28 +125,36 @@ export default function UserPageXtdhGrantedList({
           )}
         </div>
       </div>
-      <UserPageXtdhGrantedListContent
-        enabled={enabled}
-        isLoading={isLoading}
-        isError={isError}
-        errorMessage={errorMessage}
-        grants={grants}
-        isSelf={isSelf}
-        onRetry={handleRetry}
-        statuses={apiParams.statuses}
-      />
-      {showLoadMore && (
-        <div className="tw-flex tw-justify-center tw-px-6 tw-pb-6">
-          <Button
-            variant="tertiary"
-            size="md"
-            onClick={() => fetchNextPage()}
-            loading={isFetchingNextPage}
-          >
-            Load More
-          </Button>
-        </div>
-      )}
+      <div
+        id={statusPanelId}
+        role="tabpanel"
+        aria-labelledby={`${statusTabsId}-${activeTab}`}
+        tabIndex={0}
+        className="tw-space-y-4 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
+      >
+        <UserPageXtdhGrantedListContent
+          enabled={enabled}
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={errorMessage}
+          grants={grants}
+          isSelf={isSelf}
+          onRetry={handleRetry}
+          statuses={apiParams.statuses}
+        />
+        {showLoadMore && (
+          <div className="tw-flex tw-justify-center tw-px-6 tw-pb-6">
+            <Button
+              variant="tertiary"
+              size="md"
+              onClick={() => fetchNextPage()}
+              loading={isFetchingNextPage}
+            >
+              Load More
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

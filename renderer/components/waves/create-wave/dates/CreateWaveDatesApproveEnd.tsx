@@ -1,5 +1,7 @@
 "use client";
 
+import IconButton from "@/components/utils/button/IconButton";
+
 import { useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faInfoCircle, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -15,7 +17,10 @@ import {
   clampApproveWaveEndDate,
   getEarliestApproveWaveEndTimestamp,
 } from "./approveWaveDates.helpers";
-import { CREATE_WAVE_FORM_STYLES } from "../utils/createWaveFormStyles";
+import {
+  CREATE_WAVE_FORM_STYLES,
+  DECISION_EDITOR_MOBILE_STYLES,
+} from "../utils/createWaveFormStyles";
 
 interface CreateWaveDatesApproveEndProps {
   readonly dates: CreateWaveDatesConfig;
@@ -110,7 +115,9 @@ export default function CreateWaveDatesApproveEnd({
   };
 
   return (
-    <section className="tw-bg-transparent tw-p-5">
+    <section
+      className={`tw-bg-transparent tw-p-5 ${DECISION_EDITOR_MOBILE_STYLES.panelPadding}`}
+    >
       <div className="tw-flex tw-flex-col tw-gap-3 sm:tw-flex-row sm:tw-items-start sm:tw-justify-between">
         <div className="tw-space-y-1">
           <div className="tw-flex tw-items-center tw-gap-x-2">
@@ -146,17 +153,19 @@ export default function CreateWaveDatesApproveEnd({
                 : t(locale, "waves.create.dates.approve.end.noEndDate")}
             </p>
             {hasSelectedEndDate && (
-              <button
+              <IconButton
                 type="button"
                 aria-label={t(
                   locale,
                   "waves.create.dates.approve.end.clearAriaLabel"
                 )}
                 onClick={handleClearEndDate}
-                className="tw-flex tw-size-6 tw-items-center tw-justify-center tw-rounded-full tw-border tw-border-solid tw-border-iron-600 tw-bg-iron-800 tw-text-iron-300 tw-transition tw-duration-300 hover:tw-border-primary-400 hover:tw-text-primary-300"
+                size={24}
+                variant="ghost"
+                shape="circle"
               >
                 <FontAwesomeIcon icon={faXmark} className="tw-size-3" />
-              </button>
+              </IconButton>
             )}
           </div>
         </div>

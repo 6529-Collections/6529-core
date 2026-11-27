@@ -36,6 +36,8 @@ The profile header appears on profile routes under `/{user}` and shows:
    - profile picture (image or gradient fallback)
    - profile picture overlapping the lower banner edge, with the name and
      metadata on the content surface below the banner
+   - desktop name spacing follows the picture's displayed width, so narrow
+     portrait pictures do not leave an empty square-sized gap
    - title row (display name, CIC icon, level, optional artist badge)
    - metadata row (classification and `Profile enabled: <Month Year>` when data
      exists)
@@ -69,8 +71,11 @@ The profile header appears on profile routes under `/{user}` and shows:
    - subscription coverage remains a separate status and navigation surface:
      a subtle row beneath Preferences on desktop layouts, and a full-width
      subtle row below the identity block on smaller layouts
-   - other profile, signed-in viewer with handle, and target profile with
-     handle: follow/unfollow button
+   - Choose **Follow** to follow a profile. **Follow back** appears when that
+     profile already follows you.
+   - **Following** shows opposing arrows when you both follow each other.
+     Hover over or focus the button to see **You follow each other**. Select
+     **Following** to see the relationship and choose **Unfollow**.
    - **Profile actions → Artwork alerts** independently opts into new Main Stage
      artwork submissions by that artist; the menu shows On with a check mark when enabled.
      Signed-in viewers see it for profiles with an artist activity badge, or
@@ -79,12 +84,11 @@ The profile header appears on profile routes under `/{user}` and shows:
      hovering uses a background highlight. Keyboard navigation shows a focus ring,
      and Escape closes the menu and returns focus to its button.
      See [Artist Artwork Alerts](../../notifications/feature-artist-artwork-alerts.md).
-   - if that target also has a primary wallet: direct-message button appears
-     beside follow/unfollow immediately; it is not gated on existing follow
-     state
-   - while direct-message creation is pending, the paper-plane button shows a
-     loader, stays disabled, and ignores repeated clicks until the request
-     settles
+   - The profile's **More** button sits immediately to the right of Follow or Following.
+   - **Direct Message** appears beside Follow or Following for another profile.
+     On mobile web and in the app, its 36px icon button matches the More button.
+     It opens **New message** with that person selected. Opening the composer
+     creates no chat. See [Starting a chat](../../encrypted-messages.md#starting-a-chat).
 
 The **Website** action opens the profile's published custom website. Its home
 page can use a readable address such as `/{user}/studio`; the normal profile stays
@@ -125,6 +129,10 @@ also offers a direct shortcut to add or edit an optional About statement.
 - Mobile profile banners retain their existing full-strength artwork and
   top-right owner controls. Desktop banners fade into the content surface at
   the bottom; only the profile picture crosses that boundary.
+- In the app, the standard app header stays above the banner, retaining Search,
+  Share page, and the usual Back or account-menu control. There is no separate
+  profile Back overlay. Owner Edit profile and Preferences stay at the banner's
+  top right, above the profile picture.
 - The subscription status can link directly to the relevant settings,
   upcoming-drops, or top-up section. The complete status row is the link, with
   its label, current state, and contextual action kept inline when space allows.
@@ -169,8 +177,8 @@ also offers a direct shortcut to add or edit an optional About statement.
   successful request.
 - If the published website cannot be loaded, its header link is omitted; other
   profile actions remain available.
-- If direct-message creation fails, users get an error toast, the paper-plane
-  button returns to its idle state, and they can retry.
+- **New message** shows encrypted-message eligibility and any chat creation
+  errors after you open it from a profile.
 - If profile header edits fail, users get a toast or inline error and can retry.
 - If subscription coverage cannot load, the header shows
   `Coverage unavailable`; owners can still open Subscriptions and recover there.
@@ -185,8 +193,10 @@ also offers a direct shortcut to add or edit an optional About statement.
 - Switching accounts or entering a proxy session closes the Following list.
 - New Following and empty Followers copy falls back to English in locales
   without translations.
-- Direct-message action requires a signed-in viewer with a handle, a viewed
-  profile with a handle, and a target primary wallet.
+- **Direct Message** requires a signed-in profile and a different recipient
+  profile. Both profiles need a handle. The recipient also needs a primary
+  wallet when encrypted messaging is disabled or you are acting through a
+  profile proxy.
 - Artist badge and modal tabs depend on loaded
   `active_main_stage_submission_ids` and `winner_main_stage_drop_ids`.
 - `Edit profile`, `Preferences`, and owner subscription coverage are hidden

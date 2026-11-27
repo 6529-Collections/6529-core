@@ -1,10 +1,12 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
+import { usePhoneNavigationScreen } from "@/contexts/PhoneNavigationScreenContext";
 import React, {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -97,6 +99,7 @@ const items: NavItemData[] = [
 ];
 
 interface BottomNavigationProps {
+  readonly paused?: boolean | undefined;
   readonly hidden?: boolean | undefined;
   readonly preserveMeasurementWhileHidden?: boolean | undefined;
 }
@@ -193,10 +196,12 @@ const getTrackedScrollTarget = ({
 
 const useCompactDock = ({
   hidden,
+  paused = false,
   resetKey,
   reverseScrollDirection,
 }: {
   readonly hidden: boolean;
+  readonly paused?: boolean | undefined;
   readonly resetKey: string;
   readonly reverseScrollDirection: boolean;
 }) => {
@@ -232,7 +237,7 @@ const useCompactDock = ({
   }, [resetKey]);
 
   useEffect(() => {
-    if (hidden) {
+    if (hidden || paused) {
       return undefined;
     }
 
@@ -318,7 +323,7 @@ const useCompactDock = ({
       }
       pendingScrollTargetsRef.current.clear();
     };
-  }, [hidden, reverseScrollDirection, setCompact]);
+  }, [hidden, paused, reverseScrollDirection, setCompact]);
 
   return hidden ? false : compact;
 };
@@ -337,11 +342,12 @@ const getNavClassName = ({
   return `${getHiddenStyle(hidden)} tw-pointer-events-none tw-fixed tw-inset-x-0 tw-bottom-0 tw-z-50 tw-flex tw-justify-center tw-px-4 tw-transition-[opacity,transform] tw-duration-200 tw-ease-out motion-reduce:tw-transition-none ${bottomPadding}`;
 };
 
+// Retain the compact width floor while expanding so the width transition stays smooth.
 const getDockClassName = (compact: boolean) =>
-  `tw-pointer-events-auto tw-relative tw-border tw-border-white/[0.13] tw-bg-black/[0.76] tw-shadow-[0_18px_45px_rgba(0,0,0,0.48),0_0_0_1px_rgba(255,255,255,0.045),0_0_34px_rgba(255,255,255,0.075),inset_0_1px_0_rgba(255,255,255,0.105),inset_0_-1px_0_rgba(255,255,255,0.06)] tw-backdrop-blur-2xl tw-transition-[width,height,border-radius,background-color,box-shadow] tw-duration-300 tw-ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:tw-transition-none ${
+  `tw-pointer-events-auto tw-relative tw-min-w-[min(calc(100vw-2.25rem),21rem)] tw-border tw-border-white/[0.13] tw-bg-black/[0.76] tw-shadow-[0_18px_45px_rgba(0,0,0,0.48),0_0_0_1px_rgba(255,255,255,0.045),0_0_34px_rgba(255,255,255,0.075),inset_0_1px_0_rgba(255,255,255,0.105),inset_0_-1px_0_rgba(255,255,255,0.06)] tw-backdrop-blur-2xl tw-transition-[width,height,border-radius,background-color,box-shadow] tw-duration-300 tw-ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:tw-transition-none ${
     compact
-      ? "tw-h-[54px] tw-w-[min(calc(100vw-5.5rem),25rem)] tw-rounded-[1.65rem] sm:tw-h-[58px] sm:tw-w-[min(calc(100vw-6.75rem),31rem)] md:tw-w-[min(calc(100vw-10rem),35rem)]"
-      : "tw-h-[64px] tw-w-[min(calc(100vw-2.25rem),38rem)] tw-rounded-[2rem] sm:tw-h-[66px] sm:tw-w-[min(calc(100vw-4rem),40rem)]"
+      ? "tw-h-[54px] tw-w-[min(calc(100vw-5.5rem),25rem)] [--dock-nav-gap:0rem] [--dock-nav-padding:1rem] sm:[--dock-nav-padding:0.625rem] tw-rounded-[1.65rem] sm:tw-h-[58px] sm:tw-w-[min(calc(100vw-6.75rem),31rem)] md:tw-w-[min(calc(100vw-10rem),35rem)]"
+      : "tw-h-[64px] tw-w-[min(calc(100vw-2.25rem),38rem)] [--dock-nav-gap:0rem] [--dock-nav-padding:0.5rem] min-[360px]:[--dock-nav-gap:0.125rem] min-[360px]:[--dock-nav-padding:1rem] tw-rounded-[2rem] sm:tw-h-[66px] sm:tw-w-[min(calc(100vw-4rem),40rem)]"
   }`;
 
 const getDockStyle = ({
@@ -362,10 +368,8 @@ const getDockStyle = ({
 
 const floatingNavHitRowClassName = "tw-relative tw-h-full";
 
-const getFloatingNavListClassName = (compact: boolean) =>
-  `tw-m-0 tw-flex tw-h-full tw-list-none tw-items-center ${
-    compact ? "tw-gap-0 tw-px-2.5" : "tw-gap-0.5 tw-px-4"
-  }`;
+const floatingNavListClassName =
+  "tw-m-0 tw-flex tw-h-full tw-list-none tw-items-center tw-gap-[var(--dock-nav-gap)] tw-px-[var(--dock-nav-padding)]";
 
 const getFloatingActivePillClassName = ({
   compact,
@@ -375,26 +379,24 @@ const getFloatingActivePillClassName = ({
   readonly visible: boolean;
 }) => {
   const sizeClassName = compact
-    ? "tw-h-10 tw-w-12 sm:tw-h-11 sm:tw-w-14"
-    : "tw-h-12 tw-w-[3.65rem] sm:tw-h-[3.15rem] sm:tw-w-[4.05rem]";
+    ? "tw-max-h-10 tw-w-12 sm:tw-max-h-11 sm:tw-w-14"
+    : "tw-max-h-12 tw-w-[3.65rem] sm:tw-max-h-[3.15rem] sm:tw-w-[4.05rem]";
   const visibilityClassName = visible ? "tw-opacity-100" : "tw-opacity-0";
 
-  return `tw-pointer-events-none tw-absolute tw-left-1/2 tw-top-1/2 tw-z-0 -tw-translate-x-1/2 -tw-translate-y-1/2 tw-rounded-full tw-bg-white/[0.9] tw-shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_8px_24px_rgba(255,255,255,0.1)] tw-transition-[left,width,height,opacity] tw-duration-300 tw-ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:tw-transition-none ${sizeClassName} ${visibilityClassName}`;
+  return `tw-pointer-events-none tw-absolute tw-left-1/2 tw-top-1/2 tw-z-0 tw-aspect-[6/5] tw-h-auto -tw-translate-x-1/2 -tw-translate-y-1/2 tw-rounded-full tw-bg-white/[0.9] tw-shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_8px_24px_rgba(255,255,255,0.1)] tw-transition-[left,width,height,opacity] tw-duration-300 tw-ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:tw-transition-none ${sizeClassName} ${visibilityClassName}`;
 };
 
 const getFloatingActivePillStyle = ({
   activeItemIndex,
-  compact,
   itemCount,
   isTabletViewport,
 }: {
   readonly activeItemIndex: number;
-  readonly compact: boolean;
   readonly itemCount: number;
   readonly isTabletViewport: boolean;
 }): React.CSSProperties => {
-  const paddingX = compact ? "0.625rem" : "1rem";
-  const gap = compact ? "0rem" : "0.125rem";
+  const paddingX = "var(--dock-nav-padding)";
+  const gap = "var(--dock-nav-gap)";
   const gapCount = Math.max(0, itemCount - 1);
 
   if (!isTabletViewport) {
@@ -433,9 +435,9 @@ const getFloatingActivePillStyle = ({
   };
 };
 
-const BottomNavigationFallback: React.FC<BottomNavigationProps> = ({
-  hidden = false,
-}) => {
+const BottomNavigationFallback: React.FC<
+  Pick<BottomNavigationProps, "hidden">
+> = ({ hidden = false }) => {
   const isTabletViewport = useMediaQuery(TABLET_DOCK_QUERY);
   const { isAndroid } = useCapacitor();
 
@@ -447,7 +449,7 @@ const BottomNavigationFallback: React.FC<BottomNavigationProps> = ({
         style={getDockStyle({ compact: false, isTabletViewport })}
       >
         <div className={floatingNavHitRowClassName}>
-          <ul className={getFloatingNavListClassName(false)} />
+          <ul className={floatingNavListClassName} />
         </div>
       </div>
     </nav>
@@ -463,6 +465,7 @@ const BottomNavigationResolvedContent: React.FC<
   BottomNavigationResolvedContentProps
 > = ({
   hidden = false,
+  paused = false,
   preserveMeasurementWhileHidden = false,
   pathname,
   routeStateKey,
@@ -473,7 +476,9 @@ const BottomNavigationResolvedContent: React.FC<
   const { connectedProfile } = useAuth();
   const { address } = useSeizeConnectContext();
   // react-doctor-disable-next-line react-doctor/nextjs-no-use-search-params-without-suspense
-  const searchParams = useSearchParams();
+  const currentSearchParams = useSearchParams();
+  const retainedScreen = usePhoneNavigationScreen();
+  const searchParams = retainedScreen?.searchParams ?? currentSearchParams;
 
   const mobileNavRef = useRef<HTMLDivElement | null>(null);
   const waveIdFromQuery = getActiveWaveIdFromUrl({ pathname, searchParams });
@@ -486,6 +491,7 @@ const BottomNavigationResolvedContent: React.FC<
   });
   const compact = useCompactDock({
     hidden,
+    paused,
     resetKey: routeStateKey,
     reverseScrollDirection,
   });
@@ -499,7 +505,7 @@ const BottomNavigationResolvedContent: React.FC<
     mobileNavRef.current = node;
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     registerRef(
       "mobileNav",
       hidden && !preserveMeasurementWhileHidden ? null : mobileNavRef.current
@@ -566,14 +572,13 @@ const BottomNavigationResolvedContent: React.FC<
             })}
             style={getFloatingActivePillStyle({
               activeItemIndex: hasActiveItem ? activeItemIndex : 0,
-              compact,
               itemCount: navItems.length,
               isTabletViewport,
             })}
           />
         </DockedVersionUpdate>
         <div className={floatingNavHitRowClassName}>
-          <ul className={getFloatingNavListClassName(compact)}>
+          <ul className={floatingNavListClassName}>
             {navItems.map((item) => (
               <li
                 key={item.name}
@@ -597,17 +602,22 @@ const BottomNavigationResolvedContent: React.FC<
 
 const BottomNavigationContent: React.FC<BottomNavigationProps> = ({
   hidden = false,
+  paused = false,
   preserveMeasurementWhileHidden = false,
 }) => {
-  const pathname = usePathname();
+  const currentPathname = usePathname();
+  const retainedScreen = usePhoneNavigationScreen();
+  const pathname = retainedScreen?.pathname ?? currentPathname;
   // react-doctor-disable-next-line react-doctor/nextjs-no-use-search-params-without-suspense
-  const searchParams = useSearchParams();
+  const currentSearchParams = useSearchParams();
+  const searchParams = retainedScreen?.searchParams ?? currentSearchParams;
   const activeView = searchParams.get("view");
   const routeStateKey = `${pathname}:${activeView ?? ""}`;
 
   return (
     <BottomNavigationResolvedContent
       hidden={hidden}
+      paused={paused}
       preserveMeasurementWhileHidden={preserveMeasurementWhileHidden}
       pathname={pathname}
       routeStateKey={routeStateKey}
@@ -617,6 +627,7 @@ const BottomNavigationContent: React.FC<BottomNavigationProps> = ({
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({
   hidden = false,
+  paused = false,
   preserveMeasurementWhileHidden = false,
 }) => (
   <div
@@ -626,6 +637,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
     <Suspense fallback={<BottomNavigationFallback hidden={hidden} />}>
       <BottomNavigationContent
         hidden={hidden}
+        paused={paused}
         preserveMeasurementWhileHidden={preserveMeasurementWhileHidden}
       />
     </Suspense>

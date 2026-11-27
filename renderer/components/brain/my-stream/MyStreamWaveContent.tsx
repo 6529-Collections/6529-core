@@ -26,7 +26,7 @@ import { WaveChatWithUnread } from "./WaveChatWithUnread";
 import WaveChatActivity from "./WaveChatActivity";
 import MyStreamWavePending from "./MyStreamWavePending";
 import MyStreamWaveCurationContent from "./curations/MyStreamWaveCurationContent";
-import { useWaveData } from "@/hooks/useWaveData";
+import { useMyStreamWaveQuery } from "./MyStreamWaveQueryContext";
 import { useDrop } from "@/hooks/useDrop";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { useDisplayTimeZone } from "@/hooks/useDisplayTimeZone";
@@ -54,15 +54,10 @@ import {
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { useWaveEligibility } from "@/contexts/wave/WaveEligibilityContext";
 import { createBreakpoint } from "react-use";
-import {
-  getWaveHomeRoute,
-  getWavePathRoute,
-} from "@/helpers/navigation.helpers";
+import { getWavePathRoute } from "@/helpers/navigation.helpers";
 import { useWaveViewMode } from "@/hooks/useWaveViewMode";
 import { useWave } from "@/hooks/useWave";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiDropType } from "@/generated/models/ApiDropType";
-import { areSameProfileIdentity } from "@/helpers/ProfileHelpers";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { getDropQueryKey } from "@/services/api/drop-api";
 import { markMobileLaunchStep } from "@/utils/monitoring/mobileLaunchTiming";
@@ -90,7 +85,10 @@ import {
   getMemesHeaderDropActionState,
 } from "./waveDropAction.helpers";
 import { getWaveReplyEligibility } from "@/helpers/waves/wave-chat-replies.helpers";
-import { getMissingWaveNavigationRoute } from "@/helpers/waves/missing-wave-navigation.helpers";
+import WavesMoveNotice from "@/components/waves-move/WavesMoveNotice";
+import { WavesMoveScope } from "@/components/waves-move/WavesMoveScope";
+import { useWavesWritesPaused } from "@/hooks/useWavesMovePhase";
+import { editPostRefusal } from "./editPostRequest";
 
 export interface MyStreamWaveProps {
   readonly waveId: string;
@@ -135,30 +133,9 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
     serverFeedSeed: { completeInitialRegistration },
   } = useMyStream();
   const { updateEligibility } = useWaveEligibility();
-  const {
-    data: wave,
-    isError,
-    isFetching,
-    refetch,
-  } = useWaveData({
-    waveId,
-    onWaveNotFound: isCompetitionPathname(pathname)
-      ? undefined
-      : () => {
-          const route = getMissingWaveNavigationRoute(waveId);
-          if (!route) return;
-          const params = route.searchParams;
-          params.delete("wave");
-          const basePath = getWaveHomeRoute({
-            isDirectMessage: route.pathname.startsWith("/messages"),
-            isApp,
-          });
-          const newUrl = params.toString()
-            ? `${basePath}?${params.toString()}`
-            : basePath;
-          router.push(newUrl, { scroll: false });
-        },
-  });
+  // MyStreamWave runs the wave's query, above the wave's move scope.
+  const { data: wave, isError, isFetching, isFetchedAfterMount, refetch } =
+    useMyStreamWaveQuery();
   const submissionTarget = useCompetitionSubmissionWave(wave, !competitionOnly);
   const submissionWave = submissionTarget.wave ?? wave;
   const metadataWaveId = wave?.id;
@@ -220,6 +197,8 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
     dropId: requestedEditPostId,
     enabled: requestedEditPostId.length > 0,
   });
+  // A post with a poll can't be edited while its wave moves.
+  const pollEditsPaused = useWavesWritesPaused();
 
   useEffect(() => {
     if (!requestedEditPostId || !requestedEditPost) {
@@ -234,21 +213,16 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
         scroll: false,
       });
     };
-    const canEdit =
-      requestedEditPost.wave.id === waveId &&
-      requestedEditPost.drop_type !== ApiDropType.Participatory &&
-      !activeProfileProxy &&
-      areSameProfileIdentity({
-        left: requestedEditPost.author,
-        right: connectedProfile,
-      });
-
-    if (!canEdit) {
+    const refusal = editPostRefusal({
+      post: requestedEditPost,
+      waveId,
+      isProxy: !!activeProfileProxy,
+      connectedProfile,
+      pollEditsPaused,
+    });
+    if (refusal !== null) {
       clearEditRequest();
-      setToast({
-        type: "warning",
-        message: t(locale, "profileCuration.actions.authorOnly"),
-      });
+      setToast({ type: "warning", message: t(locale, refusal) });
       return;
     }
 
@@ -259,6 +233,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
     connectedProfile,
     locale,
     pathname,
+    pollEditsPaused,
     requestedEditPost,
     requestedEditPostId,
     router,
@@ -289,6 +264,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
     maxSubmissions: participationMaxSubmissions,
     startTime: participationStartTime,
     status: participationStatus,
+    isPausedForMove: participationIsPausedForMove,
   } = participation;
   const { isVotingControlsLocked: isApprovalVotingControlsLocked } =
     useApprovalWaveStatus({ wave: submissionWave });
@@ -428,6 +404,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
           maxSubmissions: participationMaxSubmissions,
           startTime: participationStartTime,
           status: participationStatus,
+          isPausedForMove: participationIsPausedForMove,
         },
         isApprovalVotingControlsLocked,
         zone: displayTimeZone,
@@ -442,6 +419,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
       participationMaxSubmissions,
       participationStartTime,
       participationStatus,
+      participationIsPausedForMove,
     ]
   );
 
@@ -643,6 +621,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
       <WaveChatWithUnread
         wave={submissionWave ?? wave}
         viewMode={showGalleryToggle ? viewMode : "chat"}
+        unreadMetadataPending={isFetching && !isFetchedAfterMount}
         onDropClick={onDropClick}
         chatSubmitDrop={activeChatSubmitDropState}
         chatSubmitDropAction={chatSubmitDropAction}
@@ -704,73 +683,81 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
   }
 
   return (
-    <div
-      ref={contentRef}
-      className="tailwind-scope tw-relative tw-flex tw-h-full tw-min-h-0 tw-min-w-0 tw-flex-col"
-      key={stableWaveKey}
-      data-testid="wave-content"
-    >
-      <WaveChatTitle
-        waveId={wave.id}
-        waveName={wave.name}
-        chatActive={activeTabContent === components[MyStreamWaveTab.CHAT]}
-      />
-      {competitionOnly ? (
-        <div className="tw-shrink-0 tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-iron-800 tw-bg-iron-950">
-          <MyStreamWaveDesktopTabs
-            wave={wave}
-            activeTab={activeContentTab}
-            setActiveTab={setActiveContentTab}
-            activeCurationId={null}
-            onSelectCuration={() => {}}
-            showCreateActionsMenu={false}
-            competitionOnly
-          />
-        </div>
-      ) : (
-        <MyStreamWaveTabs
-          wave={submissionWave ?? wave}
-          competitionSubmissionReady={Boolean(submissionTarget.wave)}
-          viewMode={viewMode}
-          onToggleViewMode={toggleViewMode}
-          showGalleryToggle={showGalleryToggle}
-          activeCurationId={activeCurationId}
-          onSelectCuration={onSelectCuration}
-          chatSubmitDropAction={chatSubmitDropAction}
+    <WavesMoveScope wave={wave} waveId={wave.id}>
+      <div
+        ref={contentRef}
+        className="tailwind-scope tw-relative tw-flex tw-h-full tw-min-h-0 tw-min-w-0 tw-flex-col"
+        key={stableWaveKey}
+        data-testid="wave-content"
+      >
+        <WaveChatTitle
+          waveId={wave.id}
+          waveName={wave.name}
+          chatActive={activeTabContent === components[MyStreamWaveTab.CHAT]}
         />
-      )}
-
-      {defaultNavigation.resolve &&
-        !isResolvingCompetitionTab &&
-        defaultNavigation.selection.isError && (
-          <DefaultCompetitionState selection={defaultNavigation.selection} />
+        {competitionOnly ? (
+          <div className="tw-shrink-0 tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-iron-800 tw-bg-iron-950">
+            <MyStreamWaveDesktopTabs
+              wave={wave}
+              activeTab={activeContentTab}
+              setActiveTab={setActiveContentTab}
+              activeCurationId={null}
+              onSelectCuration={() => {}}
+              showCreateActionsMenu={false}
+              competitionOnly
+            />
+          </div>
+        ) : (
+          <MyStreamWaveTabs
+            wave={submissionWave ?? wave}
+            competitionSubmissionReady={Boolean(submissionTarget.wave)}
+            viewMode={viewMode}
+            onToggleViewMode={toggleViewMode}
+            showGalleryToggle={showGalleryToggle}
+            activeCurationId={activeCurationId}
+            onSelectCuration={onSelectCuration}
+            chatSubmitDropAction={chatSubmitDropAction}
+          />
         )}
 
-      <div
-        className="tw-relative tw-min-h-0 tw-min-w-0 tw-flex-grow tw-overflow-hidden focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-[-2px] focus-visible:tw-outline-primary-400"
-        role={isApp && flat ? "region" : "tabpanel"}
-        tabIndex={-1}
-        aria-label={isApp && flat ? wave.name : undefined}
-        id={
-          activeCurationId
-            ? `my-stream-wave-tabpanel-curation-${activeCurationId}`
-            : getContentTabPanelId(activeContentTab)
-        }
-      >
-        <WaveChatActivity
-          waveId={wave.id}
-          active={activeTabContent === components[MyStreamWaveTab.CHAT]}
-          chat={components[MyStreamWaveTab.CHAT]}
+        {!isDm && (
+          <WavesMoveNotice
+            className="tw-mx-2 tw-my-2 tw-shrink-0 sm:tw-mx-4"
+            wave={wave}
+          />
+        )}
+
+        {defaultNavigation.resolve &&
+          !isResolvingCompetitionTab &&
+          defaultNavigation.selection.isError && (
+            <DefaultCompetitionState selection={defaultNavigation.selection} />
+          )}
+
+        <div
+          className="tw-relative tw-min-h-0 tw-min-w-0 tw-flex-grow tw-overflow-hidden focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-[-2px] focus-visible:tw-outline-primary-400"
+          role={isApp && flat ? "region" : "tabpanel"}
+          tabIndex={-1}
+          aria-label={isApp && flat ? wave.name : undefined}
+          id={
+            activeCurationId
+              ? `my-stream-wave-tabpanel-curation-${activeCurationId}`
+              : getContentTabPanelId(activeContentTab)
+          }
         >
-          {activeTabContent}
-        </WaveChatActivity>
+          <WaveChatActivity
+            active={activeTabContent === components[MyStreamWaveTab.CHAT]}
+            chat={components[MyStreamWaveTab.CHAT]}
+          >
+            {activeTabContent}
+          </WaveChatActivity>
+        </div>
+        <MemesArtSubmissionModal
+          isOpen={isAppMemesSubmitModalOpen}
+          wave={submissionWave ?? wave}
+          onClose={closeAppMemesSubmit}
+        />
       </div>
-      <MemesArtSubmissionModal
-        isOpen={isAppMemesSubmitModalOpen}
-        wave={submissionWave ?? wave}
-        onClose={closeAppMemesSubmit}
-      />
-    </div>
+    </WavesMoveScope>
   );
 };
 

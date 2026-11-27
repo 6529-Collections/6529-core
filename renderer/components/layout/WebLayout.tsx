@@ -1,13 +1,18 @@
 "use client";
 
 import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
+import { PHONE_WAVES_LAYOUT_QUERY } from "@/constants/waves-layout";
 import { useSearch } from "@/contexts/SearchContext";
-import { usePathname } from "next/navigation";
+import { getWaveIdFromPathname } from "@/helpers/navigation.helpers";
+import { commitWaveNavigationTransition } from "@/helpers/waves/wave-navigation-transition";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useParams, usePathname } from "next/navigation";
 import type { CSSProperties, RefObject } from "react";
-import { type ReactNode, useEffect, useMemo } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useMemo } from "react";
 import { SIDEBAR_WIDTHS } from "../../constants/sidebar";
 import { useSidebarController } from "../../hooks/useSidebarController";
 import { SidebarProvider, useSidebarState } from "../../hooks/useSidebarState";
+import { isUserProfilePage } from "../user/layout/userTabs.config";
 import WebSidebar from "./sidebar/WebSidebar";
 import SmallScreenLayoutHeader from "./SmallScreenLayoutHeader";
 import { isSmallWebStartupExpected } from "./smallWebStartup";
@@ -35,8 +40,19 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
   const searchContainerRef: RefObject<HTMLDivElement | null> =
     searchContext.containerRef;
   const pathname = usePathname();
+  const params = useParams();
+  const isPhoneWidth = useMediaQuery(PHONE_WAVES_LAYOUT_QUERY);
+  useLayoutEffect(() => {
+    if (isSmall && isPhoneWidth) {
+      commitWaveNavigationTransition(null, pathname);
+    }
+  }, [pathname, isSmall, isPhoneWidth]);
+  const showSiteHeader =
+    isSmall && !(isPhoneWidth && getWaveIdFromPathname(pathname));
   const smallWebOverflow =
-    pathname === "/the-memes" || /^\/the-memes\/\d+\/?$/.test(pathname)
+    pathname === "/the-memes" ||
+    /^\/the-memes\/\d+\/?$/.test(pathname) ||
+    isUserProfilePage(pathname, params["user"])
       ? "tw-overflow-x-clip"
       : "tw-overflow-auto";
 
@@ -79,6 +95,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
           : "layout-root tw-relative tw-flex tw-w-full tw-justify-between"
       }
       style={isSmall ? undefined : cssVars}
+      data-phone-wave-page={isSmall && isPhoneWidth ? true : undefined}
       data-mobile={isMobile}
       data-narrow={isNarrow}
       data-offcanvas={isOffcanvasOpen}
@@ -87,7 +104,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
       data-sidebar-ready={isSidebarReady}
     >
       <SmallScreenLayoutHeader
-        active={isSmall}
+        active={showSiteHeader}
         onMenuToggle={toggleCollapsed}
         isMenuOpen={isOffcanvasOpen}
         style={isSmall ? titlebarInset : undefined}

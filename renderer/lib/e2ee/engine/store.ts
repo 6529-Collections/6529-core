@@ -1,4 +1,4 @@
-import { getDmPeerId } from "../dm-conversations";
+import { getConversationThreadKey, getDmPeerId } from "../dm-conversations";
 import { compareHistory } from "../history-order";
 import { safetyCodeFromFp } from "../digests";
 import { E2EE_LEGACY_CIPHERSUITE, parseCredentialIdentity } from "../grant";
@@ -10,6 +10,7 @@ import type {
   E2eeDelayedReason,
   E2eeDeviceInfo,
   E2eeEngineStatus,
+  E2eeInitialSyncStatus,
   E2eeMember,
   E2eeMessage,
   E2eeUntrustedDevice,
@@ -99,6 +100,9 @@ export function toE2eeMessage(stored: StoredMessage): E2eeMessage {
     sigOk: stored.sigOk,
     undecryptable: stored.undecryptable,
     pending: stored.pending,
+    ...(stored.poll && !stored.deleted
+      ? { poll: structuredClone(stored.poll) }
+      : {}),
     ...(stored.unsent ? { unsent: stored.unsent.reason } : {}),
   };
   if (stored.imported) {
@@ -142,6 +146,7 @@ const isCountable = (message: StoredMessage, own: string): boolean =>
 
 export class EngineStore {
   status: E2eeEngineStatus = "loading";
+  initialSyncStatus: E2eeInitialSyncStatus = "pending";
   error: string | null = null;
   /** Set while this device has moved off an earlier suite (getUpgrade). */
   upgrade: { superseded: number } | null = null;
@@ -149,6 +154,9 @@ export class EngineStore {
   devices: E2eeDeviceInfo[] = [];
   /** Server switch (GET /e2ee/me); false until the server has answered. */
   attachmentsEnabled = false;
+  conversationPin:
+    | ((thread: string) => { pinned: true; pinPosition?: number } | undefined)
+    | null = null;
   /**
    * Whether this device trusts a member device for its owner (set by the
    * engine from its trust record); member snapshots carry it.
@@ -301,12 +309,14 @@ export class EngineStore {
   getConversation(g: string): E2eeConversation | null {
     this.syncDirectoryVersion();
     const runtime = this.groups.get(g);
-    if (!runtime) {
+    const kind = runtime?.record.metadata.kind;
+    // A self group (read-state sync, D175) is never a conversation.
+    if (!runtime || kind === undefined || kind === "self") {
       return null;
     }
     let conversation = this.conversationCache.get(g);
     if (!conversation) {
-      conversation = this.buildConversation(runtime);
+      conversation = this.buildConversation(runtime, kind);
       this.conversationCache.set(g, conversation);
     }
     return conversation;
@@ -418,7 +428,10 @@ export class EngineStore {
     return lastIncomingSeq;
   }
 
-  private buildConversation(runtime: GroupRuntime): E2eeConversation {
+  private buildConversation(
+    runtime: GroupRuntime,
+    kind: E2eeConversation["kind"]
+  ): E2eeConversation {
     const record = runtime.record;
     const ordered = record.history
       ? []
@@ -452,10 +465,15 @@ export class EngineStore {
     }
     const members = this.buildMembers(record);
     const dmPeer = this.buildDmPeer(record, members);
+    const thread = getConversationThreadKey(
+      { ...record.metadata, members },
+      this.ownProfileId
+    );
     return {
       dmPeer,
+      ...this.conversationPin?.(thread),
       g: record.g,
-      kind: record.metadata.kind,
+      kind,
       name: record.metadata.name,
       members,
       admins: [...record.metadata.admins],

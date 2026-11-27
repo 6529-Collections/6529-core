@@ -1,12 +1,13 @@
 import { recoverLoadedIdentities } from "./identity-recovery";
 import {
   findSavedImport,
+  getSavedAttachment,
   getSavedMessage,
   loadSavedHistory,
   requireSavedMessage,
 } from "./history-read";
 import type { HistoryPageOptions } from "../history-order";
-import { downloadMedia, localBlobType } from "../media";
+import type { PollDefinition } from "../payload";
 import { getDefaultBackupStateStore } from "../backup/state";
 import type { BackupHistory } from "../backup/format";
 import type {
@@ -21,7 +22,6 @@ import {
   checkpoint,
   clearStoredState,
   requireGroup,
-  requireMls,
   type EngineContext,
 } from "./context";
 import { ConversationCreator } from "./conversation-creation";
@@ -33,8 +33,7 @@ import {
   markRevocationUnverified,
   needsNewDevice,
   refreshMe,
-  renewalDue,
-  renewGrant,
+  renewStoredDeviceIfDue,
   submitRevocation,
 } from "./enroll";
 import { backupHistory, importBackupHistory } from "./backup";
@@ -43,15 +42,20 @@ import { E2EE_REVOCATION_UNVERIFIED, E2eeError, errorMessage } from "./errors";
 import {
   addMembers,
   checkEligibility,
+  createConversation,
   findDm,
   leave,
+  leaveThisDevice,
   removeMember,
   rename,
   setAdmin,
 } from "./membership";
+import { ReadSync } from "./read-sync";
 import { searchHistory } from "./history-search";
 import { latestReadSeq } from "./history";
+import { PollActions } from "./polls";
 import { previewReport, sendReport } from "./report";
+import { renameEngineDevice } from "./rename";
 import { queueImported, queueMessage, queueTargeted } from "./send";
 import {
   createContext,
@@ -79,11 +83,23 @@ class E2eeEngineImpl implements E2eeEngineExt {
   private readonly conversationCreator: ConversationCreator;
   private readonly restarter: ConversationRestarter;
   private readonly unsent: UnsentMessages;
+  private readonly polls: PollActions;
   private readonly enrollment: EnrollmentFlight;
+  private readonly readSync: ReadSync;
 
   constructor(ctx: EngineContext) {
     this.ctx = ctx;
     ctx.store.memberTrust = (member) => isTrustedMemberDevice(ctx, member);
+    this.readSync = new ReadSync(ctx, {
+      createSelfGroup: () =>
+        createConversation(ctx, { profileIds: [], kind: "self" }, () => {}),
+      leaveThisDevice: (g) => leaveThisDevice(ctx, g),
+      maintain: (g) => {
+        this.background(() => this.controller.maintain(g));
+      },
+    });
+    ctx.readSync = this.readSync;
+    ctx.store.conversationPin = this.readSync.pins.pinForThread;
     this.controller = new EngineController(ctx, {
       refreshMe: () => this.refreshMe(),
       onOwnRevoked: () => this.onOwnRejected(),
@@ -95,8 +111,15 @@ class E2eeEngineImpl implements E2eeEngineExt {
       afterSync: async () => {
         await this.ctx.queue.run(() => recoverLoadedIdentities(this.ctx));
         await resolveProfiles(this.ctx, memberProfileIds(this.ctx));
+        await this.readSync.afterSync();
       },
     });
+    this.polls = new PollActions(
+      ctx,
+      this.controller,
+      () => this.requireReady(),
+      (task) => this.background(task)
+    );
     this.conversationCreator = new ConversationCreator(
       ctx,
       () => this.controller.syncAll(),
@@ -147,8 +170,10 @@ class E2eeEngineImpl implements E2eeEngineExt {
   }
 
   /** NC8: enrolls from a combined sign-in grant stored meanwhile. */
-  enrollWithLoginGrant(): Promise<E2eeEngineStatus> {
-    return this.enrollment.withLoginGrant();
+  enrollWithLoginGrant(options?: {
+    readonly resumeStored?: boolean;
+  }): Promise<E2eeEngineStatus> {
+    return this.enrollment.withLoginGrant(options?.resumeStored);
   }
 
   needsNewDevice(): Promise<boolean> {
@@ -158,8 +183,11 @@ class E2eeEngineImpl implements E2eeEngineExt {
   private start(): void {
     this.controller.startBackground();
     this.background(async () => {
-      await this.refreshMe();
-      await this.controller.syncAll();
+      try {
+        await this.refreshMe();
+      } finally {
+        await this.controller.syncAll();
+      }
     });
   }
 
@@ -195,10 +223,12 @@ class E2eeEngineImpl implements E2eeEngineExt {
     if (!this.ctx.device?.registered || this.ctx.disposed) {
       return;
     }
+    const listed = new Map(this.ctx.ownKeyPackages);
     const result = await refreshMe(this.ctx);
     if (this.isDisposed()) {
       return;
     }
+    this.readSync.siblingKeyPackagesChanged(listed);
     if (result.ownRevocation === "verified") {
       await this.wipe();
     } else if (result.ownRevocation === "unverified") {
@@ -313,6 +343,7 @@ class E2eeEngineImpl implements E2eeEngineExt {
 
   getStatus = () => this.ctx.store.status;
   getError = () => this.ctx.store.error;
+  getInitialSyncStatus = () => this.ctx.store.initialSyncStatus;
   getUpgrade = () => this.ctx.store.upgrade;
   getLocalDeviceKey = () => this.ctx.device?.deviceKey ?? null;
   getThisDevice = () => this.ctx.store.thisDevice;
@@ -326,20 +357,15 @@ class E2eeEngineImpl implements E2eeEngineExt {
 
   // -- lifecycle --------------------------------------------------------------
 
-  async enroll(): Promise<void> {
+  async enroll(onProvisioning?: () => void): Promise<void> {
     await this.recheckRevocation();
-    await this.enrollment.run(true);
+    await this.enrollment.run(true, onProvisioning);
   }
 
   /** 8.8: in the grant's last 14 days, enroll() renews it (one prompt). */
   private async renew(): Promise<void> {
-    const device = this.ctx.device;
-    if (!device || !renewalDue(this.ctx, device)) {
+    if (!(await renewStoredDeviceIfDue(this.ctx))) {
       return;
-    }
-    await this.ctx.queue.run(() => renewGrant(this.ctx));
-    for (const runtime of this.ctx.store.groups.values()) {
-      runtime.record.selfUpdateRequested = true;
     }
     await this.refreshMe();
     for (const [g, runtime] of this.ctx.store.groups) {
@@ -349,11 +375,20 @@ class E2eeEngineImpl implements E2eeEngineExt {
     }
   }
 
-  async sync(): Promise<void> {
+  async sync(options?: { readonly recheckInbox?: boolean }): Promise<void> {
     if (this.ctx.store.status !== "ready") {
       return;
     }
-    await this.controller.syncAll();
+    await this.controller.syncAll(options?.recheckInbox);
+  }
+
+  async pauseIncoming(): Promise<void> {
+    this.controller.pauseIncoming();
+    await this.idle();
+  }
+
+  resumeIncoming(): void {
+    this.controller.resumeIncoming();
   }
 
   dispose(): void {
@@ -378,16 +413,16 @@ class E2eeEngineImpl implements E2eeEngineExt {
     if (key !== null && changed && this.ctx.store.status === "ready") {
       // Contract 12: an open conversation polls every 5 s, starting now.
       this.controller.restartPolling();
-      // 8.4 reconciliation on open: catch up, then look for missing devices.
-      // The catch-up fetches only groups with new items, and maintenance
-      // commits (and so fetches the log) only when a change is due, so
-      // opening a chat does not name it (D175, P60 §1).
-      this.background(async () => {
-        await this.controller.syncChanged();
-        await this.controller.maintain(key, { onlyIfDue: true });
-      });
+      // Catch up on open: only groups with new items are fetched, so
+      // opening a chat does not name it (D175, P60 §1). Looking for missing
+      // devices (8.4) is left to background maintenance, which runs for
+      // every group on its own schedule and on device events: a device
+      // lookup made because a chat was opened would name its members.
+      this.background(() => this.controller.syncChanged());
     }
   }
+
+  flushReadSync = (): Promise<void> => this.readSync.flushNow();
 
   async idle(): Promise<void> {
     for (let round = 0; round < 50; round += 1) {
@@ -453,13 +488,22 @@ class E2eeEngineImpl implements E2eeEngineExt {
     }
   }
 
+  createPoll = (g: string, poll: PollDefinition) => this.polls.create(g, poll);
+
+  updatePoll = (g: string, id: string, options: number[] | null) =>
+    this.polls.update(g, id, options);
+
   private ownMessage = (g: string, id: string) =>
     requireSavedMessage(this.ctx, g, id);
 
   async edit(g: string, id: string, text: string): Promise<void> {
     this.requireReady();
     const message = await this.ctx.queue.run(() => this.ownMessage(g, id));
-    if (message.senderProfileId !== this.ctx.profileId || message.deleted) {
+    if (
+      message.senderProfileId !== this.ctx.profileId ||
+      message.deleted ||
+      message.poll
+    ) {
       throw new E2eeError("E2EE_NOT_SENDER");
     }
     await queueTargeted(this.ctx, g.toLowerCase(), (base) => ({
@@ -523,6 +567,8 @@ class E2eeEngineImpl implements E2eeEngineExt {
       runtime.record.history.mentions = 0;
     }
     this.ctx.store.touch(runtime.record.g);
+    // Your other devices clear this chat too (D175, P60 §4).
+    this.readSync.noteRead(runtime.record.g);
     this.background(() =>
       this.ctx.queue.run(() =>
         checkpoint(this.ctx, { groups: [runtime], skipWasm: true })
@@ -539,6 +585,12 @@ class E2eeEngineImpl implements E2eeEngineExt {
       this.delayedFor(g.toLowerCase())
     );
   }
+
+  setConversationPinned = (g: string, pinned: boolean): Promise<void> =>
+    this.readSync.pins.set(g, pinned);
+
+  moveConversationPin = (thread: string, target: string): Promise<void> =>
+    this.readSync.pins.move(thread, target);
 
   async addMembers(g: string, profileIds: string[]) {
     this.requireReady();
@@ -648,22 +700,7 @@ class E2eeEngineImpl implements E2eeEngineExt {
     signal?: AbortSignal
   ): Promise<Blob> {
     this.requireReady();
-    const message = await this.ctx.queue.run(() => this.ownMessage(g, id));
-    const attachment = message.attachments.find(
-      (att) => att.blob.toLowerCase() === blob.toLowerCase()
-    );
-    if (!attachment) {
-      throw new E2eeError("E2EE_NO_ATTACHMENT");
-    }
-    const bytes = await downloadMedia({
-      api: this.ctx.api,
-      deviceKey: requireMls(this.ctx).deviceKey(),
-      attachment,
-      ...(signal ? { signal } : {}),
-    });
-    return new Blob([bytes.slice().buffer], {
-      type: localBlobType(attachment.mime),
-    });
+    return getSavedAttachment(this.ctx, g, id, blob, signal);
   }
 
   // -- encrypted history backup ---------------------------------------------
@@ -672,11 +709,7 @@ class E2eeEngineImpl implements E2eeEngineExt {
 
   async importBackupHistory(history: BackupHistory) {
     this.requireReady();
-    const result = await this.ctx.queue.run(() =>
-      importBackupHistory(this.ctx, history)
-    );
-    await resolveProfiles(this.ctx, memberProfileIds(this.ctx));
-    return result;
+    return importBackupHistory(this.ctx, history, this.readSync.pins);
   }
 
   // -- devices ----------------------------------------------------------------
@@ -744,16 +777,14 @@ class E2eeEngineImpl implements E2eeEngineExt {
 
   async renameThisDevice(label: string): Promise<void> {
     const device = this.ctx.device;
-    if (!device) {
-      throw new E2eeError("E2EE_NOT_READY");
-    }
-    await this.ctx.queue.run(async () => {
-      if (this.ctx.disposed) throw new E2eeError("E2EE_NOT_READY");
-      // A superseded tab must stop before changing the account's device name.
-      await checkpoint(this.ctx, { skipWasm: true });
-      if (this.isDisposed()) throw new E2eeError("E2EE_NOT_READY");
-      await this.ctx.api.renameDevice(device.deviceKey, label);
-    });
+    if (!device) throw new E2eeError("E2EE_NOT_READY");
+    await this.renameDevice(device.deviceKey, label);
+  }
+
+  async renameDevice(deviceKey: string, label: string): Promise<void> {
+    await renameEngineDevice(this.ctx, deviceKey, label);
+    // The list (and every other open device of the profile, on its next
+    // sync) shows the new name.
     await this.refreshMe();
   }
 }

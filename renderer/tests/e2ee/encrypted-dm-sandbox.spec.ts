@@ -1,4 +1,8 @@
 import {
+  expectNativeNavigation,
+  sampleNativeNavigation,
+} from "../support/nativePhoneNavigation";
+import {
   dropEncryptedAttachment,
   checkEncryptedImageActions,
 } from "../support/e2ee/attachmentMedia";
@@ -17,13 +21,18 @@ import {
   resetE2eeSandbox,
 } from "../support/e2ee/e2eeSandboxSession";
 import {
+  closeChatInfo,
   composer,
   conversationListRow,
   enroll,
+  enrollButton,
   ENCRYPTED_ROUTE,
+  expectEnrollmentCard,
   expectMessage,
   gotoPath,
   messageRow,
+  openChatInfo,
+  openComposerActions,
   openConversationFromList,
   openMessageActions,
   sendMessage,
@@ -40,6 +49,13 @@ import {
   installGiphyFixture,
   openGifPicker,
 } from "../support/e2ee/giphyFixture";
+import { checkEncryptedPoll } from "../support/e2ee/polls";
+import {
+  dragPinnedChat,
+  encryptedInbox,
+  expectPinBeforeTimestamp,
+  pinEncryptedChat,
+} from "../support/e2ee/pinLayout";
 
 /** A valid 1x1 RGBA PNG (raster images are the only inline type). */
 const PIXEL_PNG_BASE64 =
@@ -97,6 +113,62 @@ async function dragEncryptedMessage(
   };
 }
 
+async function tapEncryptedBackAndExpectSlide(page: Page) {
+  const back = page.getByRole("link", { name: "Back to encrypted messages" });
+  await expect(back).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: /^(Back|Go back)$/u })
+  ).toHaveCount(0);
+  const retainedInbox = page
+    .getByRole("main", { includeHidden: true })
+    .locator('xpath=ancestor::*[@data-phone-navigation-screen="encrypted"]');
+  if (await retainedInbox.count()) {
+    const underlay = await retainedInbox.elementHandle();
+    if (!underlay) throw new Error("Missing retained encrypted inbox");
+    const frames = sampleNativeNavigation(page, ENCRYPTED_ROUTE, false);
+    await back.tap();
+    expectNativeNavigation(await frames);
+    await expect(page).toHaveURL(new RegExp(`${ENCRYPTED_ROUTE}$`, "u"));
+    expect(await underlay.evaluate((element) => element.isConnected)).toBe(
+      true
+    );
+    await underlay.dispose();
+    return;
+  }
+  await page.evaluate(() => {
+    const root = document.documentElement;
+    const start = document.startViewTransition.bind(document);
+    document.startViewTransition = (update) => {
+      const transition = start(update);
+      const entering =
+        root.dataset["waveNavigationTransition"] === "conversation-entry";
+      if (
+        root.dataset["waveNavigationTransition"] === "chevron-back" ||
+        entering
+      ) {
+        const marker = entering
+          ? "testEncryptedEntrySlide"
+          : "testEncryptedBackSlide";
+        void transition.ready.then(
+          () => {
+            root.dataset[marker] = "ready";
+          },
+          () => {
+            root.dataset[marker] = "skipped";
+          }
+        );
+      }
+      return transition;
+    };
+  });
+  await back.tap();
+  await expect(page).toHaveURL(new RegExp(`${ENCRYPTED_ROUTE}$`, "u"));
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-test-encrypted-back-slide",
+    "ready"
+  );
+}
+
 /**
  * Encrypted 1:1 chat in two real browsers (D109 stories 1, 4, 8, 9, 10, 11).
  * Engine rules are covered in Jest (__tests__/lib/e2ee); this proves the
@@ -116,6 +188,111 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
     const open = sessions;
     sessions = [];
     await closeE2eeUsers(open);
+  });
+
+  test("pinned chat rows reorder by drag and keep their order after reload", async ({
+    baseURL,
+    browser,
+  }, testInfo) => {
+    const users = await resetE2eeSandbox(baseURL);
+    const alice = await openE2eeUser(browser, testInfo, baseURL, users.alice);
+    const bob = await openE2eeUser(browser, testInfo, baseURL, users.bob);
+    const carol = await openE2eeUser(browser, testInfo, baseURL, users.carol);
+    sessions = [alice, bob, carol];
+    await Promise.all(sessions.map((session) => enroll(session)));
+    const { page } = alice;
+    const mobile = isMobileWebProject(testInfo.project.name);
+    const groupTitle = "Pinned group";
+    await startChat(alice, ["bob"], { kind: "dm" });
+    await startChat(alice, ["bob", "carol"], {
+      kind: "group",
+      name: groupTitle,
+    });
+    await startChat(alice, ["carol"], { kind: "dm" });
+    await page.bringToFront();
+    await gotoPath(page, ENCRYPTED_ROUTE);
+    const inbox = encryptedInbox(page);
+    const links = inbox.getByRole("link");
+    const bobLink = conversationListRow(page, "bob");
+    const groupLink = conversationListRow(page, groupTitle);
+    const carolLink = conversationListRow(page, "carol");
+    const original = [/bob/u, /Pinned group/u, /carol/u];
+    const reordered = [/Pinned group/u, /bob/u, /carol/u];
+    await pinEncryptedChat(inbox, "bob");
+    await pinEncryptedChat(inbox, groupTitle);
+    await expect(links).toHaveText(original);
+    await expect(carolLink).not.toHaveAttribute("aria-keyshortcuts", "Space");
+    await expect(groupLink).toHaveAttribute("aria-keyshortcuts", "Space");
+    if (mobile) {
+      await dragPinnedChat(page, groupLink, bobLink, true);
+    } else {
+      const moveGroupUp = async () => {
+        await groupLink.focus();
+        await page.keyboard.press("Space");
+        await expect(
+          page.getByText("Position 2.", { exact: true })
+        ).toHaveCount(1);
+        // The keyboard sensor attaches its listener after pickup.
+        await page.evaluate(
+          () =>
+            new Promise<void>((resolve) =>
+              requestAnimationFrame(() =>
+                requestAnimationFrame(() => resolve())
+              )
+            )
+        );
+        await page.keyboard.press("ArrowUp");
+        await expect(
+          page.getByText("Position 1.", { exact: true })
+        ).toHaveCount(1);
+      };
+      await moveGroupUp();
+      await page.keyboard.press("Escape");
+      await expect(
+        page.getByText("Reordering canceled.", { exact: true })
+      ).toHaveCount(1);
+      await expect(groupLink).toBeFocused();
+      await expect(links).toHaveText(original);
+      await moveGroupUp();
+      await page.keyboard.press("Space");
+      await expect(links).toHaveText(reordered);
+      await dragPinnedChat(page, bobLink, groupLink);
+    }
+    const expected = mobile ? reordered : original;
+    await expect(links).toHaveText(expected);
+    await expect(page).toHaveURL(new RegExp(`${ENCRYPTED_ROUTE}$`, "u"));
+    await page.reload();
+    await expect(links).toHaveText(expected, {
+      timeout: E2EE_UI_TIMEOUT_MS,
+    });
+    await inbox.screenshot({
+      path: testInfo.outputPath("pinned-encrypted-chats.png"),
+    });
+  });
+
+  test("both participants can create and vote in encrypted DM polls", async ({
+    baseURL,
+    browser,
+  }, testInfo) => {
+    const users = await resetE2eeSandbox(baseURL);
+    const alice = await openE2eeUser(browser, testInfo, baseURL, users.alice);
+    const bob = await openE2eeUser(browser, testInfo, baseURL, users.bob);
+    sessions = [alice, bob];
+    await enroll(alice);
+    await enroll(bob);
+    await startChat(alice, ["bob"], { kind: "dm" });
+    await openConversationFromList(bob.page, "alice");
+
+    const singlePoll = "Which drink do you prefer?";
+    const multiPoll = "Which drinks work for you?";
+    await checkEncryptedPoll(alice.page, bob.page, "bob", singlePoll, false);
+    await checkEncryptedPoll(bob.page, alice.page, "alice", multiPoll, true);
+    const scan = await e2eeSandboxControls.plaintextScan(baseURL, [
+      singlePoll,
+      multiPoll,
+    ]);
+    expect(scan.scannedBytes).toBeGreaterThan(0);
+    expect(scan.found).toEqual([]);
   });
 
   test("a public GIF selection is sent privately as an encrypted attachment", async ({
@@ -164,6 +341,242 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
     ]);
     expect(scan.scannedBytes).toBeGreaterThan(0);
     expect(scan.found).toEqual([]);
+  });
+
+  test("a saved encryption device recovers a rejected session and enables both permissions", async ({
+    baseURL,
+    browser,
+  }, testInfo) => {
+    const users = await resetE2eeSandbox(baseURL);
+    const alice = await openE2eeUser(browser, testInfo, baseURL, users.alice);
+    sessions.push(alice);
+    await expectEnrollmentCard(alice.page);
+    // Start with encryption-only setup, retaining a pending typed-data key
+    // like a browser that saved it before its sign-in became invalid.
+    await alice.page.route(
+      "**/api/auth/session-nonce?*",
+      (route) => route.fulfill({ status: 503, json: { error: "Unavailable" } }),
+      { times: 1 }
+    );
+    await enrollButton(alice.page).click();
+    await alice.page
+      .getByRole("button", { name: "Turn on encrypted DMs", exact: true })
+      .click();
+    await e2eeSandboxControls.addFault(baseURL, {
+      method: "POST",
+      path: "^e2ee/devices$",
+      status: 401,
+    });
+    const before = alice.signatureCount();
+    await enrollButton(alice.page).click();
+    await expect(
+      alice.page.getByRole("heading", { name: "Sign in again to continue" })
+    ).toBeVisible({ timeout: E2EE_UI_TIMEOUT_MS });
+    expect(alice.signatureCount()).toBe(before + 1);
+    await e2eeSandboxControls.clearFaults(baseURL);
+    await alice.page
+      .getByRole("button", { name: "Sign in again", exact: true })
+      .click();
+    await alice.page
+      .getByRole("button", { name: "Sign to enable both", exact: true })
+      .click();
+    await expect(
+      alice.page.getByRole("heading", {
+        name: "No encrypted chats yet",
+        exact: true,
+      })
+    ).toBeVisible({ timeout: E2EE_UI_TIMEOUT_MS });
+    // One approval for encryption, one for posts. Resuming the encryption
+    // key after the posts signature does not request a third signature.
+    expect(alice.signatureCount()).toBe(before + 2);
+    await alice.page.screenshot({
+      path: testInfo.outputPath("encrypted-setup-recovered.png"),
+    });
+  });
+
+  test("iPhone enrollment shows progress and the inbox waits for a successful first sync", async ({
+    baseURL,
+    browser,
+  }, testInfo) => {
+    test.skip(
+      // NOSONAR -- This shared spec runs the iPhone setup regression in its mobile project.
+      testInfo.project.name !== "web-mobile-chromium",
+      "The test uses a simulated iPhone bridge and the mobile viewport."
+    );
+    const users = await resetE2eeSandbox(baseURL);
+    const alice = await openE2eeUser(browser, testInfo, baseURL, users.alice);
+    sessions.push(alice);
+    const { page, context } = alice;
+    await installSurfaceSimulation(context, "capacitor-ios-sim", baseURL);
+    await page.setViewportSize({ width: 412, height: 840 });
+    await context.route("https://rpc.walletconnect.org/**", (route) =>
+      route.fulfill({ status: 400, json: { error: "Fixture RPC unavailable" } })
+    );
+    await expectEnrollmentCard(page, { app: true });
+
+    const keyPackages = Promise.withResolvers<void>();
+    const firstInbox = Promise.withResolvers<void>();
+    await page.route("**/api/e2ee/devices/*/key-packages", async (route) => {
+      await keyPackages.promise;
+      await route.continue();
+    });
+    await page.route(
+      "**/api/e2ee/devices/*/welcomes",
+      async (route) => {
+        await firstInbox.promise;
+        await route.fulfill({ status: 503, json: { error: "Unavailable" } });
+      },
+      { times: 1 }
+    );
+    const empty = page.getByRole("heading", {
+      name: "No encrypted chats yet",
+      exact: true,
+    });
+    const before = alice.signatureCount();
+    try {
+      await enrollButton(page).click();
+      await expect(
+        page.getByText("Finishing encrypted message setup…", { exact: true })
+      ).toBeVisible({ timeout: E2EE_UI_TIMEOUT_MS });
+      expect(alice.signatureCount()).toBe(before + 1);
+      keyPackages.resolve();
+
+      await expect(
+        page.getByText("Loading encrypted chats…", { exact: true })
+      ).toBeVisible({ timeout: E2EE_UI_TIMEOUT_MS });
+      await expect(empty).toHaveCount(0);
+      await page.screenshot({
+        path: testInfo.outputPath("encrypted-inbox-loading.png"),
+      });
+
+      firstInbox.resolve();
+      await expect(
+        page.getByRole("heading", { name: "Couldn’t load encrypted chats." })
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole("status")
+          .filter({ hasText: "Couldn’t load encrypted chats." })
+      ).toHaveCount(1);
+      await expect(empty).toHaveCount(0);
+      await page
+        .getByRole("button", { name: "Try again", exact: true })
+        .click();
+      await expect(empty).toBeVisible({ timeout: E2EE_UI_TIMEOUT_MS });
+    } finally {
+      keyPackages.resolve();
+      firstInbox.resolve();
+    }
+  });
+
+  test("iPhone shows a late encrypted invitation without reporting an empty inbox", async ({
+    baseURL,
+    browser,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "web-mobile-chromium",
+      "The test uses a simulated iPhone bridge and the mobile viewport."
+    );
+    const users = await resetE2eeSandbox(baseURL);
+    const alice = await openE2eeUser(browser, testInfo, baseURL, users.alice);
+    const bob = await openE2eeUser(browser, testInfo, baseURL, users.bob);
+    sessions.push(alice, bob);
+    await enroll(alice);
+    await enroll(bob);
+    const dm = await startChat(alice, ["bob"], { kind: "dm" });
+    const allowInvitation = Promise.withResolvers<void>();
+
+    try {
+      for (const { context } of [alice, bob]) {
+        await context.route(
+          `**/api/e2ee/groups/${dm}/entries`,
+          async (route) => {
+            await allowInvitation.promise;
+            await route.fallback();
+          }
+        );
+      }
+      const phone = await openE2eeUser(
+        browser,
+        testInfo,
+        baseURL,
+        users.alice,
+        "Alice's iPhone"
+      );
+      sessions.push(phone);
+      await installSurfaceSimulation(
+        phone.context,
+        "capacitor-ios-sim",
+        baseURL
+      );
+      await phone.page.setViewportSize({ width: 412, height: 840 });
+      await phone.context.route("https://rpc.walletconnect.org/**", (route) =>
+        route.fulfill({
+          status: 400,
+          json: { error: "Fixture RPC unavailable" },
+        })
+      );
+      await enroll(phone, { app: true });
+      const waiting = phone.page.getByRole("status").filter({
+        hasText: "Waiting for encrypted chats to sync to this device…",
+      });
+      const empty = phone.page.getByRole("heading", {
+        name: "No encrypted chats yet",
+        exact: true,
+      });
+      await expect(waiting).toBeVisible({ timeout: E2EE_UI_TIMEOUT_MS });
+      await expect(empty).toHaveCount(0);
+
+      const awaitingInvitation = phone.page.getByRole("heading", {
+        name: "No encrypted chats available on this device yet",
+        exact: true,
+      });
+      await expect(awaitingInvitation).toBeVisible({
+        timeout: E2EE_UI_TIMEOUT_MS,
+      });
+      await expect(waiting).toBeHidden();
+      await expect(empty).toHaveCount(0);
+      const retry = phone.page.getByRole("button", {
+        name: "Try again",
+        exact: true,
+      });
+      await expect(retry).toHaveCount(0);
+      await expect(
+        phone.page.getByRole("link", { name: "Check device setup" })
+      ).toHaveAttribute("href", "/preferences?tab=security");
+      const checked = phone.page.waitForResponse(
+        (response) =>
+          response.ok() &&
+          new URL(response.url()).pathname.endsWith("/inbox-status")
+      );
+      await Promise.all([
+        checked,
+        phone.page.getByRole("button", { name: "Check again" }).click(),
+      ]);
+      await expect(awaitingInvitation).toBeVisible();
+      await phone.page.screenshot({
+        path: testInfo.outputPath("encrypted-inbox-awaiting-invitation.png"),
+      });
+
+      allowInvitation.resolve();
+      // The sandbox has no WebSocket device-added event. Reload the
+      // original device's roster and send to require its pending own add.
+      await alice.page.reload();
+      await sendMessage(alice.page, "A message after the invitation");
+      await expect(conversationListRow(phone.page, "bob")).toBeVisible({
+        timeout: E2EE_SYNC_TIMEOUT_MS,
+      });
+      await expect(waiting).toBeHidden();
+      await expect(awaitingInvitation).toHaveCount(0);
+      await expect(retry).toHaveCount(0);
+      await phone.page.screenshot({
+        path: testInfo.outputPath("encrypted-inbox-available-chats.png"),
+      });
+
+      await expect(empty).toHaveCount(0);
+    } finally {
+      allowInvitation.resolve();
+    }
   });
 
   test("native encrypted chat gesture replies on release and swipes back to its list", async ({
@@ -263,10 +676,51 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
     ).toBeVisible();
     await alice.page.keyboard.press("Escape");
 
-    const releaseBack = await dragEncryptedMessage(alice.page, body, 130);
+    const releaseBack = await dragEncryptedMessage(alice.page, body, 240);
     await releaseBack();
     await expect(alice.page).toHaveURL(new RegExp(`${ENCRYPTED_ROUTE}$`, "u"));
-    await expect(conversationListRow(alice.page, "bob")).toBeVisible();
+    const bobRow = conversationListRow(alice.page, "bob");
+    await expect(bobRow).toBeVisible();
+    await bobRow.click();
+    await expectMessage(alice.page, incoming);
+    await tapEncryptedBackAndExpectSlide(alice.page);
+    await expect(bobRow).toBeVisible();
+    await tapEncryptedBackAndExpectSlide(bob.page);
+    await expect(conversationListRow(bob.page, "alice")).toBeVisible();
+    const entryFrames = sampleNativeNavigation(
+      alice.page,
+      ENCRYPTED_ROUTE,
+      true
+    );
+    await bobRow.tap();
+    expectNativeNavigation(await entryFrames, { headerMayLoad: true });
+    await expectMessage(alice.page, incoming);
+    await conversationListRow(bob.page, "alice").tap();
+    await expect(bob.page.locator("html")).toHaveAttribute(
+      "data-test-encrypted-entry-slide",
+      "ready"
+    );
+    await expectMessage(bob.page, incoming);
+    await gotoPath(alice.page, "/messages");
+    const nativeRow = alice.page
+      .getByRole("list", { name: "Encrypted chats" })
+      .getByRole("listitem")
+      .filter({
+        has: alice.page.getByRole("button", {
+          name: "Pin bob to top",
+          exact: true,
+        }),
+      });
+    await expect(nativeRow).toBeVisible();
+    const timeBox = await expectPinBeforeTimestamp(nativeRow);
+    await nativeRow.screenshot({
+      path: testInfo.outputPath("encrypted-row-pin-and-time.png"),
+    });
+    await alice.page.touchscreen.tap(
+      timeBox.x + timeBox.width / 2,
+      timeBox.y + timeBox.height / 2
+    );
+    await expectMessage(alice.page, incoming);
     expect(
       await alice.page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth
@@ -590,10 +1044,31 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
       fullPage: true,
     });
     if (!isMobileWebProject(testInfo.project.name)) {
+      await alice.page.route(
+        (url) => url.pathname.endsWith("/identities/bob/subscriptions"),
+        (route) =>
+          route.fulfill({
+            json: { actions: ["DROP_CREATED"], follows_viewer: true },
+          })
+      );
       await headerName.focus();
+      const hoverCard = alice.page.getByRole("dialog", {
+        name: "User profile for bob",
+      });
+      await expect(hoverCard).toBeVisible();
+      const following = hoverCard.getByRole("button", {
+        name: "Following",
+        exact: true,
+      });
+      await following.click();
+      const followMenu = hoverCard.getByRole("menu");
+      await expect(followMenu.getByText("You follow each other")).toBeVisible();
       await expect(
-        alice.page.getByRole("dialog", { name: "User profile for bob" })
-      ).toBeVisible();
+        followMenu.getByRole("menuitem", { name: "Unfollow" })
+      ).toBeInViewport();
+      await alice.page.keyboard.press("Escape");
+      await expect(followMenu).toHaveCount(0);
+      await expect(following).toBeFocused();
       await alice.page.keyboard.press("Escape");
     }
     await headerName.click();
@@ -736,7 +1211,7 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
     await enroll(alice);
     await enroll(bob);
 
-    await startChat(alice, ["bob"]);
+    const g = await startChat(alice, ["bob"]);
     await sendMessage(alice.page, "Picture coming up.");
     await openConversationFromList(bob.page, "alice");
     await expectMessage(bob.page, "Picture coming up.");
@@ -748,6 +1223,7 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
     // Story 9: the image is encrypted in the browser and uploaded as a blob.
     const caption = "Here is the picture.";
     const pickedName = "picked-pixel.png";
+    await openComposerActions(alice.page);
     const chooser = alice.page.waitForEvent("filechooser");
     await alice.page
       .getByRole("button", { name: "Attach files", exact: true })
@@ -818,10 +1294,18 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
       conversationListRow(bob.page, "alice").getByText(/unread message/u)
     ).toHaveCount(0);
 
+    // The chat's last message woke bob. Read-state sync posts to Alice's own
+    // self group afterwards and wakes nobody (D175), so look up this chat.
     const state = await e2eeSandboxControls.state(baseURL);
-    expect(state.notify.at(-1)?.hints).toEqual([
+    const chatNotify = state.notify.filter((entry) => entry.group === g);
+    expect(chatNotify.at(-1)?.hints).toEqual([
       { profile_id: users.bob.profileId, kind: "message" },
     ]);
+    expect(
+      state.notify
+        .filter((entry) => entry.group !== g)
+        .every((entry) => entry.hints.length === 0)
+    ).toBe(true);
     const scan = await e2eeSandboxControls.plaintextScan(baseURL, [
       caption,
       PIXEL_PNG_BASE64,
@@ -843,11 +1327,38 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
     await sendMessage(alice.page, "An earlier encrypted message");
     await openConversationFromList(bob.page, "alice");
     await expectMessage(bob.page, "An earlier encrypted message");
-    await alice.page
-      .getByRole("button", { name: "Chat info", exact: true })
-      .click();
-    await alice.page
-      .getByRole("dialog", { name: "Chat info", exact: true })
+    await gotoPath(alice.page, ENCRYPTED_ROUTE);
+    const row = conversationListRow(alice.page, "bob");
+    const pinName = { name: "Pin bob to top", exact: true };
+    const inboxRow = alice.page
+      .getByRole("list", { name: "Encrypted chats" })
+      .last()
+      .getByRole("listitem")
+      .filter({ has: alice.page.getByRole("button", pinName) });
+    const pin = inboxRow.getByRole("button", pinName);
+    const mobile = isMobileWebProject(testInfo.project.name);
+    if (mobile) {
+      await expect(pin).toHaveCSS("opacity", "1");
+      await expect(pin).toHaveCSS("width", "44px");
+      await pin.tap();
+    } else {
+      await alice.page.mouse.move(0, 0);
+      await expect(pin).toHaveCSS("opacity", "0");
+      await row.hover();
+      await expect(pin).toHaveCSS("opacity", "1");
+      await pin.click();
+    }
+    await expect(pin).toHaveAttribute("aria-pressed", "true");
+    await expectPinBeforeTimestamp(inboxRow);
+    await expect(alice.page).toHaveURL(new RegExp(`${ENCRYPTED_ROUTE}$`, "u"));
+    await row.click();
+    await expect(alice.page).toHaveURL(oldUrl);
+    const settings = await openChatInfo(alice.page);
+    await expect(
+      settings.getByRole("button", { name: "Unpin chat" })
+    ).toBeVisible();
+    await closeChatInfo(alice.page);
+    await (await openChatInfo(alice.page))
       .getByRole("button", { name: "Leave chat", exact: true })
       .click();
     await alice.page
@@ -866,8 +1377,20 @@ test.describe("Encrypted DMs @medium @local-only @e2ee", () => {
     const freshUrl = alice.page.url();
     await sendMessage(alice.page, "A fresh encrypted message");
     await gotoPath(alice.page, ENCRYPTED_ROUTE);
-    const row = conversationListRow(alice.page, "bob");
     await expect(row).toHaveCount(1);
+    await expect(row.getByText("Pinned", { exact: true })).toHaveCount(1);
+    if (mobile) {
+      await pin.tap();
+    } else {
+      await alice.page.mouse.move(0, 0);
+      await row.focus();
+      await alice.page.keyboard.press("Tab");
+      await expect(pin).toBeFocused();
+      await alice.page.keyboard.press("Space");
+      await expect(pin).toHaveCSS("opacity", "1");
+    }
+    await expect(pin).toHaveAttribute("aria-pressed", "false");
+    await expect(alice.page).toHaveURL(new RegExp(`${ENCRYPTED_ROUTE}$`, "u"));
     await row.click();
     await expect(alice.page).toHaveURL(freshUrl);
     const history = alice.page.getByRole("combobox", {

@@ -1,5 +1,7 @@
 "use client";
 
+import IconButton from "@/components/utils/button/IconButton";
+
 import { useContext, useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
@@ -8,6 +10,7 @@ import { useAuth } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { useNotificationsContext } from "@/components/notifications/NotificationsContext";
+import PreferencesGearLink from "@/components/preferences/PreferencesGearLink";
 import {
   getExcludedNotificationCauses,
   isNotificationVisible,
@@ -35,6 +38,7 @@ export default function NotificationsInbox({
   const { reconcileProfileDeliveredNotifications } = useNotificationsContext();
   const [readError, setReadError] = useState(false);
   const markedIdentityRef = useRef<string | null>(null);
+  const scrollRegionRef = useRef<HTMLDivElement>(null);
   const handle =
     hasValidWalletAuth && !activeProfileProxy ? connectedProfile?.handle : null;
   const query = useNotificationsQuery({
@@ -89,6 +93,11 @@ export default function NotificationsInbox({
     if (unreadIds.length > 0) markRead.mutate(unreadIds);
     onClose();
   };
+  const keepFocusInInbox = (button: HTMLButtonElement) => {
+    if (button.ownerDocument.activeElement === button) {
+      scrollRegionRef.current?.focus({ preventScroll: true });
+    }
+  };
   let message: string | null = null;
   if (activeProfileProxy) message = t(locale, "notifications.inbox.proxy");
   else if (!handle) message = t(locale, "notifications.inbox.connect");
@@ -101,16 +110,25 @@ export default function NotificationsInbox({
   return (
     <>
       <div className="tw-flex tw-flex-none tw-items-center tw-justify-between tw-gap-2 tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-iron-800 tw-px-4 tw-py-3">
-        <h2 className="tw-m-0 tw-text-base tw-font-semibold tw-text-white">
-          {t(locale, "notifications.inbox.title")}
-        </h2>
+        <div className="tw-flex tw-min-w-0 tw-items-center tw-gap-1">
+          <h2 className="tw-m-0 tw-truncate tw-text-base tw-font-semibold tw-text-white">
+            {t(locale, "notifications.inbox.title")}
+          </h2>
+          <PreferencesGearLink
+            label={t(locale, "profilePreferences.notifications.linkLabel")}
+            onNavigate={onClose}
+          />
+        </div>
         <div className="tw-flex tw-items-center tw-gap-1">
           {handle && (
             <button
               type="button"
               className={ACTION_CLASS}
               disabled={markRead.isPending || !query.isSuccess}
-              onClick={() => markRead.mutate("all")}
+              onClick={(event) => {
+                keepFocusInInbox(event.currentTarget);
+                markRead.mutate("all");
+              }}
             >
               {t(
                 locale,
@@ -120,14 +138,15 @@ export default function NotificationsInbox({
               )}
             </button>
           )}
-          <button
+          <IconButton
             type="button"
-            className="tw-inline-flex tw-size-8 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-0 tw-text-iron-300 tw-transition-colors focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-400 desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-white"
+            size={32}
+            variant="ghost"
             onClick={onClose}
             aria-label={t(locale, "notifications.inbox.close")}
           >
             <XMarkIcon aria-hidden="true" className="tw-size-5 tw-shrink-0" />
-          </button>
+          </IconButton>
         </div>
       </div>
       <output className="tw-sr-only">
@@ -136,7 +155,9 @@ export default function NotificationsInbox({
           : ""}
       </output>
       <div
-        className="tw-min-h-0 tw-flex-1 tw-overflow-y-auto tw-overscroll-contain tw-py-1"
+        ref={scrollRegionRef}
+        tabIndex={-1}
+        className="tw-min-h-0 tw-flex-1 tw-overflow-y-auto tw-overscroll-contain tw-py-1 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-[-2px] focus-visible:tw-outline-primary-400"
         aria-busy={query.isFetching}
       >
         {readError && (
@@ -179,7 +200,8 @@ export default function NotificationsInbox({
               type="button"
               className={ACTION_CLASS}
               disabled={query.isFetchingNextPage}
-              onClick={() => {
+              onClick={(event) => {
+                keepFocusInInbox(event.currentTarget);
                 void query.fetchNextPage();
               }}
             >

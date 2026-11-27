@@ -23,30 +23,50 @@ import {
 } from "@/services/api/competitions-api";
 import type { ApiSetCompetitionVoteRequest } from "@/generated/models/ApiSetCompetitionVoteRequest";
 import { useCompetitionViewer } from "@/hooks/competitions/useCompetitionQueries";
-import { useCompetitionSignatureFor } from "@/hooks/competitions/useCompetitionSignature";
+import {
+  getCompetitionSignatureFailureKey,
+  toCompetitionSignatureError,
+  useCompetitionSignatureFor,
+} from "@/hooks/competitions/useCompetitionSignature";
 import {
   newCompetitionRequestKey,
   isRejectedCompetitionCommand,
   isCompetitionAccessError,
 } from "@/helpers/competition.helpers";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
-import { t } from "@/i18n/messages";
-import { formatInteger } from "@/i18n/format";
+import { useWavesWritesPaused } from "@/hooks/useWavesMovePhase";
+import { useChainWavesWriters } from "@/components/chain-waves/useChainWavesWriters";
+import { chainWavesErrorMessage } from "@/components/chain-waves/chainWavesErrorMessage";
+import { chainIdentityPointer } from "@/components/chain-waves/chainIdentityPointer";
 import {
-  CompetitionState,
-  COMPETITION_BUTTON,
-  COMPETITION_INPUT,
-} from "./CompetitionState";
+  budgetAfterVote,
+  scheduleIndexRefresh,
+} from "@/lib/chain-waves/optimistic";
+import { isUserRejectedSigningError } from "@/helpers/wallet-error.helpers";
+import { t, type MessageKey } from "@/i18n/messages";
+import { formatInteger } from "@/i18n/format";
+import { getCompetitionConfigLabel } from "@/helpers/competition-labels.helpers";
+import { CompetitionState } from "./CompetitionState";
 import CompetitionCredits from "./CompetitionCredits";
+import { VotePanel } from "@/components/voting/VotePanel";
+import { VoteActionButton } from "@/components/voting/VoteActionButton";
+import { VOTE_INPUT_AREA_CLASSES } from "@/components/voting/VoteControl.styles";
+import { VoteNumericInput } from "@/components/voting/VoteNumericInput";
 import type { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import type { ApiCompetition } from "@/generated/models/ApiCompetition";
-import type {
-  SingleWaveDropVoteMode,
+import {
+  type SingleWaveDropVoteMode,
   SingleWaveDropVoteSize,
 } from "@/components/waves/drop/SingleWaveDropVote.types";
 import SingleWaveDropVoteSlider from "@/components/waves/drop/SingleWaveDropVoteSlider";
 import { WAVE_VOTING_LABELS } from "@/helpers/waves/waves.constants";
 import { updateCompetitionVoteInCache } from "@/components/react-query-wrapper/utils/updateCompetitionVoteInCache";
+import {
+  MyVotesInput,
+  MY_VOTES_INPUT_LAYOUT,
+  MY_VOTES_MOBILE_INPUT_LAYOUT,
+} from "@/components/brain/my-stream/votes/MyVotesInput";
+import { triggerVoteSuccessHaptic } from "@/helpers/vote-haptics";
 
 const COMPACT_VOTE_LAYOUT =
   "tw-col-span-3 tw-row-start-3 tw-w-full tw-min-w-0 tw-@container/vote-controls @[32rem]/my-vote:tw-col-span-2 @[32rem]/my-vote:tw-col-start-2 @[46rem]/my-vote:tw-col-span-1 @[46rem]/my-vote:tw-col-start-4 @[46rem]/my-vote:tw-row-span-2 @[46rem]/my-vote:tw-row-start-1";
@@ -86,6 +106,10 @@ export function CompetitionVoteForm({
   budgetEnabled = true,
   budgetVisibilityRef,
   compact = false,
+  myVotes = false,
+  mobile = false,
+  modeControl,
+  hidden,
   voteMode = "numeric",
   size,
   onVoteSuccess,
@@ -108,12 +132,16 @@ export function CompetitionVoteForm({
     | undefined;
   readonly reply?:
     | {
-        readonly content: ReactNode;
+        readonly renderContent: (action: ReactNode) => ReactNode;
         readonly isValid: boolean;
         readonly onVoteApplied: () => Promise<void>;
       }
     | undefined;
   readonly compact?: boolean;
+  readonly myVotes?: boolean;
+  readonly mobile?: boolean;
+  readonly modeControl?: ReactNode;
+  readonly hidden?: boolean | undefined;
   readonly voteMode?: SingleWaveDropVoteMode | undefined;
   readonly size?: SingleWaveDropVoteSize | undefined;
   readonly onVoteSuccess?: (() => void) | undefined;
@@ -122,6 +150,8 @@ export function CompetitionVoteForm({
     | ((voteTotal: number, voteChange: number) => void)
     | undefined;
 }) {
+  const controlVariant =
+    size === SingleWaveDropVoteSize.MINI ? "compact" : "default";
   const identity = {
     waveId: competition.wave_id,
     competitionId: competition.id,
@@ -137,17 +167,25 @@ export function CompetitionVoteForm({
     };
   }, [viewer]);
   const locale = useBrowserLocale();
+  // Votes move to the 6529 Network: shown, but not changeable here.
+  const votesPaused = useWavesWritesPaused("votes");
+  const canVoteNow = competition.permissions.vote && !votesPaused;
+  const voteValueLabel = t(locale, "competitions.voteValue");
   const explainTooltipId = useId();
-  const creditLabel =
-    WAVE_VOTING_LABELS[competition.voting.credit_type as ApiWaveCreditType];
+  const creditType = competition.voting.credit_type;
+  const creditLabel = Object.hasOwn(WAVE_VOTING_LABELS, creditType)
+    ? WAVE_VOTING_LABELS[creditType as ApiWaveCreditType]
+    : getCompetitionConfigLabel(locale, creditType);
   const client = useQueryClient();
   const sign = useCompetitionSignatureFor(competition);
   const credit = useCompetitionVoteBudget(competition, entryId, budgetEnabled);
+  const chainWriters = useChainWavesWriters();
   const [draft, setDraft] = useState<{ source: string; value: string } | null>(
     null
   );
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<MessageKey | null>(null);
+  const [chainFailure, setChainFailure] = useState<ReactNode>(null);
   const [saved, setSaved] = useState(false);
   const [lastVote, setLastVote] = useState<{
     source: string;
@@ -173,8 +211,13 @@ export function CompetitionVoteForm({
     ? `competition-vote-error-${entryId}`
     : undefined;
   const rangeDescriptionId = `competition-vote-range-${entryId}`;
+  const voteInputId = `competition-vote-${entryId}`;
   const min = credit.data?.min_vote;
   const max = credit.data?.max_vote;
+  const updateNumericDraft = (next: string) => {
+    setVoteDraft(next);
+    setSaved(false);
+  };
   const valid =
     value.trim() !== "" &&
     Number.isSafeInteger(numeric) &&
@@ -185,13 +228,7 @@ export function CompetitionVoteForm({
     numeric >= min &&
     numeric <= max;
   const submit = async () => {
-    if (
-      busy ||
-      !valid ||
-      reply?.isValid === false ||
-      disabled ||
-      !competition.permissions.vote
-    )
+    if (busy || !valid || reply?.isValid === false || disabled || !canVoteNow)
       return;
     const address = getWalletAddress();
     const isCurrentActor = () =>
@@ -203,9 +240,39 @@ export function CompetitionVoteForm({
       });
     setBusy(true);
     onSubmittingChange?.(true);
-    setFailed(false);
+    setFailed(null);
     setSaved(false);
     try {
+      if (chainWriters) {
+        // On the 6529 Network the vote carries its own signature. The caches
+        // show it until 6529.io's index has read the block.
+        await chainWriters.vote({ dropId, amount: numeric });
+        pending.current = null;
+        if (credit.data) {
+          await updateCompetitionVoteInCache(client, {
+            ...identity,
+            viewer,
+            entryId,
+            dropId,
+            budget: budgetAfterVote(credit.data, numeric),
+            isCurrentViewer: isCurrentActor,
+          });
+        }
+        if (isCurrentActor()) {
+          setDraft(null);
+          controlledDraft?.onChange(null);
+          setSaved(true);
+          setLastVote({
+            source,
+            total: numeric,
+            change: numeric - (credit.data?.current_vote ?? 0),
+          });
+          void reply?.onVoteApplied();
+          onVoteSuccess?.();
+        }
+        scheduleIndexRefresh(() => invalidateCompetition(client, identity));
+        return;
+      }
       if (!(await requestAuth()).success || !isCurrentActor()) return;
       let body =
         pending.current?.actor === viewer ? pending.current.body : null;
@@ -224,7 +291,9 @@ export function CompetitionVoteForm({
             { value: numeric },
             entryId,
             dropId
-          );
+          ).catch((error: unknown) => {
+            throw toCompetitionSignatureError(error);
+          });
         pending.current = { actor: viewer, body };
       }
       if (!isCurrentActor()) return;
@@ -249,22 +318,62 @@ export function CompetitionVoteForm({
         });
         void reply?.onVoteApplied();
         onVoteSuccess?.();
+        if (myVotes) triggerVoteSuccessHaptic();
       }
       void invalidateCompetition(client, identity).catch(() => undefined);
     } catch (error) {
       if (isRejectedCompetitionCommand(error)) pending.current = null;
-      setFailed(true);
+      // Cancelled at the wallet prompt: nothing was sent.
+      if (chainWriters && isUserRejectedSigningError(error)) return;
+      setChainFailure(
+        chainWriters
+          ? (chainIdentityPointer(locale, error) ??
+              chainWavesErrorMessage(locale, error))
+          : null
+      );
+      setFailed(
+        getCompetitionSignatureFailureKey(error) ?? "competitions.failure"
+      );
       await credit.refetch();
     } finally {
       setBusy(false);
       onSubmittingChange?.(false);
     }
   };
+  const renderPanel = (content: ReactNode) =>
+    compact ? (
+      content
+    ) : (
+      <VotePanel
+        mode={voteMode}
+        modeControl={modeControl}
+        variant={controlVariant}
+        hidden={hidden}
+      >
+        {content}
+      </VotePanel>
+    );
   if (!connectedProfile)
-    return (
+    return renderPanel(
       <p className="tw-text-sm tw-text-iron-400">
         {t(locale, "competitions.signIn")}
       </p>
+    );
+  if (credit.isPending && compact && myVotes)
+    return (
+      <div
+        ref={budgetVisibilityRef}
+        role="status"
+        aria-label={t(locale, "competitions.loading")}
+        className={`tw-grid tw-grid-cols-[minmax(0,1fr)_auto] tw-items-center tw-gap-2 ${mobile ? MY_VOTES_MOBILE_INPUT_LAYOUT : MY_VOTES_INPUT_LAYOUT}`}
+        aria-busy="true"
+        aria-live="off"
+      >
+        <div className="tw-h-[46px] tw-animate-pulse tw-rounded-lg tw-bg-iron-900 motion-reduce:tw-animate-none" />
+        {onExplainVote && (
+          <div className="tw-h-11 tw-w-20 tw-animate-pulse tw-rounded-lg tw-bg-iron-900 motion-reduce:tw-animate-none" />
+        )}
+      </div>
     );
   if (credit.isPending)
     return compact ? (
@@ -288,19 +397,77 @@ export function CompetitionVoteForm({
         </div>
       </div>
     ) : (
-      <CompetitionState />
+      renderPanel(<CompetitionState />)
     );
   if (
     credit.isError &&
     (!credit.data || isCompetitionAccessError(credit.error))
   )
-    return (
+    return renderPanel(
       <CompetitionState
         error
         retry={() => {
           void credit.refetch();
         }}
       />
+    );
+  if (compact && myVotes)
+    return (
+      <div
+        ref={budgetVisibilityRef}
+        className={
+          mobile ? MY_VOTES_MOBILE_INPUT_LAYOUT : MY_VOTES_INPUT_LAYOUT
+        }
+      >
+        <MyVotesInput
+          mobile={mobile}
+          className=""
+          alwaysShowHelper={!mobile}
+          id={voteInputId}
+          label={voteValueLabel}
+          value={value}
+          currentVote={credit.data.current_vote ?? 0}
+          unit={creditLabel}
+          min={min ?? 0}
+          valid={valid}
+          disabled={disabled || !canVoteNow}
+          busy={busy}
+          helperText={t(locale, "competitions.voteRange", {
+            min: formatInteger(locale, min ?? 0),
+            max: formatInteger(locale, max ?? 0),
+          })}
+          error={failed ? (chainFailure ?? t(locale, failed)) : null}
+          saveLabel={t(
+            locale,
+            busy ? "competitions.saving" : "competitions.vote"
+          )}
+          explainLabel={t(locale, "waves.voteRationale.explainAriaLabel")}
+          explainDescription={t(locale, "waves.voteRationale.savedDescription")}
+          canExplain={
+            credit.data.current_vote !== null && credit.data.current_vote !== 0
+          }
+          onChange={updateNumericDraft}
+          onBlur={() => {
+            if (value === "" || value === "-") {
+              setVoteDraft(String(credit.data.current_vote ?? 0));
+            }
+          }}
+          onSubmit={() => void submit()}
+          onExplain={
+            onExplainVote
+              ? () => {
+                  const total = credit.data.current_vote ?? 0;
+                  onExplainVote(
+                    total,
+                    lastVote?.source === source && lastVote.total === total
+                      ? lastVote.change
+                      : 0
+                  );
+                }
+              : undefined
+          }
+        />
+      </div>
     );
   if (compact)
     return (
@@ -312,8 +479,8 @@ export function CompetitionVoteForm({
         }}
         className={`${COMPACT_VOTE_LAYOUT} tw-cursor-default`}
       >
-        <label className="tw-sr-only" htmlFor={`competition-vote-${entryId}`}>
-          {t(locale, "competitions.voteValue")}
+        <label className="tw-sr-only" htmlFor={voteInputId}>
+          {voteValueLabel}
         </label>
         <div
           ref={budgetVisibilityRef}
@@ -323,19 +490,19 @@ export function CompetitionVoteForm({
             className={`tw-col-span-2 tw-flex tw-min-w-0 tw-items-center tw-gap-x-1 tw-rounded-lg tw-bg-iron-900 tw-pr-1 tw-ring-1 tw-ring-inset tw-ring-iron-700 focus-within:tw-ring-2 focus-within:tw-ring-primary-400 @[24rem]/vote-controls:tw-col-span-1 @[46rem]/my-vote:tw-gap-x-2 ${onExplainVote ? "" : "@[24rem]/vote-controls:!tw-col-span-2"}`}
           >
             <input
-              id={`competition-vote-${entryId}`}
+              id={voteInputId}
               type="number"
               step="1"
               min={min ?? undefined}
               max={max ?? undefined}
               value={value}
               onChange={(event) => setVoteDraft(event.target.value)}
-              disabled={busy || disabled || !competition.permissions.vote}
+              disabled={busy || disabled || !canVoteNow}
               aria-invalid={!valid}
               aria-describedby={[rangeDescriptionId, errorDescriptionId]
                 .filter(Boolean)
                 .join(" ")}
-              className="tw-h-11 tw-w-[12ch] tw-min-w-[10ch] tw-max-w-[12ch] tw-flex-1 tw-rounded-lg tw-border-0 tw-bg-transparent tw-pl-3 tw-pr-0 tw-text-base tw-font-semibold tw-tabular-nums tw-text-iron-50 tw-outline-none [appearance:textfield] focus:tw-ring-0 @[46rem]/my-vote:tw-h-9 @[46rem]/my-vote:tw-min-w-0 @[46rem]/my-vote:tw-text-sm [&::-webkit-inner-spin-button]:tw-appearance-none [&::-webkit-outer-spin-button]:tw-appearance-none"
+              className="tw-h-11 tw-w-[12ch] tw-min-w-[10ch] tw-max-w-[12ch] tw-flex-1 tw-rounded-lg tw-border-0 tw-bg-transparent tw-pl-3 tw-pr-0 tw-text-base tw-font-semibold !tw-tabular-nums tw-text-iron-50 tw-outline-none [appearance:textfield] focus:tw-ring-0 @[46rem]/my-vote:tw-h-9 @[46rem]/my-vote:tw-min-w-0 @[46rem]/my-vote:tw-text-sm [&::-webkit-inner-spin-button]:tw-appearance-none [&::-webkit-outer-spin-button]:tw-appearance-none"
             />
             <span className="tw-ml-auto tw-mr-2 tw-flex-shrink-0 tw-whitespace-nowrap tw-py-1 tw-text-xs tw-leading-4 tw-text-iron-400">
               {creditLabel}
@@ -346,7 +513,7 @@ export function CompetitionVoteForm({
               disabled={
                 busy ||
                 disabled ||
-                !competition.permissions.vote ||
+                !canVoteNow ||
                 !valid ||
                 numeric === credit.data.current_vote
               }
@@ -370,7 +537,7 @@ export function CompetitionVoteForm({
               <Button
                 variant="tertiary"
                 size="sm"
-                className="tw-relative tw-col-start-2 tw-row-start-2 tw-my-1 tw-self-center after:tw-absolute after:tw-inset-x-0 after:tw-top-1/2 after:tw-h-11 after:-tw-translate-y-1/2 after:tw-content-[''] @[24rem]/vote-controls:tw-row-start-1 @[46rem]/my-vote:tw-my-0"
+                className="tw-relative tw-col-start-2 tw-row-start-2 tw-my-1 tw-self-center !tw-font-medium after:tw-absolute after:tw-inset-x-0 after:tw-top-1/2 after:tw-h-11 after:-tw-translate-y-1/2 after:tw-content-[''] @[24rem]/vote-controls:tw-row-start-1 @[46rem]/my-vote:tw-my-0"
                 aria-label={t(locale, "waves.voteRationale.explainAriaLabel")}
                 data-tooltip-id={explainTooltipId}
                 data-tooltip-content={t(
@@ -380,7 +547,7 @@ export function CompetitionVoteForm({
                 disabled={
                   busy ||
                   disabled ||
-                  !competition.permissions.vote ||
+                  !canVoteNow ||
                   credit.data.current_vote === null ||
                   credit.data.current_vote === 0
                 }
@@ -419,37 +586,46 @@ export function CompetitionVoteForm({
             role="alert"
             className="tw-mb-0 tw-mt-1 tw-text-xs tw-text-red"
           >
-            {t(locale, "competitions.failure")}
+            {chainFailure ?? t(locale, failed)}
           </p>
         )}
       </form>
     );
-  return (
-    <div className="tw-space-y-3 group-[.is-vote-panel]/inline-vote:tw-contents group-[.is-vote-panel]/inline-vote:tw-space-y-0">
-      <CompetitionCredits budget={credit.data} />
-      <p className="tw-text-sm tw-text-iron-400 group-[.is-vote-panel]/inline-vote:tw-col-start-1 group-[.is-vote-panel]/inline-vote:tw-row-start-1 group-[.is-vote-panel]/inline-vote:tw-m-0 group-[.is-vote-panel]/inline-vote:tw-flex group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-contents group-[.is-vote-panel]/inline-vote:tw-flex-wrap group-[.is-vote-panel]/inline-vote:tw-items-center group-[.is-vote-panel]/inline-vote:tw-gap-x-1.5">
-        <span className="tw-hidden tw-font-medium tw-text-iron-400 group-[.is-vote-panel]/inline-vote:tw-col-start-1 group-[.is-vote-panel]/inline-vote:tw-row-start-1 group-[.is-vote-panel]/inline-vote:tw-inline">
-          {t(locale, "competitions.voteValue")}
-        </span>
-        <span className="group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-pointer-events-none group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-z-10 group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-col-span-2 group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-col-start-1 group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-row-start-2 group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-mr-3 group-[.is-vote-panel:has(input[type=range])]/inline-vote:tw-hidden group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-justify-self-end group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-text-[13px] group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-leading-4 group-[.is-vote-panel:has(input[type=number])]/inline-vote:tw-text-iron-500">
-          {creditLabel}
-        </span>
-      </p>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-        className="tw-space-y-3 group-[.is-vote-panel]/inline-vote:tw-contents group-[.is-vote-panel]/inline-vote:tw-space-y-0 group-[.is-vote-panel]/inline-vote:[&>output]:tw-col-span-2 group-[.is-vote-panel]/inline-vote:[&>p]:tw-col-span-2 group-[.is-vote-panel]/inline-vote:[&>p]:tw-m-0"
+  const voteAction = (
+    <div
+      className={`tw-flex tw-justify-end ${size === SingleWaveDropVoteSize.MINI ? "tw-ml-auto tw-w-auto" : "tw-w-full"}`}
+    >
+      <VoteActionButton
+        type="submit"
+        amount={numeric}
+        unit={creditLabel}
+        variant={controlVariant}
+        disabled={
+          busy || disabled || !canVoteNow || !valid || reply?.isValid === false
+        }
+      >
+        {busy ? t(locale, "competitions.saving") : undefined}
+      </VoteActionButton>
+    </div>
+  );
+  return renderPanel(
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+      className={controlVariant === "compact" ? "tw-space-y-4" : "tw-space-y-3"}
+    >
+      <div
+        data-vote-input-area
+        className={`tw-flex tw-min-w-0 tw-flex-col tw-justify-center ${VOTE_INPUT_AREA_CLASSES[controlVariant]}`}
       >
         {voteMode === "slider" ? (
           <fieldset
-            className="tw-m-0 tw-min-w-0 tw-border-0 tw-px-0 tw-pb-6 tw-pt-0 group-[.is-vote-panel]/inline-vote:tw-col-span-2 group-[.is-vote-panel]/inline-vote:tw-row-start-2 group-[.is-vote-panel]/inline-vote:tw-px-2 group-[.is-mini]/inline-vote:tw-pt-8 group-[.is-vote-panel:not(.is-mini)]/inline-vote:tw-pb-2 group-[.is-vote-panel]/inline-vote:tw-pb-0 group-[.is-vote-panel]/inline-vote:focus-within:tw-rounded-lg group-[.is-vote-panel]/inline-vote:focus-within:tw-ring-2 group-[.is-vote-panel]/inline-vote:focus-within:tw-ring-primary-400"
-            disabled={busy || disabled || !competition.permissions.vote}
+            className={`tw-m-0 tw-min-w-0 tw-border-0 tw-px-2 ${controlVariant === "compact" ? "tw-pb-0 tw-pt-8" : "tw-pb-2 tw-pt-0"}`}
+            disabled={busy || disabled || !canVoteNow}
           >
-            <legend className="tw-sr-only">
-              {t(locale, "competitions.voteValue")}
-            </legend>
+            <legend className="tw-sr-only">{voteValueLabel}</legend>
             <SingleWaveDropVoteSlider
               voteValue={Number.isFinite(numeric) ? numeric : 0}
               minValue={min ?? 0}
@@ -465,67 +641,63 @@ export function CompetitionVoteForm({
             />
           </fieldset>
         ) : (
-          <>
-            <label
-              htmlFor={`competition-vote-${entryId}`}
-              className="tw-block tw-text-sm tw-text-iron-200 group-[.is-vote-panel]/inline-vote:tw-sr-only"
-            >
-              {t(locale, "competitions.voteValue")}
+          <div className="tw-relative">
+            <label htmlFor={voteInputId} className="tw-sr-only">
+              {voteValueLabel}
             </label>
-            <div className="tw-flex tw-flex-wrap tw-gap-2 group-[.is-vote-panel]/inline-vote:tw-col-span-2 group-[.is-vote-panel]/inline-vote:tw-col-start-1 group-[.is-vote-panel]/inline-vote:tw-row-start-2">
-              <input
-                id={`competition-vote-${entryId}`}
-                type="number"
-                step="1"
-                min={min ?? undefined}
-                max={max ?? undefined}
-                className={`${COMPETITION_INPUT} !tw-w-40 group-[.is-vote-panel:not(.is-mini)]/inline-vote:tw-h-11 group-[.is-vote-panel]/inline-vote:tw-h-9 group-[.is-vote-panel]/inline-vote:!tw-w-full group-[.is-vote-panel]/inline-vote:tw-min-w-0 group-[.is-vote-panel]/inline-vote:tw-border-iron-800 group-[.is-vote-panel]/inline-vote:tw-bg-iron-900 group-[.is-vote-panel]/inline-vote:tw-py-0 group-[.is-vote-panel]/inline-vote:tw-pl-3 group-[.is-vote-panel]/inline-vote:tw-pr-28 group-[.is-vote-panel]/inline-vote:tw-text-[13px] group-[.is-vote-panel]/inline-vote:tw-font-semibold group-[.is-vote-panel]/inline-vote:tw-tabular-nums group-[.is-vote-panel]/inline-vote:tw-leading-4 group-[.is-vote-panel]/inline-vote:tw-transition-colors group-[.is-vote-panel]/inline-vote:tw-duration-150 group-[.is-vote-panel]/inline-vote:[appearance:textfield] group-[.is-vote-panel]/inline-vote:hover:tw-border-iron-700 group-[.is-vote-panel]/inline-vote:focus:tw-border-primary-500/70 group-[.is-vote-panel]/inline-vote:touch-only:tw-h-11 group-[.is-vote-panel]/inline-vote:touch-only:tw-text-base group-[.is-vote-panel]/inline-vote:motion-reduce:tw-transition-none group-[.is-vote-panel]/inline-vote:max-sm:tw-h-11 group-[.is-vote-panel]/inline-vote:max-sm:tw-text-base group-[.is-vote-panel:not(.is-mini)]/inline-vote:sm:desktop-hover:tw-text-sm group-[.is-vote-panel]/inline-vote:[&::-webkit-inner-spin-button]:tw-appearance-none group-[.is-vote-panel]/inline-vote:[&::-webkit-outer-spin-button]:tw-appearance-none`}
-                value={value}
-                disabled={busy || disabled || !competition.permissions.vote}
-                aria-invalid={!valid}
-                aria-describedby={errorDescriptionId}
-                onChange={(event) => {
-                  setVoteDraft(event.target.value);
-                  setSaved(false);
-                }}
-              />
-            </div>
-          </>
+            <VoteNumericInput
+              id={voteInputId}
+              unit={creditLabel}
+              variant={controlVariant}
+              type="number"
+              step="1"
+              min={min ?? undefined}
+              max={max ?? undefined}
+              value={value}
+              disabled={busy || disabled || !canVoteNow}
+              aria-invalid={!valid}
+              aria-describedby={errorDescriptionId}
+              onChange={(event) => updateNumericDraft(event.target.value)}
+              adjustments={
+                typeof min === "number" && typeof max === "number"
+                  ? {
+                      min,
+                      max,
+                      value: Number.isSafeInteger(numeric) ? numeric : 0,
+                      onChange: (next) => updateNumericDraft(String(next)),
+                    }
+                  : undefined
+              }
+            />
+          </div>
         )}
-        {reply?.content}
-        <button
-          type="submit"
-          className={`${COMPETITION_BUTTON} group-[.is-vote-panel]/inline-vote:tw-col-start-2 group-[.is-vote-panel]/inline-vote:tw-row-start-4 group-[.is-vote-panel]/inline-vote:tw-min-h-8 group-[.is-vote-panel]/inline-vote:tw-place-self-end group-[.is-vote-panel]/inline-vote:tw-border-transparent group-[.is-vote-panel]/inline-vote:tw-bg-primary-500 group-[.is-vote-panel]/inline-vote:tw-px-3.5 group-[.is-vote-panel]/inline-vote:tw-py-1.5 group-[.is-vote-panel]/inline-vote:tw-text-[13px] group-[.is-vote-panel]/inline-vote:tw-text-white group-[.is-vote-panel]/inline-vote:hover:tw-bg-primary-600 group-[.is-vote-panel]/inline-vote:disabled:tw-cursor-default group-[.is-vote-panel]/inline-vote:disabled:tw-bg-iron-800 group-[.is-vote-panel]/inline-vote:disabled:tw-text-iron-600`}
-          disabled={
-            busy ||
-            disabled ||
-            !competition.permissions.vote ||
-            !valid ||
-            reply?.isValid === false
-          }
+      </div>
+      <CompetitionCredits budget={credit.data} />
+      {reply ? reply.renderContent(voteAction) : voteAction}
+      {(disabled || !canVoteNow) && (
+        <p className="tw-text-sm tw-text-iron-400">
+          {t(
+            locale,
+            disabled || !competition.permissions.vote
+              ? "competitions.voteClosed"
+              : "wavesMove.paused"
+          )}
+        </p>
+      )}
+      {failed && (
+        <p
+          id={errorDescriptionId}
+          role="alert"
+          className="tw-text-sm tw-text-red"
         >
-          {t(locale, busy ? "competitions.saving" : "competitions.vote")}
-        </button>
-        {(disabled || !competition.permissions.vote) && (
-          <p className="tw-text-sm tw-text-iron-400">
-            {t(locale, "competitions.voteClosed")}
-          </p>
-        )}
-        {failed && (
-          <p
-            id={errorDescriptionId}
-            role="alert"
-            className="tw-text-sm tw-text-red"
-          >
-            {t(locale, "competitions.failure")}
-          </p>
-        )}
-        {saved && (
-          <output className="tw-block tw-text-sm tw-text-emerald-400">
-            {t(locale, "competitions.saved")}
-          </output>
-        )}
-      </form>
-    </div>
+          {chainFailure ?? t(locale, failed)}
+        </p>
+      )}
+      {saved && (
+        <output className="tw-block tw-text-sm tw-text-emerald-400">
+          {t(locale, "competitions.saved")}
+        </output>
+      )}
+    </form>
   );
 }

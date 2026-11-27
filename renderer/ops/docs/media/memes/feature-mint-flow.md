@@ -99,6 +99,16 @@
   - After a destination wallet is selected, each phase card can show
     `No eligible spots`, `x eligible spot(s)`, `Unlimited spots`,
     `Loading eligibility...`, or `Eligibility unavailable`.
+  - A phase spot that a subscription fills is an airdrop, not a mint: the card
+    shows `Nx Airdrop · nothing to mint`, or `Nx Allowlist · Nx Airdrop` when
+    the wallet also has mintable spots in that phase. When the distribution
+    reports separate allowlist and airdrop counts, only allowlist spots count
+    as eligible spots; an entry without that split keeps its combined count.
+  - When the signed-in profile's subscription is assigned to the active phase,
+    the mint panel says that the subscription covers the card and names the
+    airdrop wallet, or that the card has been airdropped once it is redeemed.
+    When the subscription used the wallet's only spot in the phase, the panel
+    also shows `No spots in current phase for this address`.
 - Airdrops summary:
   - If selected destination has airdrops, the phase area shows `Airdrops: xN`.
 - Minting for another wallet:
@@ -251,3 +261,10 @@
 - [Memes Minting Calendar](feature-minting-calendar.md)
 - [The Memes Card Tabs and Focus Links](feature-card-tabs-and-focus-links.md)
 - [Docs Home](../../README.md)
+
+## Standard phase windows
+
+The default calendar uses Europe/Athens local time with daylight saving: Phase 0
+17:40–18:20, Phase 1 18:30–18:50, Phase 2 19:00–19:20, and Public 19:20–17:00
+the next day. Use the card's live phase and eligibility to see the current mint.
+Internal distribution and launch operation setup is maintained separately.

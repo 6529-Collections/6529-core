@@ -14,7 +14,7 @@ import {
   seedProcessedHistory,
   browserPerformanceSnapshot,
 } from "../support/staging-e2ee/performance";
-import type { Browser, TestInfo } from "@playwright/test";
+import type { Browser, Route, TestInfo } from "@playwright/test";
 import { createChatWave } from "../support/staging-e2ee/chat-wave";
 import {
   MARKDOWN_PARITY_CASES,
@@ -25,6 +25,14 @@ import {
   checkConversationPreviews,
 } from "../support/markdownParity";
 
+import { checkEncryptedPoll } from "../support/e2ee/polls";
+import { e2eeMessage } from "../support/e2ee/e2eeCopy";
+import {
+  dragPinnedChat,
+  encryptedInbox,
+  expectPinBeforeTimestamp,
+  pinEncryptedChat,
+} from "../support/e2ee/pinLayout";
 import { expect, test } from "../testHelpers";
 import {
   plaintextEncodings,
@@ -103,6 +111,7 @@ interface World {
   /** Created on demand: user C, B's second device. */
   readonly extra: StagingE2eeSession[];
   dm: string | null;
+  group: string | null;
 }
 
 let world: World | null = null;
@@ -182,6 +191,42 @@ async function ensureDm(current: World): Promise<string> {
   return dm;
 }
 
+async function checkOrderSync(
+  current: World,
+  second: StagingE2eeSession,
+  groupName: string
+) {
+  const { a, b } = current;
+  await Promise.all([
+    gotoStaging(b.page, ENCRYPTED_ROUTE),
+    gotoStaging(second.page, ENCRYPTED_ROUTE),
+  ]);
+  const inbox = encryptedInbox(b.page);
+  const sibling = encryptedInbox(second.page);
+  const titles = [a.user.handle, groupName];
+  for (const title of titles) {
+    await pinEncryptedChat(inbox, title);
+    await expect(
+      sibling.getByRole("button", { name: `Pin ${title} to top`, exact: true })
+    ).toHaveAttribute("aria-pressed", "true", { timeout: SYNC_TIMEOUT_MS });
+  }
+
+  const links = inbox.getByRole("link");
+  const otherLinks = sibling.getByRole("link");
+  await expect(otherLinks.first()).toContainText(a.user.handle);
+  await dragPinnedChat(
+    b.page,
+    links.filter({ hasText: groupName }),
+    links.filter({ hasText: a.user.handle })
+  );
+  await expect(links.first()).toContainText(groupName);
+  await expect(otherLinks.first()).toContainText(groupName, {
+    timeout: SYNC_TIMEOUT_MS,
+  });
+  await expect(otherLinks.nth(1)).toContainText(a.user.handle);
+  await expect(b.page).toHaveURL((url) => url.pathname === ENCRYPTED_ROUTE);
+}
+
 /** One more enrolled device (a new user, or another device of a user). */
 async function addSession(
   browser: Browser,
@@ -237,7 +282,7 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
         "B",
         { signedPostsFirst: true }
       );
-      world = { runId, a, b, extra: [], dm: null };
+      world = { runId, a, b, extra: [], dm: null, group: null };
     } catch (error) {
       await a.close();
       throw error;
@@ -343,6 +388,36 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
     await expectNothingUndecryptable(a);
     await expectNothingUndecryptable(b);
 
+    await gotoStaging(b.page, ENCRYPTED_ROUTE);
+    const lists = b.page.getByRole("list", {
+      name: e2eeMessage("e2ee.list.label"),
+    });
+    await expect(lists).toHaveCount(2, { timeout: UI_TIMEOUT_MS });
+    const sidebar = lists.first();
+    const pinButton = {
+      name: e2eeMessage("e2ee.list.pinChat", { title: a.user.handle }),
+      exact: true,
+    };
+    const withPin = { has: b.page.getByRole("button", pinButton) };
+    const sidebarRow = sidebar.getByRole("listitem").filter(withPin);
+    const inboxRow = lists.last().getByRole("listitem").filter(withPin);
+    const sidebarPin = sidebarRow.getByRole("button", pinButton);
+    const inboxPin = inboxRow.getByRole("button", pinButton);
+    const sidebarChat = sidebarRow.getByRole("link", { name: a.user.handle });
+    await expect(sidebarChat).toHaveAttribute(
+      "href",
+      `${ENCRYPTED_ROUTE}/${dm}`
+    );
+    await sidebarChat.hover();
+    await sidebarPin.click();
+    await expect(inboxPin).toHaveAttribute("aria-pressed", "true");
+    await expectPinBeforeTimestamp(sidebarRow);
+    await expectPinBeforeTimestamp(inboxRow);
+    await expect(b.page).toHaveURL((url) => url.pathname === ENCRYPTED_ROUTE);
+    await inboxPin.click();
+    await expect(sidebarPin).toHaveAttribute("aria-pressed", "false");
+    await expect(b.page).toHaveURL((url) => url.pathname === ENCRYPTED_ROUTE);
+
     expect(
       a.evidence.requestsMatching(
         "POST",
@@ -351,6 +426,22 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
       "A's sends were not observed, so the plaintext check would be vacuous"
     ).toBeGreaterThan(0);
     expectPrivateAndClean([a, b], needles({ hello, reply }));
+  });
+
+  test("both participants can create and vote in encrypted DM polls", async () => {
+    const current = requireWorld();
+    const { a, b, runId } = current;
+    const dm = await ensureDm(current);
+    await openChat(a, dm);
+    await openChat(b, dm);
+
+    const singlePoll = qaMessage(runId, "Which drink do you prefer?");
+    const multiPoll = qaMessage(runId, "Which drinks work for you?");
+    await checkEncryptedPoll(a.page, b.page, b.user.handle, singlePoll, false);
+    await checkEncryptedPoll(b.page, a.page, a.user.handle, multiPoll, true);
+    await expectNothingUndecryptable(a);
+    await expectNothingUndecryptable(b);
+    expectPrivateAndClean([a, b], needles({ singlePoll, multiPoll }));
   });
 
   test("formats conversation-list Markdown previews on desktop and mobile", async ({}, testInfo) => {
@@ -820,6 +911,7 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
     const group = await startEncryptedChat(a, [b.user.handle, c.user.handle], {
       group: { name: groupName },
     });
+    current.group = group;
     await expect(a.page.getByRole("heading", { level: 1 })).toHaveText(
       groupName,
       { timeout: UI_TIMEOUT_MS }
@@ -834,6 +926,11 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
     await openChatFromList(c, group, groupName);
     await expectDecrypted(c, fromA);
 
+    const singlePoll = qaMessage(runId, "Which drink?");
+    const multiPoll = qaMessage(runId, "Which drinks?");
+    await checkEncryptedPoll(a.page, b.page, b.user.handle, singlePoll, false);
+    await checkEncryptedPoll(a.page, c.page, c.user.handle, multiPoll, true);
+
     await sendEncrypted(c, fromC);
     await expectDecrypted(a, fromC);
     await expectDecrypted(b, fromC);
@@ -841,7 +938,10 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
       await expectNothingUndecryptable(session);
     }
 
-    expectPrivateAndClean([a, b, c], needles({ groupName, fromA, fromC }));
+    expectPrivateAndClean(
+      [a, b, c],
+      needles({ groupName, fromA, fromC, singlePoll, multiPoll })
+    );
   });
 
   test("a revoked device can no longer read new messages", async ({
@@ -850,11 +950,69 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
     const current = requireWorld();
     const { a, b, runId } = current;
     const dm = await ensureDm(current);
+    const groupName = `QA group ${runId}`;
+    if (!current.group) {
+      const c = await addSession(
+        browser,
+        testInfo,
+        createThrowawayUser("C"),
+        "C"
+      );
+      current.group = await startEncryptedChat(
+        a,
+        [b.user.handle, c.user.handle],
+        {
+          group: { name: groupName },
+        }
+      );
+    }
     const beforeRevoke = qaMessage(runId, "before revoke");
     const afterRevoke = qaMessage(runId, "after revoke");
 
-    // A second browser for B is a new device: one more grant signature.
-    const b2 = await addSession(browser, testInfo, b.user, "B (second device)");
+    // Hold invitations from both existing chats so the second device can
+    // finish its first inbox lookup before any chat arrives.
+    const heldPaths = [dm, current.group]
+      .filter((conversation) => conversation !== null)
+      .map((conversation) => `/api/e2ee/groups/${conversation}/entries`);
+    const entries = (url: URL) => heldPaths.includes(url.pathname);
+    const existingDevices = [a, b, ...current.extra];
+    const allowAddition = Promise.withResolvers<void>();
+    const holdAddition = async (route: Route) => {
+      await allowAddition.promise;
+      await route.fallback();
+    };
+    let b2: StagingE2eeSession;
+    try {
+      await Promise.all(
+        existingDevices.map(({ context }) =>
+          context.route(entries, holdAddition)
+        )
+      );
+      b2 = await addSession(browser, testInfo, b.user, "B (second device)");
+      await expect(
+        b2.page.getByRole("status").filter({
+          hasText: "Waiting for encrypted chats to sync to this device…",
+        })
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        b2.page.getByRole("heading", { name: "No encrypted chats yet" })
+      ).toHaveCount(0);
+      await expect(
+        b2.page.getByRole("heading", {
+          name: "No encrypted chats available on this device yet",
+        })
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        b2.page.getByRole("link", { name: "Check device setup" })
+      ).toHaveAttribute("href", "/preferences?tab=security");
+    } finally {
+      allowAddition.resolve();
+      await Promise.all(
+        existingDevices.map(({ context }) =>
+          context.unroute(entries, holdAddition)
+        )
+      );
+    }
     await openChat(a, dm);
     await openChat(b, dm);
     await expect(
@@ -883,6 +1041,11 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
     ]);
     expect((await reopenedNotices.response())?.ok()).toBe(true);
     await expect(combinedNotice).toHaveCount(0);
+
+    await test.step("The pinned order syncs to the second trusted device", async () => {
+      await checkOrderSync(current, b2, groupName);
+    });
+    await Promise.all([openChat(b, dm), openChat(b2, dm)]);
 
     await sendEncrypted(a, beforeRevoke);
     await expectDecrypted(b, beforeRevoke);
@@ -976,6 +1139,18 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
     });
     const migrationMs = performance.now() - upgrading;
     await a.page.goto("https://staging.6529.io/api/version");
+    // A caught-up group skips its log. Leave a real server entry for the
+    // returning device so this test can verify the incremental cursor.
+    const missedMessage = qaMessage(current.runId, "history catch-up");
+    const delivered = b.page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname ===
+          `/api/e2ee/groups/${dm}/messages` &&
+        response.ok(),
+      { timeout: SYNC_TIMEOUT_MS }
+    );
+    await Promise.all([delivered, sendEncrypted(b, missedMessage)]);
     const opened = performance.now();
     await openChat(a, dm);
     await expect(input).toBeEnabled({ timeout: UI_TIMEOUT_MS });
@@ -1008,6 +1183,7 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
     expect(logCursors.every((cursor) => cursor >= fixture.originalCursor)).toBe(
       true
     );
+    await expectDecrypted(a, missedMessage);
     await testInfo.attach("long-history-opening.json", {
       body: Buffer.from(
         JSON.stringify({
@@ -1108,6 +1284,7 @@ test.describe("Encrypted DMs between real users on staging @large @e2ee", () => 
       needles({
         historySeed,
         photoCaption,
+        missedMessage,
         imageMarker: image.marker,
         imageBytes: image.buffer,
       })

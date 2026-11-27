@@ -102,6 +102,8 @@ export default function WaveSlowMode({
   return (
     <WaveSettingRow
       canEdit={canEdit}
+      dirty={value !== String(initialParts.value) || unit !== initialParts.unit}
+      busy={mutating}
       editIcon={display === "configuration" ? "gear" : "pencil"}
       editLabel={
         display === "configuration"
@@ -116,6 +118,9 @@ export default function WaveSlowMode({
               "waves.sidebar.rightPanel.configuration.chat.slowMode.label"
             )
           : "Slow mode"
+      }
+      phoneLabelClassName={
+        display === "configuration" ? "tw-text-iron-500" : undefined
       }
       onOpen={resetEditor}
       renderEditor={renderEditor}

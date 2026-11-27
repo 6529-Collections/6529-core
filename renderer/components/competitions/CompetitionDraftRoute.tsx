@@ -11,6 +11,9 @@ import CompetitionDraftEditor from "./CompetitionDraftEditor";
 import CompetitionBackLink from "./CompetitionBackLink";
 import { useLayout } from "@/components/brain/my-stream/layout/LayoutContext";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { useWavesWritesPaused } from "@/hooks/useWavesMovePhase";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
 
 export default function CompetitionDraftRoute({
   waveId,
@@ -20,7 +23,11 @@ export default function CompetitionDraftRoute({
   const router = useRouter();
   const { isApp } = useDeviceInfo();
   const { waveViewStyle } = useLayout();
+  const locale = useBrowserLocale();
   const hub = useCompetitionHub(waveId);
+  // New decisions move to the 6529 Network. The wave above already shows
+  // the notice, so the page says only that this is paused.
+  const wavesWritesPaused = useWavesWritesPaused();
   const wave = useWaveData({
     waveId,
     onWaveNotFound: () => undefined,
@@ -32,6 +39,12 @@ export default function CompetitionDraftRoute({
     (!(hub.data && wave.data) && (hub.isError || wave.isError))
   )
     content = <CompetitionState error />;
+  else if (hub.data && wave.data && wavesWritesPaused)
+    content = (
+      <p role="status" className="tw-m-0 tw-text-sm tw-text-iron-300">
+        {t(locale, "wavesMove.paused")}
+      </p>
+    );
   else if (hub.data && wave.data)
     content = hub.data.permissions.create_competition ? (
       <CompetitionDraftEditor
@@ -46,8 +59,10 @@ export default function CompetitionDraftRoute({
       className="tw-h-full tw-min-h-0 tw-scroll-pb-24 tw-overflow-y-auto tw-px-4 tw-pt-4 tw-scrollbar-thin tw-scrollbar-track-transparent tw-scrollbar-thumb-white/10 hover:tw-scrollbar-thumb-white/15 sm:tw-px-6 sm:tw-pt-6"
       style={isApp ? waveViewStyle : undefined}
     >
-      <div className="tw-mx-auto tw-flex tw-min-h-full tw-w-full tw-max-w-[680px] tw-flex-col tw-items-start tw-gap-5">
-        <CompetitionBackLink waveId={waveId} />
+      <div className="tw-mx-auto tw-flex tw-min-h-full tw-w-full tw-max-w-[680px] tw-flex-col tw-items-start tw-gap-5 [&:has(#competition-draft-title)>nav]:tw-hidden">
+        <nav>
+          <CompetitionBackLink waveId={waveId} />
+        </nav>
         {content}
       </div>
     </section>

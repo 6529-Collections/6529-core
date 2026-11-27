@@ -134,6 +134,35 @@ function detailButton(page: Page, name: string) {
   return mainButton(page, name).last();
 }
 
+// Empty when filters that wrap below the title start flush with it and, from
+// 390px, both filters share one row; otherwise a description of the
+// misalignment. Tolerance is half a pixel.
+async function filterAlignmentProblem(
+  title: Locator,
+  collection: Locator,
+  activity: Locator,
+  width: number
+) {
+  const titleBounds = await title.boundingBox();
+  const collectionBounds = await collection.boundingBox();
+  if (!titleBounds || !collectionBounds)
+    return "title or filter is not laid out";
+  if (
+    collectionBounds.y >= titleBounds.y + titleBounds.height &&
+    Math.abs(collectionBounds.x - titleBounds.x) >= 0.5
+  ) {
+    return `wrapped filters start at x=${collectionBounds.x}, title at x=${titleBounds.x}`;
+  }
+  if (width >= 390) {
+    const activityBounds = await activity.boundingBox();
+    if (!activityBounds) return "activity filter is not laid out";
+    if (Math.abs(collectionBounds.y - activityBounds.y) >= 0.5) {
+      return `filters sit on different rows: y=${collectionBounds.y} and y=${activityBounds.y}`;
+    }
+  }
+  return "";
+}
+
 async function expectCollectionTitle(
   page: Page,
   projectName: string,
@@ -150,6 +179,44 @@ async function expectCollectionTitle(
 }
 
 test.describe("NextGen and collections read-only coverage @surface @medium @large @readonly", () => {
+  test("NFT activity filters fit narrow screens without resizing", async ({
+    page,
+  }) => {
+    await gotoReady(page, "/nft-activity");
+    const collection = page.getByRole("button", {
+      name: "Collection: All Collections",
+      exact: true,
+    });
+    const activity = page.getByRole("button", {
+      name: "Activity type: All activity",
+      exact: true,
+    });
+    const title = page.getByRole("heading", {
+      level: 1,
+      name: "NFT Activity",
+      exact: true,
+    });
+    for (const width of [320, 390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const trigger of [collection, activity]) {
+        await expect(trigger).toBeInViewport({ ratio: 1 });
+        await expect(trigger).toHaveCSS("height", "36px");
+        await expect(trigger).toHaveCSS("font-size", "12px");
+      }
+      await expectNoHorizontalOverflow(page);
+      // The filter row switches between its desktop and mobile alignment when
+      // the page re-renders after the resize, so wait for the layout to settle.
+      await expect
+        .poll(
+          () => filterAlignmentProblem(title, collection, activity, width),
+          {
+            message: `NFT activity filters align with the title at ${width}px`,
+          }
+        )
+        .toBe("");
+    }
+  });
+
   test("NextGen landing exposes public collection navigation", async ({
     page,
   }) => {
@@ -214,6 +281,32 @@ test.describe("NextGen and collections read-only coverage @surface @medium @larg
       page.locator('main a[href*="/nextgen/collection/"]'),
       "Expected NextGen collections to settle with cards or an empty state"
     );
+
+    await expect(statusFilter).toHaveCSS("height", "40px");
+    expect(
+      await statusFilter.evaluate(
+        (button) => button.getBoundingClientRect().width
+      )
+    ).toBeLessThan(224);
+    await statusFilter.click();
+    const menu = page.getByRole("menu").filter({
+      has: page.getByRole("menuitem", { name: "All statuses", exact: true }),
+    });
+    const rows = menu.getByRole("menuitem");
+    await expect(rows).toHaveText([
+      "All statuses",
+      "Live",
+      "Upcoming",
+      "Completed",
+    ]);
+    await expect(rows.first()).toHaveAttribute("aria-current", "true");
+    const columns = await rows.evaluateAll((options) =>
+      options.map((option) => option.getBoundingClientRect().left)
+    );
+    expect(new Set(columns).size).toBe(1);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(statusFilter).toBeFocused();
   });
 
   test("NextGen collection detail tabs remain navigable", async ({ page }) => {
@@ -241,17 +334,22 @@ test.describe("NextGen and collections read-only coverage @surface @medium @larg
   test("NextGen collection art page exposes token browse links", async ({
     isMobile,
     page,
-  }) => {
+  }, testInfo) => {
     await gotoReady(page, "/nextgen/collection/pebbles/art");
 
     await expect(page).toHaveTitle(/Art.*Pebbles|Pebbles.*Art|Pebbles/);
     await expect(page.getByRole("heading", { name: "The Art" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Sort:/ })).toBeVisible();
+    const sort = page.getByRole("button", { name: /^Sort:/ });
+    await expect(sort).toBeVisible();
+    await expect(sort).toHaveCSS("height", "40px");
     if (!isMobile) {
       for (const name of ["Sort ascending", "Sort descending"]) {
         const direction = page.getByRole("button", { name, exact: true });
         await expect(direction).toHaveCSS("height", "36px");
         await expect(direction).toHaveCSS("width", "36px");
+        await expect(
+          page.getByRole("button", { name, exact: true }).locator("..")
+        ).toHaveCSS("height", "40px");
       }
     }
     await expectCardsOrEmpty(
@@ -259,6 +357,36 @@ test.describe("NextGen and collections read-only coverage @surface @medium @larg
       page.locator('main a[href*="/nextgen/token/"]'),
       "Expected NextGen collection art to settle with token links or an empty state"
     );
+    const listingStatus = page.getByRole("combobox", {
+      name: "Listing status",
+    });
+    if (testInfo.project.name === "capacitor-ios-sim") {
+      await expect(listingStatus).toHaveCount(0);
+    } else {
+      await expect(listingStatus).toBeVisible();
+      await expect(listingStatus).toHaveValue("All");
+      await listingStatus.scrollIntoViewIfNeeded();
+      const coversControl = await listingStatus.evaluate((select) => {
+        const bounds = select.closest("label")!.getBoundingClientRect();
+        return [
+          [bounds.left + 4, bounds.top + bounds.height / 2],
+          [bounds.right - 4, bounds.top + bounds.height / 2],
+          [bounds.left + bounds.width / 2, bounds.top + 4],
+          [bounds.left + bounds.width / 2, bounds.bottom - 4],
+        ].every(([x, y]) => document.elementFromPoint(x!, y!) === select);
+      });
+      expect(coversControl).toBe(true);
+    }
+    await sort.click();
+    const idOption = page.getByRole("button", { name: "ID", exact: true });
+    await expect(idOption).toBeVisible();
+    const optionBounds = (await idOption.boundingBox())!;
+    expect(optionBounds.x).toBeGreaterThanOrEqual(0);
+    expect(optionBounds.x + optionBounds.width).toBeLessThanOrEqual(
+      page.viewportSize()!.width
+    );
+    await sort.press("Escape");
+    await expect(idOption).toHaveCount(0);
   });
 
   test("NextGen token detail exposes read-only detail sections", async ({

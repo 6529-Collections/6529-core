@@ -1,7 +1,6 @@
 // en-US source strings for signed posts (device-key signed drop writes).
 // Other locales fall back to en-US while the feature is staged.
 export const SIGNED_MESSAGES_MESSAGES = {
-  "preferences.tabs.devices": "Device Permissions",
   "signedMessages.enable.unavailable":
     "Couldn't turn on signed posts. Please try again.",
   "signedMessages.enable.reconnectWallet":
@@ -46,7 +45,7 @@ export const SIGNED_MESSAGES_MESSAGES = {
     "Your wallet or network changed while signing. Please try again.",
   "signedMessages.notice.ariaLabel": "Signed posts",
   "signedMessages.notice.dismiss": "Dismiss",
-  "signedMessages.notice.enable.title": "Turn on Signed Posts (one signature)",
+  "signedMessages.notice.enable.title": "Turn on signed posts",
   "signedMessages.notice.enable.body":
     "Your wallet signs once. This browser then signs your posts, edits, deletes and reactions for 180 days, so anyone can verify they came from you.",
   "signedMessages.notice.enable.action": "Turn on",
@@ -88,51 +87,22 @@ export const SIGNED_MESSAGES_MESSAGES = {
   "signedMessages.notice.newDevice.acknowledgeError":
     "Couldn’t acknowledge this device. Try again.",
   "signedMessages.notice.enabled": "Signed posts are on in this browser.",
+  "signedMessages.notice.enableBoth.title":
+    "Turn on signed posts and encrypted DMs",
+  "signedMessages.notice.enableBoth.body":
+    "One wallet signature, no gas. Lasts 180 days in this browser.",
+  "signedMessages.notice.expired.bodyBoth":
+    "Your messages are sent unsigned until you renew. The same one signature also turns on encrypted DMs.",
   "signedMessages.revoke.success": "{label} can no longer post as you.",
   "signedMessages.revoke.error":
     "Couldn't revoke this device. Please try again.",
-  "signedMessages.devices.title": "Authorized devices",
-  "signedMessages.devices.description":
-    "Review which devices can sign your posts or access encrypted DMs, and when each permission expires.",
-  "signedMessages.devices.listLabel": "Devices",
-  "signedMessages.devices.thisDevice": "This device",
-  "signedMessages.devices.scopes": "Can {scopes}",
-  "signedMessages.devices.scope.post": "post",
-  "signedMessages.devices.scope.edit": "edit",
-  "signedMessages.devices.scope.delete": "delete",
-  "signedMessages.devices.scope.react": "react",
-  "signedMessages.devices.scope.vote": "vote",
   "signedMessages.devices.wallet": "Wallet {address}",
   "signedMessages.devices.origin": "Authorized from {origin}",
-  "signedMessages.devices.granted": "Added {date}",
-  "signedMessages.devices.expires": "Expires {date}",
-  "signedMessages.devices.expiredOn": "Expired {date}",
-  "signedMessages.devices.revokedOn": "Revoked {date}",
-  "signedMessages.devices.lastUsed": "Last used {date}",
-  "signedMessages.devices.neverUsed": "Not used yet",
-  "signedMessages.devices.status.active": "Active",
-  "signedMessages.devices.status.expired": "Expired",
-  "signedMessages.devices.status.revoked": "Revoked",
-  "signedMessages.devices.revoke": "Revoke",
-  "signedMessages.devices.revokeLabel": "Revoke {label}",
-  "signedMessages.devices.authorProof": "Signed Posts",
-  "signedMessages.devices.revokeProofTitle": "Revoke signed posts for {label}?",
-  "signedMessages.devices.revokeConfirm":
-    "This device will no longer sign your messages. Its earlier signatures stay verifiable.",
-  "signedMessages.devices.cancel": "Cancel",
-  "signedMessages.devices.empty": "No authorized devices yet.",
-  "signedMessages.devices.localUnreadable":
-    "This browser couldn't read its own keys, so it can't mark which device below is this one. Check a device's name and dates before you revoke it.",
   "signedMessages.devices.revokeMaybeThisDevice":
     "This browser couldn't read its own keys, so this may be the permission this browser uses.",
-  "signedMessages.devices.loading": "Loading devices",
-  "signedMessages.devices.error": "Couldn't load your devices.",
-  "signedMessages.devices.retry": "Try again",
   "signedMessages.devices.enable": "Turn on Signed Posts in this browser",
   "signedMessages.devices.enableOnDevice":
     "Turn on Signed Posts on this device",
-  "signedMessages.devices.proxy":
-    "Switch to your own profile to manage devices.",
   "signedMessages.marker.label": "Signed by its author",
   "signedMessages.marker.pending": "Checking the author's signature",
   "signedMessages.marker.unverified": "Signed, not yet verified",

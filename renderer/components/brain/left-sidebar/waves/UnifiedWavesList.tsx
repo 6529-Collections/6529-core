@@ -1,4 +1,6 @@
 "use client";
+import "@/i18n/namespaces/wave-sidebar";
+import { usePhoneNavigationScreenActive } from "@/contexts/PhoneNavigationScreenContext";
 import { useWaveSidebarSearch } from "@/hooks/useWaveSidebarSearch";
 import { useWaveDiscoveryViewer } from "@/hooks/useWaveDiscoveryViewer";
 import { useWaveSidebarCollection } from "@/hooks/useWaveSidebarCollection";
@@ -47,6 +49,7 @@ const UnifiedWavesList: React.FC<UnifiedWavesListProps> = ({
   onHover,
   scrollContainerRef,
 }) => {
+  const screenActive = usePhoneNavigationScreenActive();
   const { isApp } = useDeviceInfo();
   const { openWave } = useCreateModalState();
   const locale = useBrowserLocale();
@@ -86,6 +89,7 @@ const UnifiedWavesList: React.FC<UnifiedWavesListProps> = ({
   useEffect(() => {
     const sentinel = listRef.current?.sentinelRef.current;
     if (
+      !screenActive ||
       !sentinel ||
       hasLoadingError ||
       isFetching ||
@@ -117,6 +121,7 @@ const UnifiedWavesList: React.FC<UnifiedWavesListProps> = ({
 
     return () => obs.disconnect();
   }, [
+    screenActive,
     collection,
     isSearching,
     hasNextPage,

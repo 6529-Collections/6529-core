@@ -1,7 +1,7 @@
 import type { ApiWaveDropsFeedV2 } from "../../generated/models/ApiWaveDropsFeedV2";
 import type { ApiWave } from "../../generated/models/ApiWave";
 import type { ApiWaveOverviewPage } from "../../generated/models/ApiWaveOverviewPage";
-import type { Page, WebSocketRoute } from "@playwright/test";
+import type { Locator, Page, WebSocketRoute } from "@playwright/test";
 import {
   expect,
   waitForRouteReady,
@@ -13,10 +13,12 @@ import {
   getSandboxApiOrigin,
   installLocalSandboxBrowserMutationGuard,
   dismissNextDevTools,
+  hideNextDevOverlay,
   expectNoUnsafeSandboxMutations,
   LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
   useLocalSandboxMutationGuard,
 } from "../support/localSandbox";
+import { CHROMIUM_SANDBOX } from "../support/chromiumSandbox";
 import { installSurfaceSimulation } from "../support/surfaceSimulation";
 import {
   GAP_SYNC_TIMING,
@@ -28,109 +30,340 @@ import {
   sidebarScrollMetrics,
 } from "../support/waveListScroll";
 
+// A brief hold could finish before the former pin menu would have opened.
+const LONG_WAVE_ROW_HOLD_MS = 650;
+
 // Headless Chromium otherwise hides the native scrollbar we need to exercise.
-test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
-
-test("saves reordered pins across reload on desktop and mobile", async ({
-  page,
-  baseURL,
-  isMobile,
-}) => {
-  await installWaveListScrollFixture(page, baseURL);
-  await page.goto("/waves", { waitUntil: "domcontentloaded" });
-  await page
-    .getByRole("group", { name: "Wave list filter" })
-    .getByRole("button", { name: "Pinned", exact: true })
-    .click();
-
-  const list = page
-    .getByRole("region", { name: "Pinned", exact: true })
-    .filter({ visible: true });
-  const first = list.getByRole("link", { name: "Scroll wave 0", exact: true });
-  const second = list.getByRole("link", { name: "Scroll wave 1", exact: true });
-  await expect(
-    list.getByRole("button", { name: /^(Drag|Reorder) / })
-  ).toHaveCount(0);
-  await expect(first).toBeInViewport();
-  await expect(second).toBeInViewport();
-  const saved = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/api/v2/waves/pinned") &&
-      response.request().method() === "PUT"
-  );
-  if (isMobile) {
-    const session = await page.context().newCDPSession(page);
-    const scroll = await sidebarScrollMetrics(list);
-    const swipeX = Math.round(scroll.x);
-    const swipeY = Math.round(scroll.y);
-    await session.send("Input.dispatchTouchEvent", {
-      type: "touchStart",
-      touchPoints: [{ x: swipeX, y: swipeY }],
-    });
-    for (const distance of [25, 50, 75, 100]) {
-      await session.send("Input.dispatchTouchEvent", {
-        type: "touchMove",
-        touchPoints: [{ x: swipeX, y: swipeY - distance }],
-      });
-    }
-    await session.send("Input.dispatchTouchEvent", {
-      type: "touchEnd",
-      touchPoints: [],
-    });
-    await expect
-      .poll(async () => (await sidebarScrollMetrics(list)).top)
-      .toBeGreaterThan(scroll.top);
-    await expect(
-      list.getByRole("link", { name: /^Scroll wave [01]$/ })
-    ).toHaveText(["Scroll wave 0", "Scroll wave 1"]);
-    await first.scrollIntoViewIfNeeded();
-    await sidebarScrollMetrics(list, 0);
-
-    const box = await first.boundingBox();
-    const target = await second.boundingBox();
-    if (!box || !target) throw new Error("Missing pinned wave rows");
-    const x = Math.round(box.x + box.width * 0.75);
-    const y = Math.round(box.y + box.height / 2);
-    const endY = Math.round(target.y + target.height / 2);
-    await session.send("Input.dispatchTouchEvent", {
-      type: "touchStart",
-      touchPoints: [{ x, y }],
-    });
-    await expect(list.getByText("Position 1.", { exact: true })).toBeAttached();
-    for (let step = 1; step <= 8; step++) {
-      await session.send("Input.dispatchTouchEvent", {
-        type: "touchMove",
-        touchPoints: [{ x, y: Math.round(y + ((endY - y) * step) / 8) }],
-      });
-    }
-    await session.send("Input.dispatchTouchEvent", {
-      type: "touchEnd",
-      touchPoints: [],
-    });
-    await session.detach();
-  } else {
-    await first.dragTo(second, { steps: 8 });
-  }
-  expect((await saved).ok()).toBe(true);
-  await expect(
-    list.getByRole("link", { name: /^Scroll wave [01]$/ })
-  ).toHaveText(["Scroll wave 1", "Scroll wave 0"]);
-
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(
-    list.getByRole("link", { name: /^Scroll wave [01]$/ })
-  ).toHaveText(["Scroll wave 1", "Scroll wave 0"]);
-  await expect(page).toHaveURL(/\/waves$/);
-
-  if (isMobile) {
-    await first.tap();
-  } else {
-    await first.click();
-  }
-  await expect(page).toHaveURL(new RegExp(scrollWaveId(0)), {
-    timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
-  });
+// launchOptions replaces the config value, so keep the sandbox setting too.
+test.use({
+  launchOptions: {
+    chromiumSandbox: CHROMIUM_SANDBOX,
+    ignoreDefaultArgs: ["--hide-scrollbars"],
+  },
 });
+
+for (const surface of [
+  "web",
+  "capacitor-ios-sim",
+  "capacitor-android-sim",
+] as const) {
+  test(`saves reordered pins across reload (${surface})`, async ({
+    page,
+    baseURL,
+    isMobile,
+  }) => {
+    if (surface !== "web") {
+      test.skip(!isMobile, "Native shell simulation needs phone input.");
+      await installSurfaceSimulation(page.context(), surface, baseURL);
+    }
+    await hideNextDevOverlay(page.context());
+    await installWaveListScrollFixture(page, baseURL);
+    await page.goto("/waves", { waitUntil: "domcontentloaded" });
+    await page
+      .getByRole("group", { name: "Wave list filter" })
+      .getByRole("button", { name: "Pinned", exact: true })
+      .click();
+
+    const list = page
+      .getByRole("region", { name: "Pinned", exact: true })
+      .filter({ visible: true });
+    const firstTwo = list.getByRole("link", { name: /^Scroll wave [01]$/ });
+    const first = list.getByRole("link", {
+      name: "Scroll wave 0",
+      exact: true,
+    });
+    const second = list.getByRole("link", {
+      name: "Scroll wave 1",
+      exact: true,
+    });
+    await expect(
+      list.getByRole("button", { name: /^(Drag|Reorder) / })
+    ).toHaveCount(0);
+    await expect(first).toBeInViewport();
+    await expect(second).toBeInViewport();
+    await expect(firstTwo).toHaveText(["Scroll wave 0", "Scroll wave 1"]);
+    await expect(first).toHaveAttribute("draggable", "false");
+    await expect(first).toHaveCSS("-webkit-user-drag", "none");
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/v2/waves/pinned") &&
+        response.request().method() === "PUT"
+    );
+    if (isMobile) {
+      const gesture = await startWaveRowTouch(page, first);
+      const box = await first.boundingBox();
+      const target = await second.boundingBox();
+      if (!box || !target) throw new Error("Missing pinned wave rows");
+      const distance = target.y + target.height / 2 - (box.y + box.height / 2);
+      await page.waitForTimeout(LONG_WAVE_ROW_HOLD_MS);
+      await expect(
+        page.getByRole("dialog", { name: /^(Pin|Unpin) wave$/ })
+      ).toHaveCount(0);
+      await gesture.move(0, 4);
+      for (let step = 1; step <= 8; step++) {
+        await gesture.move(0, Math.round((distance * step) / 8));
+        if (step === 2) {
+          await expect(
+            list.getByText("Position 1.", { exact: true })
+          ).toBeAttached();
+        }
+      }
+      await gesture.release();
+    } else {
+      await first.dragTo(second, { steps: 8 });
+    }
+    expect((await saved).ok()).toBe(true);
+    await expect(firstTwo).toHaveText(["Scroll wave 1", "Scroll wave 0"]);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(firstTwo).toHaveText(["Scroll wave 1", "Scroll wave 0"], {
+      timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
+    });
+    await expect(page).toHaveURL(/\/waves$/);
+
+    if (isMobile) {
+      const scroll = await sidebarScrollMetrics(list);
+      const quickSwipe = await startWaveRowTouch(page, second);
+      for (const distance of [25, 50, 75, 100]) {
+        await quickSwipe.move(0, -distance);
+      }
+      await quickSwipe.release();
+      await expect
+        .poll(async () => (await sidebarScrollMetrics(list)).top)
+        .toBeGreaterThan(scroll.top);
+      await expect(firstTwo).toHaveText(["Scroll wave 1", "Scroll wave 0"]);
+      await first.tap();
+    } else {
+      await first.click();
+    }
+    await expect(page).toHaveURL(new RegExp(scrollWaveId(0)), {
+      timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
+    });
+  });
+}
+
+async function startWaveRowTouch(page: Page, row: Locator) {
+  await row.click({ trial: true });
+  const box = await row.boundingBox();
+  if (!box) throw new Error("Wave row must be visible");
+  const x = Math.max(40, Math.min(260, box.x + box.width / 3));
+  const y = box.y + box.height / 2;
+  await expect
+    .poll(() =>
+      row.evaluate(
+        (element, point) =>
+          element.contains(document.elementFromPoint(point.x, point.y)),
+        { x, y }
+      )
+    )
+    .toBe(true);
+  const session = await page.context().newCDPSession(page);
+  await session.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y }],
+  });
+  return {
+    async move(dx: number, dy = 0) {
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x: x + dx, y: y + dy }],
+      });
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+      );
+    },
+    async release() {
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+      await session.detach();
+    },
+  };
+}
+
+for (const pinSurface of [
+  "mobile web",
+  "capacitor-ios-sim",
+  "capacitor-android-sim",
+] as const) {
+  test(`touch row pinning separates swipes, scrolling and navigation (${pinSurface})`, async ({
+    page,
+    baseURL,
+    isMobile,
+  }, testInfo) => {
+    test.skip(!isMobile, "Touch gestures are exercised with phone input.");
+    test.setTimeout(120000);
+    if (pinSurface !== "mobile web") {
+      await installSurfaceSimulation(page.context(), pinSurface, baseURL);
+    }
+    await hideNextDevOverlay(page.context());
+    const fixture = await installWaveListScrollFixture(page, baseURL);
+    await page.goto("/waves", { waitUntil: "domcontentloaded" });
+    await dismissNextDevTools(page);
+    const filters = page.getByRole("group", { name: "Wave list filter" });
+    await filters.getByRole("button", { name: "All", exact: true }).click();
+    const row = page.getByTestId("wave-list-touch-row").filter({
+      has: page.getByRole("link", { name: "Scroll wave 0", exact: true }),
+    });
+    const rowPin = row.getByRole("button", { name: /^(Pin|Unpin) wave$/ });
+    await expect(rowPin).toBeVisible();
+    await expect(rowPin).toHaveAccessibleName("Unpin wave");
+    await expect(rowPin).toHaveAttribute("aria-pressed", "true");
+    const pinBounds = await rowPin.boundingBox();
+    expect(pinBounds && pinBounds.width >= 44 && pinBounds.height >= 44).toBe(
+      true
+    );
+    if (pinSurface !== "mobile web") {
+      await expect
+        .poll(async () => {
+          const avatar = await page
+            .getByRole("button", { name: "Open menu", exact: true })
+            .boundingBox();
+          const more = await page
+            .getByRole("button", { name: "More", exact: true })
+            .boundingBox();
+          const pin = await rowPin.boundingBox();
+          const scoreControl = row.getByRole("button", {
+            name: /^Wave score /,
+          });
+          const score = (await scoreControl.count())
+            ? await scoreControl.boundingBox()
+            : null;
+          const rowAvatar = await row
+            .getByTestId("sidebar-wave-avatar")
+            .boundingBox();
+          const collection = await filters.boundingBox();
+          if (!avatar || !more || !pin || !rowAvatar || !collection)
+            return null;
+          return {
+            avatarAlignment: Math.round(rowAvatar.x - avatar.x),
+            filterAlignment: Math.round(collection.x - avatar.x),
+            actionAlignment: Math.round(
+              score
+                ? score.x + score.width - (more.x + more.width)
+                : pin.x + pin.width / 2 - (more.x + more.width / 2)
+            ),
+            pinBeforeScore: score ? pin.x + pin.width <= score.x : true,
+          };
+        })
+        .toEqual({
+          avatarAlignment: 0,
+          filterAlignment: 0,
+          actionAlignment: 0,
+          pinBeforeScore: true,
+        });
+    }
+    await expect(page.getByTestId("wave-pin-status")).toHaveCount(0);
+    await rowPin.tap();
+    await expect.poll(() => fixture.pinRequests).toEqual(["DELETE"]);
+    await expect(rowPin).toHaveAccessibleName("Pin wave");
+    await expect(rowPin).toHaveAttribute("aria-pressed", "false");
+    await expect(page).toHaveURL(/\/waves$/);
+    await rowPin.tap();
+    await expect.poll(() => fixture.pinRequests).toEqual(["DELETE", "POST"]);
+    await expect(rowPin).toHaveAccessibleName("Unpin wave");
+    await expect(
+      page.getByRole("dialog", { name: /^(Pin|Unpin) wave$/ })
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(/\/waves$/);
+    let touch = await startWaveRowTouch(page, row);
+    await touch.move(25);
+    await touch.move(85);
+    await expect(row).toHaveAttribute("data-pin-armed", "true");
+    expect(fixture.pinRequests).toEqual(["DELETE", "POST"]);
+    await page.screenshot({ path: testInfo.outputPath("touch-pin-armed.png") });
+    await touch.move(30);
+    await expect(row).toHaveAttribute("data-pin-armed", "false");
+    await touch.release();
+    expect(fixture.pinRequests).toEqual(["DELETE", "POST"]);
+    await expect(page).toHaveURL(/\/waves$/);
+    touch = await startWaveRowTouch(page, row);
+    await touch.move(25);
+    await touch.move(85);
+    await touch.release();
+    await expect
+      .poll(() => fixture.pinRequests)
+      .toEqual(["DELETE", "POST", "DELETE"]);
+    await expect(rowPin).toHaveAccessibleName("Pin wave");
+    await expect(page).toHaveURL(/\/waves$/);
+
+    touch = await startWaveRowTouch(page, row);
+    await page.waitForTimeout(LONG_WAVE_ROW_HOLD_MS);
+    await expect(
+      page.getByRole("dialog", { name: /^(Pin|Unpin) wave$/ })
+    ).toHaveCount(0);
+    await touch.move(25);
+    await touch.move(85);
+    await touch.release();
+    await expect
+      .poll(() => fixture.pinRequests)
+      .toEqual(["DELETE", "POST", "DELETE", "POST"]);
+    await expect(rowPin).toHaveAccessibleName("Unpin wave");
+    await filters.getByRole("button", { name: "Joined", exact: true }).click();
+    await expect(rowPin).toBeVisible();
+    await expect(rowPin).toHaveAccessibleName("Unpin wave");
+    await filters.getByRole("button", { name: "Pinned", exact: true }).click();
+    await expect(page.getByTestId("wave-pin-status")).toHaveCount(0);
+    await expect(rowPin).toBeVisible();
+    await expect(rowPin).toHaveAccessibleName("Unpin wave");
+    await filters.getByRole("button", { name: "All", exact: true }).click();
+    const before = await sidebarScrollMetrics(row);
+    touch = await startWaveRowTouch(page, row);
+    for (const dy of [-25, -50, -90, -140]) await touch.move(2, dy);
+    await touch.release();
+    await expect
+      .poll(
+        async () =>
+          (
+            await sidebarScrollMetrics(
+              page.getByTestId("wave-list-touch-row").first()
+            )
+          ).top
+      )
+      .toBeGreaterThan(before.top);
+    await expect(
+      page.getByRole("dialog", { name: /^(Pin|Unpin) wave$/ })
+    ).toHaveCount(0);
+    expect(fixture.pinRequests).toEqual(["DELETE", "POST", "DELETE", "POST"]);
+    const last = page.getByRole("link", {
+      name: "Scroll wave 59",
+      exact: true,
+      includeHidden: true,
+    });
+    await sidebarScrollMetrics(
+      page.getByTestId("wave-list-touch-row").first(),
+      Number.MAX_SAFE_INTEGER
+    );
+    await last.scrollIntoViewIfNeeded();
+    const lastRow = page
+      .getByTestId("wave-list-touch-row")
+      .filter({ has: last });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    touch = await startWaveRowTouch(page, lastRow);
+    await touch.move(25);
+    await touch.move(85);
+    await expect(lastRow).toHaveAttribute("data-pin-armed", "true");
+    await expect
+      .poll(() =>
+        lastRow.evaluate((element) => {
+          const content = element.children[1];
+          if (!content) throw new Error("Missing row content");
+          return getComputedStyle(content).transform;
+        })
+      )
+      .toBe("none");
+    await touch.move(25);
+    await touch.release();
+    expect(fixture.pinRequests).toEqual(["DELETE", "POST", "DELETE", "POST"]);
+    await expectNoHorizontalOverflow(page);
+    await last.tap();
+    await expect(page).toHaveURL(new RegExp(scrollWaveId(59)), {
+      timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
+    });
+  });
+}
 
 test("can reorder pins from the keyboard", async ({
   page,
@@ -548,6 +781,136 @@ function discoveryRegion(page: Page) {
     .filter({ visible: true });
 }
 
+test("recommendation taps navigate without score cards while desktop hover stays anchored", async ({
+  page,
+  baseURL,
+  isMobile,
+}) => {
+  if (isMobile)
+    await installSurfaceSimulation(
+      page.context(),
+      "capacitor-ios-sim",
+      baseURL
+    );
+  await page.route("**/api/open-graph**", (route) =>
+    route.fulfill({ json: {} })
+  );
+  const wave = await waveFixture(page, baseURL);
+  const waves = {
+    data: [
+      {
+        ...wave,
+        wave_score: {
+          visibility_score: 93,
+          quality_score: 91,
+          hotness_score: 97,
+          rep_sort_score: 73,
+        },
+      },
+    ],
+    page: 1,
+    next: false,
+    next_cursor: null,
+    snapshot_expires_at: Date.now() + 900000,
+  };
+  // Both collections refer to the same wave; keep its score consistent when
+  // the shared wave cache merges recommendation and directory responses.
+  await page.route("**/api/v2/waves?**", (route) =>
+    route.fulfill({ json: waves })
+  );
+  await page.route(/\/api\/v2\/waves\/(?:all|joined)(?:\?|$)/, (route) =>
+    route.fulfill({ json: waves })
+  );
+  await page.route("**/api/v2/waves/active-votes**", (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          { wave: waves.data[0], voting_ends_at: null, next_decision_at: null },
+        ],
+        count: 1,
+        page: 1,
+        next: false,
+      },
+    })
+  );
+  await page.goto("/waves", { waitUntil: "domcontentloaded" });
+  const discovery = discoveryRegion(page);
+  const toggle = discovery.getByRole("button", {
+    name: /(?:Expand|Collapse) Worth Checking Out/,
+  });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-expanded")) === "false")
+    await toggle.click();
+  const link = discovery.getByRole("link", {
+    name: `Open ${wave.name}, score 93`,
+    exact: true,
+  });
+  await expect(link).toBeVisible();
+  const details = page.getByRole("dialog", {
+    name: "Wave score details",
+    exact: true,
+  });
+  if (isMobile) {
+    const activeVotes = discovery.getByRole("region", {
+      name: "Active Votes",
+      exact: true,
+    });
+    const votesToggle = activeVotes.getByRole("button", {
+      name: /(?:Expand|Collapse) Active Votes/,
+    });
+    if ((await votesToggle.getAttribute("aria-expanded")) === "false")
+      await votesToggle.click();
+    const activeScore = activeVotes.getByRole("button", {
+      name: /^Wave score 93/,
+    });
+    const waveScore = page
+      .getByTestId("wave-list-touch-row")
+      .filter({
+        has: page.getByRole("link", { name: wave.name, exact: true }),
+      })
+      .getByRole("button", { name: /^Wave score 93/ });
+    const viewport = page.viewportSize();
+    if (!viewport) throw new Error("Missing phone viewport");
+    for (const width of [320, 430, 640]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(activeScore).toBeVisible();
+      await expect(waveScore).toBeVisible();
+      await expect
+        .poll(async () => {
+          const active = await activeScore.boundingBox();
+          const list = await waveScore.boundingBox();
+          return active && list
+            ? Math.round(active.x + active.width - (list.x + list.width))
+            : null;
+        })
+        .toBe(0);
+      await expectNoHorizontalOverflow(page);
+    }
+    await page.setViewportSize(viewport);
+    await page.clock.install();
+    await link.tap();
+    await expect(page).toHaveURL(new RegExp(`/waves/${WAVE}`));
+    await page.clock.runFor(1000);
+    await expect(details).toHaveCount(0);
+  } else {
+    await link.hover();
+    await expect(details).toBeVisible();
+    const trigger = await link.boundingBox();
+    expect(trigger).not.toBeNull();
+    await expect
+      .poll(async () => (await details.boundingBox())?.y ?? 0)
+      .toBeGreaterThan(trigger!.y);
+    const card = await details.boundingBox();
+    expect(card).not.toBeNull();
+    expect(card!.y).toBeGreaterThan(trigger!.y);
+    expect(card!.x).toBeLessThan(trigger!.x + trigger!.width);
+    expect(card!.x + card!.width).toBeGreaterThan(trigger!.x);
+    await page.keyboard.press("Escape");
+    await expect(details).toHaveCount(0);
+  }
+  await expectNoUnsafeSandboxMutations(baseURL);
+});
+
 test("saved discovery sections stay closed before hydration on reload", async ({
   page,
 }, testInfo) => {
@@ -667,6 +1030,7 @@ test("discovery reserves space while loading and retains its controls", async ({
           },
           voting_ends_at: null,
           next_decision_at: null,
+          ...(index === 0 ? { active_submission_count: 2 } : {}),
         })),
         page: 1,
         next: false,
@@ -733,6 +1097,7 @@ test("discovery reserves space while loading and retains its controls", async ({
     await expect(
       discovery.getByText("Community decisions powered by TDH.")
     ).toBeVisible();
+    await expect(discovery.getByText("2 active submissions")).toBeVisible();
     await expect(
       discovery.getByRole("status").filter({ hasText: /Loading/ })
     ).toHaveCount(0);
@@ -990,6 +1355,43 @@ for (const width of [375, 390, 768, 1024, 1440]) {
       );
       expect(positions.length).toBeGreaterThan(0);
       expect(positions.every((x) => Math.abs(x - before.x) < 1)).toBe(true);
+      if (!(touch && width === 375)) {
+        for (const offsetTop of [0, 120]) {
+          await page.evaluate((offset) => {
+            const viewport = globalThis.visualViewport!;
+            Object.defineProperty(viewport, "height", {
+              configurable: true,
+              value: 450,
+            });
+            Object.defineProperty(viewport, "offsetTop", {
+              configurable: true,
+              value: offset,
+            });
+            viewport.dispatchEvent(new Event("resize"));
+          }, offsetTop);
+          await expect
+            .poll(() =>
+              close.evaluate((element) => {
+                const overlay = element.parentElement!.parentElement!;
+                const bounds = overlay.getBoundingClientRect();
+                const viewport = globalThis.visualViewport!;
+                return (
+                  bounds.top >= viewport.offsetTop - 1 &&
+                  bounds.bottom <= viewport.offsetTop + viewport.height + 1
+                );
+              })
+            )
+            .toBe(true);
+          await expect(close).toBeInViewport({ ratio: 1 });
+        }
+        await page.evaluate(() => {
+          const viewport = globalThis.visualViewport!;
+          Reflect.deleteProperty(viewport, "height");
+          Reflect.deleteProperty(viewport, "offsetTop");
+          viewport.dispatchEvent(new Event("resize"));
+        });
+        await expect.poll(() => close.boundingBox()).toEqual(before);
+      }
       if (touch && width === 375) {
         await page.evaluate(() =>
           document.documentElement.style.setProperty(
@@ -1097,6 +1499,12 @@ async function sharedPostFixture(page: Page, baseURL: string | undefined) {
       content: `Shared link fixture post ${serial}`,
     };
   }).reverse();
+  // Browser routes cannot intercept the server-rendered feed seed. Give the
+  // sandbox server this same history before opening the shared-link page.
+  const serverFixture = await page.request.post(
+    `${getSandboxApiOrigin(baseURL)}/__composer-sandbox/shared-posts`
+  );
+  expect(serverFixture.ok()).toBe(true);
   await page.route("**/api/v2/drops?**", (route) => {
     const ids =
       new URL(route.request().url()).searchParams.get("ids")?.split(",") ?? [];
@@ -1552,6 +1960,11 @@ test("shared post loads only its surroundings and fills the rest as the reader s
   baseURL,
 }) => {
   const { post } = await sharedPostFixture(page, baseURL);
+  // Keep the streamed server seed consistent with the browser's latest page.
+  const seed = await page.request.post(
+    `${getSandboxApiOrigin(baseURL)}/__composer-sandbox/shared-post-feed`
+  );
+  expect(seed.ok()).toBe(true);
   const chat = page.getByRole("region", {
     name: "Wave chat file upload area",
     exact: true,

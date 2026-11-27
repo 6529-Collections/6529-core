@@ -15,6 +15,7 @@ import { notifyDesktopProfilesReady } from "@/services/auth/desktop-profile-stor
 import { useEffect } from "react";
 import Auth from "@/components/auth/Auth";
 import AuthLaunchTimingReporter from "@/components/auth/AuthLaunchTimingReporter";
+import ChainProfileDocWriterHost from "@/components/chain-identity/ChainProfileDocWriterHost";
 import MarketActivityTracker from "@/components/collect/MarketActivityTracker";
 import DeviceSetupHost from "@/components/device-signing/DeviceSetupHost";
 import SignedWriteDecisionHost from "@/components/device-signing/SignedWriteDecisionHost";
@@ -137,6 +138,9 @@ export default function Providers({
                                       isSignedMessagesEnabled() && (
                                         <SignedWriteDecisionHost />
                                       )}
+                                    {enableWalletAuthentication && (
+                                      <ChainProfileDocWriterHost />
+                                    )}
                                     <WaveEligibilityProvider>
                                       <NotificationsProvider>
                                         <CookieConsentProvider

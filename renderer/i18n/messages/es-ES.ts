@@ -28,13 +28,21 @@ import type { MessageKey } from "@/i18n/messages/en-US.complete";
 import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.es-ES.json";
 
 export const ES_ES_MESSAGES = {
+  "rep.categories.validation.unavailable":
+    "Este nombre de categoría no está disponible. Prueba con otro nombre.",
   "waves.drops.searchModal.result.emoji": "Emoji {shortcode}",
+  "waves.discovery.activeSubmissions.one": "{count} propuesta activa",
+  "waves.discovery.activeSubmissions.other": "{count} propuestas activas",
   "waves.historyGap.load": "Cargar más mensajes",
   "waves.historyGap.loaded": "Más mensajes cargados",
   "waves.historyGap.loading": "Cargando más mensajes…",
   "waves.historyGap.retry": "No se pudieron cargar los mensajes. Reintentar",
 
   "waves.myVotes.sort": "Ordenar por",
+  "waves.myVotes.select": "Seleccionar",
+  "waves.myVotes.yourVotesInCredit": "Tus votos en {credit}",
+  "waves.myVotes.maxRating": "{label} {value}",
+  "waves.myVotes.doneSelecting": "Listo",
   "waves.myVotes.sort.voteAmount": "Tu cantidad de votos",
   "waves.myVotes.sort.leaderboard": "Posición en la clasificación",
   "waves.myVotes.sort.lastVoted": "Último voto",
@@ -899,7 +907,6 @@ export const ES_ES_MESSAGES = {
     "Audiencia actual no disponible",
   "waves.create.groups.members.view": "Ver miembros",
   "waves.create.groups.members.previewDraft": "Previsualizar coincidencias",
-  "waves.create.groups.members.dialogTitle": "{role}: {group}",
   "waves.create.groups.members.dynamicDescription":
     "Esta vista previa en directo se basa en los datos actuales de perfil, reputación y propiedad. La pertenencia puede cambiar.",
   "waves.create.groups.members.criteriaSummary":
@@ -1315,6 +1322,24 @@ export const ES_ES_MESSAGES = {
   "desktop.profiles.saveError": "No se han podido guardar tus perfiles. Reinténtalo antes de salir para conservar los cambios.",
   "desktop.profiles.saveRetrying": "Reintentando guardar los perfiles…",
   "desktop.profiles.retry": "Reintentar",
+  "e2ee.list.pinned": "Fijado",
+  "e2ee.list.pinnedChat": "{title}, chat fijado",
+  "e2ee.list.pinChat": "Fijar {title} arriba",
+  "e2ee.list.pinDragInstructions":
+    "Pulsa la barra espaciadora para levantar este chat. Usa las flechas para moverlo y pulsa la barra espaciadora para soltarlo o Escape para cancelar.",
+  "e2ee.list.pinDragStarted": "Chat fijado levantado.",
+  "e2ee.list.pinDragPosition": "Posición {position}.",
+  "e2ee.list.pinDragCancelled": "Reordenación cancelada.",
+  "e2ee.list.pinOrderSaved": "Orden de los chats fijados guardado.",
+  "e2ee.list.pinOrderError":
+    "No se pudo guardar el orden de los chats fijados. Inténtalo de nuevo.",
+  "e2ee.info.pin": "Fijar arriba",
+  "e2ee.info.unpin": "Desfijar chat",
+  "e2ee.info.pinSyncHelp":
+    "Los chats fijados se sincronizan de forma privada con tus otros dispositivos de confianza.",
+  "e2ee.info.pinLocalHelp":
+    "Los chats fijados se guardan en este dispositivo hasta que esté disponible la sincronización cifrada.",
+  "e2ee.info.pinFailed": "No se pudo cambiar el pin. Inténtalo de nuevo.",
   "e2ee.message.taskChecked": "Tarea marcada",
   "e2ee.message.taskUnchecked": "Tarea sin marcar",
   "e2ee.message.imageLink": "Enlace de imagen",

@@ -21,6 +21,11 @@ const SMOKE_SPECS = [
   "tests/pages/the-memes.spec.ts",
 ];
 
+const LOCAL_SMOKE_SPECS = [
+  ...SMOKE_SPECS,
+  "tests/home/home-drop-fallback.spec.ts",
+];
+
 const STAGING_READONLY_ENV = {
   PLAYWRIGHT_BASE_URL: "https://staging.6529.io",
   PLAYWRIGHT_SKIP_WEB_SERVER: "1",
@@ -100,6 +105,10 @@ const READONLY_SPECS = {
   museumInsideSystem: ["tests/museum/inside-system-readonly.spec.ts"],
   museumDataArchitecture: ["tests/museum/data-architecture-readonly.spec.ts"],
   museumRights: ["tests/museum/rights-readonly.spec.ts"],
+  provenanceGovernance: ["tests/provenance/governance-readonly.spec.ts"],
+  museumOnchainPreview: [
+    "tests/museum-onchain/onchain-preview-readonly.spec.ts",
+  ],
 };
 
 function localPack(scriptKey, description, specs, tweaks = {}) {
@@ -258,7 +267,7 @@ const PACKS = [
     ...localPack(
       "test:e2e:smoke",
       "Fast @smoke subset of home, about, and The Memes.",
-      SMOKE_SPECS,
+      LOCAL_SMOKE_SPECS,
       { grep: "@smoke", projects: [DESKTOP] }
     ),
     triggers: ["pr-ci", "manual"],
@@ -399,6 +408,28 @@ const PACKS = [
     ),
     triggers: ["pr-ci", "manual"],
   }),
+  // Reads the live Sepolia registry and Safe from the browser, so it runs on
+  // request rather than gating PR CI on a public RPC endpoint.
+  {
+    ...localReadonlyPack(
+      "test:e2e:provenance-governance",
+      "Unlinked provenance governance page: Sepolia Safe reads and SafeTx building without a wallet.",
+      READONLY_SPECS.provenanceGovernance,
+      { timeoutMinutes: 15 }
+    ),
+    triggers: ["manual"],
+  },
+  // Reads the live Sepolia registry and 6529 IPFS, so it runs on request
+  // rather than gating PR CI on a public RPC endpoint.
+  {
+    ...localReadonlyPack(
+      "test:e2e:museum-onchain-preview",
+      "Unlinked on-chain Museum preview: Sepolia registry reads and hash-verified records.",
+      READONLY_SPECS.museumOnchainPreview,
+      { timeoutMinutes: 20 }
+    ),
+    triggers: ["manual"],
+  },
   museumPack({
     ...localReadonlyPack(
       "test:e2e:museum-inside-system",
@@ -485,7 +516,7 @@ const PACKS = [
       {
         ...AUTH_SANDBOX_ENV,
         PLAYWRIGHT_BASE_URL: "http://localhost:3297",
-        PLAYWRIGHT_WEB_SERVER_URL: "http://localhost:3297",
+        PLAYWRIGHT_WEB_SERVER_URL: "http://localhost:3297/api/version",
         PLAYWRIGHT_COMPOSER_SANDBOX_API_PORT: "4297",
         NEXT_DEV_DIST_DIR: ".next-playwright-native-competition",
       },
@@ -596,11 +627,31 @@ const PACKS = [
         "tests/social/profile-following-sandbox.spec.ts",
         "tests/social/profile-rep-edit-sandbox.spec.ts",
         "tests/social/profile-about-sandbox.spec.ts",
+        "tests/social/profile-xtdh-sandbox.spec.ts",
       ],
       {
         ...AUTH_SANDBOX_ENV,
         USE_DEV_AUTH: "false",
         NEXT_DEV_DIST_DIR: ".next-playwright-following",
+      },
+      [DESKTOP, MOBILE, "capacitor-ios-sim", "capacitor-android-sim"]
+    ),
+    triggers: ["pr-ci", "manual"],
+  },
+  {
+    ...sandboxPack(
+      "test:e2e:subscription-status-sandbox",
+      "Subscription status explanations, funding controls, recovery and native purchasing gates.",
+      ["tests/social/subscription-status-sandbox.spec.ts"],
+      {
+        ...AUTH_SANDBOX_ENV,
+        USE_DEV_AUTH: "false",
+        PLAYWRIGHT_SUBSCRIPTIONS_SANDBOX: "1",
+        NEXTGEN_CHAIN_ID: "1",
+        PLAYWRIGHT_BASE_URL: "http://localhost:3327",
+        PLAYWRIGHT_WEB_SERVER_URL: "http://localhost:3327",
+        PLAYWRIGHT_COMPOSER_SANDBOX_API_PORT: "4327",
+        NEXT_DEV_DIST_DIR: ".next-playwright-subscription-status",
       },
       [DESKTOP, MOBILE, "capacitor-ios-sim", "capacitor-android-sim"]
     ),
@@ -645,7 +696,10 @@ const PACKS = [
       "test:e2e:e2ee-sandbox",
       "Encrypted DMs and groups across several local browsers against the fake delivery service.",
       ["tests/e2ee"],
-      E2EE_SANDBOX_ENV,
+      {
+        ...E2EE_SANDBOX_ENV,
+        PLAYWRIGHT_WEB_SERVER_URL: "http://localhost:3299/api/version",
+      },
       [DESKTOP, MOBILE]
     ),
     timeoutMinutes: 30,
@@ -672,22 +726,18 @@ const PACKS = [
   localPack(
     "test:e2e:smoke:surface-matrix",
     "@smoke subset on desktop and mobile web shells.",
-    SMOKE_SPECS,
+    LOCAL_SMOKE_SPECS,
     { grep: "@smoke" }
   ),
   localPack(
     "test:e2e:surface-matrix",
     "Core surfaces on desktop and mobile web shells.",
-    ["tests/surfaces", ...SMOKE_SPECS]
+    ["tests/surfaces", ...LOCAL_SMOKE_SPECS]
   ),
   localPack(
     "test:e2e:browser-diversity",
     "Engine-diversity pass on Firefox and WebKit.",
-    [
-      "tests/surfaces",
-      "tests/home/home.spec.ts",
-      "tests/pages/the-memes.spec.ts",
-    ],
+    ["tests/surfaces", "tests/home", "tests/pages/the-memes.spec.ts"],
     { projects: ["web-desktop-firefox", "web-desktop-webkit"] }
   ),
   localPack(

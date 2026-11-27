@@ -69,7 +69,39 @@ exclude Validator after results settle and still navigate through Join 6529.
 Member search results are covered by the focused search unit tests, alongside
 the member navigation scenarios in the session recovery sandbox.
 
+Homepage layout and homepage-based search checks use a synthetic mint newer
+than the server-rendered live selection, with its roots and artwork fulfilled
+locally. This lets the existing client fixture settle without stale mint data
+leaving live interactive artwork in the page. Transition scenarios set their
+clock after this fixture mint's scheduled grace period. Sidebar storage init
+scripts run only in the top frame so sandboxed artwork frames retain their
+storage isolation.
+
+The Coming Up visitor-timezone scenario also supplies a completed mint and
+waits for the controlled artwork, signed-out sections and fonts before resizing
+or scrolling. Its fixed clock and Shanghai midnight assertions remain separate
+from live mint selection; seeing the decision label alone is not page readiness.
+The scenario uses the existing data-response readiness budget rather than
+changing the overall test timeout or adding retries.
+
+The profile pages sandbox also checks Collected personal actions against its
+isolated API. Anonymous and visitor profiles omit the entire action row. Owners
+retain action alignment, browser/native Back, filter and focus restoration;
+iOS owners retain the existing purchasing restriction. These owner-only cases
+replace the old anonymous action-navigation assumptions in the public read-only
+profile and native-shell packs.
+
 ## Pack registry
+
+The native competition pack's wave-loading sandbox covers touch row pin/unpin
+with real browser input, release reversal, native scrolling, reduced motion,
+visible 44px row pin controls and their state in All/Joined/Pinned, native
+header/list alignment, and ordinary tap navigation. Reorder tests hold the row
+before dragging vertically, check for interruptions from pin controls, and
+verify the saved order across reload on mobile web and in simulated iOS and
+Android shells. The pack also covers desktop drag and keyboard reordering.
+Gesture, row action, pin status, and touch sensor changes select this pack
+through the effective CI planner.
 
 The reaction sandbox covers live count and profile-list updates, desktop tooltip
 and dialog overflow, recoverable detail-read failures, and mobile long press.
@@ -129,6 +161,9 @@ tests. The pack also owns the wave header Join call to action
 (`components/waves/header/WaveJoinCta.tsx`) and the sidebar row pin tooltip
 layering (`components/brain/left-sidebar/waves/BrainLeftSidebarWavePin.tsx`),
 so changes to either select it.
+The pack also checks aligned About metric labels and values, the underlined
+Score action, and its expanded touch area on mobile web, iOS, and Android.
+Changes to `WaveHeaderTrustStats.tsx` select this pack through the same planner.
 Keep those ownership rules covered in
 `__tests__/scripts/app-pr-ci-effective-plan.test.ts`; merely registering a
 pack here does not make a product-only PR select it.
@@ -223,6 +258,8 @@ Generated from `tests/packs.manifest.cjs` by
 | `test:e2e:museum-network-ia`                        | —                             | readonly | local       | manual                    | 15m     | Network Museum information-architecture gate across hubs, works, and acquisitions.                    |
 | `test:e2e:museum-about`                             | —                             | readonly | local       | pr-ci, manual             | 15m     | Network Museum About proposition route readability and source contract.                               |
 | `test:e2e:museum-rights`                            | —                             | readonly | local       | pr-ci, manual             | 15m     | Network Museum rights education and object-license route sweep.                                       |
+| `test:e2e:provenance-governance`                    | —                             | readonly | local       | manual                    | 15m     | Unlinked provenance governance page: Sepolia Safe reads and SafeTx building without a wallet.         |
+| `test:e2e:museum-onchain-preview`                   | —                             | readonly | local       | manual                    | 20m     | Unlinked on-chain Museum preview: Sepolia registry reads and hash-verified records.                   |
 | `test:e2e:museum-inside-system`                     | —                             | readonly | local       | pr-ci, manual             | 30m     | Network Museum Inside the System project and comparison sweep.                                        |
 | `test:e2e:artwork-documentation-sandbox`            | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Artwork documentation saving and upload recovery through the real editor with isolated HTTP fixtures. |
 | `test:e2e:pdf-attachments-sandbox`                  | —                             | sandbox  | local       | pr-ci, manual             | 15m     | PDF attachment scrolling, recovery and touch layout in WebKit.                                        |
@@ -238,6 +275,7 @@ Generated from `tests/packs.manifest.cjs` by
 | `test:e2e:wave-link-preview-sandbox`                | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Embedded wave preview readability in the sidebar and responsive chat.                                 |
 | `test:e2e:notifications-inbox-sandbox`              | —                             | sandbox  | local       | manual                    | 15m     | Desktop notification preview, explicit read actions, and mobile navigation.                           |
 | `test:e2e:profile-following-sandbox`                | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Profile editing, Following, artist artwork alerts and REP editing dialogs, permissions and recovery.  |
+| `test:e2e:subscription-status-sandbox`              | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Subscription status explanations, funding controls, recovery and native purchasing gates.             |
 | `test:e2e:profile-nic-sandbox`                      | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Profile NIC activity filtering and cursor navigation across desktop, tablet and mobile.               |
 | `test:e2e:wave-creation-sandbox`                    | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Wave creation, permissions, and draft recovery on desktop and mobile.                                 |
 | `test:e2e:e2ee-sandbox`                             | —                             | sandbox  | local       | manual                    | 30m     | Encrypted DMs and groups across several local browsers against the fake delivery service.             |
@@ -305,6 +343,11 @@ The same Playwright spec can be `@medium` locally and `@large` when
 size at runtime.
 
 Choosing the test layer:
+
+- The native competition sandbox includes a simulated iPhone voting check that
+  samples the sheet during keyboard movement, keeps the background stable, and
+  preserves the vote and reply draft. It checks alignment with the app's shared
+  keyboard curve; it does not measure a physical iPhone's keyboard or frame rate.
 
 - Use Playwright for browser-specific behavior such as rendering, hydration,
   navigation, responsive layout, accessibility, and runtime integrations.
@@ -547,9 +590,9 @@ Surface matrix:
 - `test:e2e:composer-sandbox` runs a local-only authenticated Waves composer
   sandbox on both baseline web projects. It starts a mock API runtime,
   renders a real wave detail route, verifies attachment queue/remove behavior
-  and deterministic link previews, long-drop expansion at the latest scroll
-  position and expansion/collapse anchoring while reading older posts, including
-  delayed link previews. It preserves lists, clickable links, and paragraphs
+  and deterministic link previews, stable reading position when expanding
+  the latest or an older long drop, and collapse anchoring for older posts.
+  This covers delayed link previews. It preserves lists, clickable links, and paragraphs
   in both disclosure states and checks nested quote keyboard and touch behavior, plus
   exact synthetic chat-drop and poll submits. The poll flow
   covers its responsive layout, options, type, closing

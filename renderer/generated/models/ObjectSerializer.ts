@@ -7,6 +7,12 @@ export * from '../models/AllowlistNormalizedEntry';
 export * from '../models/ApiActiveWaveVote';
 export * from '../models/ApiActiveWaveVotesPage';
 export * from '../models/ApiAddReactionToDropRequest';
+export * from '../models/ApiAddRememeBadRequest';
+export * from '../models/ApiAddRememeError';
+export * from '../models/ApiAddRememeRequest';
+export * from '../models/ApiAddRememeResponse';
+export * from '../models/ApiAddRememeTokenErrors';
+export * from '../models/ApiAddRememeTokenErrorsNftsInner';
 export * from '../models/ApiAggregatedActivity';
 export * from '../models/ApiAggregatedActivityMemes';
 export * from '../models/ApiAggregatedActivityPage';
@@ -381,9 +387,32 @@ export * from '../models/ApiDropBoost';
 export * from '../models/ApiDropBoostV2';
 export * from '../models/ApiDropBoostsPage';
 export * from '../models/ApiDropCompetitionContext';
+export * from '../models/ApiDropCompetitionEntryReference';
 export * from '../models/ApiDropContextProfileContext';
 export * from '../models/ApiDropCuration';
 export * from '../models/ApiDropCurationRequest';
+export * from '../models/ApiDropForgeAction';
+export * from '../models/ApiDropForgeControlRequest';
+export * from '../models/ApiDropForgeFundingRequest';
+export * from '../models/ApiDropForgeFundingResponse';
+export * from '../models/ApiDropForgeJob';
+export * from '../models/ApiDropForgeJobRequest';
+export * from '../models/ApiDropForgeLaunch';
+export * from '../models/ApiDropForgeListPage';
+export * from '../models/ApiDropForgeListPageRowsInner';
+export * from '../models/ApiDropForgeManualRequest';
+export * from '../models/ApiDropForgeManualResponse';
+export * from '../models/ApiDropForgePhase';
+export * from '../models/ApiDropForgePhaseInput';
+export * from '../models/ApiDropForgePlanRequest';
+export * from '../models/ApiDropForgePreparation';
+export * from '../models/ApiDropForgeRecovery';
+export * from '../models/ApiDropForgeRecoveryAllocation';
+export * from '../models/ApiDropForgeRecoveryAttempt';
+export * from '../models/ApiDropForgeRecoveryRequest';
+export * from '../models/ApiDropForgeSettings';
+export * from '../models/ApiDropForgeSettingsRequest';
+export * from '../models/ApiDropForgeSupplyEvidence';
 export * from '../models/ApiDropGroupMention';
 export * from '../models/ApiDropHiddenState';
 export * from '../models/ApiDropId';
@@ -460,6 +489,7 @@ export * from '../models/ApiE2eeCreateGroupRequest';
 export * from '../models/ApiE2eeDevice';
 export * from '../models/ApiE2eeDeviceGrant';
 export * from '../models/ApiE2eeDeviceGroup';
+export * from '../models/ApiE2eeDeviceInboxStatus';
 export * from '../models/ApiE2eeDeviceLookupRequest';
 export * from '../models/ApiE2eeDeviceLookupResponse';
 export * from '../models/ApiE2eeDevicePlatform';
@@ -694,6 +724,8 @@ export * from '../models/ApiProfileCmsAgentSchemaBundleSourcePacketTypesInner';
 export * from '../models/ApiProfileCmsAgentSourcePacket';
 export * from '../models/ApiProfileCmsAgentSourcePacketSafety';
 export * from '../models/ApiProfileCmsAgentSourcePacketValidationDiagnostics';
+export * from '../models/ApiProfileCmsChainDocument';
+export * from '../models/ApiProfileCmsChainDocuments';
 export * from '../models/ApiProfileCmsPackage';
 export * from '../models/ApiProfileCmsPackageExport';
 export * from '../models/ApiProfileCmsPackageStatus';
@@ -744,6 +776,11 @@ export * from '../models/ApiRefreshPushInstallationBadgeRequest';
 export * from '../models/ApiRefreshPushInstallationBadgeResponse';
 export * from '../models/ApiRegisterDeviceGrantRequest';
 export * from '../models/ApiRegisterPushNotificationTokenRequest';
+export * from '../models/ApiRememeContractMetadata';
+export * from '../models/ApiRememeNftLookupError';
+export * from '../models/ApiRememeNftMetadata';
+export * from '../models/ApiRememeNftMetadataRaw';
+export * from '../models/ApiRememePayload';
 export * from '../models/ApiRenameDeviceRequest';
 export * from '../models/ApiRepCategoriesPage';
 export * from '../models/ApiRepCategory';
@@ -777,6 +814,9 @@ export * from '../models/ApiSetCompetitionVoteRequest';
 export * from '../models/ApiSetDropReplyCollapseRequest';
 export * from '../models/ApiSetPinnedDropRequest';
 export * from '../models/ApiSetProfileWaveRequest';
+export * from '../models/ApiSignedRecordsAnchor';
+export * from '../models/ApiSignedRecordsOwner';
+export * from '../models/ApiSignedRecordsOwners';
 export * from '../models/ApiStartMultipartMediaUploadResponse';
 export * from '../models/ApiSubmissionDropContext';
 export * from '../models/ApiSubmissionDropStatus';
@@ -854,6 +894,7 @@ export * from '../models/ApiWaveCreditNft';
 export * from '../models/ApiWaveCreditScope';
 export * from '../models/ApiWaveCreditType';
 export * from '../models/ApiWaveCuration';
+export * from '../models/ApiWaveCurationCriteria';
 export * from '../models/ApiWaveCurationRequest';
 export * from '../models/ApiWaveDecision';
 export * from '../models/ApiWaveDecisionAward';
@@ -1008,6 +1049,12 @@ import { AllowlistNormalizedEntry } from '../models/AllowlistNormalizedEntry';
 import { ApiActiveWaveVote } from '../models/ApiActiveWaveVote';
 import { ApiActiveWaveVotesPage } from '../models/ApiActiveWaveVotesPage';
 import { ApiAddReactionToDropRequest } from '../models/ApiAddReactionToDropRequest';
+import { ApiAddRememeBadRequestClass } from '../models/ApiAddRememeBadRequest';
+import { ApiAddRememeError } from '../models/ApiAddRememeError';
+import { ApiAddRememeRequest } from '../models/ApiAddRememeRequest';
+import { ApiAddRememeResponse } from '../models/ApiAddRememeResponse';
+import { ApiAddRememeTokenErrors } from '../models/ApiAddRememeTokenErrors';
+import { ApiAddRememeTokenErrorsNftsInnerClass } from '../models/ApiAddRememeTokenErrorsNftsInner';
 import { ApiAggregatedActivity } from '../models/ApiAggregatedActivity';
 import { ApiAggregatedActivityMemes } from '../models/ApiAggregatedActivityMemes';
 import { ApiAggregatedActivityPage } from '../models/ApiAggregatedActivityPage';
@@ -1227,7 +1274,7 @@ import { ApiCommunityMetric } from '../models/ApiCommunityMetric';
 import { ApiCommunityMetricSample } from '../models/ApiCommunityMetricSample';
 import { ApiCommunityMetrics } from '../models/ApiCommunityMetrics';
 import { ApiCommunityMetricsSeries } from '../models/ApiCommunityMetricsSeries';
-import { ApiCompetition                         } from '../models/ApiCompetition';
+import { ApiCompetition                           } from '../models/ApiCompetition';
 import { ApiCompetitionActionRequest } from '../models/ApiCompetitionActionRequest';
 import { ApiCompetitionAward } from '../models/ApiCompetitionAward';
 import { ApiCompetitionAwardPage } from '../models/ApiCompetitionAwardPage';
@@ -1382,9 +1429,32 @@ import { ApiDropBoost } from '../models/ApiDropBoost';
 import { ApiDropBoostV2 } from '../models/ApiDropBoostV2';
 import { ApiDropBoostsPage } from '../models/ApiDropBoostsPage';
 import { ApiDropCompetitionContext } from '../models/ApiDropCompetitionContext';
+import { ApiDropCompetitionEntryReference } from '../models/ApiDropCompetitionEntryReference';
 import { ApiDropContextProfileContext } from '../models/ApiDropContextProfileContext';
 import { ApiDropCuration } from '../models/ApiDropCuration';
 import { ApiDropCurationRequest } from '../models/ApiDropCurationRequest';
+import { ApiDropForgeAction              , ApiDropForgeActionKindEnum  , ApiDropForgeActionStateEnum          } from '../models/ApiDropForgeAction';
+import { ApiDropForgeControlRequest , ApiDropForgeControlRequestOperationEnum   } from '../models/ApiDropForgeControlRequest';
+import { ApiDropForgeFundingRequest } from '../models/ApiDropForgeFundingRequest';
+import { ApiDropForgeFundingResponse } from '../models/ApiDropForgeFundingResponse';
+import { ApiDropForgeJob     , ApiDropForgeJobKindEnum  , ApiDropForgeJobStatusEnum      } from '../models/ApiDropForgeJob';
+import { ApiDropForgeJobRequest  , ApiDropForgeJobRequestKindEnum     } from '../models/ApiDropForgeJobRequest';
+import { ApiDropForgeLaunch    , ApiDropForgeLaunchStateEnum             } from '../models/ApiDropForgeLaunch';
+import { ApiDropForgeListPage } from '../models/ApiDropForgeListPage';
+import { ApiDropForgeListPageRowsInner } from '../models/ApiDropForgeListPageRowsInner';
+import { ApiDropForgeManualRequest, ApiDropForgeManualRequestActionEnum  , ApiDropForgeManualRequestOperationEnum     } from '../models/ApiDropForgeManualRequest';
+import { ApiDropForgeManualResponse } from '../models/ApiDropForgeManualResponse';
+import { ApiDropForgePhase } from '../models/ApiDropForgePhase';
+import { ApiDropForgePhaseInput } from '../models/ApiDropForgePhaseInput';
+import { ApiDropForgePlanRequest } from '../models/ApiDropForgePlanRequest';
+import { ApiDropForgePreparation, ApiDropForgePreparationModeEnum   } from '../models/ApiDropForgePreparation';
+import { ApiDropForgeRecovery    , ApiDropForgeRecoveryOutcomeEnum      } from '../models/ApiDropForgeRecovery';
+import { ApiDropForgeRecoveryAllocation } from '../models/ApiDropForgeRecoveryAllocation';
+import { ApiDropForgeRecoveryAttempt , ApiDropForgeRecoveryAttemptOperationEnum      } from '../models/ApiDropForgeRecoveryAttempt';
+import { ApiDropForgeRecoveryRequest     , ApiDropForgeRecoveryRequestOperationEnum   } from '../models/ApiDropForgeRecoveryRequest';
+import { ApiDropForgeSettings } from '../models/ApiDropForgeSettings';
+import { ApiDropForgeSettingsRequest } from '../models/ApiDropForgeSettingsRequest';
+import { ApiDropForgeSupplyEvidence, ApiDropForgeSupplyEvidenceStatusEnum           } from '../models/ApiDropForgeSupplyEvidence';
 import { ApiDropGroupMention } from '../models/ApiDropGroupMention';
 import { ApiDropHiddenState } from '../models/ApiDropHiddenState';
 import { ApiDropId } from '../models/ApiDropId';
@@ -1422,7 +1492,7 @@ import { ApiDropSubscriptionActions } from '../models/ApiDropSubscriptionActions
 import { ApiDropSubscriptionTargetAction } from '../models/ApiDropSubscriptionTargetAction';
 import { ApiDropTraceItem } from '../models/ApiDropTraceItem';
 import { ApiDropType } from '../models/ApiDropType';
-import { ApiDropV2                                   } from '../models/ApiDropV2';
+import { ApiDropV2                                    } from '../models/ApiDropV2';
 import { ApiDropV2ContextProfileContext } from '../models/ApiDropV2ContextProfileContext';
 import { ApiDropV2Page } from '../models/ApiDropV2Page';
 import { ApiDropV2PageWithoutCount } from '../models/ApiDropV2PageWithoutCount';
@@ -1461,6 +1531,7 @@ import { ApiE2eeCreateGroupRequest } from '../models/ApiE2eeCreateGroupRequest';
 import { ApiE2eeDevice     , ApiE2eeDeviceVerifiedViaEnum           } from '../models/ApiE2eeDevice';
 import { ApiE2eeDeviceGrant } from '../models/ApiE2eeDeviceGrant';
 import { ApiE2eeDeviceGroup } from '../models/ApiE2eeDeviceGroup';
+import { ApiE2eeDeviceInboxStatus } from '../models/ApiE2eeDeviceInboxStatus';
 import { ApiE2eeDeviceLookupRequest } from '../models/ApiE2eeDeviceLookupRequest';
 import { ApiE2eeDeviceLookupResponse } from '../models/ApiE2eeDeviceLookupResponse';
 import { ApiE2eeDevicePlatform } from '../models/ApiE2eeDevicePlatform';
@@ -1695,7 +1766,9 @@ import { ApiProfileCmsAgentSchemaBundleSourcePacketTypesInner , ApiProfileCmsAge
 import { ApiProfileCmsAgentSourcePacket, ApiProfileCmsAgentSourcePacketSchemaEnum       , ApiProfileCmsAgentSourcePacketVisibilityEnum          } from '../models/ApiProfileCmsAgentSourcePacket';
 import { ApiProfileCmsAgentSourcePacketSafety } from '../models/ApiProfileCmsAgentSourcePacketSafety';
 import { ApiProfileCmsAgentSourcePacketValidationDiagnostics } from '../models/ApiProfileCmsAgentSourcePacketValidationDiagnostics';
-import { ApiProfileCmsPackage               } from '../models/ApiProfileCmsPackage';
+import { ApiProfileCmsChainDocument } from '../models/ApiProfileCmsChainDocument';
+import { ApiProfileCmsChainDocuments } from '../models/ApiProfileCmsChainDocuments';
+import { ApiProfileCmsPackage                 } from '../models/ApiProfileCmsPackage';
 import { ApiProfileCmsPackageExport                 } from '../models/ApiProfileCmsPackageExport';
 import { ApiProfileCmsPackageStatus } from '../models/ApiProfileCmsPackageStatus';
 import { ApiProfileCmsPackageStorageUploadResult } from '../models/ApiProfileCmsPackageStorageUploadResult';
@@ -1745,6 +1818,11 @@ import { ApiRefreshPushInstallationBadgeRequest } from '../models/ApiRefreshPush
 import { ApiRefreshPushInstallationBadgeResponse } from '../models/ApiRefreshPushInstallationBadgeResponse';
 import { ApiRegisterDeviceGrantRequest } from '../models/ApiRegisterDeviceGrantRequest';
 import { ApiRegisterPushNotificationTokenRequest } from '../models/ApiRegisterPushNotificationTokenRequest';
+import { ApiRememeContractMetadata } from '../models/ApiRememeContractMetadata';
+import { ApiRememeNftLookupError } from '../models/ApiRememeNftLookupError';
+import { ApiRememeNftMetadata } from '../models/ApiRememeNftMetadata';
+import { ApiRememeNftMetadataRaw } from '../models/ApiRememeNftMetadataRaw';
+import { ApiRememePayload } from '../models/ApiRememePayload';
 import { ApiRenameDeviceRequest } from '../models/ApiRenameDeviceRequest';
 import { ApiRepCategoriesPage } from '../models/ApiRepCategoriesPage';
 import { ApiRepCategory } from '../models/ApiRepCategory';
@@ -1778,13 +1856,16 @@ import { ApiSetCompetitionVoteRequest } from '../models/ApiSetCompetitionVoteReq
 import { ApiSetDropReplyCollapseRequest } from '../models/ApiSetDropReplyCollapseRequest';
 import { ApiSetPinnedDropRequest } from '../models/ApiSetPinnedDropRequest';
 import { ApiSetProfileWaveRequest } from '../models/ApiSetProfileWaveRequest';
+import { ApiSignedRecordsAnchor } from '../models/ApiSignedRecordsAnchor';
+import { ApiSignedRecordsOwner } from '../models/ApiSignedRecordsOwner';
+import { ApiSignedRecordsOwners } from '../models/ApiSignedRecordsOwners';
 import { ApiStartMultipartMediaUploadResponse     } from '../models/ApiStartMultipartMediaUploadResponse';
 import { ApiSubmissionDropContext        } from '../models/ApiSubmissionDropContext';
 import { ApiSubmissionDropStatus } from '../models/ApiSubmissionDropStatus';
 import { ApiSubmissionDropVoting } from '../models/ApiSubmissionDropVoting';
 import { ApiSubmissionDropVotingContextProfileContext } from '../models/ApiSubmissionDropVotingContextProfileContext';
 import { ApiSubmitProfileCmsAgentProposalRequest } from '../models/ApiSubmitProfileCmsAgentProposalRequest';
-import { ApiSubscriptionCoverage                 } from '../models/ApiSubscriptionCoverage';
+import { ApiSubscriptionCoverage                   } from '../models/ApiSubscriptionCoverage';
 import { ApiSubscriptionCoverageDeadlineBasis } from '../models/ApiSubscriptionCoverageDeadlineBasis';
 import { ApiSubscriptionCoverageEligibilityBasis } from '../models/ApiSubscriptionCoverageEligibilityBasis';
 import { ApiSubscriptionCoverageForecast           } from '../models/ApiSubscriptionCoverageForecast';
@@ -1855,6 +1936,7 @@ import { ApiWaveCreditNft } from '../models/ApiWaveCreditNft';
 import { ApiWaveCreditScope } from '../models/ApiWaveCreditScope';
 import { ApiWaveCreditType } from '../models/ApiWaveCreditType';
 import { ApiWaveCuration } from '../models/ApiWaveCuration';
+import { ApiWaveCurationCriteria } from '../models/ApiWaveCurationCriteria';
 import { ApiWaveCurationRequest } from '../models/ApiWaveCurationRequest';
 import { ApiWaveDecision } from '../models/ApiWaveDecision';
 import { ApiWaveDecisionAward       } from '../models/ApiWaveDecisionAward';
@@ -1875,7 +1957,7 @@ import { ApiWaveMentionSearchResult } from '../models/ApiWaveMentionSearchResult
 import { ApiWaveMetadata } from '../models/ApiWaveMetadata';
 import { ApiWaveMetadataType } from '../models/ApiWaveMetadataType';
 import { ApiWaveMetrics } from '../models/ApiWaveMetrics';
-import { ApiWaveMin                            } from '../models/ApiWaveMin';
+import { ApiWaveMin                             } from '../models/ApiWaveMin';
 import { ApiWaveNotificationPreferences } from '../models/ApiWaveNotificationPreferences';
 import { ApiWaveOutcome        } from '../models/ApiWaveOutcome';
 import { ApiWaveOutcomeCredit } from '../models/ApiWaveOutcomeCredit';
@@ -2123,6 +2205,20 @@ let enumsMap: Set<string> = new Set<string>([
     "ApiCreateConnectionShareResponseTargetClientTypeEnum",
     "ApiCreateLegacyDesktopConnectionShareRequestClientTypeEnum",
     "ApiDecentralizedMediaProtocol",
+    "ApiDropForgeActionKindEnum",
+    "ApiDropForgeActionStateEnum",
+    "ApiDropForgeControlRequestOperationEnum",
+    "ApiDropForgeJobKindEnum",
+    "ApiDropForgeJobStatusEnum",
+    "ApiDropForgeJobRequestKindEnum",
+    "ApiDropForgeLaunchStateEnum",
+    "ApiDropForgeManualRequestActionEnum",
+    "ApiDropForgeManualRequestOperationEnum",
+    "ApiDropForgePreparationModeEnum",
+    "ApiDropForgeRecoveryOutcomeEnum",
+    "ApiDropForgeRecoveryAttemptOperationEnum",
+    "ApiDropForgeRecoveryRequestOperationEnum",
+    "ApiDropForgeSupplyEvidenceStatusEnum",
     "ApiDropGroupMention",
     "ApiDropMainType",
     "ApiDropMediaStatus",
@@ -2316,6 +2412,12 @@ let typeMap: {[index: string]: any} = {
     "ApiActiveWaveVote": ApiActiveWaveVote,
     "ApiActiveWaveVotesPage": ApiActiveWaveVotesPage,
     "ApiAddReactionToDropRequest": ApiAddReactionToDropRequest,
+    "ApiAddRememeBadRequest": ApiAddRememeBadRequestClass,
+    "ApiAddRememeError": ApiAddRememeError,
+    "ApiAddRememeRequest": ApiAddRememeRequest,
+    "ApiAddRememeResponse": ApiAddRememeResponse,
+    "ApiAddRememeTokenErrors": ApiAddRememeTokenErrors,
+    "ApiAddRememeTokenErrorsNftsInner": ApiAddRememeTokenErrorsNftsInnerClass,
     "ApiAggregatedActivity": ApiAggregatedActivity,
     "ApiAggregatedActivityMemes": ApiAggregatedActivityMemes,
     "ApiAggregatedActivityPage": ApiAggregatedActivityPage,
@@ -2663,9 +2765,32 @@ let typeMap: {[index: string]: any} = {
     "ApiDropBoostV2": ApiDropBoostV2,
     "ApiDropBoostsPage": ApiDropBoostsPage,
     "ApiDropCompetitionContext": ApiDropCompetitionContext,
+    "ApiDropCompetitionEntryReference": ApiDropCompetitionEntryReference,
     "ApiDropContextProfileContext": ApiDropContextProfileContext,
     "ApiDropCuration": ApiDropCuration,
     "ApiDropCurationRequest": ApiDropCurationRequest,
+    "ApiDropForgeAction": ApiDropForgeAction,
+    "ApiDropForgeControlRequest": ApiDropForgeControlRequest,
+    "ApiDropForgeFundingRequest": ApiDropForgeFundingRequest,
+    "ApiDropForgeFundingResponse": ApiDropForgeFundingResponse,
+    "ApiDropForgeJob": ApiDropForgeJob,
+    "ApiDropForgeJobRequest": ApiDropForgeJobRequest,
+    "ApiDropForgeLaunch": ApiDropForgeLaunch,
+    "ApiDropForgeListPage": ApiDropForgeListPage,
+    "ApiDropForgeListPageRowsInner": ApiDropForgeListPageRowsInner,
+    "ApiDropForgeManualRequest": ApiDropForgeManualRequest,
+    "ApiDropForgeManualResponse": ApiDropForgeManualResponse,
+    "ApiDropForgePhase": ApiDropForgePhase,
+    "ApiDropForgePhaseInput": ApiDropForgePhaseInput,
+    "ApiDropForgePlanRequest": ApiDropForgePlanRequest,
+    "ApiDropForgePreparation": ApiDropForgePreparation,
+    "ApiDropForgeRecovery": ApiDropForgeRecovery,
+    "ApiDropForgeRecoveryAllocation": ApiDropForgeRecoveryAllocation,
+    "ApiDropForgeRecoveryAttempt": ApiDropForgeRecoveryAttempt,
+    "ApiDropForgeRecoveryRequest": ApiDropForgeRecoveryRequest,
+    "ApiDropForgeSettings": ApiDropForgeSettings,
+    "ApiDropForgeSettingsRequest": ApiDropForgeSettingsRequest,
+    "ApiDropForgeSupplyEvidence": ApiDropForgeSupplyEvidence,
     "ApiDropHiddenState": ApiDropHiddenState,
     "ApiDropId": ApiDropId,
     "ApiDropMedia": ApiDropMedia,
@@ -2735,6 +2860,7 @@ let typeMap: {[index: string]: any} = {
     "ApiE2eeDevice": ApiE2eeDevice,
     "ApiE2eeDeviceGrant": ApiE2eeDeviceGrant,
     "ApiE2eeDeviceGroup": ApiE2eeDeviceGroup,
+    "ApiE2eeDeviceInboxStatus": ApiE2eeDeviceInboxStatus,
     "ApiE2eeDeviceLookupRequest": ApiE2eeDeviceLookupRequest,
     "ApiE2eeDeviceLookupResponse": ApiE2eeDeviceLookupResponse,
     "ApiE2eeDeviceRevocation": ApiE2eeDeviceRevocation,
@@ -2949,6 +3075,8 @@ let typeMap: {[index: string]: any} = {
     "ApiProfileCmsAgentSourcePacket": ApiProfileCmsAgentSourcePacket,
     "ApiProfileCmsAgentSourcePacketSafety": ApiProfileCmsAgentSourcePacketSafety,
     "ApiProfileCmsAgentSourcePacketValidationDiagnostics": ApiProfileCmsAgentSourcePacketValidationDiagnostics,
+    "ApiProfileCmsChainDocument": ApiProfileCmsChainDocument,
+    "ApiProfileCmsChainDocuments": ApiProfileCmsChainDocuments,
     "ApiProfileCmsPackage": ApiProfileCmsPackage,
     "ApiProfileCmsPackageExport": ApiProfileCmsPackageExport,
     "ApiProfileCmsPackageStorageUploadResult": ApiProfileCmsPackageStorageUploadResult,
@@ -2995,6 +3123,11 @@ let typeMap: {[index: string]: any} = {
     "ApiRefreshPushInstallationBadgeResponse": ApiRefreshPushInstallationBadgeResponse,
     "ApiRegisterDeviceGrantRequest": ApiRegisterDeviceGrantRequest,
     "ApiRegisterPushNotificationTokenRequest": ApiRegisterPushNotificationTokenRequest,
+    "ApiRememeContractMetadata": ApiRememeContractMetadata,
+    "ApiRememeNftLookupError": ApiRememeNftLookupError,
+    "ApiRememeNftMetadata": ApiRememeNftMetadata,
+    "ApiRememeNftMetadataRaw": ApiRememeNftMetadataRaw,
+    "ApiRememePayload": ApiRememePayload,
     "ApiRenameDeviceRequest": ApiRenameDeviceRequest,
     "ApiRepCategoriesPage": ApiRepCategoriesPage,
     "ApiRepCategory": ApiRepCategory,
@@ -3027,6 +3160,9 @@ let typeMap: {[index: string]: any} = {
     "ApiSetDropReplyCollapseRequest": ApiSetDropReplyCollapseRequest,
     "ApiSetPinnedDropRequest": ApiSetPinnedDropRequest,
     "ApiSetProfileWaveRequest": ApiSetProfileWaveRequest,
+    "ApiSignedRecordsAnchor": ApiSignedRecordsAnchor,
+    "ApiSignedRecordsOwner": ApiSignedRecordsOwner,
+    "ApiSignedRecordsOwners": ApiSignedRecordsOwners,
     "ApiStartMultipartMediaUploadResponse": ApiStartMultipartMediaUploadResponse,
     "ApiSubmissionDropContext": ApiSubmissionDropContext,
     "ApiSubmissionDropVoting": ApiSubmissionDropVoting,
@@ -3091,6 +3227,7 @@ let typeMap: {[index: string]: any} = {
     "ApiWaveContributorOverview": ApiWaveContributorOverview,
     "ApiWaveCreditNft": ApiWaveCreditNft,
     "ApiWaveCuration": ApiWaveCuration,
+    "ApiWaveCurationCriteria": ApiWaveCurationCriteria,
     "ApiWaveCurationRequest": ApiWaveCurationRequest,
     "ApiWaveDecision": ApiWaveDecision,
     "ApiWaveDecisionAward": ApiWaveDecisionAward,

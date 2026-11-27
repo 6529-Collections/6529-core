@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import CompetitionDetail from "@/components/competitions/CompetitionDetail";
 import type { ApiCreateWaveMetadataRequest } from "@/generated/models/ApiCreateWaveMetadataRequest";
 import { WAVE_DISPLAY_METADATA_KEYS } from "@/helpers/waves/wave-metadata.helpers";
+import type { ReactNode } from "react";
 let mockPrimary: string | null = null;
 let mockSearch = "edit=1";
 const mockPush = jest.fn();
@@ -45,9 +46,18 @@ jest.mock("@/hooks/competitions/useCompetitionQueries", () => ({
 jest.mock("@/components/brain/my-stream/MyStreamWave", () => () => (
   <div>Original primary experience</div>
 ));
-jest.mock("@/components/competitions/CompetitionAdmin", () => () => (
-  <button>Manage native competition</button>
-));
+jest.mock(
+  "@/components/competitions/CompetitionAdmin",
+  () =>
+    ({
+      renderActions,
+    }: {
+      readonly renderActions?: (actions: ReactNode) => ReactNode;
+    }) => {
+      const actions = <button>Manage native competition</button>;
+      return renderActions ? renderActions(actions) : actions;
+    }
+);
 jest.mock(
   "@/components/competitions/CompetitionResources",
   () =>
@@ -218,3 +228,32 @@ it.each(["", "tab=rules", "edit=1", "edit=1&competition=native&serialNo=42"])(
     expect(mockReplace).toHaveBeenCalledWith("/waves/wave/decisions");
   }
 );
+
+describe("a decision made on the 6529 Network", () => {
+  beforeEach(() => {
+    mockSearch = "";
+    (mockCompetition as Record<string, unknown>)["chain_id"] =
+      `0x${"3c".repeat(32)}`;
+  });
+
+  afterEach(() => {
+    delete (mockCompetition as Record<string, unknown>)["chain_id"];
+    mockCompetition.permissions.submit = true;
+  });
+
+  it("offers the entry form when 6529.io's API offers it", () => {
+    mockCompetition.permissions.submit = true;
+    render(<CompetitionDetail waveId="wave" competitionId="native" />);
+    expect(
+      screen.getByRole("button", { name: "Submit an entry" })
+    ).toBeVisible();
+  });
+
+  it("offers none when 6529.io's API shows it closed", () => {
+    mockCompetition.permissions.submit = false;
+    render(<CompetitionDetail waveId="wave" competitionId="native" />);
+    expect(
+      screen.queryByRole("button", { name: "Submit an entry" })
+    ).toBeNull();
+  });
+});

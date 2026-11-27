@@ -1,8 +1,19 @@
+import { Capacitor } from "@capacitor/core";
 import { act, render } from "@testing-library/react";
 import {
   getWaveNavigationScreen,
   useWaveNavigationTransition,
 } from "@/components/brain/mobile/useWaveNavigationTransition";
+import { navigateAfterWaveSwipe } from "@/helpers/waves/wave-navigation-transition";
+
+jest.mock("@capacitor/core", () => {
+  const actual =
+    jest.requireActual<typeof import("@capacitor/core")>("@capacitor/core");
+  return {
+    ...actual,
+    Capacitor: { ...actual.Capacitor, getPlatform: () => "ios" },
+  };
+});
 
 const cancel = jest.fn();
 const animate = jest.fn<
@@ -22,7 +33,7 @@ function Surface({
 }: {
   readonly screen: Parameters<typeof useWaveNavigationTransition>[0];
 }) {
-  const ref = useWaveNavigationTransition(screen);
+  const ref = useWaveNavigationTransition(screen, "/waves");
   return <div ref={ref}>Wave content</div>;
 }
 
@@ -52,19 +63,53 @@ it("does not animate initial loads or unrelated routes", () => {
   expect(getWaveNavigationScreen("/notifications", null)).toBeNull();
   expect(getWaveNavigationScreen("/messages/wave-a", "wave-a")).toBeNull();
   expect(getWaveNavigationScreen("/waves", null)).toBe("list");
+  expect(getWaveNavigationScreen("/waves", null, true)).toBe("feed");
   expect(getWaveNavigationScreen("/waves/wave-a", "wave-a")).toBe("wave");
 });
 
-it("moves into a wave and reverses direction on return without remounting", () => {
+it("does not replay a completed swipe when the return route commits slowly", () => {
+  jest.useFakeTimers();
+  try {
+    const { rerender } = render(<Surface screen="feed" />);
+    navigateAfterWaveSwipe(jest.fn());
+    act(() => jest.advanceTimersByTime(1500));
+    rerender(<Surface screen="list" />);
+    expect(animate).not.toHaveBeenCalled();
+
+    rerender(<Surface screen="wave" />);
+    expect(animate).toHaveBeenCalledTimes(1);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it("treats the feed as a distinct screen and reverses direction back from a chat", () => {
+  const { rerender } = render(<Surface screen="list" />);
+  rerender(<Surface screen="feed" />);
+  expect(animate.mock.calls[0]?.[0][0]).toEqual({
+    opacity: 0.75,
+    transform: "scale(0.98)",
+  });
+  rerender(<Surface screen="wave" />);
+  rerender(<Surface screen="feed" />);
+  expect(animate.mock.calls[2]?.[0][0]).toEqual({
+    opacity: 0.75,
+    transform: "scale(1.02)",
+  });
+  rerender(<Surface screen="list" />);
+  expect(animate.mock.calls[3]?.[0][0]).toEqual({
+    opacity: 0.75,
+    transform: "scale(1.02)",
+  });
+});
+
+it("fades into a wave at full size on iOS and preserves the return without remounting", () => {
   const { container, rerender, unmount } = render(<Surface screen="list" />);
   const surface = container.firstElementChild;
   rerender(<Surface screen="wave" />);
   expect(container.firstElementChild).toBe(surface);
   expect(animate).toHaveBeenLastCalledWith(
-    [
-      { opacity: 0.75, transform: "scale(0.98)" },
-      { opacity: 1, transform: "none" },
-    ],
+    [{ opacity: 0.75 }, { opacity: 1 }],
     { duration: 240, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
   );
   rerender(<Surface screen="list" />);
@@ -75,6 +120,22 @@ it("moves into a wave and reverses direction on return without remounting", () =
   });
   unmount();
   expect(cancel).toHaveBeenCalledTimes(2);
+});
+
+it("keeps the existing Wave entry outside iOS", () => {
+  const platform = jest
+    .spyOn(Capacitor, "getPlatform")
+    .mockReturnValue("android");
+  try {
+    const { rerender } = render(<Surface screen="list" />);
+    rerender(<Surface screen="wave" />);
+    expect(animate.mock.calls[0]?.[0][0]).toEqual({
+      opacity: 0.75,
+      transform: "scale(0.98)",
+    });
+  } finally {
+    platform.mockRestore();
+  }
 });
 
 it("skips motion when reduced motion is requested", () => {

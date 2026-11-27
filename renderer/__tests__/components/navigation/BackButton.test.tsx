@@ -1,7 +1,27 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import BackButton from "@/components/navigation/BackButton";
+let mockIsApp = false;
+let mockIsIos = false;
+jest.mock("@capacitor/core", () => {
+  const actual = jest.requireActual("@capacitor/core");
+  return {
+    ...actual,
+    Capacitor: {
+      ...actual.Capacitor,
+      getPlatform: () => (mockIsIos ? "ios" : "android"),
+    },
+  };
+});
+const mockChevronBack = jest.fn((_: string, navigate: () => void) =>
+  navigate()
+);
+jest.mock("@/helpers/waves/wave-navigation-transition", () => ({
+  ...jest.requireActual("@/helpers/waves/wave-navigation-transition"),
+  runPhoneChevronBackTransition: (pathname: string, navigate: () => void) =>
+    mockChevronBack(pathname, navigate),
+}));
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -24,7 +44,7 @@ jest.mock("@/components/utils/Spinner", () => ({
 jest.mock("@/hooks/useDeviceInfo", () => ({
   __esModule: true,
   default: () => ({
-    isApp: false,
+    isApp: mockIsApp,
     isMobileDevice: false,
     hasTouchScreen: false,
   }),
@@ -88,8 +108,107 @@ function setup(
 
 describe("BackButton", () => {
   afterEach(() => {
+    mockIsApp = false;
+    mockIsIos = false;
     jest.clearAllMocks();
     window.history.replaceState(null, "", "/");
+  });
+
+  it("uses the whole-channel transition for iPhone chevron Back", () => {
+    mockIsApp = true;
+    mockIsIos = true;
+    const { setActiveWave } = setup(
+      {},
+      { activeWaveId: "w1", pathname: "/waves/w1" }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(mockChevronBack).toHaveBeenCalledWith(
+      "/waves",
+      expect.any(Function)
+    );
+    expect(setActiveWave).toHaveBeenCalledWith(null, {
+      isDirectMessage: false,
+    });
+  });
+
+  it.each([true, false])(
+    "slides back to Messages on iPhone even if DM details are pending (loaded: %s)",
+    (isDm) => {
+      mockIsApp = true;
+      mockIsIos = true;
+      const { setActiveWave } = setup({}, { pathname: "/messages/dm1", isDm });
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(mockChevronBack).toHaveBeenCalledWith(
+        "/messages",
+        expect.any(Function)
+      );
+      expect(mockClearLastVisited).toHaveBeenCalledWith("dm");
+      expect(setActiveWave).toHaveBeenCalledWith(null, {
+        isDirectMessage: true,
+      });
+    }
+  );
+
+  it.each(["other-native", "phone-web", "other-native-dm", "profile-feed"])(
+    "shares the requested phone Back motion for %s",
+    (surface) => {
+      mockIsApp = surface !== "phone-web";
+      mockIsIos = !surface.startsWith("other-native");
+      const query =
+        surface === "profile-feed"
+          ? { returnTo: "/waves?view=profile-feed" }
+          : {};
+      let pathname = "/waves/w1";
+      if (surface === "other-native-dm") pathname = "/messages/w1";
+      const { setActiveWave } = setup(query, {
+        activeWaveId: "w1",
+        pathname,
+        isDm: surface === "other-native-dm",
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(mockChevronBack).toHaveBeenCalledWith(
+        surface === "other-native-dm" ? "/messages" : "/waves",
+        expect.any(Function)
+      );
+      expect(setActiveWave).toHaveBeenCalledWith(
+        null,
+        surface === "profile-feed"
+          ? { profileFeed: true }
+          : { isDirectMessage: surface === "other-native-dm" }
+      );
+    }
+  );
+
+  it("preserves direct Back for an active wave in another section", () => {
+    mockIsApp = true;
+    mockIsIos = true;
+    const { setActiveWave } = setup(
+      {},
+      { activeWaveId: "w1", pathname: "/network" }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(mockChevronBack).not.toHaveBeenCalled();
+    expect(setActiveWave).toHaveBeenCalledWith(null, {
+      isDirectMessage: false,
+    });
+  });
+
+  it("clears the remembered wave only when the Back motion commits", () => {
+    mockIsApp = true;
+    let complete: () => void = () => undefined;
+    mockChevronBack.mockImplementationOnce((_, navigate) => {
+      complete = navigate;
+    });
+    const { setActiveWave } = setup(
+      {},
+      { activeWaveId: "w1", pathname: "/waves/w1" }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(mockClearLastVisited).not.toHaveBeenCalled();
+    expect(setActiveWave).not.toHaveBeenCalled();
+    act(() => complete());
+    expect(mockClearLastVisited).toHaveBeenCalledTimes(1);
+    expect(setActiveWave).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -191,6 +310,35 @@ describe("BackButton", () => {
     expect(mockGoBack).toHaveBeenCalled();
   });
 
+  it("stays busy only while navigation is pending and recovers afterward", async () => {
+    let finish = () => {};
+    mockGoBack.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      })
+    );
+    setup({});
+    const back = screen.getByRole("button", { name: "Back" });
+    fireEvent.click(back);
+    expect(back).toHaveAttribute("aria-busy", "true");
+    expect(back).toBeDisabled();
+    await act(async () => finish());
+    expect(back).toHaveAttribute("aria-busy", "false");
+    expect(back).toBeEnabled();
+  });
+
+  it("returns from the native feed to Waves without a route navigation", async () => {
+    mockIsApp = true;
+    const { setActiveWave, prefetch } = setup(
+      { view: "profile-feed" },
+      { pathname: "/waves", returnTo: "/waves" }
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(setActiveWave).toHaveBeenCalledWith(null);
+    expect(mockGoBackTo).not.toHaveBeenCalled();
+    expect(prefetch).not.toHaveBeenCalled();
+  });
+
   it("uses the explicit collected return target when provided", async () => {
     const returnTo =
       "/Shelby/collected?collection=memelab#collected-card-memelab-65";
@@ -202,7 +350,7 @@ describe("BackButton", () => {
 
     expect(mockGoBackTo).toHaveBeenCalledWith(returnTo);
     expect(mockGoBack).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Back" })).toBeEnabled();
     expect(screen.queryByTestId("spinner")).not.toBeInTheDocument();
   });
 });

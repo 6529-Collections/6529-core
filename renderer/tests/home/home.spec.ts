@@ -7,15 +7,6 @@ import {
 import { devices, type Page } from "@playwright/test";
 import { buildSync } from "esbuild";
 import {
-  decodeFunctionData,
-  encodeFunctionResult,
-  multicall3Abi,
-  toFunctionSelector,
-  zeroAddress,
-  zeroHash,
-} from "viem";
-import { MEMES_MANIFOLD_PROXY_ABI } from "../../abis/abis";
-import {
   getAppEnvironment,
   isLocalAppEnvironment,
 } from "../../config/appEnvironment";
@@ -27,19 +18,43 @@ import { gateSidebarHydration } from "../support/sidebarHydration";
 import { installSectionTrackingFixture } from "../support/sectionTrackingFixture";
 import { installReadonlyMutationGuard } from "../support/readonlyMutationGuard";
 import { RESPONSE_TIMEOUT_MS } from "../support/routeReadiness";
+import {
+  comingUpLeaderboard,
+  comingUpLeaderboardPattern,
+  comingUpSettings,
+  comingUpWave,
+  installComingUpFixture,
+  installCompletedMintStatus,
+  loadingTestArtwork,
+} from "./homeDropFixtures";
 
-const loadingTestArtwork = {
-  id: 536,
-  name: "Homepage loading test artwork",
-  artist: "Test artist",
-  artist_seize_handle: "",
-  image: "https://6529.io/home-loading-fixture.png",
-  scaled: "https://6529.io/home-loading-fixture.png",
-  animation: null,
-  floor_price: 0,
-  collection: "The Memes",
-  season: 1,
-};
+test.describe("Initial homepage HTML", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("home renders only resolved drop headings before browser data loads @smoke @medium @large", async ({
+    page,
+  }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const main = page.getByRole("main").first();
+    await expect(main).toBeAttached();
+    const labelledCards = page
+      .getByRole("main")
+      .first()
+      .locator("[data-home-drop]");
+    const headings = main.getByText(/^(Latest Drop|Next Drop)$/, {
+      exact: true,
+    });
+    const headingCount = await headings.count();
+    expect(headingCount).toBeLessThanOrEqual(1);
+    await expect(labelledCards).toHaveCount(headingCount);
+    if (headingCount === 1) {
+      await expect(
+        labelledCards.getByText(/^(Latest Drop|Next Drop)$/, { exact: true })
+      ).toHaveCount(1);
+    }
+  });
+});
 
 async function expectDesktopEnvironmentOverlay(page: Page) {
   const sidebar = page.getByLabel("Primary sidebar", { exact: true });
@@ -107,133 +122,6 @@ async function expectDesktopEnvironmentOverlay(page: Page) {
   ).toBe(true);
 }
 
-async function installLoadingTestArtwork(page: Page) {
-  await page.route("**/home-loading-fixture.png", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#777"/></svg>',
-    })
-  );
-  await page.route("https://rpc.walletconnect.org/**", (route) =>
-    // A terminal response exercises the unavailable state without transport retries.
-    route.fulfill({ status: 400, json: { error: "Fixture RPC unavailable" } })
-  );
-}
-
-async function installCompletedMintStatus(
-  page: Page,
-  ready: Promise<void> = Promise.resolve(),
-  tokenId = loadingTestArtwork.id
-) {
-  const claimResult = encodeFunctionResult({
-    abi: MEMES_MANIFOLD_PROXY_ABI,
-    functionName: "getClaimForToken",
-    result: [
-      1n,
-      {
-        total: 328,
-        totalMax: 328,
-        walletMax: 0,
-        startDate: 1,
-        endDate: 2,
-        storageProtocol: 0,
-        merkleRoot: zeroHash,
-        location: "",
-        tokenId: BigInt(tokenId),
-        cost: 0n,
-        paymentReceiver: zeroAddress,
-        erc20: zeroAddress,
-        signingAddress: zeroAddress,
-      },
-    ],
-  });
-  const selector = toFunctionSelector("getClaimForToken(address,uint256)");
-  await page.route("https://rpc.walletconnect.org/**", async (route) => {
-    const rpc = route.request().postDataJSON();
-    if (rpc.method !== "eth_call") {
-      await route.abort();
-      return;
-    }
-    await ready;
-    let result = claimResult;
-    if (!rpc.params[0].data.startsWith(selector)) {
-      const { args, functionName } = decodeFunctionData({
-        abi: multicall3Abi,
-        data: rpc.params[0].data,
-      });
-      if (functionName !== "aggregate3")
-        throw new Error("Unexpected fixture RPC call");
-      result = encodeFunctionResult({
-        abi: multicall3Abi,
-        functionName,
-        result: args[0].map((call) => ({
-          success: call.callData.startsWith(selector),
-          returnData: call.callData.startsWith(selector) ? claimResult : "0x",
-        })),
-      });
-    }
-    await route.fulfill({ json: { jsonrpc: "2.0", id: rpc.id, result } });
-  });
-}
-
-const comingUpWave = {
-  id: "00000000-0000-4000-8000-000000000529",
-  name: "Coming Up fixture",
-};
-const comingUpSettings = { memes_wave_id: comingUpWave.id };
-const comingUpLeaderboard = {
-  wave: comingUpWave,
-  count: 3,
-  page: 1,
-  next: false,
-  drops: [1, 2, 3].map((rank) => ({
-    id: `coming-up-${rank}`,
-    serial_no: rank,
-    title: `Coming Up artwork ${rank}`,
-    drop_type: "SUBMISSION",
-    created_at: 1,
-    is_signed: false,
-    hide_link_preview: false,
-    parts_count: 1,
-    boosts: 0,
-    author: {
-      id: "coming-up-artist",
-      handle: "coming-up-artist",
-      level: 1,
-      primary_address: "0x0000000000000000000000000000000000000529",
-      classification: "PSEUDONYM",
-      badges: {},
-    },
-  })),
-};
-const comingUpLeaderboardPattern = (url: URL) =>
-  /\/api\/v2\/waves\/[^/]+\/leaderboard$/.test(url.pathname) &&
-  url.searchParams.get("page_size") === "3";
-
-async function installComingUpFixture(page: Page) {
-  await installLoadingTestArtwork(page);
-  await page.route("**/api/memes_lite", (route) =>
-    route.fulfill({
-      json: {
-        data: Array.from({ length: 5 }, (_, index) => ({
-          ...loadingTestArtwork,
-          id: loadingTestArtwork.id - index,
-          name: `Recent Meme ${index}`,
-        })),
-      },
-    })
-  );
-  await page.route("**/api/settings", (route) =>
-    route.fulfill({ json: comingUpSettings })
-  );
-  await page.route("**/api/memes_latest", (route) =>
-    route.fulfill({ json: loadingTestArtwork })
-  );
-  await page.route("**/api/v2/waves/*/decisions?*", (route) =>
-    route.fulfill({ json: { data: [], page: 1, count: 0, next: false } })
-  );
-}
-
 test.describe("Coming up local decision time", () => {
   test.use({ timezoneId: "Asia/Shanghai", locale: "en-US" });
 
@@ -244,6 +132,9 @@ test.describe("Coming up local decision time", () => {
     const decision = new Date("2026-10-26T16:00:00Z");
     await page.clock.setFixedTime(now);
     await installComingUpFixture(page);
+    // Settle the synthetic mint instead of retaining live server artwork while
+    // resizing and scrolling to the independently mocked decision timestamp.
+    await installCompletedMintStatus(page);
     let waveRequests = 0;
     await page.route(`**/api/waves/${comingUpWave.id}`, (route) => {
       waveRequests += 1;
@@ -258,6 +149,7 @@ test.describe("Coming up local decision time", () => {
       route.fulfill({ json: comingUpLeaderboard })
     );
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForComingUpLayoutReady(page, RESPONSE_TIMEOUT_MS);
     const section = page.getByRole("region", {
       name: "Coming up",
       exact: true,
@@ -265,9 +157,7 @@ test.describe("Coming up local decision time", () => {
     const decisionLabel = page
       .getByRole("region", { name: "Coming up", exact: true })
       .locator("time");
-    await expect(decisionLabel).toHaveText(
-      "Next result tomorrow at 00:00."
-    );
+    await expect(decisionLabel).toHaveText("Next result tomorrow at 00:00.");
     await expect(decisionLabel).toHaveAttribute(
       "datetime",
       decision.toISOString()
@@ -357,7 +247,9 @@ test("Subscription Minting stays readable with the reference layout @smoke @medi
       const heading = await region
         .getByText("Subscription Minting", { exact: true })
         .boundingBox();
-      const action = region.getByRole("link", { name: /^(Set up|Manage|Choose drops)$/ });
+      const action = region.getByRole("link", {
+        name: /^(Set up|Manage|Choose drops)$/,
+      });
       const actionBox = await action.boundingBox();
       const infoBox = await region
         .getByRole("link", { name: "Learn more about The Memes subscriptions" })
@@ -418,11 +310,24 @@ test("Subscription Minting stays readable with the reference layout @smoke @medi
   }
 });
 
+async function waitForComingUpLayoutReady(page: Page, timeout = 5000) {
+  const artwork = page.getByRole("main").first().getByRole("img", {
+    name: loadingTestArtwork.name,
+    exact: true,
+  });
+  await expect(artwork).toBeVisible({ timeout });
+  await expect(
+    page.getByRole("region", { name: "How to start", exact: true })
+  ).toBeVisible({ timeout });
+  await page.evaluate(() => document.fonts.ready);
+}
+
 for (const cardCount of [1, 3]) {
   test(`Coming Up sizes ${cardCount} cards for the available width @smoke @medium @large`, async ({
     page,
   }, testInfo) => {
     await installComingUpFixture(page);
+    await installCompletedMintStatus(page);
     await page.route("**/coming-up-layout-*.png", (route) => {
       const rank = Number(
         /coming-up-layout-(\d)/.exec(route.request().url())?.[1]
@@ -453,6 +358,7 @@ for (const cardCount of [1, 3]) {
       })
     );
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForComingUpLayoutReady(page);
     const cards = page
       .getByRole("region", { name: "Coming up", exact: true })
       .getByTestId("coming-up-cards");
@@ -568,6 +474,7 @@ test.describe("Coming up avatar density", () => {
     page,
   }, testInfo) => {
     await installComingUpFixture(page);
+    await installCompletedMintStatus(page);
     const avatar =
       "https://media.6529usercontent.com/ipfs/coming-up-avatar-fixture";
     const optimizedWidths: number[] = [];
@@ -601,6 +508,7 @@ test.describe("Coming up avatar density", () => {
       })
     );
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForComingUpLayoutReady(page);
     const section = page.getByRole("region", {
       name: "Coming up",
       exact: true,
@@ -891,623 +799,245 @@ for (const slowEndpoint of ["leaderboard", "settings"] as const) {
   });
 }
 
-test("Coming Up does not mislabel the current artwork while Latest Drop is delayed @smoke @medium @large", async ({
+test("Discover controls fade offscreen options and hide the scrollbar @smoke @medium @large", async ({
   page,
-}) => {
-  await installComingUpFixture(page);
-  await page.route(comingUpLeaderboardPattern, (route) =>
-    route.fulfill({ json: comingUpLeaderboard })
-  );
-  await page.route("**/api/v2/waves/*/decisions?*", (route) =>
+  browserName,
+}, testInfo) => {
+  await page.route("**/api/v2/waves?*", (route) =>
     route.fulfill({
-      json: {
-        page: 1,
-        count: 1,
-        next: false,
-        data: [
-          {
-            decision_time: 1,
-            winners: [
-              {
-                place: 1,
-                awards: [],
-                drop: {
-                  ...comingUpLeaderboard.drops[0],
-                  title: loadingTestArtwork.name,
-                },
-              },
-            ],
-          },
-        ],
-      },
+      headers: { "access-control-allow-origin": "*" },
+      json: { data: [], page: 1, count: 0, next: false },
     })
   );
-  let releaseArtwork!: () => void;
-  const artworkReady = new Promise<void>((resolve) => {
-    releaseArtwork = resolve;
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.goto("/discover", { waitUntil: "domcontentloaded" });
+  const controls = page.getByRole("group", { name: "Discovery controls" });
+  const scroller = page
+    .getByRole("group", { name: "Discovery controls" })
+    .locator("[data-discovery-controls-scroll]");
+  const leftFade = page
+    .getByRole("group", { name: "Discovery controls" })
+    .locator('[data-wave-tabs-fade="left"]');
+  const rightFade = page
+    .getByRole("group", { name: "Discovery controls" })
+    .locator('[data-wave-tabs-fade="right"]');
+  const leftArrow = controls.getByRole("button", {
+    name: "Scroll filters left",
   });
-  await page.route("**/api/memes_latest", async (route) => {
-    await artworkReady;
-    await route.fulfill({ json: loadingTestArtwork });
+  const rightArrow = controls.getByRole("button", {
+    name: "Scroll filters right",
   });
-  try {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    const comingUp = page.getByRole("region", {
-      name: "Coming up",
-      exact: true,
-    });
-    await expect(
-      comingUp.getByRole("link", { name: "Coming Up artwork 3", exact: true })
-    ).toBeVisible();
-    await expect(comingUp.getByText("NEXT MINT", { exact: true })).toHaveCount(
-      0
-    );
-    releaseArtwork();
-    await expect(
-      page.getByRole("link", { name: loadingTestArtwork.name, exact: true })
-    ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-    await expect(comingUp.getByText("NEXT MINT", { exact: true })).toHaveCount(
-      0
-    );
-    await expect(
-      comingUp.getByRole("link", { name: "Coming Up artwork 3", exact: true })
-    ).toBeVisible();
-  } finally {
-    releaseArtwork();
+  await expect(scroller).toHaveCSS("scrollbar-width", "none");
+  if (browserName !== "firefox") {
+    expect(
+      await scroller.evaluate(
+        (element) => getComputedStyle(element, "::-webkit-scrollbar").display
+      )
+    ).toBe("none");
   }
-});
+  await expect(leftFade).toHaveCSS("opacity", "0");
+  await expect(rightFade).toHaveCSS("opacity", "1");
+  await expect(rightFade).toHaveCSS("pointer-events", "none");
+  await controls.screenshot({
+    path: testInfo.outputPath("controls-start.png"),
+  });
 
-test("homepage waits for initial settings and recovers from failed mint status @smoke @medium @large", async ({
-  page,
-}) => {
-  await installLoadingTestArtwork(page);
-  await page.route("**/api/memes_latest", (route) =>
-    route.fulfill({ json: loadingTestArtwork })
-  );
-  let releaseSettings!: () => void;
-  const settingsReady = new Promise<void>((resolve) => {
-    releaseSettings = resolve;
-  });
-  await page.route("**/api/v2/waves/*/decisions?*", (route) =>
-    route.fulfill({ json: { data: [], page: 1, count: 0, next: false } })
-  );
-  await page.route("**/api/settings", async (route) => {
-    await settingsReady;
-    await route.fulfill({ json: comingUpSettings });
-  });
-  try {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    const artwork = page
-      .getByRole("main")
-      .locator('[data-home-section="Latest drop"]');
-    await expect(page.getByText("Latest Drop", { exact: true })).toBeVisible();
-    await expect(artwork).toHaveCount(0);
-    releaseSettings();
-    const image = artwork.getByRole("img", {
-      name: loadingTestArtwork.name,
-      exact: true,
-    });
-    await expect(image).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-    await expect
-      .poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth))
-      .toBeGreaterThan(0);
-    await expect(
-      artwork.getByText("Unavailable", { exact: true }).first()
-    ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-    await expect(image).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Your allowance" })
-    ).toHaveCount(0);
-    await expect(
-      page.getByText("Connect your wallet to view details.", { exact: true })
-    ).toHaveCount(0);
-    await expectNoHorizontalOverflow(page);
-  } finally {
-    releaseSettings();
-  }
-});
-
-test("homepage reuses fast roots after mint details mount @smoke @medium @large", async ({
-  page,
-}) => {
-  await installComingUpFixture(page);
-  let releaseClaim!: () => void;
-  const claimReady = new Promise<void>((resolve) => {
-    releaseClaim = resolve;
-  });
-  await installCompletedMintStatus(page, claimReady);
-  await page.route(comingUpLeaderboardPattern, (route) =>
-    route.fulfill({ json: comingUpLeaderboard })
-  );
-  let rootsRequests = 0;
-  await page.route("**/api/minting-claims/*/*/roots", (route) => {
-    rootsRequests += 1;
-    return route.fulfill({ json: [] });
-  });
-  try {
-    const rootsResponse = page.waitForResponse(
-      "**/api/minting-claims/*/*/roots"
-    );
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await (await rootsResponse).finished();
-    await expect(
-      page
-        .getByRole("main")
-        .first()
-        .locator('[data-home-section="Latest drop"]')
-    ).toHaveCount(0);
-    expect(rootsRequests).toBe(1);
-    releaseClaim();
-    const latest = page
-      .getByRole("main")
-      .first()
-      .locator('[data-home-section="Latest drop"]');
-    const image = latest.getByRole("img", {
-      name: loadingTestArtwork.name,
-      exact: true,
-    });
-    await expect(image).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-    await expect
-      .poll(() => image.evaluate((el: HTMLImageElement) => el.naturalWidth))
-      .toBeGreaterThan(0);
-    await expect(
-      latest.getByText("All editions have been minted!", { exact: true })
-    ).toBeVisible();
-    expect(rootsRequests).toBe(1);
-  } finally {
-    releaseClaim();
-  }
-});
-
-test("homepage reads fresh roots on same-card SPA return @smoke @medium @large", async ({
-  page,
-}) => {
-  await installComingUpFixture(page);
-  await installCompletedMintStatus(page);
-  await page.route(comingUpLeaderboardPattern, (route) =>
-    route.fulfill({ json: comingUpLeaderboard })
-  );
-  let rootsRequests = 0;
-  await page.route("**/api/minting-claims/*/*/roots", (route) => {
-    rootsRequests += 1;
-    return route.fulfill({ json: [] });
-  });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  const latest = page
-    .getByRole("main")
-    .first()
-    .locator('[data-home-section="Latest drop"]');
+  await rightArrow.click();
+  await expect(leftFade).toHaveCSS("opacity", "1");
+  await expect(rightFade).toHaveCSS("opacity", "0");
+  await expect(leftArrow).toBeFocused();
+  await controls.getByRole("radio", { name: "REP 60+" }).click();
+  await expect(page).toHaveURL(/filter=REP_60/);
   await expect(
-    latest.getByText("All editions have been minted!", { exact: true })
-  ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-  expect(rootsRequests).toBe(1);
-  const documentStart = await page.evaluate(() => performance.timeOrigin);
-  await page.getByRole("link", { name: "Start here", exact: true }).click();
-  await page.waitForURL(/\/join-6529$/);
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentStart);
-  await page.goBack();
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentStart);
+    controls.getByRole("radio", { name: "REP 60+" })
+  ).toHaveAttribute("aria-checked", "true");
+  await controls.screenshot({ path: testInfo.outputPath("controls-end.png") });
+
+  await leftArrow.click();
+  await controls
+    .getByRole("button", { name: "Wave discovery sort: Balanced" })
+    .click();
+  const sortSheet = page.getByRole("dialog", { name: "Wave discovery sort" });
+  await sortSheet.getByRole("button", { name: "Quality", exact: true }).click();
+  await expect(sortSheet).not.toBeVisible();
+  await expect(page).toHaveURL(/sort=QUALITY/);
+  const selectedFilter = controls.getByRole("radio", { name: "REP 60+" });
+  await selectedFilter.focus();
+  await selectedFilter.press("Home");
   await expect(
-    latest.getByRole("img", { name: loadingTestArtwork.name, exact: true })
-  ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-  await expect.poll(() => rootsRequests).toBe(2);
+    controls.getByRole("radio", { name: "All", exact: true })
+  ).toBeFocused();
   await expect(
-    latest.getByText("All editions have been minted!", { exact: true })
-  ).toBeVisible();
-  expect(rootsRequests).toBe(2);
+    controls.getByRole("radio", { name: "All", exact: true })
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(page).not.toHaveURL(/filter=REP_60/);
+  await expect(
+    controls.getByRole("radio", { name: "All", exact: true })
+  ).toBeInViewport({ ratio: 1 });
+  await expectNoHorizontalOverflow(page);
+
+  await leftArrow.focus();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(leftFade).toHaveCSS("opacity", "0");
+  await expect(rightFade).toHaveCSS("opacity", "0");
+  await expect(leftArrow).not.toBeVisible();
+  await expect(rightArrow).not.toBeVisible();
+  await expect(
+    controls.getByRole("tab", { name: "Quality", exact: true })
+  ).toBeFocused();
+  await expect(scroller).toHaveCSS("scrollbar-width", "none");
+  await expectNoHorizontalOverflow(page);
+  await controls.screenshot({ path: testInfo.outputPath("controls-wide.png") });
 });
 
-for (const rootsStatus of [200, 503]) {
-  test(`homepage shares pending roots without delaying or replacing artwork (${rootsStatus}) @smoke @medium @large`, async ({
-    page,
-  }, testInfo) => {
-    await installComingUpFixture(page);
-    await installCompletedMintStatus(page);
-    await page.route(comingUpLeaderboardPattern, (route) =>
-      route.fulfill({ json: comingUpLeaderboard })
-    );
-    let releaseRoots!: () => void;
-    const rootsReady = new Promise<void>((resolve) => {
-      releaseRoots = resolve;
-    });
-    let rootsRequests = 0;
-    await page.route("**/api/minting-claims/*/*/roots", async (route) => {
-      rootsRequests += 1;
-      await rootsReady;
-      await route.fulfill({
-        status: rootsStatus,
-        json: rootsStatus === 200 ? [] : { error: "Fixture roots unavailable" },
-      });
-    });
-    const started = Date.now();
-    try {
-      await page.goto("/", { waitUntil: "domcontentloaded" });
-      const latest = page
-        .getByRole("main")
-        .first()
-        .locator('[data-home-section="Latest drop"]');
-      const image = latest.getByRole("img", {
-        name: loadingTestArtwork.name,
-        exact: true,
-      });
-      await expect(image).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-      await expect
-        .poll(() =>
-          image.evaluate((element: HTMLImageElement) => element.naturalWidth)
-        )
-        .toBeGreaterThan(0);
-      await expect
-        .poll(() =>
-          image.evaluate((element: HTMLImageElement) => element.currentSrc)
-        )
-        .toContain("home-loading-fixture.png");
-      await expect(
-        latest.getByText("All editions have been minted!", { exact: true })
-      ).toBeVisible();
-      await expect(
-        latest.getByRole("link", { name: loadingTestArtwork.name, exact: true })
-      ).toHaveAttribute("href", `/the-memes/${loadingTestArtwork.id}`);
-      expect(rootsRequests).toBe(1);
-
-      const artworkVisibleMs = Date.now() - started;
-      const completed = page.waitForResponse((response) =>
-        /\/api\/minting-claims\/[^/]+\/\d+\/roots$/.test(
-          new URL(response.url()).pathname
-        )
-      );
-      releaseRoots();
-      await completed;
-      await expect(image).toBeVisible();
-      await expect(
-        latest.getByText("All editions have been minted!", { exact: true })
-      ).toBeVisible();
-      expect(rootsRequests).toBe(1);
-      await testInfo.attach("roots-request-evidence", {
-        contentType: "application/json",
-        body: JSON.stringify({
-          rootsStatus,
-          rootsRequests,
-          artworkVisibleMs,
-          artworkVisibleBeforeRootsResponse: true,
-        }),
-      });
-    } finally {
-      releaseRoots();
-    }
-  });
-}
-
-test("homepage keeps newer artwork when old roots finish after back navigation @smoke @medium @large", async ({
-  page,
-}) => {
-  const initialTime = new Date("2026-11-13T12:00:00Z");
-  await page.clock.setFixedTime(initialTime);
-  await installComingUpFixture(page);
-  await installCompletedMintStatus(page);
-  await page.route(comingUpLeaderboardPattern, (route) =>
-    route.fulfill({ json: comingUpLeaderboard })
-  );
-  const newerArtwork = {
-    ...loadingTestArtwork,
-    id: loadingTestArtwork.id + 1,
-    name: "Newer homepage artwork",
-    image: "https://6529.io/home-rollover-fixture.png",
-    scaled: "https://6529.io/home-rollover-fixture.png",
-  };
-  await page.route("**/home-rollover-fixture.png", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#579"/></svg>',
-    })
-  );
-  let showNewCard = false;
-  await page.route("**/api/memes_latest", (route) =>
-    route.fulfill({ json: showNewCard ? newerArtwork : loadingTestArtwork })
-  );
-  let releaseOldRoots!: () => void;
-  const oldRootsReady = new Promise<void>((resolve) => {
-    releaseOldRoots = resolve;
-  });
-  await page.route("**/api/minting-claims/*/*/roots", async (route) => {
-    if (
-      new URL(route.request().url()).pathname.endsWith(
-        `/${loadingTestArtwork.id}/roots`
-      )
-    ) {
-      await oldRootsReady;
-    }
-    await route.fulfill({ json: [] });
-  });
-  try {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    const latest = page
-      .getByRole("main")
-      .first()
-      .locator('[data-home-section="Latest drop"]');
-    await expect(
-      latest.getByRole("img", { name: loadingTestArtwork.name, exact: true })
-    ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-    const initialDocument = await page.evaluate(() => performance.timeOrigin);
-    await page.getByRole("link", { name: "Start here", exact: true }).click();
-    await page.waitForURL(/\/join-6529$/);
-    expect(await page.evaluate(() => performance.timeOrigin)).toBe(
-      initialDocument
-    );
-    showNewCard = true;
-    await installCompletedMintStatus(page, Promise.resolve(), newerArtwork.id);
-    await page.clock.setFixedTime(new Date(initialTime.getTime() + 11_000));
-    await page.goBack();
-    const image = latest.getByRole("img", {
-      name: newerArtwork.name,
-      exact: true,
-    });
-    await expect(image).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-    await expect
-      .poll(() =>
-        image.evaluate((element: HTMLImageElement) => element.naturalWidth)
-      )
-      .toBeGreaterThan(0);
-    await expect
-      .poll(() =>
-        image.evaluate((element: HTMLImageElement) => element.currentSrc)
-      )
-      .toContain("home-rollover-fixture.png");
-    const oldResponse = page.waitForResponse((response) =>
-      new URL(response.url()).pathname.endsWith(
-        `/${loadingTestArtwork.id}/roots`
-      )
-    );
-    releaseOldRoots();
-    await oldResponse;
-    await expect(image).toBeVisible();
-    await expect
-      .poll(() =>
-        image.evaluate((element: HTMLImageElement) => element.currentSrc)
-      )
-      .toContain("home-rollover-fixture.png");
-    await expect(
-      latest.getByRole("img", { name: loadingTestArtwork.name, exact: true })
-    ).toHaveCount(0);
-    await expect(
-      latest.getByRole("link", { name: newerArtwork.name, exact: true })
-    ).toHaveAttribute("href", `/the-memes/${newerArtwork.id}`);
-  } finally {
-    releaseOldRoots();
-  }
-});
-
-test("Latest Drop keeps multiple artist links spaced within the card @smoke @medium @large", async ({
+test("Active Votes keeps full-height artwork and every metric visible at responsive widths @smoke @medium @large", async ({
   page,
 }, testInfo) => {
-  await installComingUpFixture(page);
-  const handles = [
-    "phoebeum",
-    "prxt0alt",
-    "artist-with-a-very-long-handle".repeat(3),
-  ];
-  await page.route("**/api/identities/*", (route) =>
-    route.fulfill({ status: 503, json: { error: "Unavailable" } })
-  );
-  await page.route("**/api/memes_latest", (route) =>
-    route.fulfill({
-      json: { ...loadingTestArtwork, artist_seize_handle: handles.join(", ") },
-    })
-  );
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  const section = page
-    .getByRole("main")
-    .locator('[data-home-section="Latest drop"]');
-  const artists = page
-    .getByRole("main")
-    .locator(
-      '[data-home-section="Latest drop"] [data-home-action="Open artist profile"]'
-    );
-  await expect(
-    section.getByRole("link", { name: loadingTestArtwork.name, exact: true })
-  ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-  await expect(artists).toHaveCount(handles.length);
-  const boxes = [];
-  for (const handle of handles) {
-    const link = section.getByRole("link", { name: handle, exact: true });
-    await expect(link).toHaveAttribute("href", `/${handle}`);
-    const box = await link.boundingBox();
-    if (!box) throw new Error("Artist link must be visible");
-    boxes.push(box);
-  }
-  for (let index = 1; index < boxes.length; index++) {
-    const previous = boxes[index - 1]!;
-    const current = boxes[index]!;
-    if (Math.abs(current.y - previous.y) < 1) {
-      expect(current.x - previous.x - previous.width).toBeGreaterThanOrEqual(
-        20
-      );
-    } else {
-      expect(current.y - previous.y - previous.height).toBeGreaterThanOrEqual(
-        12
-      );
-    }
-  }
-  await expectNoHorizontalOverflow(page);
-  await section.screenshot({
-    path: testInfo.outputPath("latest-drop-artists.png"),
-  });
-});
-
-test("homepage selects Next Drop without flashing the previous artwork @smoke @medium @large", async ({
-  page,
-}) => {
-  await installComingUpFixture(page);
-  const winner = {
-    ...comingUpLeaderboard.drops[0],
-    id: "next-drop-loading-fixture",
-    title: "Upcoming artwork fixture",
-    wave: comingUpWave,
-    media: [{ mime_type: "image/png", url: loadingTestArtwork.image }],
-    metadata: [],
-    collaborators: Array.from({ length: 3 }, (_, index) => ({
-      id: `next-credit-${index}`,
-      handle: `next-collaborator-with-a-long-name-${index}`,
-      display: `Collaborator ${index}`,
-      pfp: loadingTestArtwork.image,
-    })),
-    submission_context: {
-      meme_card_id: 537,
-      voting: { current_calculated_vote: 0 },
+  const data = [0, 2, null, 1, null, 3].map((count, index) => ({
+    voting_ends_at: null,
+    next_decision_at: null,
+    active_submission_count: count,
+    wave: {
+      id: `discover-layout-${index}`,
+      name: `Community proposal ${index} with a long wave name`,
+      pfp: "https://6529.io/discover-cover-fixture.png",
+      creator: null,
+      created_at: 0,
+      last_drop_time: 0,
+      has_competition: true,
+      is_dm_wave: false,
+      is_private: false,
+      total_drops_count: 2,
+      description_drop: {
+        contents:
+          "- **QUORUM Proposal Template** and [details](https://example.com)",
+        media: [],
+      },
+      wave_score: { visibility_score: 100, hotness_score: 100 },
+      wave_rep: { total_rep: index % 2 === 0 ? 1250 : -1250 },
     },
-  };
-  await page.route("**/api/identities/next-credit-*", (route) =>
-    route.fulfill({ status: 503, json: { error: "Unavailable" } })
-  );
-  await page.route(`**/api/waves/${comingUpWave.id}`, (route) =>
+  }));
+  await page.route("**/api/v2/waves/active-votes?*", (route) =>
     route.fulfill({
-      json: {
-        ...comingUpWave,
-        author: winner.author,
-        description_drop: { id: "description" },
-        voting: { scope: {}, credit_type: "TDH" },
-        participation: { scope: {} },
-        chat: { scope: {} },
-        visibility: { scope: {} },
-        wave: { admin_group: {} },
-      },
+      headers: { "access-control-allow-origin": "*" },
+      json: { page: 1, next: false, count: data.length, data },
     })
   );
-  let releaseWinner!: () => void;
-  const winnerReady = new Promise<void>((resolve) => {
-    releaseWinner = resolve;
-  });
-  await page.route("**/api/v2/waves/*/decisions?*", async (route) => {
-    await winnerReady;
-    await route.fulfill({
-      json: {
-        data: [
-          {
-            decision_time: 1,
-            winners: [{ place: 1, awards: [], drop: winner }],
-          },
-        ],
-        page: 1,
-        count: 1,
-        next: false,
-      },
-    });
-  });
-  let releaseStatus!: () => void;
-  const statusReady = new Promise<void>((resolve) => {
-    releaseStatus = resolve;
-  });
-  await installCompletedMintStatus(page, statusReady);
-  await page.addInitScript(() => {
-    new MutationObserver(() => {
-      if (document.querySelector('[data-home-section="Latest drop"]')) {
-        document.documentElement.dataset["previousDropRendered"] = "true";
-      }
-    }).observe(document, { childList: true, subtree: true });
-  });
-  try {
-    const artworkResponse = page.waitForResponse("**/api/memes_latest");
-    const statusRequest = page.waitForRequest(
-      (request) =>
-        request.url().startsWith("https://rpc.walletconnect.org/") &&
-        request.postDataJSON()?.method === "eth_call"
-    );
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await artworkResponse;
-    await statusRequest;
-    await expect(page.getByText("Latest Drop", { exact: true })).toBeVisible();
-    await expect(
-      page.getByRole("main").locator('[data-home-section="Latest drop"]')
-    ).toHaveCount(0);
-    const winnerResponse = page.waitForResponse(
-      "**/api/v2/waves/*/decisions?*"
-    );
-    releaseWinner();
-    await winnerResponse;
-    await expect(
-      page.getByRole("link", { name: winner.title, exact: true })
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("main").locator('[data-home-section="Latest drop"]')
-    ).toHaveCount(0);
-    releaseStatus();
-    await expect(page.getByText("Next Drop", { exact: true })).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: winner.title, exact: true })
-    ).toBeVisible();
-    await expect(page.locator("html")).not.toHaveAttribute(
-      "data-previous-drop-rendered",
-      "true"
-    );
-    await expect(
-      page.getByRole("heading", { name: "Your allowance" })
-    ).toHaveCount(0);
-    await expect(
-      page.getByText("Connect your wallet to view details.", { exact: true })
-    ).toHaveCount(0);
-    const credits = page
-      .getByRole("main")
-      .locator('[data-home-section="Next drop"]')
-      .getByRole("list", { name: "Collaborators" });
-    await expect(credits.getByRole("listitem")).toHaveCount(3);
-    const layout = await credits.evaluate((list) => {
-      const group = list.parentElement!;
-      const artist = group.parentElement!.previousElementSibling!;
-      return {
-        artistGap:
-          group.getBoundingClientRect().top -
-          artist.getBoundingClientRect().bottom,
-        rows: Array.from(list.children, (row) =>
-          row.getBoundingClientRect().toJSON()
-        ),
-      };
-    });
-    expect(layout.artistGap).toBeGreaterThanOrEqual(16);
-    for (let index = 1; index < layout.rows.length; index++) {
-      expect(
-        layout.rows[index]!.top - layout.rows[index - 1]!.bottom
-      ).toBeGreaterThanOrEqual(12);
-    }
-    await expectNoHorizontalOverflow(page);
-  } finally {
-    releaseWinner();
-    releaseStatus();
-  }
-});
-
-test("homepage artwork request has a visible failure and retry @smoke @medium @large", async ({
-  page,
-}) => {
-  await installLoadingTestArtwork(page);
-  let failing = true;
-  await page.route("**/api/memes_latest", (route) =>
-    failing
-      ? route.fulfill({
-          status: 503,
-          json: { error: "Temporarily unavailable" },
-        })
-      : route.fulfill({ json: loadingTestArtwork })
+  await page.route("**/_next/image?*", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="92" height="92"><rect width="92" height="92" fill="#161616"/></svg>',
+    })
   );
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/discover?view=active-votes", {
+    waitUntil: "domcontentloaded",
+  });
+  const section = page
+    .getByRole("region", { name: "Active Votes", exact: true })
+    .last();
+  const cards = section.getByRole("link", {
+    name: /^View wave Community proposal/,
+  });
+  await expect(cards).toHaveCount(data.length);
   await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "We couldn’t load the latest artwork." })
-  ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-  failing = false;
-  await page.getByRole("button", { name: "Try again", exact: true }).click();
+    section.getByText("0 active submissions", { exact: true })
+  ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: loadingTestArtwork.name, exact: true })
-  ).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
-  await expect(
-    page.getByRole("button", { name: "Try again", exact: true })
-  ).toHaveCount(0);
-  await expectNoHorizontalOverflow(page);
+    section.getByText("2 active submissions", { exact: true })
+  ).toBeVisible();
+  const countBadge = section
+    .getByRole("heading", { name: /^Active Votes/ })
+    .locator("span");
+  for (const width of [320, 390, 640, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expectNoHorizontalOverflow(page);
+    const badgeBox = (await countBadge.boundingBox())!;
+    expect(Math.abs(badgeBox.width - badgeBox.height)).toBeLessThanOrEqual(0.5);
+
+    for (const card of await cards.all()) {
+      await expect(
+        card.getByText("QUORUM Proposal Template and details", {
+          exact: true,
+        })
+      ).toBeVisible();
+      const layout = await card.evaluate((element) => {
+        const cover = element.firstElementChild!;
+        const metrics = element.querySelector(".explore-wave-card-metrics")!;
+        return {
+          card: element.getBoundingClientRect().toJSON(),
+          cover: cover.getBoundingClientRect().toJSON(),
+          metrics: Array.from(
+            metrics.querySelectorAll("[aria-label]"),
+            (metric) => ({
+              box: metric.getBoundingClientRect().toJSON(),
+              icon: metric
+                .querySelector("svg")!
+                .getBoundingClientRect()
+                .toJSON(),
+              label: metric.children[1]!.getBoundingClientRect().toJSON(),
+              value: metric.children[2]!.getBoundingClientRect().toJSON(),
+              clipped: metric.scrollWidth > metric.clientWidth,
+            })
+          ),
+        };
+      });
+      expect(layout.cover.width).toBe(width < 640 ? 80 : 96);
+      expect(layout.cover.height).toBeCloseTo(layout.card.height, 1);
+      expect(layout.cover.left).toBeCloseTo(layout.card.left, 1);
+      expect(layout.cover.top).toBeCloseTo(layout.card.top, 1);
+      expect(layout.cover.bottom).toBeCloseTo(layout.card.bottom, 1);
+      expect(layout.metrics).toHaveLength(3);
+      for (const metric of layout.metrics) {
+        expect(metric.clipped).toBe(false);
+        const iconCenter = metric.icon.top + metric.icon.height / 2;
+        for (const text of [metric.label, metric.value]) {
+          expect(
+            Math.abs(iconCenter - (text.top + text.height / 2))
+          ).toBeLessThanOrEqual(0.5);
+        }
+        expect(metric.box.left).toBeGreaterThan(layout.cover.right);
+        expect(metric.box.right).toBeLessThanOrEqual(layout.card.right - 12);
+        expect(metric.box.bottom).toBeLessThanOrEqual(layout.card.bottom - 12);
+      }
+      if (width === 1440) {
+        expect(
+          new Set(layout.metrics.map((metric) => metric.box.top)).size
+        ).toBe(1);
+        expect(layout.card.height).toBe(116);
+      }
+    }
+    if (width === 390 || width === 1440) {
+      await page.screenshot({
+        path: testInfo.outputPath(`active-votes-${width}.png`),
+      });
+    }
+  }
+  const restingShadow = await cards
+    .first()
+    .evaluate((element) => getComputedStyle(element).boxShadow);
+  await cards.first().focus();
+  await expect(cards.first()).toBeFocused();
+  await expect(cards.first()).not.toHaveCSS("box-shadow", "none");
+  await expect
+    .poll(() =>
+      cards.first().evaluate((element) => getComputedStyle(element).boxShadow)
+    )
+    .not.toBe(restingShadow);
+  await cards.first().hover();
+  await expect(cards.first()).toHaveCSS("transform", "none");
+  await expect(cards.first().getByRole("img")).toHaveCSS("transform", "none");
+  await expect(cards.first()).toHaveAttribute(
+    "href",
+    "/waves/discover-layout-0"
+  );
 });
 
 test.describe("Home Page @smoke @medium @large", () => {
   test.beforeEach(async ({ page }) => {
     // Layout and hover assertions must not depend on a live voting round.
     await installComingUpFixture(page);
+    await installCompletedMintStatus(page);
     await page.route(comingUpLeaderboardPattern, (route) =>
       route.fulfill({ json: comingUpLeaderboard })
     );
@@ -1518,17 +1048,18 @@ test.describe("Home Page @smoke @medium @large", () => {
   test("hero keeps the approved copy and actions in a responsive typography layout @smoke", async ({
     page,
   }, testInfo) => {
-    await installCompletedMintStatus(page);
     await page.reload({ waitUntil: "domcontentloaded" });
     const hero = page
       .getByRole("main")
       .first()
       .locator('[data-home-section="Introduction"]');
     const heading = hero.getByRole("heading", { level: 1 });
-    await expect(heading).toHaveText("Building a decentralized network state");
+    await expect(heading).toHaveText(
+      "A peer-to-peer protocol for network organizations"
+    );
     await expect(
       hero.getByText(
-        "A decentralized, permissionless global network that funds, builds, and coordinates public-goods work across art, science, culture, and technology."
+        "Decentralized, permissionless, and global. Anyone can fund, build, and coordinate network-scaled organizations or public goods."
       )
     ).toBeVisible();
     const actions = page
@@ -1604,8 +1135,12 @@ test.describe("Home Page @smoke @medium @large", () => {
       "Create profile",
       "Join a Wave",
     ]);
-    await expect(start.getByRole("heading", { name: "Collect or create" })).toBeVisible();
-    await expect(start.getByRole("link", { name: "Collect or create", exact: true })).toHaveCount(0);
+    await expect(
+      start.getByRole("heading", { name: "Collect or create" })
+    ).toBeVisible();
+    await expect(
+      start.getByRole("link", { name: "Collect or create", exact: true })
+    ).toHaveCount(0);
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 1100 });
       for (const action of await actions.all()) {
@@ -1640,10 +1175,19 @@ test.describe("Home Page @smoke @medium @large", () => {
     }
     await Promise.all([
       page.waitForURL(/\/about\/apply$/, { waitUntil: "domcontentloaded" }),
-      start.getByRole("link", { name: "submit your own art", exact: true }).click(),
+      start
+        .getByRole("link", { name: "submit your own art", exact: true })
+        .click(),
     ]);
-    await expect(page.getByRole("heading", { name: "Apply", exact: true, level: 1 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Seeking a Nomination (New Artists)", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Apply", exact: true, level: 1 })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: "Seeking a Nomination (New Artists)",
+        exact: true,
+      })
+    ).toBeVisible();
   });
 
   test("homepage wave cards use desktop artwork overlays and preserve mobile details", async ({
@@ -1676,12 +1220,19 @@ test.describe("Home Page @smoke @medium @large", () => {
         await card.scrollIntoViewIfNeeded();
         const hasArtwork = (await card.getByRole("img").count()) > 0;
         const expectedTint = width >= 768 && hasArtwork ? "58 7 7" : "";
-        await expect.poll(() => card.evaluate((element) => {
-          const details = element.lastElementChild!;
-          return getComputedStyle(details).getPropertyValue("--card-tint").trim();
-        })).toBe(expectedTint);
-        const gradient = await card.evaluate((element) =>
-          getComputedStyle(element.lastElementChild!).backgroundImage
+        await expect
+          .poll(() =>
+            card.evaluate((element) => {
+              const details = element.lastElementChild!;
+              return getComputedStyle(details)
+                .getPropertyValue("--card-tint")
+                .trim();
+            })
+          )
+          .toBe(expectedTint);
+        const gradient = await card.evaluate(
+          (element) =>
+            getComputedStyle(element.lastElementChild!).backgroundImage
         );
         if (width < 768) {
           expect(gradient).toBe("none");
@@ -1716,7 +1267,10 @@ test.describe("Home Page @smoke @medium @large", () => {
           };
         });
         if (width < 768) {
-          expect(layout.cover.width).toBeCloseTo((layout.card.width - 2) / 3, 0);
+          expect(layout.cover.width).toBeCloseTo(
+            (layout.card.width - 2) / 3,
+            0
+          );
           expect(layout.cover.right).toBeCloseTo(layout.details.left, 0);
           expect(layout.cover.top).toBeCloseTo(layout.details.top, 0);
         } else {
@@ -1789,7 +1343,7 @@ test.describe("Home Page @smoke @medium @large", () => {
               .trim()
           )
         )
-        .toBe("7 7 58");
+        .toBe("19 19 58");
       const layout = await firstCard.evaluate((card) => {
         const cover = card.firstElementChild!;
         const details = card.lastElementChild!;
@@ -1809,11 +1363,12 @@ test.describe("Home Page @smoke @medium @large", () => {
       expect(layout.cover.width).toBeCloseTo(layout.card.width, 0);
       expect(layout.cover.height).toBeCloseTo(layout.card.height, 0);
       expect(layout.card.height).toBeCloseTo(
-        width < 768 ? Math.max(layout.card.width, 288) : layout.card.width, 0
+        width < 768 ? Math.max(layout.card.width, 288) : layout.card.width,
+        0
       );
       expect(layout.details.top).toBeGreaterThan(layout.card.top);
       expect(layout.metrics.bottom).toBeLessThan(layout.card.bottom);
-      expect(layout.gradient).toContain("rgb(7, 7, 58) calc(100% - 60px)");
+      expect(layout.gradient).toContain("rgb(19, 19, 58) calc(100% - 60px)");
       if (width === 390 || width === 1440) {
         await page.screenshot({
           path: testInfo.outputPath(`discover-cards-${width}.png`),
@@ -1844,7 +1399,7 @@ test.describe("Home Page @smoke @medium @large", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Building a decentralized network state",
+        name: "A peer-to-peer protocol for network organizations",
       })
     ).toBeVisible();
     await expect(
@@ -2159,7 +1714,8 @@ test.describe("Home Page @smoke @medium @large", () => {
     expect(compact.timer.top).toBeGreaterThanOrEqual(compact.row.top + 12);
     expect(
       Math.abs(
-        compact.timer.left + compact.timer.width / 2 -
+        compact.timer.left +
+          compact.timer.width / 2 -
           (compact.row.left + compact.row.width / 2)
       )
     ).toBeLessThanOrEqual(1);
@@ -2199,10 +1755,13 @@ test.describe("Home Page @smoke @medium @large", () => {
           };
         });
         // The timer stays centered in its own row below the complete heading.
-        expect(mobileLayout.timer.top).toBeGreaterThan(mobileLayout.phase.bottom);
+        expect(mobileLayout.timer.top).toBeGreaterThan(
+          mobileLayout.phase.bottom
+        );
         expect(
           Math.abs(
-            mobileLayout.timer.left + mobileLayout.timer.width / 2 -
+            mobileLayout.timer.left +
+              mobileLayout.timer.width / 2 -
               (mobileLayout.box.left + mobileLayout.box.width / 2)
           )
         ).toBeLessThanOrEqual(1);
@@ -2296,10 +1855,13 @@ test.describe("Home Page @smoke @medium @large", () => {
 
     await page.emulateMedia({ reducedMotion: "no-preference" });
     if (isDesktopWebProject(testInfo.project.name)) {
-      const dropTitle = page.getByRole("link", {
-        name: loadingTestArtwork.name,
-        exact: true,
-      });
+      const dropTitle = page
+        .getByRole("main")
+        .first()
+        .locator("[data-home-drop]")
+        .locator(
+          '[data-home-action="Open artwork"], [data-home-action="Open drop"]'
+        );
       await expect(dropTitle).toBeVisible({ timeout: RESPONSE_TIMEOUT_MS });
       await dropTitle.hover();
       await expect(dropTitle).toHaveCSS("color", "rgb(206, 207, 212)");
@@ -2315,15 +1877,25 @@ test.describe("Home Page @smoke @medium @large", () => {
       await page.mouse.move(0, 0);
       await expect(waveLink).toHaveCSS("transform", "none");
       const before = await waveLink.boundingBox();
-      await waveLink.screenshot({ path: testInfo.outputPath("wave-card-rest.png") });
+      await waveLink.screenshot({
+        path: testInfo.outputPath("wave-card-rest.png"),
+      });
       await waveLink.hover();
       // The requested desktop motion replaces the former border-only feedback.
-      await expect(waveLink).toHaveCSS("border-color", "rgba(255, 255, 255, 0.2)");
-      await expect(waveLink).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, -4)");
-      await expect(page.getByRole("link", { name: /^View wave / }).first().locator("img")).toHaveCSS(
-        "transform",
-        "matrix(1.06, 0, 0, 1.06, 0, 0)"
+      await expect(waveLink).toHaveCSS(
+        "border-color",
+        "rgba(255, 255, 255, 0.2)"
       );
+      await expect(waveLink).toHaveCSS(
+        "transform",
+        "matrix(1, 0, 0, 1, 0, -4)"
+      );
+      await expect(
+        page
+          .getByRole("link", { name: /^View wave / })
+          .first()
+          .locator("img")
+      ).toHaveCSS("transform", "matrix(1.06, 0, 0, 1.06, 0, 0)");
       await expect(
         // Wave names and ordering differ between deployed environments.
         // Keep checking the hovered card's actual title color.
@@ -2336,7 +1908,9 @@ test.describe("Home Page @smoke @medium @large", () => {
       expect(after!.y).toBeCloseTo(before!.y - 4, 0);
       expect(after!.width).toBe(before!.width);
       expect(after!.height).toBe(before!.height);
-      await waveLink.screenshot({ path: testInfo.outputPath("wave-card-hover.png") });
+      await waveLink.screenshot({
+        path: testInfo.outputPath("wave-card-hover.png"),
+      });
 
       await viewAll.hover();
       await expect(arrow).toHaveCSS("transform", "matrix(1, 0, 0, 1, 2, 0)");
@@ -2382,8 +1956,18 @@ test.describe("Home Page @smoke @medium @large", () => {
     if (isDesktopWebProject(testInfo.project.name)) {
       await waveLink.hover();
       await expect(waveLink).toHaveCSS("transform", "none");
-      await expect(page.getByRole("link", { name: /^View wave / }).first().locator("img")).toHaveCSS("transform", "none");
-      await expect(page.getByRole("link", { name: /^View wave / }).first().locator("img")).toHaveCSS("transition-property", "none");
+      await expect(
+        page
+          .getByRole("link", { name: /^View wave / })
+          .first()
+          .locator("img")
+      ).toHaveCSS("transform", "none");
+      await expect(
+        page
+          .getByRole("link", { name: /^View wave / })
+          .first()
+          .locator("img")
+      ).toHaveCSS("transition-property", "none");
     }
     await expect(viewAll).not.toHaveCSS("box-shadow", "none");
     await expectNoHorizontalOverflow(page);
@@ -2499,10 +2083,10 @@ test("mobile web starts with its header and full-width content before hydration 
   }
 });
 
-test("prerendered home hydrates cleanly with shell query links @smoke @medium @large", async ({
+test("home hydrates cleanly with shell query links @smoke @medium @large", async ({
   page,
 }) => {
-  // `/` is prerendered without its query. Shell readers of `?view=`, `?drop=`
+  // The home shell starts without its query. Readers of `?view=`, `?drop=`
   // and `?serialNo=` render after hydration or inside their own boundaries,
   // so a URL carrying them must not produce a hydration mismatch.
   const hydrationErrors: string[] = [];
@@ -2576,6 +2160,96 @@ test("homepage tracking follows nested scrolling and loaded sections @smoke @med
     .getByRole("heading", { name: "Introduction" })
     .scrollIntoViewIfNeeded();
   await expect(seen).toHaveText(["Introduction", "Explore waves"]);
+});
+
+test("collapsed sidebar fits full rows when a desktop update appears @smoke @medium @large", async ({
+  page,
+}, testInfo) => {
+  // Mobile and native projects use different navigation shells.
+  test.skip(
+    !isDesktopWebProject(testInfo.project.name),
+    "Desktop collapsed sidebar geometry"
+  );
+  await page.setViewportSize({ width: 1440, height: 600 });
+  await page.addInitScript(() => {
+    if (globalThis.top === globalThis.window) {
+      globalThis.sessionStorage.setItem("sidebarCollapsed", "true");
+    }
+  });
+  let releaseVersion!: () => void;
+  const versionReady = new Promise<void>((resolve) => {
+    releaseVersion = resolve;
+  });
+  await page.route("**/api/version", async (route) => {
+    await versionReady;
+    const currentOrder = Number(
+      route.request().headers()["x-6529-client-release-order"] ?? "0"
+    );
+    await route.fulfill({
+      json: { stale: true, announced_release_order: currentOrder + 1 },
+    });
+  });
+  try {
+    await page.goto("/about", { waitUntil: "domcontentloaded" });
+    const sidebar = page.getByLabel("Primary sidebar", { exact: true });
+    const navigation = page
+      .getByLabel("Primary sidebar", { exact: true })
+      .locator("[data-sidebar-scroll]");
+    const about = navigation.getByRole("button", {
+      name: "About",
+      exact: true,
+    });
+    const search = sidebar.getByRole("button", { name: "Search", exact: true });
+    const share = sidebar.getByRole("button", { name: "Share this page" });
+    const update = sidebar.getByRole("button", { name: "Update", exact: true });
+    const account = page
+      .getByLabel("Primary sidebar", { exact: true })
+      .locator("[data-sidebar-account]");
+    await expect(share).toBeVisible();
+    await expect(account).toHaveAttribute("data-sidebar-account", "signed-out");
+    await expect(
+      page
+        .getByLabel("Primary sidebar", { exact: true })
+        .locator("[data-sidebar-version-slot]")
+    ).toBeHidden();
+    await expect(about).toHaveCSS("height", "46px");
+    const accountBeforeUpdate = await account.boundingBox();
+
+    releaseVersion();
+    await expect(update).toBeVisible();
+    await expect
+      .poll(async () => (await about.boundingBox())!.height)
+      .toBeLessThan(46);
+    const rowHeight = await about.evaluate(
+      (node) => getComputedStyle(node).height
+    );
+    for (const control of [update, search, share]) {
+      await expect(control).toHaveCSS("height", rowHeight);
+    }
+    const navBox = await navigation.boundingBox();
+    const aboutBox = await about.boundingBox();
+    expect(aboutBox!.y + aboutBox!.height).toBeLessThanOrEqual(
+      navBox!.y + navBox!.height + 1
+    );
+    expect(await account.boundingBox()).toEqual(accountBeforeUpdate);
+
+    await page.setViewportSize({ width: 1440, height: 460 });
+    await expect(about).toHaveCSS("height", "42px");
+    await expect(update).toBeInViewport({ ratio: 1 });
+    await expect(
+      account.getByRole("button", { name: "Connect Wallet", exact: true })
+    ).toBeInViewport({ ratio: 1 });
+    await about.focus();
+    await expect(about).toBeInViewport({ ratio: 1 });
+
+    await page.setViewportSize({ width: 1440, height: 600 });
+    await page.goto("/notifications", { waitUntil: "domcontentloaded" });
+    await expect(share).toHaveCount(0);
+    await expect(update).toBeVisible();
+    await expect(about).toHaveCSS("height", "46px");
+  } finally {
+    releaseVersion();
+  }
 });
 
 test("desktop account updates do not move utilities, including in short expanded sidebars @smoke @medium @large", async ({
@@ -2812,7 +2486,9 @@ for (const { width, stored, expectedWidth } of [
     );
     await page.setViewportSize({ width, height: 900 });
     await page.addInitScript((value) => {
-      globalThis.sessionStorage.setItem("sidebarCollapsed", value);
+      if (globalThis.top === globalThis.window) {
+        globalThis.sessionStorage.setItem("sidebarCollapsed", value);
+      }
     }, stored);
     const hydration = await gateSidebarHydration(page);
     const sidebar = page.getByLabel("Primary sidebar", { exact: true });

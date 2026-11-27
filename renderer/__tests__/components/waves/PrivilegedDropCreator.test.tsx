@@ -51,6 +51,11 @@ jest.mock("@/hooks/useDropPriviledges", () => ({
   useDropPrivileges: jest.fn(),
   ChatRestriction: { SLOW_MODE: "SLOW_MODE" },
 }));
+const mockWritesPaused = jest.fn((_kind?: string) => false);
+jest.mock("@/hooks/useWavesMovePhase", () => ({
+  useWavesWritesPaused: (kind?: string) => mockWritesPaused(kind),
+  useWaveMovedToChain: () => false,
+}));
 const mockUsePublicProfileModerationStatus = jest.fn(
   (_profileId?: string | null) => ({
     isError: false,
@@ -65,6 +70,11 @@ jest.mock(
       mockUsePublicProfileModerationStatus(profileId),
   })
 );
+let mockAuthRole: string | null | undefined;
+jest.mock("@/components/auth/auth-session-scope", () => ({
+  ...jest.requireActual("@/components/auth/auth-session-scope"),
+  getAuthSessionRole: () => mockAuthRole,
+}));
 const mockUseAuth = jest.fn<MockAuthState, []>(() => ({}));
 jest.mock("@/components/auth/Auth", () => ({
   useAuth: () => mockUseAuth(),
@@ -227,6 +237,27 @@ describe("PrivilegedDropCreator", () => {
       "data-type",
       "submission"
     );
+  });
+
+  it("pauses submissions until entries open on the 6529 Network", () => {
+    mockPriv.mockReturnValue({
+      submissionRestriction: null,
+      chatRestriction: null,
+    });
+    // After the switch-on, entries open there while other writes stay closed.
+    mockWritesPaused.mockImplementation((kind) => kind === undefined);
+    renderPrivilegedDropCreator({ fixedDropMode: DropMode.BOTH });
+    expect(mockPriv).toHaveBeenLastCalledWith(
+      expect.objectContaining({ submissionsPaused: false })
+    );
+
+    // From the freeze until then, they are paused.
+    mockWritesPaused.mockImplementation(() => true);
+    renderPrivilegedDropCreator({ fixedDropMode: DropMode.BOTH });
+    expect(mockPriv).toHaveBeenLastCalledWith(
+      expect.objectContaining({ submissionsPaused: true })
+    );
+    mockWritesPaused.mockImplementation(() => false);
   });
 
   it("renders CreateDrop when allowed", () => {
@@ -568,6 +599,35 @@ describe("PrivilegedDropCreator", () => {
       "data-profile-setup-href",
       ""
     );
+  });
+
+  it("treats a token acting for another profile as a proxy session", () => {
+    mockAuthRole = "delegating-profile";
+    mockUseAuth.mockReturnValue({
+      connectedProfile: { id: "own-profile", handle: "me" },
+      activeProfileProxy: null,
+      fetchingProfile: false,
+    });
+    mockPriv.mockReturnValue({
+      submissionRestriction: null,
+      chatRestriction: null,
+    });
+
+    try {
+      renderPrivilegedDropCreator();
+      expect(mockPriv).toHaveBeenCalledWith(
+        expect.objectContaining({ isProxy: true })
+      );
+
+      mockPriv.mockClear();
+      mockAuthRole = "own-profile";
+      renderPrivilegedDropCreator();
+      expect(mockPriv).toHaveBeenCalledWith(
+        expect.objectContaining({ isProxy: false })
+      );
+    } finally {
+      mockAuthRole = undefined;
+    }
   });
 
   it("keeps chat composer visible during slow mode cooldown", () => {

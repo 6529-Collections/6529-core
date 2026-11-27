@@ -3,10 +3,12 @@
 import ProfileActivityLogsResults from "./ProfileActivityLogsResults";
 import ProfileNicActivityLogs from "./ProfileNicActivityLogs";
 
-import type { ProfileActivityLog } from "@/entities/IProfile";
-import type { CountlessPage } from "@/helpers/Types";
-import { commonApiFetch } from "@/services/api/common-api";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  PENDING_PROFILE_QUERY_VIEWER,
+  useProfileQueryViewer,
+} from "@/hooks/useProfileQueryViewer";
+import { profileActivityLogsQueryOptions } from "@/services/api/profile-page-queries";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import ProfileActivityLogsFilter from "./filter/ProfileActivityLogsFilter";
 
@@ -17,9 +19,10 @@ import {
   type ProfileActivityLogType,
   RateMatter,
 } from "@/types/enums";
-import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
 import type { CommonSelectItem } from "../utils/select/CommonSelect";
 import CommonTabs from "../utils/select/tabs/CommonTabs";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import useIsMobileLayoutViewport from "@/hooks/useIsMobileLayoutViewport";
 
 export interface ActivityLogParams {
   readonly page: number;
@@ -81,6 +84,10 @@ export default function ProfileActivityLogs({
   readonly children?: React.ReactNode | undefined;
 }) {
   const { activeGroupId } = useActiveGroup();
+  const { isApp } = useDeviceInfo();
+  const isMobileViewport = useIsMobileLayoutViewport();
+  const useProfilePills =
+    !!initialParams.handleOrWallet && (isApp || isMobileViewport);
   const [selectedFilters, setSelectedFilters] = useState<
     ProfileActivityLogType[]
   >(initialParams.logTypes);
@@ -131,35 +138,17 @@ export default function ProfileActivityLogs({
   });
   const isProfileNic = params.activity_scope === "NIC";
 
-  const { isLoading, data: logs } = useQuery<CountlessPage<ProfileActivityLog>>(
-    {
-      queryKey: [
-        QueryKey.PROFILE_LOGS,
-        {
-          ...params,
-        },
-      ],
-      queryFn: async () =>
-        await commonApiFetch<
-          CountlessPage<ProfileActivityLog>,
-          ActivityLogParamsConverted
-        >({
-          endpoint: `profile-logs`,
-          params: params,
-        }),
-      placeholderData: keepPreviousData,
-      enabled: enabled && !isProfileNic,
-    }
-  );
+  const viewer = useProfileQueryViewer();
+  const { data: logs } = useQuery({
+    ...profileActivityLogsQueryOptions(params, viewer),
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[2] === viewer ? previousData : undefined,
+    enabled:
+      enabled && !isProfileNic && viewer !== PENDING_PROFILE_QUERY_VIEWER,
+  });
 
-  useEffect(() => {
-    if (isLoading) return;
-    if (logs?.page === 1 && !logs.data.length) {
-      setCurrentPage(1);
-    }
-  }, [logs?.page, isLoading]);
   return (
-    <div className={`${initialParams.handleOrWallet ? "" : "tw-mt-2"} `}>
+    <div className={initialParams.handleOrWallet ? "" : "tw-mt-2"}>
       <div
         className={`${
           withMatterFilter
@@ -171,22 +160,35 @@ export default function ProfileActivityLogs({
           <div className="tw-flex-none tw-whitespace-nowrap">{children}</div>
         )}
         {withFilters && !withMatterFilter && (
-          <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-3">
+          <div className="tw-relative tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-3">
             {initialParams.handleOrWallet && (
-              <div className="tw-w-full sm:tw-w-fit">
+              <div
+                className={
+                  useProfilePills
+                    ? "tw-w-max tw-min-w-0 tw-max-w-full tw-flex-auto"
+                    : "tw-w-full sm:tw-w-fit"
+                }
+              >
                 <CommonTabs
                   items={DIRECTION_TAB_ITEMS}
                   activeItem={targetType}
                   filterLabel="Filter direction"
                   setSelected={onTargetType}
-                  variant="connected"
+                  variant={useProfilePills ? "sub-view" : "connected"}
                   connectedSize="sm"
                 />
               </div>
             )}
             {matter === RateMatter.NIC && (
-              <div className="tw-flex-1 md:tw-ml-auto md:tw-w-[17.5rem] md:tw-flex-none min-[1200px]:tw-w-[18rem] min-[1400px]:tw-w-[20rem]">
+              <div
+                className={
+                  useProfilePills
+                    ? "tw-w-max tw-max-w-full tw-flex-none"
+                    : "tw-flex-1 md:tw-ml-auto md:tw-w-[17.5rem] md:tw-flex-none min-[1200px]:tw-w-[18rem] min-[1400px]:tw-w-[20rem]"
+                }
+              >
                 <ProfileActivityLogsFilter
+                  inline={useProfilePills}
                   user={initialParams.handleOrWallet}
                   options={initialParams.logTypes}
                   selected={selectedFilters}
@@ -205,7 +207,7 @@ export default function ProfileActivityLogs({
                   activeItem={matter}
                   filterLabel="Filter matter"
                   setSelected={onMatterChange}
-                  variant="connected"
+                  variant={useProfilePills ? "sub-view" : "connected"}
                   connectedSize="sm"
                 />
               </div>
@@ -216,7 +218,7 @@ export default function ProfileActivityLogs({
                     activeItem={targetType}
                     filterLabel="Filter direction"
                     setSelected={onTargetType}
-                    variant="connected"
+                    variant={useProfilePills ? "sub-view" : "connected"}
                     connectedSize="sm"
                   />
                 </div>

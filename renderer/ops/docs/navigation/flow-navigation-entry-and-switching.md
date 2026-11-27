@@ -85,20 +85,39 @@ context-aware `Back`).
 - In an open wave or direct message, drag right across ordinary conversation
   content to return to its list. The view follows your finger. Reverse below the
   gesture threshold before releasing to cancel. A slow, short drag also stays
-  in the conversation; a longer drag or quick flick completes the return.
+  in the conversation. A slow drag must pass about half the screen width;
+  a quick flick can complete the return from a shorter distance.
+- The destination list stays underneath with its header, bottom navigation and
+  reading position. Opening slides the conversation in from the right. Back
+  slides the full conversation, including its header, away while the list moves
+  into place. Swipe release, the visible Back button and Android system Back
+  share this motion. A new touch can catch a moving page. Reduced Motion uses
+  a short fade without sliding or dimming.
+- In the iPhone app, a rightward swipe starting within 32px of the left edge
+  takes Back priority on every tab, including over buttons, links, inputs,
+  voting sliders and horizontally scrolling rows. It returns to the same
+  destination as the visible Back control. Sheets and editors keep their own
+  Back and unfinished-draft guards.
 - A brief diagonal start can turn into a horizontal swipe. Once vertical
   scrolling has started, that touch stays with scrolling; lift your finger
   before starting a swipe back.
 - Encrypted conversations support the same rightward return to the encrypted
   messages list. The visible Back control remains available.
-- Inputs, links, buttons, voting sliders, media controls, selected text and
-  horizontal carousels keep their own interactions. Vertical scrolling and
-  multi-touch do not trigger conversation navigation. Screen edges remain
-  available to the system or browser.
+- In Profile Waves Feed, swipe right to return to Waves. Open a feed post to
+  enter its chat; a right swipe or the visible Back button then returns to the
+  feed at the same reading position. A chat opened directly still returns to
+  Waves.
+- Away from the channel's left-edge zone, inputs, links, buttons, voting
+  sliders, media controls, selected text and horizontal carousels keep their
+  own interactions. Vertical scrolling and multi-touch do not trigger channel
+  navigation. Direct messages and browser navigation retain their existing
+  edge behavior. Android keeps its system edge gesture; in-app right drags start
+  within conversation content. Mobile web keeps the browser's edge gesture.
 - Android system Back first dismisses an open keyboard, then the topmost
   dismissible sheet, menu or dialog. A reaction picker returns to its action
   sheet before the sheet closes. Single-drop details close before the wave;
-  a wave returns to Waves, and a direct message returns to Messages.
+  a chat opened from Profile Waves Feed returns to the Feed. Other waves return
+  to Waves, and direct messages return to Messages.
 - Deeper pages return through app history or to an in-app destination. Only
   a main-section root with no earlier app destination can minimize the app.
   A dialog awaiting a required decision keeps its visible actions and does not

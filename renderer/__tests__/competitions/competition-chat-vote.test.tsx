@@ -7,7 +7,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useState } from "react";
+import CompetitionAwareDropVote from "@/components/competitions/CompetitionAwareDropVote";
+import { CompetitionVoteForm } from "@/components/competitions/CompetitionVote";
 import * as competitionVoteCache from "@/components/react-query-wrapper/utils/updateCompetitionVoteInCache";
 import { SingleWaveDropVoteSize } from "@/components/waves/drop/SingleWaveDropVote.types";
 import { SingleWaveDropVote } from "@/components/waves/drop/SingleWaveDropVote";
@@ -16,6 +18,10 @@ import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiCompetitionCreditBudget } from "@/generated/models/ApiCompetitionCreditBudget";
 import { QueryKey } from "@/components/react-query-wrapper/query-keys";
 import { useCompetitionViewer } from "@/hooks/competitions/useCompetitionQueries";
+import { useChainWavesWriters } from "@/components/chain-waves/useChainWavesWriters";
+import { isChainIdentityActive } from "@/lib/chain-identity/active";
+import { chainGateway } from "@/lib/chain-identity/gateway";
+import { identityOfWallet } from "@/lib/chain-waves/signing";
 import {
   fetchDropCompetitionContext,
   fetchCompetitionCredits,
@@ -23,6 +29,18 @@ import {
   invalidateCompetition,
 } from "@/services/api/competitions-api";
 
+let mockMovePaused = false;
+jest.mock("@/hooks/useWavesMovePhase", () => ({
+  ...jest.requireActual("@/hooks/useWavesMovePhase"),
+  useWavesWritesPaused: () => mockMovePaused,
+}));
+jest.mock("@/components/chain-waves/useChainWavesWriters", () => ({
+  useChainWavesWriters: jest.fn(() => null),
+}));
+jest.mock("@/lib/chain-identity/active", () => ({
+  ...jest.requireActual("@/lib/chain-identity/active"),
+  isChainIdentityActive: jest.fn(() => false),
+}));
 jest.mock("@/components/auth/auth-session-scope", () => ({
   isAuthSessionForProfile: jest.fn(() => true),
 }));
@@ -53,6 +71,7 @@ jest.mock("@/hooks/competitions/useCompetitionQueries", () => ({
   useCompetitionViewer: jest.fn(() => "viewer:self"),
 }));
 jest.mock("@/hooks/competitions/useCompetitionSignature", () => ({
+  ...jest.requireActual("@/hooks/competitions/useCompetitionSignature"),
   useCompetitionSignatureFor: () => jest.fn(),
 }));
 jest.mock("@/hooks/useBrowserLocale", () => ({
@@ -103,6 +122,7 @@ const knownContext = {
   dropId: "drop",
   data: context,
 };
+const voteButtonName = /^Vote (?:[+-][\d,]+|0) TDH \+ XTDH$/;
 const initialBudget = {
   competition_id: "competition",
   profile_id: "viewer",
@@ -137,6 +157,34 @@ function mount(
   );
   return { ...rendered, client };
 }
+
+function LegacyDraftFallback() {
+  const [numeric, setNumeric] = useState(false);
+  const [vote, setVote] = useState("");
+  const [reply, setReply] = useState("");
+  return (
+    <div>
+      <button
+        type="button"
+        aria-pressed={numeric}
+        onClick={() => setNumeric(true)}
+      >
+        Numeric
+      </button>
+      <input
+        aria-label="Legacy vote"
+        value={vote}
+        onChange={(event) => setVote(event.target.value)}
+      />
+      <textarea
+        aria-label="Legacy reply"
+        value={reply}
+        onChange={(event) => setReply(event.target.value)}
+      />
+    </div>
+  );
+}
+
 beforeEach(() => {
   jest.mocked(isAuthSessionForProfile).mockReturnValue(true);
   jest.clearAllMocks();
@@ -155,13 +203,74 @@ beforeEach(() => {
     }));
   jest.mocked(invalidateCompetition).mockResolvedValue(undefined);
 });
+it("keeps Explain disabled and restores zero after an empty mobile draft when no vote is saved", async () => {
+  jest
+    .mocked(fetchCompetitionCredits)
+    .mockResolvedValue({ ...initialBudget, current_vote: null });
+  const explain = jest.fn();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <CompetitionVoteForm
+        competition={context.competition as never}
+        entryId="entry"
+        dropId="drop"
+        disabled={false}
+        compact
+        myVotes
+        onExplainVote={explain}
+      />
+    </QueryClientProvider>
+  );
+  const input = await screen.findByRole("textbox", { name: "Your vote" });
+  expect(input).toHaveValue("0");
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: "-" } });
+  fireEvent.blur(input);
+  expect(input).toHaveValue("0");
+  expect(screen.getByRole("button", { name: "Explain vote" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Explain vote" }));
+  expect(explain).not.toHaveBeenCalled();
+  expect(setCompetitionVote).not.toHaveBeenCalled();
+  client.clear();
+});
+it("keeps the compact My Votes input closed while votes are paused for the move", async () => {
+  mockMovePaused = true;
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  try {
+    render(
+      <QueryClientProvider client={client}>
+        <CompetitionVoteForm
+          competition={context.competition as never}
+          entryId="entry"
+          dropId="drop"
+          disabled={false}
+          compact
+          myVotes
+        />
+      </QueryClientProvider>
+    );
+    expect(
+      await screen.findByRole("textbox", { name: "Your vote" })
+    ).toBeDisabled();
+    expect(setCompetitionVote).not.toHaveBeenCalled();
+  } finally {
+    mockMovePaused = false;
+    client.clear();
+  }
+});
+
 it("uses the entry budget and competition vote endpoint despite the parent wave's zero limits", async () => {
   mount();
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   expect(input).toHaveAttribute("max", "1500");
   expect(screen.getByText("TDH + XTDH")).toBeInTheDocument();
   fireEvent.change(input, { target: { value: "25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: "Vote +25 TDH + XTDH" }));
   await waitFor(() =>
     expect(setCompetitionVote).toHaveBeenCalledWith(
       { waveId: "wave", competitionId: "competition" },
@@ -176,6 +285,96 @@ it("uses the entry budget and competition vote endpoint despite the parent wave'
   );
   expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
 });
+it.each([SingleWaveDropVoteSize.NORMAL, SingleWaveDropVoteSize.MINI])(
+  "validates the entry limits and allows a zero draft in %s numeric mode",
+  async (size) => {
+    mount("numeric", drop, undefined, size);
+
+    const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+    expect(input).toHaveAttribute("min", "-1500");
+    expect(input).toHaveAttribute("max", "1500");
+    expect(screen.getByRole("button", { name: "Increase vote" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Decrease vote" })).toBeEnabled();
+    expect(screen.queryAllByRole("button", { name: /%$/ })).toHaveLength(
+      size === SingleWaveDropVoteSize.MINI ? 0 : 4
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Increase vote" }));
+    expect(input).toHaveValue(1);
+
+    fireEvent.change(input, { target: { value: "1501" } });
+    expect(screen.getByRole("button", { name: voteButtonName })).toBeDisabled();
+    fireEvent.change(input, { target: { value: "0" } });
+    expect(
+      screen.getByRole("button", { name: "Vote 0 TDH + XTDH" })
+    ).toBeEnabled();
+    expect(setCompetitionVote).not.toHaveBeenCalled();
+  }
+);
+it("adjusts the full Decision draft against the entry limits without submitting", async () => {
+  jest.mocked(fetchCompetitionCredits).mockResolvedValue({
+    ...initialBudget,
+    remaining: 53,
+    min_vote: -75,
+    max_vote: 125,
+  });
+  mount();
+  const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+  fireEvent.click(screen.getByRole("button", { name: "+50%" }));
+  expect(input).toHaveValue(63);
+  fireEvent.click(screen.getByRole("button", { name: "Increase vote" }));
+  expect(input).toHaveValue(64);
+  fireEvent.click(screen.getByRole("button", { name: "-100%" }));
+  fireEvent.click(screen.getByRole("button", { name: "Decrease vote" }));
+  expect(input).toHaveValue(-75);
+  expect(setCompetitionVote).not.toHaveBeenCalled();
+});
+it("omits negative shortcuts in Decisions that disallow negative votes", async () => {
+  jest.mocked(fetchCompetitionCredits).mockResolvedValue({
+    ...initialBudget,
+    min_vote: 0,
+  });
+  mount();
+  expect(await screen.findByRole("button", { name: "+100%" })).toBeEnabled();
+  expect(screen.queryByRole("button", { name: /^-\d+%$/ })).toBeNull();
+});
+it.each([
+  { creditType: "REP", label: "Rep" },
+  { creditType: "CIC", label: "NIC" },
+  { creditType: "CUSTOM_CREDITS", label: "CUSTOM_CREDITS" },
+  { creditType: "constructor", label: "constructor" },
+  { creditType: "toString", label: "toString" },
+  { creditType: "__proto__", label: "__proto__" },
+])(
+  "labels numeric voting and signed actions for $creditType",
+  async ({ creditType, label }) => {
+    jest.mocked(fetchDropCompetitionContext).mockResolvedValue({
+      ...context,
+      competition: {
+        ...context.competition,
+        voting: { ...context.competition.voting, credit_type: creditType },
+      },
+    } as never);
+    mount();
+    const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+    expect(input).toHaveAttribute("min", "-1500");
+    expect(input).toHaveAttribute("max", "1500");
+    expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "25" } });
+    expect(
+      screen.getByRole("button", { name: `Vote +25 ${label}` })
+    ).toBeEnabled();
+    fireEvent.change(input, { target: { value: "-25" } });
+    fireEvent.click(screen.getByRole("button", { name: `Vote -25 ${label}` }));
+    await waitFor(() => {
+      expect(setCompetitionVote).toHaveBeenCalledWith(
+        { waveId: "wave", competitionId: "competition" },
+        "entry",
+        { value: -25, config_version: 4, idempotency_key: "request-key" }
+      );
+    });
+  }
+);
 it("does not submit a stale vote after the viewer changes during authentication", async () => {
   let finishAuth!: (result: { success: boolean }) => void;
   mockRequestAuth.mockReturnValue(
@@ -186,7 +385,7 @@ it("does not submit a stale vote after the viewer changes during authentication"
   const { unmount } = mount();
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await waitFor(() => expect(mockRequestAuth).toHaveBeenCalled());
   unmount();
   jest.mocked(useCompetitionViewer).mockReturnValue("other:self");
@@ -204,7 +403,7 @@ it("blocks an actor change before React updates the viewer", async () => {
   mount();
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   jest.mocked(isAuthSessionForProfile).mockReturnValue(false);
   await act(async () => finishAuth({ success: true }));
   expect(setCompetitionVote).not.toHaveBeenCalled();
@@ -229,7 +428,7 @@ it("uses the passed competition and entry without another lookup and fetches fre
     expect.any(AbortSignal)
   );
   fireEvent.change(input, { target: { value: "-25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await waitFor(() =>
     expect(setCompetitionVote).toHaveBeenCalledWith(
       { waveId: "wave", competitionId: "competition" },
@@ -288,12 +487,281 @@ it("keeps legacy voting for a verified legacy drop", async () => {
 it("does not fall back to the wrong voting endpoint when lookup fails", async () => {
   jest
     .mocked(fetchDropCompetitionContext)
-    .mockRejectedValue(new Error("Unavailable"));
+    .mockRejectedValueOnce(new Error("Unavailable"))
+    .mockResolvedValue({ competition: null, entry: null });
   mount();
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
   expect(fetchCompetitionCredits).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByText("Legacy voting")).toBeInTheDocument();
+  expect(fetchCompetitionCredits).not.toHaveBeenCalled();
 });
+it("retains a mounted legacy vote and reply draft across a temporary context refresh failure", async () => {
+  jest
+    .mocked(fetchDropCompetitionContext)
+    .mockResolvedValue({ competition: null, entry: null });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <CompetitionAwareDropVote
+        drop={drop}
+        fallback={<LegacyDraftFallback />}
+      />
+    </QueryClientProvider>
+  );
+  const numeric = await screen.findByRole("button", { name: "Numeric" });
+  fireEvent.click(numeric);
+  const vote = screen.getByRole("textbox", { name: "Legacy vote" });
+  const reply = screen.getByRole("textbox", { name: "Legacy reply" });
+  fireEvent.change(vote, { target: { value: "25" } });
+  fireEvent.change(reply, { target: { value: "A preserved explanation" } });
+
+  jest
+    .mocked(fetchDropCompetitionContext)
+    .mockRejectedValue(
+      Object.assign(new Error("Unavailable"), { status: 503 })
+    );
+  await act(async () => {
+    await client.refetchQueries({
+      queryKey: [QueryKey.COMPETITION_DROP_CONTEXT],
+    });
+    // React Query batches observer notifications onto the next task.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Numeric" })).toBe(numeric);
+  expect(numeric).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("textbox", { name: "Legacy vote" })).toBe(vote);
+  expect(vote).toHaveValue("25");
+  expect(screen.getByRole("textbox", { name: "Legacy reply" })).toBe(reply);
+  expect(reply).toHaveValue("A preserved explanation");
+
+  jest
+    .mocked(fetchDropCompetitionContext)
+    .mockResolvedValue({ competition: null, entry: null });
+  await act(async () => {
+    await client.refetchQueries({
+      queryKey: [QueryKey.COMPETITION_DROP_CONTEXT],
+    });
+  });
+  expect(screen.getByRole("button", { name: "Numeric" })).toBe(numeric);
+  expect(vote).toHaveValue("25");
+  expect(reply).toHaveValue("A preserved explanation");
+
+  jest.mocked(fetchDropCompetitionContext).mockResolvedValue({
+    ...context,
+    competition: { ...context.competition, permissions: { vote: false } },
+  } as never);
+  await act(async () => {
+    await client.refetchQueries({
+      queryKey: [QueryKey.COMPETITION_DROP_CONTEXT],
+    });
+  });
+  await waitFor(() => {
+    expect(screen.queryByRole("textbox", { name: "Legacy vote" })).toBeNull();
+  });
+  expect(
+    await screen.findByRole("button", { name: voteButtonName })
+  ).toBeDisabled();
+  expect(setCompetitionVote).not.toHaveBeenCalled();
+});
+it.each([401, 403, 404])(
+  "blocks cached legacy voting after access denial %s until a fresh retry succeeds",
+  async (status) => {
+    jest
+      .mocked(fetchDropCompetitionContext)
+      .mockResolvedValue({ competition: null, entry: null });
+    const { client } = mount();
+    await screen.findByText("Legacy voting");
+    jest
+      .mocked(fetchDropCompetitionContext)
+      .mockRejectedValue(Object.assign(new Error("Access denied"), { status }));
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: [QueryKey.COMPETITION_DROP_CONTEXT],
+      });
+    });
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+    expect(fetchCompetitionCredits).not.toHaveBeenCalled();
+
+    jest
+      .mocked(fetchDropCompetitionContext)
+      .mockRejectedValue(
+        Object.assign(new Error("Unavailable"), { status: 503 })
+      );
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => {
+      expect(fetchDropCompetitionContext).toHaveBeenCalledTimes(3);
+      expect(
+        client.getQueryState([
+          QueryKey.COMPETITION_DROP_CONTEXT,
+          { wave_id: "wave", drop_id: "drop", viewer: "viewer:self" },
+        ])?.error
+      ).toMatchObject({ status: 503 });
+    });
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+
+    let resolveRetry!: () => void;
+    jest.mocked(fetchDropCompetitionContext).mockReturnValue(
+      new Promise((resolve) => {
+        resolveRetry = () => resolve({ competition: null, entry: null });
+      })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+    await act(async () => resolveRetry());
+    expect(await screen.findByText("Legacy voting")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(fetchCompetitionCredits).not.toHaveBeenCalled();
+  }
+);
+it("retains an observed access denial from another query function through a transient retry", async () => {
+  jest
+    .mocked(fetchDropCompetitionContext)
+    .mockResolvedValue({ competition: null, entry: null });
+  const { client } = mount();
+  await screen.findByText("Legacy voting");
+  const queryKey = [
+    QueryKey.COMPETITION_DROP_CONTEXT,
+    { wave_id: "wave", drop_id: "drop", viewer: "viewer:self" },
+  ];
+  const denied = Object.assign(new Error("Access denied"), { status: 403 });
+  await act(async () => {
+    await expect(
+      client.fetchQuery({
+        queryKey,
+        queryFn: () => Promise.reject(denied),
+      })
+    ).rejects.toBe(denied);
+  });
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+
+  const unavailable = Object.assign(new Error("Unavailable"), { status: 503 });
+  await act(async () => {
+    await expect(
+      client.fetchQuery({
+        queryKey,
+        queryFn: () => Promise.reject(unavailable),
+      })
+    ).rejects.toBe(unavailable);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  expect(client.getQueryState(queryKey)?.error).toBe(unavailable);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+  expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+  expect(fetchDropCompetitionContext).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByText("Legacy voting")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(fetchDropCompetitionContext).toHaveBeenCalledTimes(2);
+  expect(fetchCompetitionCredits).not.toHaveBeenCalled();
+  expect(setCompetitionVote).not.toHaveBeenCalled();
+});
+it.each(["viewer", "drop"])(
+  "retains a cached denial across remounts without blocking another %s",
+  async (changedScope) => {
+    const legacyContext = { competition: null, entry: null };
+    const contextQueryKey = [
+      QueryKey.COMPETITION_DROP_CONTEXT,
+      { wave_id: "wave", drop_id: "drop", viewer: "viewer:self" },
+    ];
+    jest.mocked(fetchDropCompetitionContext).mockResolvedValue(legacyContext);
+    const { client, unmount } = mount();
+    await screen.findByText("Legacy voting");
+    jest
+      .mocked(fetchDropCompetitionContext)
+      .mockRejectedValue(
+        Object.assign(new Error("Access denied"), { status: 403 })
+      );
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: [QueryKey.COMPETITION_DROP_CONTEXT],
+      });
+    });
+    await screen.findByRole("alert");
+    jest
+      .mocked(fetchDropCompetitionContext)
+      .mockRejectedValue(
+        Object.assign(new Error("Unavailable"), { status: 503 })
+      );
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => {
+      expect(client.getQueryState(contextQueryKey)?.error).toMatchObject({
+        status: 503,
+      });
+    });
+    unmount();
+
+    const rendered = render(
+      <QueryClientProvider client={client}>
+        <CompetitionAwareDropVote drop={drop} fallback={"Legacy voting"} />
+      </QueryClientProvider>
+    );
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: [QueryKey.COMPETITION_DROP_CONTEXT],
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      client.setQueryData(contextQueryKey, legacyContext);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("Legacy voting")).not.toBeInTheDocument();
+
+    let resolveLookup!: () => void;
+    jest.mocked(fetchDropCompetitionContext).mockReturnValue(
+      new Promise((resolve) => {
+        resolveLookup = () => resolve(legacyContext);
+      })
+    );
+    if (changedScope === "viewer") {
+      jest.mocked(useCompetitionViewer).mockReturnValue("other:self");
+    }
+    rendered.rerender(
+      <QueryClientProvider client={client}>
+        <CompetitionAwareDropVote
+          drop={changedScope === "drop" ? { ...drop, id: "other" } : drop}
+          fallback={"Legacy voting"}
+        />
+      </QueryClientProvider>
+    );
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await act(async () => resolveLookup());
+    expect(await screen.findByText("Legacy voting")).toBeInTheDocument();
+
+    jest.mocked(useCompetitionViewer).mockReturnValue("viewer:self");
+    jest.mocked(fetchDropCompetitionContext).mockReturnValue(
+      new Promise((resolve) => {
+        resolveLookup = () => resolve(legacyContext);
+      })
+    );
+    rendered.rerender(
+      <QueryClientProvider client={client}>
+        <CompetitionAwareDropVote drop={drop} fallback={"Legacy voting"} />
+      </QueryClientProvider>
+    );
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    await act(async () => resolveLookup());
+    expect(await screen.findByText("Legacy voting")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(fetchCompetitionCredits).not.toHaveBeenCalled();
+  }
+);
 it("closes after confirmation with fresh credits while background refresh is still pending", async () => {
   let finishRefresh!: () => void;
   jest.mocked(invalidateCompetition).mockReturnValue(
@@ -305,7 +773,7 @@ it("closes after confirmation with fresh credits while background refresh is sti
   const { client } = mount("numeric", drop, onClose);
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   expect(
     client.getQueryData([
@@ -328,7 +796,7 @@ it("keeps the confirmed vote when a background refresh fails", async () => {
   const { client } = mount();
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "-25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await screen.findByText("Saved");
   expect(input).toHaveValue(-25);
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -364,7 +832,7 @@ it("does not close another modal when a submitted form unmounts before confirmat
   const { unmount } = mount("numeric", drop, onClose);
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await waitFor(() => expect(setCompetitionVote).toHaveBeenCalledTimes(1));
   unmount();
   confirm({ ...initialBudget, current_vote: 25, spent: 25, remaining: 1475 });
@@ -423,7 +891,7 @@ it("invalidates the old viewer during commit before passive effects can flush", 
     const { rerender } = render(<VoteHarness switched={false} />);
     const input = await screen.findByRole("spinbutton", { name: "Your vote" });
     fireEvent.change(input, { target: { value: "25" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+    fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
     await waitFor(() => expect(checkViewer).toBeDefined());
     jest.mocked(useCompetitionViewer).mockReturnValue("viewer:proxy");
     rerender(<VoteHarness switched />);
@@ -447,7 +915,7 @@ it("keeps voting open and refreshes fresh limits when saving the vote fails", as
   mount("numeric", drop, onClose);
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "25" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await screen.findByRole("alert");
   await waitFor(() => expect(input).toHaveAttribute("max", "10"));
   expect(fetchCompetitionCredits).toHaveBeenCalledTimes(2);
@@ -461,6 +929,38 @@ const replyDrop = {
   wave: { ...drop.wave, authenticated_user_eligible_to_chat: true },
   parts: [{ part_id: 7 }],
 } as ApiDrop;
+it("preserves competition input mode, vote and reply drafts after a temporary context refresh error", async () => {
+  const { client } = mount(null, replyDrop);
+  await screen.findAllByRole("slider");
+  const numeric = screen.getByRole("button", { name: "Numeric" });
+  fireEvent.click(numeric);
+  const vote = screen.getByRole("spinbutton", { name: "Your vote" });
+  fireEvent.change(vote, { target: { value: "25" } });
+  fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
+  const reply = screen.getByLabelText("Optional rationale reply");
+  fireEvent.change(reply, { target: { value: "A competition explanation" } });
+  jest
+    .mocked(fetchDropCompetitionContext)
+    .mockRejectedValue(
+      Object.assign(new Error("Unavailable"), { status: 503 })
+    );
+
+  await act(async () => {
+    await client.refetchQueries({
+      queryKey: [QueryKey.COMPETITION_DROP_CONTEXT],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(numeric).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("spinbutton", { name: "Your vote" })).toBe(vote);
+  expect(vote).toHaveValue(25);
+  expect(screen.getByLabelText("Optional rationale reply")).toBe(reply);
+  expect(reply).toHaveValue("A competition explanation");
+  expect(setCompetitionVote).not.toHaveBeenCalled();
+  expect(commonApiPost).not.toHaveBeenCalled();
+});
 it("restores Explain vote for proxy competition votes after the vote succeeds", async () => {
   jest.mocked(useCompetitionViewer).mockReturnValue("viewer:proxy");
   jest.mocked(commonApiPost).mockResolvedValue({ id: "reply" } as never);
@@ -475,7 +975,7 @@ it("restores Explain vote for proxy competition votes after the vote succeeds", 
     "Vote rationale (+25 at time of posting):"
   );
   fireEvent.change(rationale, { target: { value: "Proxy vote rationale" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await waitFor(() =>
     expect(commonApiPost).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -498,7 +998,7 @@ it.each([SingleWaveDropVoteSize.MINI, SingleWaveDropVoteSize.NORMAL])(
     await screen.findByRole("spinbutton", { name: "Your vote" });
     fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
     const rationale = screen.getByLabelText("Optional rationale reply");
-    const save = screen.getByRole("button", { name: "Save vote" });
+    const save = screen.getByRole("button", { name: voteButtonName });
     expect(rationale).toHaveValue("");
     expect(rationale).toHaveAttribute(
       "placeholder",
@@ -531,7 +1031,7 @@ it.each([SingleWaveDropVoteSize.MINI, SingleWaveDropVoteSize.NORMAL])(
     const input = await screen.findByRole("spinbutton", { name: "Your vote" });
     fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
     const rationale = screen.getByLabelText("Optional rationale reply");
-    const save = screen.getByRole("button", { name: "Save vote" });
+    const save = screen.getByRole("button", { name: voteButtonName });
     fireEvent.change(input, { target: { value: "25" } });
     expect(rationale).toHaveValue("");
     expect(rationale).toHaveAttribute(
@@ -574,7 +1074,7 @@ it("blocks empty enabled replies before submitting a vote", async () => {
   fireEvent.change(screen.getByLabelText("Optional rationale reply"), {
     target: { value: " " },
   });
-  expect(screen.getByRole("button", { name: "Save vote" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: voteButtonName })).toBeDisabled();
   expect(setCompetitionVote).not.toHaveBeenCalled();
 });
 it("does not post a reply if saving the competition vote fails", async () => {
@@ -585,7 +1085,7 @@ it("does not post a reply if saving the competition vote fails", async () => {
   const input = await screen.findByRole("spinbutton", { name: "Your vote" });
   fireEvent.change(input, { target: { value: "25" } });
   fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await screen.findByRole("alert");
   expect(commonApiPost).not.toHaveBeenCalled();
 });
@@ -632,7 +1132,9 @@ it.each([0, -1500])(
     expect(input).toHaveAttribute("min", String(min));
     fireEvent.change(input, { target: { value: "-25" } });
     expect(
-      screen.getByRole("button", { name: "Save vote" }).hasAttribute("disabled")
+      screen
+        .getByRole("button", { name: voteButtonName })
+        .hasAttribute("disabled")
     ).toBe(min === 0);
   }
 );
@@ -645,7 +1147,7 @@ it("keeps a vote saved when posting the public explanation fails", async () => {
     target: { value: "25" },
   });
   fireEvent.click(screen.getByRole("switch", { name: "Explain vote" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save vote" }));
+  fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
   await waitFor(() => expect(commonApiPost).toHaveBeenCalledTimes(1));
   expect(screen.getByRole("spinbutton", { name: "Your vote" })).toHaveValue(25);
   expect(screen.getByText("Saved")).toBeInTheDocument();
@@ -667,7 +1169,7 @@ it("hides the MINI vote footer for a signed-out viewer", async () => {
   const prompt = await screen.findByText("Connect your wallet to participate.");
   expect(prompt).not.toBeVisible();
   expect(screen.queryByRole("group", { name: "Vote input mode" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Save vote" })).toBeNull();
+  expect(screen.queryByRole("button")).toBeNull();
   expect(fetchCompetitionCredits).not.toHaveBeenCalled();
 });
 it("offers both modes without a reply option when the voter cannot chat", async () => {
@@ -696,12 +1198,12 @@ it.each(["closed", "inactive"])(
     } as never);
     mount(null);
     await screen.findAllByRole("slider");
-    expect(screen.getByRole("button", { name: "Save vote" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: voteButtonName })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Numeric" }));
     expect(
       screen.getByRole("spinbutton", { name: "Your vote" })
     ).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Save vote" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: voteButtonName })).toBeDisabled();
     expect(setCompetitionVote).not.toHaveBeenCalled();
   }
 );
@@ -720,6 +1222,87 @@ it("keeps zero-credit voting bounded in both modes", async () => {
   expect(input).toHaveAttribute("min", "0");
   expect(input).toHaveAttribute("max", "0");
   fireEvent.change(input, { target: { value: "1" } });
-  expect(screen.getByRole("button", { name: "Save vote" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: voteButtonName })).toBeDisabled();
   expect(setCompetitionVote).not.toHaveBeenCalled();
+});
+
+describe("a chain vote from a wallet with no identity on the 6529 Network", () => {
+  /** The vote stops where the chain writer looks up the wallet. */
+  const voteWithoutIdentity = () => {
+    jest.spyOn(chainGateway, "getIdentityByWallet").mockResolvedValue(null);
+    return identityOfWallet(`0x${"12".repeat(20)}`).then(() => undefined);
+  };
+
+  beforeEach(() => {
+    jest.mocked(useChainWavesWriters).mockReturnValue({
+      vote: jest.fn(voteWithoutIdentity),
+      pollBallot: jest.fn(),
+      waveRating: jest.fn(),
+    });
+  });
+  afterEach(() => {
+    jest.mocked(useChainWavesWriters).mockReturnValue(null);
+    jest.mocked(isChainIdentityActive).mockReturnValue(false);
+    jest.restoreAllMocks();
+  });
+
+  it("points to the identity page in the vote panel once it takes changes", async () => {
+    jest.mocked(isChainIdentityActive).mockReturnValue(true);
+    mount();
+    const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+    fireEvent.change(input, { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "This wallet has no identity on the 6529 Network yet. Create one on your identity page."
+    );
+    expect(
+      screen.getByRole("link", { name: "your identity page" })
+    ).toHaveAttribute("href", "/network/identity");
+    expect(setCompetitionVote).not.toHaveBeenCalled();
+  });
+
+  it("shows the same line under the compact My Votes input", async () => {
+    jest.mocked(isChainIdentityActive).mockReturnValue(true);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    try {
+      render(
+        <QueryClientProvider client={client}>
+          <CompetitionVoteForm
+            competition={context.competition as never}
+            entryId="entry"
+            dropId="drop"
+            disabled={false}
+            compact
+            myVotes
+          />
+        </QueryClientProvider>
+      );
+      const input = await screen.findByRole("textbox", { name: "Your vote" });
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "25" } });
+      fireEvent.submit(input);
+      expect(
+        await screen.findByRole("link", { name: "your identity page" })
+      ).toHaveAttribute("href", "/network/identity");
+    } finally {
+      client.clear();
+    }
+  });
+
+  it("keeps the plain line while the identity page can't help", async () => {
+    mount();
+    const input = await screen.findByRole("spinbutton", { name: "Your vote" });
+    fireEvent.change(input, { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: voteButtonName }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "This wallet has no identity on the 6529 Network yet."
+    );
+    expect(
+      screen.queryByRole("link", { name: "your identity page" })
+    ).not.toBeInTheDocument();
+  });
 });

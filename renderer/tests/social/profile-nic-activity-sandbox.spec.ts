@@ -169,6 +169,36 @@ async function selectNic(page: Page, width: number) {
       .click();
 }
 
+// These flows supply activity rows through browser request interception.
+// Enter through the hydrated app so the browser owns the first read as
+// well as the later reads for filters, pagination, and viewport changes.
+async function openProfileInApp(page: Page) {
+  await page.goto("/playwright/curations", { waitUntil: "domcontentloaded" });
+  const profileTabs = page.getByRole("navigation", {
+    name: "Profile sections",
+  });
+  const subscriptions = profileTabs.getByRole("link", {
+    name: "Subscriptions",
+  });
+  if (test.info().project.name === "capacitor-ios-sim") {
+    // iOS intentionally hides Subscriptions. Its active-tab indicator is
+    // positioned after hydration, so it can signal the same ready nav.
+    await expect(
+      page
+        .getByRole("navigation", { name: "Profile sections" })
+        .locator('[data-profile-tabs-scroll] > div > span[aria-hidden="true"]')
+    ).toHaveCSS("opacity", "1");
+    await expect(subscriptions).toHaveCount(0);
+  } else {
+    // This web-only tab appears after the client has hydrated the profile nav.
+    await expect(subscriptions).toBeAttached();
+  }
+  await profileTabs
+    .getByRole("link", { name: "Identity", exact: true })
+    .click();
+  await page.waitForURL(/\/playwright$/, { timeout: 20000 });
+}
+
 test.describe("Profile NIC activity @local-only", () => {
   useLocalSandboxMutationGuard(
     test,
@@ -189,6 +219,120 @@ test.describe("Profile NIC activity @local-only", () => {
       }
     );
   });
+  test("NIC activity filters share the row when they fit and wrap to the left", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 576, height: 1000 });
+    await page.goto("/playwright", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "NIC", exact: true }).click();
+    const direction = page
+      .getByRole("tablist", { name: "Filter direction" })
+      .filter({ visible: true });
+    const filter = page.getByRole("button", {
+      name: /Filter activity types:/,
+    });
+
+    for (const width of [576, 411, 320, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expect(filter).toBeVisible();
+      const [tabsBox, filterBox, row] = await Promise.all([
+        direction.boundingBox(),
+        filter.boundingBox(),
+        page
+          .getByRole("navigation", { name: "Profile sections" })
+          .boundingBox(),
+      ]);
+      if (!tabsBox || !filterBox || !row)
+        throw new Error("Missing activity filters");
+      const [firstTab, lastTab] = await Promise.all([
+        direction.getByRole("tab").first().boundingBox(),
+        direction.getByRole("tab").last().boundingBox(),
+      ]);
+      if (!firstTab || !lastTab)
+        throw new Error("Missing activity direction tabs");
+      const minimumRowWidth =
+        lastTab.x + lastTab.width - firstTab.x + filterBox.width + 12;
+      const chevronBox = await page
+        .getByRole("button", { name: /Filter activity types:/ })
+        .locator("svg")
+        .boundingBox();
+      if (!chevronBox) throw new Error("Missing activity filter chevron");
+      expect(chevronBox.x).toBeGreaterThanOrEqual(filterBox.x);
+      expect(chevronBox.x + chevronBox.width).toBeLessThanOrEqual(
+        filterBox.x + filterBox.width
+      );
+      if (minimumRowWidth > row.width) {
+        expect(filterBox.y).toBeGreaterThanOrEqual(tabsBox.y + tabsBox.height);
+        expect(Math.abs(filterBox.x - row.x)).toBeLessThanOrEqual(1);
+      } else {
+        expect(Math.abs(filterBox.y - tabsBox.y)).toBeLessThanOrEqual(2);
+        expect(
+          Math.abs(filterBox.x + filterBox.width - row.x - row.width)
+        ).toBeLessThanOrEqual(1);
+      }
+      await filter.click();
+      const menu = page.getByRole("dialog", { name: "Activity types" });
+      await expect(
+        menu.getByRole("heading", { name: "Activity types" })
+      ).toBeVisible();
+      const panel = page
+        .getByRole("dialog", { name: "Activity types" })
+        .getByRole("button", { name: "Handle", exact: true });
+      for (const label of [
+        "Rating",
+        "Handle",
+        "Classification",
+        "Social Media Account",
+      ]) {
+        const option = page
+          .getByRole("dialog", { name: "Activity types" })
+          .getByRole("button", { name: label, exact: true });
+        await expect(option).toHaveAttribute("aria-pressed", "true");
+        await option.click();
+        await expect(option).toHaveAttribute("aria-pressed", "false");
+        await expect(
+          menu.getByRole("heading", { name: "Activity types" })
+        ).toBeVisible();
+        await option.click();
+        await expect(option).toHaveAttribute("aria-pressed", "true");
+        await expect(
+          menu.getByRole("heading", { name: "Activity types" })
+        ).toBeVisible();
+      }
+      await expect(panel).toBeInViewport();
+      if (width === 390)
+        await page.screenshot({
+          path: test.info().outputPath("activity-types-sheet.png"),
+        });
+      await menu
+        .getByRole("button", { name: "Close panel", exact: true })
+        .click();
+      await expect(menu).toHaveCount(0);
+      await expect(filter).toBeFocused();
+      await filter.click();
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
+      await expect(filter).toBeFocused();
+      await expectNoHorizontalOverflow(page);
+    }
+    if (test.info().project.name === "web-desktop-chromium") {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await selectNic(page, 1440);
+      await filter.click();
+      const desktopMenu = page.getByRole("list", { name: "Activity types" });
+      await expect(desktopMenu).toBeVisible();
+      await expect(
+        page.getByRole("dialog", { name: "Activity types" })
+      ).toHaveCount(0);
+      await desktopMenu
+        .getByRole("button", { name: "Handle", exact: true })
+        .click();
+      await expect(desktopMenu).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(desktopMenu).toHaveCount(0);
+      await expect(filter).toBeFocused();
+    }
+  });
   for (const width of [1440, 820, 390]) {
     test(`${width}px fetches only the visible activity log`, async ({
       page,
@@ -196,7 +340,7 @@ test.describe("Profile NIC activity @local-only", () => {
     }, testInfo) => {
       await page.setViewportSize({ width, height: 1000 });
       const requests = await installLogs(page, getSandboxApiOrigin(baseURL));
-      await page.goto("/playwright");
+      await openProfileInApp(page);
       await expect(
         page
           .getByText("rep-leak-marker", { exact: true })
@@ -295,6 +439,74 @@ test.describe("Profile NIC activity @local-only", () => {
     }
   }
 
+  test("keeps the profile name close to narrow and square pictures", async ({
+    page,
+    baseURL,
+  }, testInfo) => {
+    await installLogs(page, getSandboxApiOrigin(baseURL));
+    const image = page.getByRole("img", {
+      name: "profile-picture's profile picture",
+      exact: true,
+    });
+    const heading = page.getByRole("heading", { level: 1 });
+    let imageWidth = 56;
+    const portraitWidths = new Map<number, number>();
+    await page.route("**/_next/image?**", (route) => {
+      const source = new URL(route.request().url()).searchParams.get("url");
+      if (!source?.includes("QmRT2Ur5E1GooeiCWxqToiQXnnok6drPYxuK8J3RLnaMg8"))
+        return route.continue();
+      return route.fulfill({
+        contentType: "image/svg+xml",
+        body: `<svg xmlns="http://www.w3.org/2000/svg" width="${imageWidth}" height="112"><rect width="100%" height="100%" fill="#593878"/></svg>`,
+      });
+    });
+    for (const pictureWidth of [56, 112, 224]) {
+      imageWidth = pictureWidth;
+      await page.goto("/profile-picture");
+      await expect
+        .poll(() =>
+          image.evaluate(
+            (img: HTMLImageElement) => img.naturalWidth / img.naturalHeight
+          )
+        )
+        .toBeCloseTo(pictureWidth / 112, 1);
+      for (const width of [1280, 1024, 820, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        const pictureBox = await image.boundingBox();
+        const headingBox = await heading.boundingBox();
+        expect(pictureBox).not.toBeNull();
+        expect(headingBox).not.toBeNull();
+        if (width >= 1024) {
+          await expect(image).toHaveCSS("object-fit", "contain");
+          // object-contain centers the visible image inside the rendered box.
+          const drawnWidth = Math.min(
+            pictureBox!.width,
+            (pictureBox!.height * pictureWidth) / 112
+          );
+          const drawnRight =
+            pictureBox!.x + (pictureBox!.width + drawnWidth) / 2;
+          const gap = headingBox!.x - drawnRight;
+          expect(gap).toBeGreaterThanOrEqual(16);
+          expect(gap).toBeLessThanOrEqual(24);
+          if (pictureWidth === 56) portraitWidths.set(width, drawnWidth);
+          if (pictureWidth === 112) {
+            expect(drawnWidth).toBeGreaterThan(portraitWidths.get(width)!);
+          }
+        } else {
+          expect(headingBox!.y).toBeGreaterThanOrEqual(
+            pictureBox!.y + pictureBox!.height
+          );
+        }
+        await expectNoHorizontalOverflow(page);
+        if (pictureWidth === 56 && (width === 1280 || width === 390)) {
+          await page.screenshot({
+            path: testInfo.outputPath(`portrait-profile-header-${width}.png`),
+          });
+        }
+      }
+    }
+  });
+
   for (const startWidth of [390, 1440]) {
     test(`${startWidth}px retains both layouts' filters and pages across resizing`, async ({
       page,
@@ -303,7 +515,7 @@ test.describe("Profile NIC activity @local-only", () => {
       const api = getSandboxApiOrigin(baseURL);
       const requests = await installLogs(page, api);
       await page.setViewportSize({ width: startWidth, height: 1000 });
-      await page.goto("/playwright");
+      await openProfileInApp(page);
       await expect(
         page
           .getByText("rep-leak-marker", { exact: true })
@@ -473,7 +685,7 @@ test.describe("Profile NIC activity @local-only", () => {
             body: optimizerFails ? "" : png,
           });
         });
-        await page.goto("/playwright");
+        await openProfileInApp(page);
         const avatar = page
           .getByRole("img", { name: "avatar-user", exact: true })
           .filter({ visible: true })
@@ -535,10 +747,9 @@ test.describe("Profile NIC activity @local-only", () => {
         await seedViewer(page, api, viewer);
         const requests = await installLogs(page, api);
         if (viewer === "logged-out") {
-          await page.goto("/playwright");
+          await openProfileInApp(page);
         } else {
-          // Hydrate the saved session before navigating to the profile, as in
-          // the existing authenticated profile sandbox coverage.
+          // Restore the saved session on the wave before opening the profile.
           await page.goto("/waves/00000000-0000-4000-8000-000000000529");
           await page
             .getByRole("link", { name: "playwright", exact: true })
@@ -653,7 +864,7 @@ test.describe("Profile NIC activity @local-only", () => {
   test("REP-only profile has an empty NIC log", async ({ page, baseURL }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await installLogs(page, getSandboxApiOrigin(baseURL), true);
-    await page.goto("/playwright");
+    await openProfileInApp(page);
     await selectNic(page, 1440);
     await expect(
       page.getByText("No Activity Log", { exact: true })
@@ -687,7 +898,7 @@ test.describe("Profile NIC activity @local-only", () => {
           await route.fallback();
         }
       });
-      await page.goto("/playwright");
+      await openProfileInApp(page);
       await selectNic(page, width);
       const alert = page.getByRole("alert").filter({
         hasText: "Unable to load activity log.",

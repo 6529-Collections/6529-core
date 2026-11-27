@@ -3,17 +3,19 @@
 ## Overview
 
 The `Subscriptions` tab at `/{user}/subscriptions` separates the coverage answer
-from its supporting facts. The top zone contains the status, headline, brief
+from its supporting facts. On desktop the top zone contains the status, headline, brief
 message and owner actions. The quiet bottom zone contains Subscription balance,
 available mints, Forecast use and, when not already named by a deadline, Next
-unfunded. All dates keep their original full-year format and UTC deadline times.
+unfunded. Desktop dates keep their original full-year format and UTC deadline times.
 The original coverage-card gradient is unchanged.
 
-Owners see primary Top up for Action required, Running low and Not set up, with
-a transparent outlined Top up in other states. Only No upcoming drops selected
+Owners see primary Top up for Action required and Running low.
+Covered and Plan a top up keep Top up quiet with a transparent outline.
+Not set up keeps its setup explanation and shows Set up, which opens Minting settings.
+Only No upcoming drops selected
 shows primary Choose drops first and secondary Top up second. Actions sit beside
-the message on desktop and beneath it on phones; the two phone actions share a
-row. Visitors have no owner actions, and Loading shows skeletons without actions.
+the message on desktop. Below 640px they follow Subscription balance and Forecast
+use at the bottom of the card; the two phone actions share a row. Visitors have no owner actions, and Loading shows skeletons without actions.
 
 Facts use 14px labels and desktop values. Desktop facts wrap into compact inline
 rows. On phones, Subscription balance and Forecast use sit side by side, with
@@ -30,7 +32,8 @@ setting labels are brighter, values and supporting details sit beneath them on
 the left, and owner switches sit on the right. The existing owner switches keep their selected-value labels. Airdrop Address uses the original short address format, with the full address available on hover, focus or tap. Below 1024px,
 Minting settings and Subscription History become two compact rows together after
 Upcoming Drops. The settings row summarizes the saved mode and edition preference.
-Settings and history open their full content in the shared mobile bottom sheet; settings uses the full-height sheet. Learn more opens the existing subscriptions guide. Inside settings,
+Below 768px, these rows have settings and clock icons beside their original
+titles. Settings and history open their full content in the shared mobile bottom sheet; settings uses the full-height sheet. Learn more opens the existing subscriptions guide. Inside settings,
 visitor settings use three columns from 768px and owner settings use two; phones
 stack the groups with dividers. Owner labels remain above their controls.
 History retains its compact pill tabs and original entries. Redeemed rows
@@ -97,30 +100,65 @@ On the web and Android, the tab appears after the page loads.
 ## User Journey
 
 1. Open `/{user}/subscriptions`. The coverage card has two zones: the status,
-   funded-drop headline, short explanation and owner actions above; balance,
-   available mints and Forecast use below. Covered is green, Plan a top up is
-   neutral, Running low is amber and Action required is red. Visitors see neutral
-   status text except Covered. Each state keeps its existing headline and data.
-   Funded through appears when at least one drop is funded. A supplied authoritative
-   Top up by cutoff follows for owners in Plan a top up, Running low and Action
-   required. The zero- and one-funded-drop Action required explanations are omitted
-   because the count and deadline already convey them. States without a status
-   keep their existing explanation for owners. Visitors see the status without
-   setup or funding instructions. Manual selections, eligibility and unavailable
-   coverage retain neutral explanations; balances, dates and other facts remain
-   visible. The unavailable-data tooltip also uses visitor wording.
+   headline and owner actions above; balance, available mints and Forecast use
+   below. Existing counts, funded dates and deadline boxes provide the explanation
+   without a repeated sentence. At 24 funded drops, the headline is Next 24 drops funded. Positive counts below 24 and
+   the supplied Funded through line keep their existing wording and date.
+   When a selected forecast is fully funded and identifies no unfunded drop, the
+   card says Covered, even if only one drop was selected. An identified shortfall
+   with funded drops remaining is a calm reminder; the one-funded-drop state says
+   Running low. Action required is red only when the immediate selected drop is
+   not fully funded. Plan a top up is neutral, and Running low is amber. Visitors
+   see factual headings and no owner instructions, deadlines or actions.
+   Funded through appears when at least one drop is funded. When funding reaches
+   the last drop of the 24-drop forecast with no unfunded drop, the balance may
+   cover later drops, so the line reads Funded at least through, the Upcoming
+   Drops boundary uses the same words, the profile header says at least
+   through, and the compact home line says Next 24 drops funded. The profile
+   header and coverage notification show one funded drop as Running low, like
+   the card.
+   When the API also reports how many drops the balance funds past the
+   forecast (at the current mint price and current settings), the headline and
+   the compact home line show that count as About N drops funded, or At least
+   N drops funded when the count reached its 312-drop maximum, with the note
+   At the current mint price and current subscription settings. This applies
+   only when the count is larger than the forecast's funded drops; a balance
+   that funds exactly the forecast, Manual mode and older API responses keep
+   the existing wording. Stale coverage never shows it. A supplied top-up
+   deadline keeps its highlighted background, bold full date/time and original
+   Top up by wording ending in to receive The Memes #N. When the immediate drop
+   is not covered, the owner's heading says Today's mint isn't covered only on
+   its actual UTC mint day; otherwise it names The Memes #N. Partial coverage
+   says isn't fully covered and the deadline names the remaining unfunded
+   editions. Visitors see the funded edition count without the owner instruction.
+   If no deadline is supplied, Next unfunded keeps the named Meme and full mint
+   date; no unavailable-deadline sentence is added. The card cannot confirm
+   mint results from balance alone; the forecast and settings can change after it is calculated.
+   For an immediate shortfall on or after minting day, or when a supplied cutoff expires, the forecast is checked against the final subscription
+   list before showing an alarm. A confirmed payment for all requested editions
+   shows Subscription paid, keeps Top up optional, and preserves the funded-drop
+   count as a last-forecast fact. Checking and failed payment reads stay
+   neutral. Payment confirmation does not promise that the airdrop is complete.
+   A passed authoritative cutoff with a verified unpaid immediate drop shows Deadline passed in
+   grey, the named uncovered Meme and the exact cutoff in the highlighted box.
+   View history opens Subscription History; Top up for future drops remains a
+   separate quiet action. Payment is checked again when the cutoff passes, and
+   an already-paid subscription takes priority over the expired-cutoff warning.
+   A future authoritative cutoff keeps its actionable forecast while payment is checked.
+   An expired later cutoff keeps funded counts and the next unfunded Meme/date,
+   with factual Top-up deadline wording and optional Top up for future drops.
 2. Read Subscription balance, available mints and Forecast use in the quiet facts
    zone. Desktop keeps each fact inline in 14px text. Phones place the two facts
    side by side, with 14px labels above 16px values and `N mints available` below
    the balance without parentheses. They stack below 384px. Summary dates keep their original full-year format, and deadlines retain
    their UTC time. Next unfunded remains in
    the facts only when no deadline line already names that drop. The Forecast use
-   information button retains its projection note and Covered-owner explanation.
+   information button retains its existing projection note.
    Hover, focus or tap opens the shared tooltip; Escape or tapping elsewhere
    dismisses it. The settings and upcoming-drop facts remain in their own sections.
 3. Owners open Top up beside the message on desktop or beneath it on phones.
-   It is white and filled for Action required, Running low and Not set up, and
-   transparent with a subtle outline otherwise. No upcoming drops selected
+   It is white and filled for Action required and Running low, and transparent
+   with a subtle outline for Covered and Plan a top up. No upcoming drops selected
    shows primary Choose drops first and secondary Top up second, under the
    message on desktop and side by side on phones. Choose drops still scrolls to
    and focuses Upcoming Drops. Loading shows no actions, and visitors have no
@@ -151,10 +189,15 @@ On the web and Android, the tab appears after the page loads.
    selections or quantities. From 640px, `Show More` reveals the remaining rows
    inline. On phones it opens the full list in the shared bottom sheet; Close,
    Escape or Show Less returns to the three-row preview and restores focus.
-   Phone rows keep the date first and the title beneath it. The quantity selector
-   and toggle stay together beside the title when there is room, or below it
-   together on narrower rows. Minting Today artwork sits above the full-width
-   text on phones, and the Meme name stays on one line.
+   Below 768px, mobile web and the native app share a 48px leading column:
+   artwork for Minting Today, or a short month above the day inside a thin border
+   when artwork is absent. Rows show the name first and the weekday and season beneath
+   it, without repeating the month and day. Tap, hover or focus the date column
+   to read the full date, including its year. Minting Today keeps its existing
+   label and tooltip. Controls sit beside the name; owner controls move below
+   the metadata when the row is too narrow. Names wrap as needed. Visitor status
+   stacks above the quantity. Show More and Show Less use full-width
+   disclosure rows at these widths.
    Each Meme title links to its `/the-memes/{id}` page, including before minting,
    with keyboard focus and the tab's existing link styling. Scheduled cards in
    the upcoming subscription season open the existing upcoming-card view;
@@ -163,7 +206,8 @@ On the web and Android, the tab appears after the page loads.
    uses the matching minted thumbnail or, before indexing, a Main Stage winner
    explicitly mapped to that Meme number. Winner artwork uses a small resized
    image or preview. Unmatched, unavailable or failed artwork leaves no image
-   slot. Artwork data is requested only when a Minting Today row is present,
+   slot; below 768px the date column appears instead. Artwork data is requested
+   only when a Minting Today row is present,
    reusing the shared cache; title links do not prefetch Meme pages.
    Visitors keep static quantity
    and subscription status. One amber boundary follows the last funded drop,
@@ -173,7 +217,10 @@ On the web and Android, the tab appears after the page loads.
    rows revealed by Show More. The boundary appears when its row is visible,
    including in the three-row preview. Minting Today rows stay locked;
    focus, tap, or hover the label for the explanation. Below 768px, a More button expands the supplied Phase, Subscription Position,
-   Airdrop Address and Subscription Count below the row. More sits beside the title so the control stays close to its text. Desktop keeps those
+   Airdrop Address and Subscription Count below the row. More and details span
+   the text grid below both lines on mobile web and in the native app.
+   Owners also see the existing No changes allowed on
+   minting day explanation under disabled controls; the tooltip remains. Desktop keeps those
    details visible below the title; the tooltip only explains the mint-day lock.
 5. Use Minting settings beside the coverage panel from 1024px. Below that width,
    tap its compact row after Upcoming Drops to open the shared, content-sized
@@ -206,7 +253,7 @@ On the web and Android, the tab appears after the page loads.
 
 - Settings use compact inline controls on the same subtle dark surface as
   Upcoming Drops, with the full address available in its tooltip.
-  Upcoming Drops uses date-first rows with the original mode explanation
+  Upcoming Drops keeps the original mode explanation
   below its heading for the owner only. Minting Today has a primary-blue label
   and a dot that pings unless reduced motion is enabled. All rows share one panel
   with no nested row boxes.
@@ -214,15 +261,17 @@ On the web and Android, the tab appears after the page loads.
   when the existing latest-Meme data matches its token and contract; missing,
   mismatched or failed artwork leaves the row usable without an image.
   The panel has vertical padding around the rows and
-  footer, with subtle horizontal dividers between rows. Dates are emphasized above
-  quieter Meme titles, including Minting Today. Its blue label takes the date's
-  place, with uncropped 80 × 113 artwork from 640px and 48 × 68 artwork on phones.
-  Below 640px, today's artwork sits above the full-width text, so its controls
-  align with the right edge of the later rows. The owner quantity picker and
-  switch stay paired beside the Meme name when there is room, or below it on
-  narrower rows, still aligned right. Visitors keep quantity and subscription status together with
-  the same responsive placement. Below 768px, More expands the original mint-day allocation details as text
-  below the row; desktop keeps them visible. Show More stays centered in the panel footer at every screen size.
+  footer, with subtle horizontal dividers between rows. From 768px, dates are
+  emphasized above quieter Meme titles, including Minting Today, whose blue label
+  takes the date's place. Its uncropped artwork is 80 × 113 from 768px and
+  48 × 68 below that width. Below 768px, artwork or the bordered month/day column
+  sits beside the text, with the Meme name above the weekday and season.
+  The owner quantity picker and switch stay paired beside the name when there
+  is room, or below the metadata on narrower rows. Visitor status stacks above
+  the quantity. More expands the original mint-day allocation details below
+  the row; desktop keeps them visible. Below 768px, Show More and Show Less use
+  a full-width footer row with a label on the left and chevron on the right;
+  desktop keeps its centered control.
   Visitors see non-interactive `Subscribed` or `Not subscribed` text
   instead of disabled drop switches, and plain selected / eligible quantities
   without chip backgrounds or dropdown arrows. Owners keep the existing editable switches, quantity
@@ -232,26 +281,35 @@ On the web and Android, the tab appears after the page loads.
   left, original labels and counts in the middle, and ETH amounts on the right. Blue radio and selected-row colors transition smoothly while rows
   stay in place; reduced motion disables the transitions. Other has a distinct
   bordered count input and ETH preview.
-  Both presentations retain any supplied funding projections. A full-width confirmation
+  Both presentations retain current funding projections. Stale projections or
+  projections whose authoritative cutoff has passed are omitted; the generic
+  card-count choices remain available. A full-width confirmation
   button and recipient address follow all amount choices.
   During a transaction, the existing transaction-status dialog replaces the
   amount-picker dialog. Dismissing success or error returns
   to the amount picker.
-- Coverage status ramps with urgency and pairs its color with text:
+- The shared profile header and notifications retain the API status thresholds:
   - `Covered`: at least 7 consecutive intended drops are fully funded
   - `Plan a top up`: 4-6 drops are fully funded
   - `Running low`: 2-3 drops are fully funded
   - `Action required`: 0-1 drops are fully funded
-- Status explanations use plain, professional wording without changing the
-  state labels or actions. Manual mode, the purpose of choosing drops, eligibility
-  limits and schedule-dependent refresh guidance remain explicit. `Action required`
-  distinguishes an unfunded next drop from one remaining fully funded drop.
+- The Subscription minting card uses the selected forecast to explain those
+  numbers. It says `Covered` when at least one selected drop is funded and no
+  unfunded drop is identified. One funded drop before an identified shortfall
+  says `Running low`. Every loaded state has an explanation, and only a real
+  immediate selected shortfall gets red owner emphasis. States that offer funding
+  actions retain owner top-up controls, including optional future top-ups.
+  Owners in Not set up see Set up instead of Top up.
 - Non-runway states distinguish profiles that are `Not set up`, have
   `No current eligibility`, have `No upcoming drops selected` in Manual mode,
   or cannot currently be forecast.
 - `Automatic` mode does not expire when the balance runs out. The forecast says
   what the current balance funds; it does not claim that the mode itself runs
   until a date.
+- The subscription balance pays only for subscription airdrops, used
+  automatically in the phase the subscriber is eligible for. It cannot pay for
+  a card minted manually on the minting page, and it is not refunded; About >
+  Subscription Minting says this in the Fill Balance step.
 - `mint capacity` is the raw floor of balance divided by the subscription mint
   price. `Forecast use` is the capacity allocated within the current intended
   drop horizon.
@@ -287,11 +345,15 @@ On the web and Android, the tab appears after the page loads.
     unfunded drop instead. There are no repeated row tags or additional Top up
     links; stale coverage does not mark rows
   - shows first 3 rows by default; `Show More` expands the list
-  - each row leads with the UTC date, retaining the abbreviated weekday and
+  - desktop rows lead with the UTC date, retaining the abbreviated weekday and
     month plus the year, or `Minting Today` with its existing tooltip
+  - below 768px, web and native rows show the name first, with a bordered
+    month/day box and the weekday and season beneath the name. The column
+    reveals the full date on hover, focus or tap. Minting Today retains its
+    artwork, label and tooltip
   - every row shows its season beside the date or `Minting Today`, including
     rows revealed by `Show More`; the section heading has no season label
-  - the Meme number is smaller below the date
+  - on desktop the Meme number remains smaller below the date
   - first row can show phase metadata (phase, position, airdrop address,
     subscribed count)
   - a subscribed first row shows `No subscription allocation` once distribution
@@ -390,14 +452,17 @@ processed; they do not automatically recover rows stranded by earlier failures.
   failed request, rather than a zero balance, an empty list or an indefinite
   loading label. A successfully loaded zero balance or empty list keeps its
   normal display.
-- A failed coverage refresh keeps the last known forecast with a visible stale
-  warning in the summary.
+- A failed coverage refresh keeps the last known forecast. Its status becomes
+  grey Last known coverage, with Last updated followed by the calculation's
+  full UTC date/time and May be out of date. Owners retain Refresh coverage.
+  The stale snapshot does not trigger an urgent mint-day or expired-deadline
+  warning; Top up stays quiet.
 - If coverage cannot be calculated or fetched, the page states that settings
   have not changed and owners can retry. It does not guess a funded-through
   date or top-up deadline.
 - If a next intended drop is unfunded but no authoritative cutoff is available,
-  the page says so and shows its projected mint date without presenting that
-  date as a safe deadline.
+  Next unfunded shows the Meme and full mint date. That date is not presented
+  as a top-up deadline, and no extra sentence about a missing deadline is shown.
 - When no airdrop address is available, the page shows
   `No airdrop address found`; owners can use `Set airdrop address` to open the
   existing delegation registration flow.
@@ -446,6 +511,9 @@ processed; they do not automatically recover rows stranded by earlier failures.
 
 ## Limitations / Notes
 
+- On phones, the year for a scheduled drop is available in the date column's
+  tooltip and accessible name. Desktop rows show the full date directly.
+
 ### Localization fallback debt
 
 - Route or component: `/{user}/subscriptions`,
@@ -454,9 +522,13 @@ processed; they do not automatically recover rows stranded by earlier failures.
 - Untranslated surface: subscription controls, the Phase / Subscription Position /
   Airdrop Address / Subscription Count metadata in both row layouts, plus the
   shared transaction status, transaction-link, close-control, and backdrop
-  accessible names.
+  accessible names. The coverage summary's new uncovered, partial-edition,
+  payment-check, passed-deadline and stale-data messages also await translation
+  in `en-GB`, `fr-FR`, `es-ES` and `de-DE`.
 - Current fallback behavior: these surfaces use hardcoded canonical `en-US`
-  in all supported locales. The `No subscription allocation` status uses
+  in all supported locales except the coverage summary, which uses the existing
+  translation catalog with canonical `en-US` fallback and locale-aware numbers
+  and dates. The `No subscription allocation` status uses
   `profile.subscriptions.noAllocation` and is translated in all five locales.
 - User impact: the English UI remains fully functional, but these controls and
   states are not translated yet.

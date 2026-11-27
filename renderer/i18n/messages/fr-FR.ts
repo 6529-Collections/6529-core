@@ -30,13 +30,21 @@ import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.fr-FR.jso
 const LOADING_LABEL = "Chargement…";
 
 export const FR_FR_MESSAGES = {
+  "rep.categories.validation.unavailable":
+    "Ce nom de catégorie ne peut pas être utilisé. Essayez un autre nom.",
   "waves.drops.searchModal.result.emoji": "Émoji {shortcode}",
+  "waves.discovery.activeSubmissions.one": "{count} soumission active",
+  "waves.discovery.activeSubmissions.other": "{count} soumissions actives",
   "waves.historyGap.load": "Charger d’autres messages",
   "waves.historyGap.loaded": "Autres messages chargés",
   "waves.historyGap.loading": "Chargement d’autres messages…",
   "waves.historyGap.retry": "Impossible de charger les messages. Réessayer",
 
   "waves.myVotes.sort": "Trier par",
+  "waves.myVotes.select": "Sélectionner",
+  "waves.myVotes.yourVotesInCredit": "Vos votes en {credit}",
+  "waves.myVotes.maxRating": "{label} {value}",
+  "waves.myVotes.doneSelecting": "Terminé",
   "waves.myVotes.sort.voteAmount": "Votre nombre de votes",
   "waves.myVotes.sort.leaderboard": "Position au classement",
   "waves.myVotes.sort.lastVoted": "Dernier vote",
@@ -258,7 +266,8 @@ export const FR_FR_MESSAGES = {
   "waves.drop.actions.copied": "Copie !",
   "waves.drop.actions.copyFailed": "Echec de la copie",
   "waves.drop.actions.menuLabel": "Actions du drop",
-  "waves.drop.actions.scrollForMore": "Plus d’actions, faire défiler vers le bas",
+  "waves.drop.actions.scrollForMore":
+    "Plus d’actions, faire défiler vers le bas",
   "waves.drop.actions.scrollUp": "Faire défiler vers le haut",
   "waves.drop.actions.reactionPickerLabel": "Ajouter une réaction au drop",
   "waves.drop.actions.showMore": "Afficher plus",
@@ -915,7 +924,6 @@ export const FR_FR_MESSAGES = {
     "Audience actuelle indisponible",
   "waves.create.groups.members.view": "Voir les membres",
   "waves.create.groups.members.previewDraft": "Prévisualiser les résultats",
-  "waves.create.groups.members.dialogTitle": "{role} : {group}",
   "waves.create.groups.members.dynamicDescription":
     "Cet aperçu en direct repose sur les données actuelles de profil, de réputation et de propriété. L’appartenance peut évoluer.",
   "waves.create.groups.members.criteriaSummary":
@@ -1327,6 +1335,24 @@ export const FR_FR_MESSAGES = {
   "desktop.profiles.saveError": "Impossible d’enregistrer vos profils. Réessayez avant de quitter pour conserver vos modifications.",
   "desktop.profiles.saveRetrying": "Nouvelle tentative d’enregistrement des profils…",
   "desktop.profiles.retry": "Réessayer",
+  "e2ee.list.pinned": "Épinglée",
+  "e2ee.list.pinnedChat": "{title}, discussion épinglée",
+  "e2ee.list.pinChat": "Épingler {title} en haut",
+  "e2ee.list.pinDragInstructions":
+    "Appuyez sur Espace pour saisir cette discussion. Utilisez les flèches pour la déplacer, Espace pour la déposer ou Échap pour annuler.",
+  "e2ee.list.pinDragStarted": "Discussion épinglée saisie.",
+  "e2ee.list.pinDragPosition": "Position {position}.",
+  "e2ee.list.pinDragCancelled": "Réorganisation annulée.",
+  "e2ee.list.pinOrderSaved": "Ordre des discussions épinglées enregistré.",
+  "e2ee.list.pinOrderError":
+    "Impossible d’enregistrer l’ordre des discussions épinglées. Réessayez.",
+  "e2ee.info.pin": "Épingler en haut",
+  "e2ee.info.unpin": "Désépingler la discussion",
+  "e2ee.info.pinSyncHelp":
+    "Les discussions épinglées se synchronisent de façon privée avec vos autres appareils de confiance.",
+  "e2ee.info.pinLocalHelp":
+    "Les discussions épinglées restent sur cet appareil jusqu’à ce que la synchronisation chiffrée soit disponible.",
+  "e2ee.info.pinFailed": "Impossible de modifier l’épingle. Réessayez.",
   "e2ee.message.taskChecked": "Tâche cochée",
   "e2ee.message.taskUnchecked": "Tâche non cochée",
   "e2ee.message.imageLink": "Lien vers l’image",

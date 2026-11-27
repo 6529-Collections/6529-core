@@ -76,10 +76,17 @@ export function createContext(options: E2eeEngineOptions): EngineContext {
     stateVersion: 0,
     persistChain: Promise.resolve(),
     disposed: false,
+    incomingPaused: false,
     lastMeAt: 0,
+    ownKeyPackages: new Map(),
+    ownDevices: [],
+    listedAt: null,
+    monotonic: options.monotonic ?? options.now ?? (() => performance.now()),
+    poolReplaceRefused: false,
     lastWakeAt: 0,
     openConversation: null,
     openUntil: 0,
+    readSync: null,
   };
   holder.ctx = ctx;
   return ctx;
@@ -91,6 +98,7 @@ export function setStatus(
   error: string | null = null
 ): void {
   ctx.store.status = status;
+  if (status !== "ready") ctx.store.initialSyncStatus = "pending";
   ctx.store.error = error;
   ctx.store.touch();
 }

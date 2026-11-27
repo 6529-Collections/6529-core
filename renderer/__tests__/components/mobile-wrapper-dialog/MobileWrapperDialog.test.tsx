@@ -11,7 +11,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useRef, useState } from "react";
+import { createRef, useRef, useState } from "react";
 
 jest.mock("@/hooks/useIsMobileLayoutViewport");
 jest.mock("@/hooks/useIsTouchDevice");
@@ -77,6 +77,51 @@ describe("MobileWrapperDialog", () => {
   });
 
   describe("rendering", () => {
+    it.each([false, true])(
+      "keeps the explicit content target when title focus is %s",
+      async (focusTitleOnOpen) => {
+        const initialFocusRef = createRef<HTMLInputElement>();
+        render(
+          <MobileWrapperDialog
+            isOpen
+            title="Add post"
+            onClose={jest.fn()}
+            initialFocusRef={initialFocusRef}
+            focusTitleOnOpen={focusTitleOnOpen}
+          >
+            <input aria-label="Message" ref={initialFocusRef} />
+          </MobileWrapperDialog>
+        );
+        const focusTitle = jest.spyOn(
+          screen.getByRole("heading", { name: "Add post" }),
+          "focus"
+        );
+        act(() => screen.getByRole("dialog", { name: "Add post" }).focus());
+        await act(
+          () =>
+            new Promise<void>((resolve) =>
+              requestAnimationFrame(() => resolve())
+            )
+        );
+        await waitFor(() =>
+          expect(screen.getByRole("textbox", { name: "Message" })).toHaveFocus()
+        );
+        expect(focusTitle).not.toHaveBeenCalled();
+      }
+    );
+    it("supports an optional subtitle without changing the shared close control", () => {
+      render(
+        <MobileWrapperDialog
+          {...defaultProps}
+          isOpen
+          title="Add post"
+          subtitle="to My Curation"
+        />
+      );
+      const dialog = screen.getByRole("dialog", { name: "Add post" });
+      expect(dialog).toHaveAccessibleDescription("to My Curation");
+      expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(1);
+    });
     it("does not render children when closed", () => {
       render(<MobileWrapperDialog {...defaultProps} isOpen={false} />);
 
@@ -259,17 +304,17 @@ describe("MobileWrapperDialog", () => {
       );
       expect(container?.style.transform).toBe("");
       expect(container?.style.transition).toBe(
-        "bottom var(--native-keyboard-layout-transition-duration, 0ms) ease-out"
+        "bottom var(--native-keyboard-layout-transition-duration, 0ms) var(--native-keyboard-layout-transition-easing, ease-out)"
       );
       expect(surface?.style.maxHeight).toBe(
         "min(var(--mobile-wrapper-dialog-resting-height, calc(min(100vh, 100svh) - 10rem)), var(--mobile-wrapper-dialog-available-height, max(0px, calc(min(100vh, 100svh) - var(--mobile-wrapper-dialog-viewport-reserve, 4rem) - var(--mobile-wrapper-dialog-keyboard-inset, 0px)))))"
       );
       expect(surface?.style.transition).toBe(
-        "max-height var(--native-keyboard-layout-transition-duration, 0ms) ease-out"
+        "max-height var(--native-keyboard-layout-transition-duration, 0ms) var(--native-keyboard-layout-transition-easing, ease-out)"
       );
     });
 
-    it("fits an opted-in browser sheet to the visible keyboard viewport", async () => {
+    it("fits browser sheets to the visible keyboard viewport by default", async () => {
       const realViewport = globalThis.visualViewport;
       const viewport = Object.assign(new EventTarget(), {
         height: globalThis.innerHeight,
@@ -283,7 +328,7 @@ describe("MobileWrapperDialog", () => {
       const removeListener = jest.spyOn(viewport, "removeEventListener");
       try {
         const { unmount } = render(
-          <MobileWrapperDialog {...defaultProps} isOpen fitVisualViewport />
+          <MobileWrapperDialog {...defaultProps} isOpen />
         );
         const container = document.querySelector<HTMLElement>(
           ".tw-pointer-events-none.tw-fixed.tw-inset-x-0"
@@ -353,6 +398,47 @@ describe("MobileWrapperDialog", () => {
       }
     });
 
+    it("preserves an explicit browser viewport-fit opt-out", () => {
+      const original = globalThis.visualViewport;
+      const viewport = Object.assign(new EventTarget(), {
+        height: globalThis.innerHeight - 300,
+        offsetTop: 0,
+      });
+      Object.defineProperty(globalThis, "visualViewport", {
+        configurable: true,
+        value: viewport,
+      });
+      try {
+        render(
+          <MobileWrapperDialog
+            {...defaultProps}
+            isOpen
+            fitVisualViewport={false}
+          />
+        );
+        const container = document.querySelector<HTMLElement>(
+          ".tw-pointer-events-none.tw-fixed.tw-inset-x-0"
+        );
+        act(() => viewport.dispatchEvent(new Event("resize")));
+        expect(container).not.toBeNull();
+        expect(
+          container!.style.getPropertyValue(
+            "--mobile-wrapper-dialog-available-height"
+          )
+        ).toBe("");
+        expect(
+          container!.style.getPropertyValue(
+            "--mobile-wrapper-dialog-keyboard-inset"
+          )
+        ).toBe("");
+      } finally {
+        Object.defineProperty(globalThis, "visualViewport", {
+          configurable: true,
+          value: original,
+        });
+      }
+    });
+
     it("animates keyboard resizing for fixed-height sheets", () => {
       render(
         <MobileWrapperDialog
@@ -368,7 +454,7 @@ describe("MobileWrapperDialog", () => {
         "var(--mobile-wrapper-dialog-keyboard-inset, 0px)"
       );
       expect(surface?.style.transition).toBe(
-        "height var(--native-keyboard-layout-transition-duration, 0ms) ease-out"
+        "height var(--native-keyboard-layout-transition-duration, 0ms) var(--native-keyboard-layout-transition-easing, ease-out)"
       );
     });
 
@@ -499,6 +585,79 @@ describe("MobileWrapperDialog", () => {
       );
       fireEvent.click(screen.getByRole("button", { name: "Close" }));
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("expands an opted-in sheet with an upward grip drag and collapses it with the keyboard", async () => {
+      const onClose = jest.fn();
+      render(
+        <MobileWrapperDialog
+          {...defaultProps}
+          isOpen
+          expandableHeight
+          onClose={onClose}
+        />
+      );
+      const grip = screen.getByRole("button", { name: "Expand sheet" });
+      fireTouch(grip, "touchstart", 200);
+      fireTouch(grip, "touchmove", 120);
+      fireTouch(grip, "touchend");
+      expect(grip).toHaveAccessibleName("Collapse sheet");
+      expect(onClose).not.toHaveBeenCalled();
+
+      grip.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(grip).toHaveAccessibleName("Expand sheet");
+      expect(grip).toHaveFocus();
+      expect(screen.getByTestId("child-content")).toBeVisible();
+    });
+
+    it("restores the expanded sheet after leaving a subview and still dismisses on a downward drag", async () => {
+      const onClose = jest.fn();
+      const user = userEvent.setup();
+
+      function Sheet() {
+        const [editing, setEditing] = useState(false);
+        const back = editing ? () => setEditing(false) : undefined;
+        return (
+          <MobileWrapperDialog
+            isOpen
+            title={editing ? "Edit wave" : "About wave"}
+            expandableHeight={!editing}
+            onClose={onClose}
+            onBack={back}
+            onEscape={back}
+          >
+            {editing ? (
+              <input aria-label="Wave name" />
+            ) : (
+              <button type="button" onClick={() => setEditing(true)}>
+                Edit
+              </button>
+            )}
+          </MobileWrapperDialog>
+        );
+      }
+
+      render(<Sheet />);
+      await user.click(screen.getByRole("button", { name: "Expand sheet" }));
+      await user.click(screen.getByRole("button", { name: "Edit" }));
+      expect(screen.getByRole("dialog", { name: "Edit wave" })).toBeVisible();
+      expect(
+        screen.queryByRole("button", { name: "Collapse sheet" })
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("textbox", { name: "Wave name" }));
+      await user.keyboard("{Escape}");
+      expect(
+        screen.getByRole("button", { name: "Collapse sheet" })
+      ).toBeVisible();
+      expect(onClose).not.toHaveBeenCalled();
+
+      const header = screen.getByTestId("mobile-dialog-header");
+      fireTouch(header, "touchstart", 20);
+      fireTouch(header, "touchmove", 110);
+      fireTouch(header, "touchend");
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     });
 
     it("closes a default sheet with a downward header swipe", async () => {
@@ -974,6 +1133,7 @@ describe("MobileWrapperDialog", () => {
           );
           expect(container.inert).toBe(true);
           expect(container).toHaveAttribute("aria-hidden", "true");
+          expect(screen.getByRole("heading", { name: "Review" })).toHaveFocus();
         });
 
         await user.keyboard("{Escape}");

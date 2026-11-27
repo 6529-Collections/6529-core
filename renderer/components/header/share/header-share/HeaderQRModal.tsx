@@ -26,7 +26,7 @@ import {
 import {
   bodyScrollLock,
   buildConnectionShareFailureKey,
-  buildDesktopConnectionShareLink,
+  buildDesktopConnectionSharePath,
   buildNavigateDeepLinkUrl,
   buildNativeConnectionShareUrls,
   buildRouterPath,
@@ -56,7 +56,7 @@ type ShareDisplayState = {
   readonly navigateCoreUrl: string;
   readonly shareConnectionSrc: string;
   readonly shareConnectionAppUrl: string;
-  readonly shareConnectionCoreUrl: string;
+  readonly shareConnectionDesktopPath: string;
   readonly mobileConnectionShareStatus: ConnectionShareStatus;
   readonly desktopConnectionShareStatus: ConnectionShareStatus;
 };
@@ -105,7 +105,7 @@ function HeaderQRModal({
   const [navigateCoreUrl, setNavigateCoreUrl] = useState<string>("");
   const [shareConnectionAppUrl, setShareConnectionAppUrl] =
     useState<string>("");
-  const [shareConnectionCoreUrl, setShareConnectionCoreUrl] =
+  const [shareConnectionDesktopPath, setShareConnectionDesktopPath] =
     useState<string>("");
   const [desktopShareExpiresAt, setDesktopShareExpiresAt] = useState<
     number | null
@@ -126,6 +126,18 @@ function HeaderQRModal({
   const [connectionShareRevision, setConnectionShareRevision] = useState(0);
   const [closingDisplayState, setClosingDisplayState] =
     useState<ShareDisplayState | null>(null);
+  const [previousShow, setPreviousShow] = useState(show);
+  if (previousShow !== show) {
+    setPreviousShow(show);
+    if (!show) {
+      const nextStatus: ConnectionShareStatus =
+        hasValidWalletAuth || hasWalletAddress
+          ? "legacy-auth"
+          : "unauthenticated";
+      setUnavailableMobileConnectionShare(nextStatus);
+      setUnavailableDesktopConnectionShare(nextStatus);
+    }
+  }
 
   const closeModal = useCallback(() => {
     setClosingDisplayState({
@@ -137,7 +149,7 @@ function HeaderQRModal({
       navigateCoreUrl,
       shareConnectionSrc,
       shareConnectionAppUrl,
-      shareConnectionCoreUrl,
+      shareConnectionDesktopPath,
       mobileConnectionShareStatus,
       desktopConnectionShareStatus,
     });
@@ -156,7 +168,7 @@ function HeaderQRModal({
     navigateCoreUrl,
     onClose,
     shareConnectionAppUrl,
-    shareConnectionCoreUrl,
+    shareConnectionDesktopPath,
     shareConnectionSrc,
   ]);
 
@@ -201,7 +213,6 @@ function HeaderQRModal({
     setShareConnectionSrc("");
 
     const appScheme = publicEnv.MOBILE_APP_SCHEME ?? "mobile6529";
-    const coreScheme = publicEnv.CORE_SCHEME ?? "core6529";
 
     if (mode === Mode.PAGE_SHARE) {
       const { fullUrl, routerPath: pageRouterPath } = getCurrentPageLocation();
@@ -211,7 +222,7 @@ function HeaderQRModal({
         routerPath: pageRouterPath,
       });
       const coreUrl = buildNavigateDeepLinkUrl({
-        scheme: coreScheme,
+        scheme: publicEnv.CORE_SCHEME ?? "core6529",
         routerPath: pageRouterPath,
       });
 
@@ -239,7 +250,7 @@ function HeaderQRModal({
 
     const routerPath = buildRouterPath(pathname, searchParams);
     setShareConnectionAppUrl("");
-    setShareConnectionCoreUrl("");
+    setShareConnectionDesktopPath("");
     setDesktopShareExpiresAt(null);
     setMobileConnectionShareStatus("loading");
     setDesktopConnectionShareStatus("loading");
@@ -259,8 +270,7 @@ function HeaderQRModal({
         isStaleGeneration,
         signal,
       }),
-      generateDesktopConnectionShareUrl({
-        coreScheme,
+      generateDesktopConnectionSharePath({
         isStaleGeneration,
         signal,
         walletAddress,
@@ -424,22 +434,20 @@ function HeaderQRModal({
     }
   }
 
-  async function generateDesktopConnectionShareUrl({
-    coreScheme,
+  async function generateDesktopConnectionSharePath({
     isStaleGeneration,
     routerPath,
     signal,
     walletAddress,
   }: {
-    readonly coreScheme: string;
     readonly isStaleGeneration: IsStaleGeneration;
     readonly signal?: AbortSignal | undefined;
     readonly walletAddress: string | null;
     readonly routerPath: string;
-  }): Promise<string> {
+  }): Promise<void> {
     if (!walletAddress) {
       setUnavailableDesktopConnectionShare("unauthenticated");
-      return "";
+      return;
     }
 
     const addressKey = walletAddress.toLowerCase();
@@ -452,7 +460,7 @@ function HeaderQRModal({
       terminalConnectionShareFailuresRef.current.get(failureKey);
     if (terminalFailure) {
       setUnavailableDesktopConnectionShare(terminalFailure);
-      return "";
+      return;
     }
 
     try {
@@ -463,12 +471,12 @@ function HeaderQRModal({
         walletAddress,
       });
       if (verificationStatus === "stale") {
-        return "";
+        return;
       }
 
       if (verificationStatus === "error") {
         setUnavailableDesktopConnectionShare("error");
-        return "";
+        return;
       }
 
       if (verificationStatus === "inactive") {
@@ -477,7 +485,7 @@ function HeaderQRModal({
           "legacy-auth"
         );
         setUnavailableDesktopConnectionShare("legacy-auth");
-        return "";
+        return;
       }
 
       const share = await createConnectionShare({
@@ -485,27 +493,22 @@ function HeaderQRModal({
         targetClientType: "desktop",
       });
       if (isStaleGeneration()) {
-        return "";
+        return;
       }
 
-      const link = buildDesktopConnectionShareLink(
-        share,
-        addressKey,
-        coreScheme
-      );
+      const link = buildDesktopConnectionSharePath(share, addressKey);
       if (!link) {
         setUnavailableDesktopConnectionShare("error");
-        return "";
+        return;
       }
 
       terminalConnectionShareFailuresRef.current.delete(failureKey);
       setDesktopShareExpiresAt(link.expiresAt);
       setDesktopConnectionShareStatus("ready");
-      setShareConnectionCoreUrl(link.url);
-      return link.url;
+      setShareConnectionDesktopPath(link.routerPath);
     } catch (error: unknown) {
       if (isStaleGeneration() || isAbortError(error, signal)) {
-        return "";
+        return;
       }
 
       console.error("Failed to create Desktop connection share", error);
@@ -516,7 +519,6 @@ function HeaderQRModal({
         terminalStatus
       );
       setUnavailableDesktopConnectionShare(terminalStatus);
-      return "";
     }
   }
 
@@ -546,7 +548,7 @@ function HeaderQRModal({
     status: ConnectionShareStatus
   ): void {
     setDesktopConnectionShareStatus(status);
-    setShareConnectionCoreUrl("");
+    setShareConnectionDesktopPath("");
     setDesktopShareExpiresAt(null);
   }
 
@@ -576,18 +578,18 @@ function HeaderQRModal({
   };
 
   useEffect(() => {
-    if (!show || !shareConnectionCoreUrl || desktopShareExpiresAt === null)
+    if (!show || !shareConnectionDesktopPath || desktopShareExpiresAt === null)
       return;
     const timer = setTimeout(
       () => {
         setDesktopConnectionShareStatus("error");
-        setShareConnectionCoreUrl("");
+        setShareConnectionDesktopPath("");
         setDesktopShareExpiresAt(null);
       },
       Math.max(0, desktopShareExpiresAt - Date.now())
     );
     return () => clearTimeout(timer);
-  }, [show, shareConnectionCoreUrl, desktopShareExpiresAt]);
+  }, [show, shareConnectionDesktopPath, desktopShareExpiresAt]);
 
   useEffect(() => {
     terminalConnectionShareFailuresRef.current.clear();
@@ -601,15 +603,6 @@ function HeaderQRModal({
       connectionShareAbortRef.current?.abort();
       connectionShareAbortRef.current = null;
       connectionShareRefreshPendingRef.current = false;
-      const nextStatus: ConnectionShareStatus =
-        hasValidWalletAuth || hasWalletAddress
-          ? "legacy-auth"
-          : "unauthenticated";
-      setMobileConnectionShareStatus(nextStatus);
-      setDesktopConnectionShareStatus(nextStatus);
-      setShareConnectionAppUrl("");
-      setShareConnectionCoreUrl("");
-      setShareConnectionSrc("");
       return;
     }
 
@@ -723,7 +716,7 @@ function HeaderQRModal({
     navigateCoreUrl,
     shareConnectionSrc,
     shareConnectionAppUrl,
-    shareConnectionCoreUrl,
+    shareConnectionDesktopPath,
     mobileConnectionShareStatus,
     desktopConnectionShareStatus,
   };
@@ -764,7 +757,7 @@ function HeaderQRModal({
       }}
       shareConnectionSrc={displayState.shareConnectionSrc}
       shareConnectionAppUrl={displayState.shareConnectionAppUrl}
-      shareConnectionCoreUrl={displayState.shareConnectionCoreUrl}
+      shareConnectionDesktopPath={displayState.shareConnectionDesktopPath}
       mobileConnectionShareStatus={displayState.mobileConnectionShareStatus}
       desktopConnectionShareStatus={displayState.desktopConnectionShareStatus}
       terminalConnectionShareFailuresRef={terminalConnectionShareFailuresRef}

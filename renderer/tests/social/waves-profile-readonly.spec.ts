@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { ApiProfileClassification } from "../../generated/models/ApiProfileClassification";
 import type { ApiWaveOverviewPage } from "../../generated/models/ApiWaveOverviewPage";
+import type { ApiWaveDropsFeedV2 } from "../../generated/models/ApiWaveDropsFeedV2";
 import type { ApiXTdhGrantsPage } from "../../generated/models/ApiXTdhGrantsPage";
 import { ApiXTdhGrantStatus } from "../../generated/models/ApiXTdhGrantStatus";
 import { ApiXTdhGrantTargetChain } from "../../generated/models/ApiXTdhGrantTargetChain";
@@ -37,6 +38,7 @@ import {
   captureSafeScreenshot,
   expect,
   expectNoHorizontalOverflow,
+  seedStagingAccessCookie,
   test,
   waitForRouteReady,
 } from "../testHelpers";
@@ -125,7 +127,7 @@ async function getFirstWaveId(page: Page) {
   return match?.[1] ?? "";
 }
 
-async function getPublicChatMessageTarget(page: Page) {
+async function findPublicChatWave(page: Page) {
   const response = await gotoReadyWithApiResponse(
     page,
     "/waves",
@@ -157,10 +159,15 @@ async function getPublicChatMessageTarget(page: Page) {
   }
   expect(
     wave,
-    "Legacy-link fixture unavailable: public discovery must contain a nonempty public chat wave"
+    "Public discovery must contain a nonempty public chat wave"
   ).toBeDefined();
   const waveId = wave!.id;
   expect(waveId).toMatch(/^[0-9a-f-]{36}$/i);
+  return wave!;
+}
+
+async function getPublicChatMessageTarget(page: Page) {
+  const { id: waveId } = await findPublicChatWave(page);
   await gotoReady(page, `/waves/${waveId}`);
   const message = page
     .getByRole("region", {
@@ -226,10 +233,11 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       await expect(sortControl).toHaveCount(1);
       await expect(sortControl).toBeDisabled();
       await expect(sortControl).toHaveCSS("font-size", "14px");
-      await expect(sortControl).toHaveCSS(
-        "height",
-        (page.viewportSize()?.width ?? 1280) >= 1024 ? "32px" : "44px"
-      );
+      const width = page.viewportSize()?.width ?? 1280;
+      let sortHeight = "44px";
+      if (width < 768) sortHeight = "40px";
+      else if (width >= 1024) sortHeight = "32px";
+      await expect(sortControl).toHaveCSS("height", sortHeight);
       loadingLayout = await skeleton.evaluate(measureCard);
       await expectNoHorizontalOverflow(page);
       await captureSafeScreenshot(
@@ -650,22 +658,17 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       await expect(statuses).toHaveCount(3);
       await expect(upcoming.getByRole("switch")).toHaveCount(0);
       await expect(upcoming.getByRole("combobox")).toHaveCount(0);
-      for (const width of [390, 492, 639, 640, 1024]) {
+      for (const width of [390, 492, 639, 640, 767, 768, 1024]) {
         await page.setViewportSize({ width, height: 900 });
         const imageBox = await artwork.boundingBox();
         const labelBox = await mintingToday.boundingBox();
         expect(imageBox).not.toBeNull();
         expect(labelBox).not.toBeNull();
-        if (width < 640) {
-          expect(labelBox!.y).toBeGreaterThanOrEqual(
-            imageBox!.y + imageBox!.height
-          );
-          expect(Math.abs(labelBox!.x - imageBox!.x)).toBeLessThanOrEqual(1);
-        } else {
-          expect(labelBox!.x).toBeGreaterThanOrEqual(
-            imageBox!.x + imageBox!.width
-          );
-        }
+        expect(labelBox!.x).toBeGreaterThanOrEqual(
+          imageBox!.x + imageBox!.width
+        );
+        expect(imageBox!.width).toBe(width < 768 ? 48 : 80);
+        expect(imageBox!.height).toBe(width < 768 ? 68 : 113);
         const rightEdges = await statuses.evaluateAll((elements) =>
           elements.map((element) => element.getBoundingClientRect().right)
         );
@@ -1298,6 +1301,15 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     await expect(details).toHaveCount(0);
     await expect(coverage.getByText(/Top up by|Recommended:/)).toHaveCount(0);
     await expect(
+      coverage.getByText("Next unfunded", { exact: true })
+    ).toBeVisible();
+    await expect(
+      coverage.getByRole("link", { name: "The Memes #571", exact: true })
+    ).toHaveAttribute("href", "/the-memes/571");
+    await expect(
+      coverage.getByText("The Memes #571 is not fully funded.", { exact: true })
+    ).toHaveCount(0);
+    await expect(
       coverage.getByText(
         /Choose a drop|Set up subscriptions|Review settings or refresh/
       )
@@ -1465,8 +1477,8 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     expect(narrowTitle).not.toBeNull();
     expect(narrowQuantityBox).not.toBeNull();
     expect(narrowStatusBox).not.toBeNull();
-    // Visitor values may share the title line when space permits; neither
-    // layout may overlap or split quantity from its status.
+    // Below md, the approved visitor stack places status above quantity.
+    // Values beside the name must still leave room for the complete title.
     if (narrowQuantityBox!.y < narrowTitle!.y + narrowTitle!.height) {
       expect(narrowQuantityBox!.x).toBeGreaterThanOrEqual(
         narrowTitle!.x + narrowTitle!.width
@@ -1476,8 +1488,15 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
         narrowTitle!.y + narrowTitle!.height
       );
     }
+    expect(narrowQuantityBox!.y).toBeGreaterThanOrEqual(
+      narrowStatusBox!.y + narrowStatusBox!.height - 1
+    );
     expect(
-      Math.abs(narrowQuantityBox!.y - narrowStatusBox!.y)
+      Math.abs(
+        narrowQuantityBox!.x +
+          narrowQuantityBox!.width -
+          (narrowStatusBox!.x + narrowStatusBox!.width)
+      )
     ).toBeLessThanOrEqual(1);
     const settingsOpener = page.getByRole("button", {
       name: "Minting settings",
@@ -1661,7 +1680,7 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     await page.setViewportSize({ width: 390, height: viewport.height });
     await expect(
       upcoming.getByRole("button", { name: "Show More", exact: true })
-    ).toHaveCSS("justify-content", "center");
+    ).toHaveCSS("justify-content", "space-between");
     for (const quantity of await upcoming
       .getByRole("group", {
         name: /^Subscription quantity for The Memes #/,
@@ -1758,7 +1777,11 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     expect(settings.memes_wave_id).toMatch(/^[0-9a-f-]{36}$/i);
     await gotoReady(page, `/waves/${settings.memes_wave_id}`);
     await page
-      .getByRole("navigation", { name: "Wave sections" })
+      .getByRole("button")
+      .locator(":scope[data-wave-phone-more]")
+      .click();
+    await page
+      .getByRole("dialog", { name: "Wave sections", exact: true })
       .getByRole("button", { name: "Settings", exact: true })
       .click();
     const rules = page
@@ -2062,6 +2085,37 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     const settings = await response.json();
     expect(settings.memes_wave_id).toMatch(/^[0-9a-f-]{36}$/i);
 
+    const ordinaryFeedIds = new Set<string>();
+    if (process.env["PLAYWRIGHT_ENV"] === "staging") {
+      const feedUrl = new URL(response.url());
+      feedUrl.pathname = `/api/v2/waves/${settings.memes_wave_id}/drops`;
+      feedUrl.searchParams.set("limit", "50");
+      feedUrl.searchParams.set("respect_drop_reply_collapse", "true");
+      const access = await response.request().headerValue("x-6529-auth");
+      const feedResponse = await page.request.get(feedUrl.href, {
+        headers: access ? { "x-6529-auth": access } : {},
+      });
+      expect(feedResponse.ok()).toBe(true);
+      const feed: ApiWaveDropsFeedV2 = await feedResponse.json();
+      expect(feed.wave.has_competition).toBe(true);
+      expect(feed.drops.length).toBeGreaterThan(0);
+      for (const drop of feed.drops) {
+        expect(drop.competition_entry).toBeDefined();
+        if (drop.competition_entry === null) ordinaryFeedIds.add(drop.id);
+      }
+    }
+    const ordinaryContextRequests: string[] = [];
+    page.on("request", (request) => {
+      const parts = new URL(request.url()).pathname.split("/");
+      const dropId = parts.at(-2);
+      if (
+        parts.at(-1) === "competition-context" &&
+        dropId &&
+        ordinaryFeedIds.has(dropId)
+      ) {
+        ordinaryContextRequests.push(dropId);
+      }
+    });
     await gotoReady(page, `/waves/${settings.memes_wave_id}`);
     await expect(
       page.getByRole("heading", { level: 1, name: "The Memes - Main Stage" })
@@ -2069,10 +2123,30 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     const waveTabs = page.getByRole("tablist").filter({
       has: page.getByRole("tab", { name: "Chat", exact: true }),
     });
-    for (const name of ["Chat", "Leaderboard", "Winners", "FAQ"]) {
+    for (const name of ["Chat", "Leaderboard", "Winners"]) {
       await expect(
         waveTabs.getByRole("tab", { name, exact: true })
       ).toBeAttached();
+    }
+    const faq = waveTabs.getByRole("tab", { name: "FAQ", exact: true });
+    if (await faq.count()) {
+      await expect(faq).toBeAttached();
+    } else {
+      const more = page.getByRole("main").locator("[data-wave-phone-more]");
+      if (testInfo.project.use.hasTouch) await more.tap();
+      else await more.click();
+      const sections = page.getByRole("dialog", {
+        name: "Wave sections",
+        exact: true,
+      });
+      await expect(
+        sections.getByRole("button", { name: "FAQ", exact: true })
+      ).toBeVisible();
+      await expect(
+        sections.getByRole("button", { name: /^Outcomes?$/, exact: true })
+      ).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(sections).toBeHidden();
     }
     await expect(
       waveTabs.getByRole("tab", { name: /^Outcomes?$/, exact: true })
@@ -2098,6 +2172,7 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       body: await page.screenshot(),
       contentType: "image/png",
     });
+    expect(ordinaryContextRequests).toEqual([]);
     // This pack runs signed out; personal voting controls remain authenticated.
     await expect(
       page.getByRole("tab", { name: "My Votes", exact: true })
@@ -2475,6 +2550,63 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     ).toBeVisible();
   });
 
+  test("keeps Wave details clear of the Desktop title strip", async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "web-desktop-chromium",
+      "The integrated title strip case uses the desktop Waves layout."
+    );
+
+    await page.addInitScript(() => {
+      const applyTitleStrip = () => {
+        const root = document.documentElement;
+        if (!root) return false;
+        root.dataset["desktopTitlebar"] = "overlay";
+        root.style.setProperty("--desktop-titlebar-height", "34px");
+        return true;
+      };
+      if (applyTitleStrip()) return;
+      const observer = new MutationObserver(() => {
+        if (applyTitleStrip()) observer.disconnect();
+      });
+      observer.observe(document, { childList: true });
+    });
+
+    const waveId = await getFirstWaveId(page);
+    await gotoReady(page, `/waves/${waveId}`);
+    const strip = page.getByRole("toolbar", {
+      name: "6529 Desktop window title",
+    });
+    const header = page
+      .getByRole("main")
+      .locator("header")
+      .filter({ has: page.getByRole("heading", { level: 1 }) });
+    await expect(strip).toBeVisible();
+    await expect(header).toBeVisible();
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-seize-body-scroll-locked",
+      "true"
+    );
+
+    // A scroll-locked Wave has its own scroll regions. The document must not
+    // have spare space that a programmatic scroll can move under the strip.
+    await page.evaluate(() =>
+      window.scrollTo({ top: 12, behavior: "instant" })
+    );
+    await expect
+      .poll(async () => {
+        const [stripBox, headerBox] = await Promise.all([
+          strip.boundingBox(),
+          header.boundingBox(),
+        ]);
+        return stripBox && headerBox
+          ? headerBox.y - stripBox.y - stripBox.height
+          : null;
+      })
+      .toBe(8);
+  });
+
   test("keeps wave identity compact and sharing reachable through details", async ({
     page,
   }, testInfo) => {
@@ -2487,7 +2619,7 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       .locator("header")
       .filter({ has: page.getByRole("heading", { level: 1 }) });
     const utilityTrigger = header.getByRole("button", {
-      name: compact ? "Wave details" : "Show right sidebar",
+      name: compact ? "More wave actions" : "Show right sidebar",
       exact: true,
     });
     await expect(utilityTrigger).toBeVisible();
@@ -2635,6 +2767,12 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     }
 
     await utilityTrigger.click();
+    if (compact) {
+      await page
+        .getByRole("dialog", { name: "More wave actions", exact: true })
+        .getByRole("button", { name: "Wave details", exact: true })
+        .click();
+    }
     if (!compact) {
       await page.mouse.move(0, 0);
       const openToggle = page.getByRole("button", {
@@ -2656,7 +2794,9 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     }
     const aboutPanel = page
       .getByRole("complementary", { name: "Wave details" })
-      .or(page.getByRole("dialog", { name: "Wave details" }));
+      .or(
+        page.getByRole("dialog", { name: compact ? /^About / : "Wave details" })
+      );
     await expect(
       aboutPanel.getByRole("tab", { name: "About", exact: true })
     ).toBeVisible();
@@ -2684,6 +2824,54 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       testInfo,
       "wave-utility-controls-hierarchy"
     );
+  });
+
+  test("opens public Wave message links with JavaScript disabled", async ({
+    browser,
+    baseURL,
+    page,
+  }) => {
+    const { id: waveId, name: waveName } = await findPublicChatWave(page);
+    const viewport = page.viewportSize();
+    const context = await browser.newContext({
+      javaScriptEnabled: false,
+      ...(baseURL === undefined ? {} : { baseURL }),
+      ...(viewport === null ? {} : { viewport }),
+    });
+    try {
+      await seedStagingAccessCookie(context, baseURL);
+      const previewPage = await context.newPage();
+      const response = await gotoDocumentWithTransientRetry(
+        previewPage,
+        `/waves/${waveId}`
+      );
+      expect(response?.ok()).toBe(true);
+      const preview = previewPage.getByRole("region", {
+        name: waveName,
+        exact: true,
+      });
+      await expect(preview).toHaveAttribute("data-public-wave-feed", waveId);
+      const messageLink = preview.getByRole("article").last().getByRole("link");
+      await expect(messageLink).toBeVisible();
+      await expect(messageLink).toBeInViewport();
+      await messageLink.focus();
+      await expect(messageLink).toBeFocused();
+      const href = await messageLink.getAttribute("href");
+      if (!href) throw new Error("Public Wave preview link is missing its URL");
+      const target = new URL(href, previewPage.url());
+      const dropId = target.searchParams.get("drop");
+      if (!dropId)
+        throw new Error("Public Wave preview link is missing its message ID");
+      expect(dropId).toMatch(/^[0-9a-f-]{36}$/i);
+
+      await messageLink.press("Enter");
+      await expect(previewPage).toHaveURL(target.href);
+      await expect(preview).toHaveAttribute("data-public-wave-drop", dropId);
+      await expect(preview.getByRole("article")).toBeVisible();
+      await expectNoHorizontalOverflow(previewPage);
+    } finally {
+      await context.close();
+    }
   });
 
   test("handles legacy wave query links without mutation", async ({ page }) => {
@@ -2739,19 +2927,43 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
   test("keeps profile statistics natural and activity loading compact", async ({
     page,
   }) => {
-    let releaseLogs: () => void = () => {};
-    const logsReady = new Promise<void>((resolve) => {
-      releaseLogs = resolve;
+    let releaseScripts: () => void = () => undefined;
+    const scriptsReady = new Promise<void>((resolve) => {
+      releaseScripts = resolve;
     });
-    await page.route("**/api/profile-logs?**", async (route) => {
-      await logsReady;
+    const browserReads: string[] = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      const defaultLog =
+        url.pathname === "/api/profile-logs" &&
+        url.searchParams.get("profile") === PROFILE_HANDLE &&
+        url.searchParams.get("page") === "1" &&
+        url.searchParams.get("include_incoming") === "true";
+      const initialRatingsOrStatements = [
+        "rep/overview",
+        "rep/categories",
+        "cic/overview",
+        "cic/statements",
+      ].some(
+        (suffix) => url.pathname === `/api/profiles/${PROFILE_HANDLE}/${suffix}`
+      );
+      if (
+        request.method() === "GET" &&
+        (defaultLog || initialRatingsOrStatements)
+      ) {
+        browserReads.push(url.pathname);
+      }
+    });
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      if (new URL(route.request().url()).pathname.endsWith(".js")) {
+        await scriptsReady;
+      }
       await route.continue();
     });
+
+    const loading = page.getByRole("status", { name: "Loading activity log" });
     try {
-      await gotoReady(page, `/${PROFILE_HANDLE}`);
-      const loading = page.getByRole("status", {
-        name: "Loading activity log",
-      });
+      await page.goto(`/${PROFILE_HANDLE}`, { waitUntil: "commit" });
       await expect(loading).toBeVisible();
       const loadingBox = await loading.boundingBox();
       expect(loadingBox).not.toBeNull();
@@ -2770,54 +2982,18 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       expect(numericStyles.variant).toBe("normal");
       await expectNoHorizontalOverflow(page);
       await loading.scrollIntoViewIfNeeded();
-      await expect
-        .poll(() =>
-          loading.evaluate((element) => {
-            let ancestor: Element | null = element;
-            while (ancestor) {
-              if (Number(getComputedStyle(ancestor).opacity) < 1) return false;
-              ancestor = ancestor.parentElement;
-            }
-            return true;
-          })
-        )
-        .toBe(true);
       await captureSafeScreenshot(
         page,
         test.info(),
         "profile-activity-loading"
       );
-
-      // Releasing the held request starts the network round trip; it does not
-      // mean the activity data has arrived. Keep network and render readiness
-      // separate, and fail explicitly if the activity endpoint returns an error.
-      const activityResponse = page.waitForResponse(
-        (response) => {
-          const url = new URL(response.url());
-          return (
-            response.request().method() === "GET" &&
-            url.pathname === "/api/profile-logs" &&
-            url.searchParams.get("profile") === PROFILE_HANDLE
-          );
-        },
-        { timeout: RESPONSE_TIMEOUT_MS }
-      );
-      releaseLogs();
-      const response = await activityResponse;
-      expect(
-        response.ok(),
-        `Profile activity request returned HTTP ${response.status()}`
-      ).toBe(true);
-      await expect(
-        response.finished(),
-        "Profile activity response must complete successfully"
-      ).resolves.toBeNull();
-      await expect(
-        page.getByRole("status", { name: "Loading activity log" })
-      ).toHaveCount(0);
     } finally {
-      releaseLogs();
+      releaseScripts();
     }
+    const rep = page.getByRole("region", { name: "REP", exact: true });
+    await expect(rep.getByText(/^[\d,]+ raters?$/).first()).toBeVisible();
+    await expect(loading).toHaveCount(0);
+    expect(browserReads).toEqual([]);
   });
 
   test("waits for identity guidance hydration before accepting activation", async ({

@@ -1,5 +1,5 @@
 import { defineWaveImageLayoutTests } from "../media/imageArtworkLayoutCases";
-import type { Page, Route, WebSocketRoute } from "@playwright/test";
+import type { Locator, Page, Route, WebSocketRoute } from "@playwright/test";
 import { defineWaveImagePreviewTests } from "../media/waveImagePreviewCases";
 import { defineWaveVideoLayoutTests } from "../media/waveVideoLayoutCases";
 
@@ -30,6 +30,19 @@ const LONG_DROP_END_MARKER = "END-OF-LONG-SANDBOX-POST";
 const LONG_DROP_CONTENT = `${"Long timeline detail for browser coverage. ".repeat(
   30
 )}${LONG_DROP_END_MARKER}`;
+const LONG_DROP_PREVIEW_PARAGRAPH =
+  "This paragraph is visible before expanding.";
+const LONG_DROP_CONTINUATION =
+  "The next paragraph starts the rest of the post.";
+const LONG_DROP_READING_CONTENT = [
+  ...Array.from({ length: 9 }, (_, index) => `Preview paragraph ${index + 1}.`),
+  LONG_DROP_PREVIEW_PARAGRAPH,
+  LONG_DROP_CONTINUATION,
+  ...Array.from({ length: 3 }, () =>
+    "Long timeline detail for browser coverage. ".repeat(30).trimEnd()
+  ),
+  LONG_DROP_END_MARKER,
+].join("\n\n");
 const SANDBOX_POLL_QUESTION = "Which sandbox option do you prefer?";
 const SANDBOX_GUIDELINES_FIRST_LINE =
   "1. Keep discussions constructive and stay on topic in this local sandbox wave.";
@@ -43,6 +56,44 @@ const SANDBOX_POLL_OPTIONS = [
 const SANDBOX_STORM_INITIAL_PART = "Calm storm first draft.";
 const SANDBOX_STORM_FIRST_PART = "Calm storm conclusion.";
 const SANDBOX_STORM_SECOND_PART = "Calm storm opening.";
+
+const screenTop = (locator: Locator) =>
+  locator.evaluate((node) => node.getBoundingClientRect().top);
+
+async function expectSameScreenPosition(locator: Locator, originalTop: number) {
+  await expect
+    .poll(async () => Math.abs((await screenTop(locator)) - originalTop))
+    .toBeLessThanOrEqual(2);
+}
+
+const getFocusedDisclosureElement = (drop: Locator) =>
+  drop
+    .getByRole("button", { name: "Show less", exact: true })
+    .locator("xpath=..")
+    .locator(":focus");
+
+async function expectComposerUsableAfterReading(page: Page) {
+  const composer = page
+    .getByRole("textbox", { name: "Write a message" })
+    .last();
+  const draft = "Continue the conversation after reading.";
+  await composer.fill(draft);
+  await expect(composer).toContainText(draft);
+}
+
+async function focusCenteredWaveToggle(toggle: Locator) {
+  await toggle.scrollIntoViewIfNeeded();
+  await toggle.focus();
+  await toggle.evaluate((button) => {
+    const container = button.closest<HTMLElement>(
+      "[data-wave-drops-scroll-container]"
+    );
+    if (!container) throw new Error("Expected a wave scroll container.");
+    const desiredTop =
+      container.getBoundingClientRect().top + container.clientHeight / 2;
+    container.scrollTop += button.getBoundingClientRect().top - desiredTop;
+  });
+}
 
 test.describe.configure({ mode: "serial" });
 
@@ -321,7 +372,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
   test("pastes one image when Chrome exposes different timestamp wrappers", async ({
     baseURL,
     page,
-  }) => {
+  }, testInfo) => {
     let uploadStartCount = 0;
     await installDropImageUploadFixture(page, baseURL, () => {
       uploadStartCount += 1;
@@ -376,7 +427,14 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     ).toHaveCount(0);
     expect(uploadStartCount).toBe(1);
 
-    await page.getByRole("button", { name: "Remove image" }).click();
+    const removeImage = page.getByRole("button", { name: "Remove image" });
+    await expect(removeImage).toHaveCSS("width", "28px");
+    await expect(removeImage).toHaveCSS("height", "28px");
+    await expect(removeImage).toHaveCSS("border-radius", "8px");
+    await page.screenshot({
+      path: testInfo.outputPath("composer-image-remove.png"),
+    });
+    await removeImage.click();
     await expect(
       page.getByRole("button", { name: "Select image" })
     ).toHaveCount(0);
@@ -504,7 +562,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
   test("renders deterministic link preview and keeps composer usable", async ({
     baseURL,
     page,
-  }) => {
+  }, testInfo) => {
     await gotoSandboxWave(page);
 
     const previewLink = page
@@ -519,6 +577,33 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     });
     await expect(page.getByText(PREVIEW_DESCRIPTION).first()).toBeVisible();
 
+    const previewFrame = page
+      .getByTestId("link-preview-card-stable-frame")
+      .filter({ has: previewLink })
+      .first();
+    const actions = previewFrame.getByRole("button", {
+      name: "Link actions",
+      exact: true,
+    });
+    await actions.focus();
+    await expect(actions).toHaveCSS("width", "32px");
+    await expect(actions).toHaveCSS("height", "32px");
+    await expect(actions).toHaveCSS("border-radius", "8px");
+    await page.keyboard.press("Enter");
+    await expect(actions).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      page.getByRole("button", { name: "Copy link", exact: true }).last()
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Open link", exact: true }).last()
+    ).toHaveAttribute("href", PREVIEW_URL);
+    await page.keyboard.press("Escape");
+    await expect(actions).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      page.getByRole("button", { name: "Copy link", exact: true }).last()
+    ).toBeHidden();
+    await expect(actions).toBeFocused();
+
     const composer = page
       .getByRole("textbox", { name: "Write a message" })
       .last();
@@ -526,6 +611,10 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await expect(
       page.getByRole("button", { name: "Post" }).last()
     ).toBeEnabled();
+    if (!testInfo.project.use.hasTouch) await previewLink.hover();
+    await page.screenshot({
+      path: testInfo.outputPath("link-preview-actions.png"),
+    });
     await expectNoHorizontalOverflow(page);
     await expectNoUnsafeSandboxMutations(baseURL);
   });
@@ -759,9 +848,10 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
-  test("expands and collapses a long chat drop without leaving the latest position", async ({
+  test("renders deterministic link preview and keeps composer usable after expanding the latest long drop in place", async ({
     baseURL,
     page,
+    hasTouch,
   }) => {
     // Load the fixture before navigation; a route may still be in flight
     // when Playwright disposes the page's request context at test teardown.
@@ -773,13 +863,13 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
           json: {
             ...payload,
             drops: [
-              sourceDrop,
+              { ...sourceDrop, content: "Earlier chat drop." },
               {
                 ...sourceDrop,
                 id: "00000000-0000-4000-8000-000000000546",
                 serial_no: 2,
                 created_at: Number(sourceDrop["created_at"] ?? 0) + 1,
-                content: LONG_DROP_CONTENT,
+                content: `${LONG_DROP_READING_CONTENT}\n\n${PREVIEW_URL}`,
               },
             ],
           },
@@ -789,12 +879,19 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await gotoSandboxWave(page);
 
     const longDrop = page
-      .getByText("Long timeline detail", { exact: false })
+      .getByText(LONG_DROP_PREVIEW_PARAGRAPH, { exact: true })
       .locator('xpath=ancestor::*[@data-serial-no="2"][1]');
+    const previewParagraph = longDrop.getByText(LONG_DROP_PREVIEW_PARAGRAPH, {
+      exact: true,
+    });
+    const continuation = page.getByText(LONG_DROP_CONTINUATION, {
+      exact: true,
+    });
     await expect(longDrop).toBeVisible({
       timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
     });
     await expect(longDrop).not.toContainText(LONG_DROP_END_MARKER);
+    await expect(continuation).toHaveCount(0);
 
     const showMore = longDrop.getByRole("button", { name: "Show more" });
     await expect(showMore).toHaveAttribute("aria-expanded", "false");
@@ -809,31 +906,35 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       .poll(() => scrollContainer.evaluate((node) => node.scrollTop))
       .toBe(0);
 
-    await showMore.focus();
-    await expect(showMore).toBeFocused();
-    await showMore.press("Enter");
+    await expect(showMore).toBeInViewport({ ratio: 1 });
+    await expect(previewParagraph).toBeInViewport({ ratio: 1 });
+    const originalTop = await screenTop(previewParagraph);
+    if (hasTouch) await showMore.tap();
+    else await showMore.click();
 
-    await expect(longDrop).toContainText(LONG_DROP_END_MARKER);
     const showLess = longDrop.getByRole("button", { name: "Show less" });
     await expect(showLess).toHaveAttribute("aria-expanded", "true");
-    await expect(showLess).toBeFocused();
-    await expect(showLess).toBeInViewport({ ratio: 1 });
+    await expect(longDrop).toContainText(LONG_DROP_END_MARKER);
+    await expectSameScreenPosition(previewParagraph, originalTop);
     await expect
-      .poll(() => scrollContainer.evaluate((node) => node.scrollTop))
-      .toBe(0);
+      .poll(() => screenTop(continuation))
+      .toBeGreaterThan(originalTop);
+    await expect(longDrop.getByText(PREVIEW_TITLE)).toBeVisible();
+    await expectSameScreenPosition(previewParagraph, originalTop);
 
-    await showLess.press("Enter");
+    if (hasTouch) await showLess.tap();
+    else await showLess.click();
     await expect(longDrop).not.toContainText(LONG_DROP_END_MARKER);
     const collapsedToggle = longDrop.getByRole("button", {
       name: "Show more",
     });
-    await expect(collapsedToggle).toBeFocused();
     await expect(collapsedToggle).toBeInViewport({ ratio: 1 });
+    await expectComposerUsableAfterReading(page);
     await expectNoHorizontalOverflow(page);
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
-  test("keeps an older long drop toggle in place when expanding and collapsing", async ({
+  test("renders deterministic link preview and keeps composer usable after expanding an older long drop in place", async ({
     baseURL,
     page,
   }) => {
@@ -845,7 +946,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       created_at: Number(sourceDrop["created_at"] ?? 0) + index * 60_000,
       content:
         index === 19
-          ? `${LONG_DROP_CONTENT}\n\nhttps://example.com/delayed-long-drop`
+          ? `${LONG_DROP_READING_CONTENT}\n\nhttps://example.com/delayed-long-drop`
           : `Surrounding history message ${index + 1}.`,
     }));
     await page.route(
@@ -855,30 +956,22 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await gotoSandboxWave(page);
 
     const longDrop = page
-      .getByText("Long timeline detail", { exact: false })
+      .getByText(LONG_DROP_PREVIEW_PARAGRAPH, { exact: true })
       .locator('xpath=ancestor::*[@data-serial-no="20"][1]');
+    const previewParagraph = longDrop.getByText(LONG_DROP_PREVIEW_PARAGRAPH, {
+      exact: true,
+    });
     const scrollContainer = page
       .getByRole("main")
       .locator("[data-wave-drops-scroll-container]")
       .first();
     const showMore = longDrop.getByRole("button", { name: "Show more" });
-    await showMore.scrollIntoViewIfNeeded();
-    await showMore.focus();
-    await showMore.evaluate((button) => {
-      const container = button.closest<HTMLElement>(
-        "[data-wave-drops-scroll-container]"
-      );
-      if (!container) throw new Error("Expected a wave scroll container.");
-      const desiredTop =
-        container.getBoundingClientRect().top + container.clientHeight / 2;
-      container.scrollTop += button.getBoundingClientRect().top - desiredTop;
-    });
+    await focusCenteredWaveToggle(showMore);
     await expect
       .poll(() => scrollContainer.evaluate((node) => node.scrollTop))
       .toBeLessThan(-100);
-    const buttonTop = await showMore.evaluate(
-      (button) => button.getBoundingClientRect().top
-    );
+    await expect(previewParagraph).toBeInViewport({ ratio: 1 });
+    const previewTop = await screenTop(previewParagraph);
 
     let releasePreview = () => {};
     const previewReady = new Promise<void>((resolve) => {
@@ -897,41 +990,20 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       await showMore.press("Enter");
       const showLess = longDrop.getByRole("button", { name: "Show less" });
       await expect(longDrop).toContainText(LONG_DROP_END_MARKER);
-      await expect(showLess).toBeFocused();
-      await expect
-        .poll(async () =>
-          Math.abs(
-            (await showLess.evaluate(
-              (button) => button.getBoundingClientRect().top
-            )) - buttonTop
-          )
-        )
-        .toBeLessThanOrEqual(2);
+      await expect(getFocusedDisclosureElement(longDrop)).toBeInViewport();
+      await expectSameScreenPosition(previewParagraph, previewTop);
 
       releasePreview();
       await expect(longDrop.getByText(PREVIEW_TITLE)).toBeVisible();
-      await expect
-        .poll(async () =>
-          Math.abs(
-            (await showLess.evaluate(
-              (button) => button.getBoundingClientRect().top
-            )) - buttonTop
-          )
-        )
-        .toBeLessThanOrEqual(2);
+      await expectSameScreenPosition(previewParagraph, previewTop);
 
+      await focusCenteredWaveToggle(showLess);
+      const expandedToggleTop = await screenTop(showLess);
       await showLess.press("Space");
       await expect(longDrop).not.toContainText(LONG_DROP_END_MARKER);
       await expect(showMore).toBeFocused();
-      await expect
-        .poll(async () =>
-          Math.abs(
-            (await showMore.evaluate(
-              (button) => button.getBoundingClientRect().top
-            )) - buttonTop
-          )
-        )
-        .toBeLessThanOrEqual(2);
+      await expectSameScreenPosition(showMore, expandedToggleTop);
+      await expectComposerUsableAfterReading(page);
       await expectNoHorizontalOverflow(page);
       await expectNoUnsafeSandboxMutations(baseURL);
     } finally {
@@ -1958,7 +2030,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
         exact: true,
       });
       await expect(showLess).toHaveAttribute("aria-expanded", "true");
-      await expect(showLess).toBeFocused();
+      await expect(getFocusedDisclosureElement(quoteCard)).toBeInViewport();
       await expect(quoteCard).toContainText(LONG_DROP_END_MARKER);
       await expect(page).toHaveURL(new RegExp(`/waves/${SANDBOX_WAVE_ID}$`));
       await showLess.press(key);
@@ -1972,21 +2044,14 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
 
       if (hasTouch) {
         await showMore.evaluate((button) => button.blur());
-        const toggleTop = await showMore.evaluate(
-          (button) => button.getBoundingClientRect().top
-        );
+        const quotedText = quoteCard.getByText("Long timeline detail", {
+          exact: false,
+        });
+        const quotedTextTop = await screenTop(quotedText);
         await showMore.tap();
         await expect(showLess).toHaveAttribute("aria-expanded", "true");
         await expect(showLess).not.toBeFocused();
-        await expect
-          .poll(async () =>
-            Math.abs(
-              (await showLess.evaluate(
-                (button) => button.getBoundingClientRect().top
-              )) - toggleTop
-            )
-          )
-          .toBeLessThanOrEqual(2);
+        await expectSameScreenPosition(quotedText, quotedTextTop);
         await showLess.tap();
         await expect(showMore).toHaveAttribute("aria-expanded", "false");
         await expect(showMore).not.toBeFocused();

@@ -8,6 +8,8 @@ import {
   parseWalletBridgeResponse,
   parseWalletBridgeStatus,
   walletBridgeAcceptsContext,
+  walletBridgeSendsTransactions,
+  walletBridgeSignsSafeTx,
   type WalletBridgeResponse,
   type WalletForwardingMethod,
   type WalletRequestInput,
@@ -25,9 +27,38 @@ const PROFILES_KEY = "desktop-browser-wallet-profiles";
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 
 let profiles: ReadonlySet<string> = new Set();
+const profileListeners = new Set<() => void>();
+
+const setProfiles = (next: ReadonlySet<string>) => {
+  profiles = next;
+  for (const listener of profileListeners) {
+    try {
+      listener();
+    } catch {
+      // A renderer must not interrupt profile cleanup or other subscribers.
+    }
+  }
+};
+
+export function subscribeBrowserWalletProfiles(
+  listener: () => void
+): () => void {
+  profileListeners.add(listener);
+  return () => {
+    profileListeners.delete(listener);
+  };
+}
+
 /** True once the list was read from the store (not merely defaulted). */
 let profilesRead = false;
 let profilesLoading: Promise<boolean> | null = null;
+let profilesGeneration = 0;
+
+/** A transaction hash on a chain, for an explorer link. */
+interface SentTransaction {
+  readonly hash: string;
+  readonly chainId: number;
+}
 
 /** What the waiting dialog shows. */
 type DesktopWalletRequestStatus =
@@ -38,12 +69,26 @@ type DesktopWalletRequestStatus =
       readonly expiresAt: number;
       /** Short payload hash of a drop or decision signature, else null. */
       readonly fingerprint: string | null;
+      /** Whether the open request is a transaction. */
+      readonly transaction?: boolean;
     }
   | { readonly kind: "cancelled" }
   | { readonly kind: "expired" }
   | { readonly kind: "busy" }
   /** The browser page or the app would not sign it: use the website. */
   | { readonly kind: "refused" }
+  /** A transaction forwarding does not send: use the website. */
+  | { readonly kind: "transaction" }
+  /** This 6529 Desktop does not send transactions: update or use the website. */
+  | { readonly kind: "transactionUpdate" }
+  /** This 6529 Desktop does not sign Safe transactions: update or use the website. */
+  | { readonly kind: "safeTxUpdate" }
+  /** The wallet reported a hash 6529 Desktop could not confirm yet. */
+  | ({ readonly kind: "transactionUnverified" } & SentTransaction)
+  /** The transaction on chain differs from the one requested. */
+  | ({ readonly kind: "transactionMismatch" } & SentTransaction)
+  /** A transaction approved after its request ended was sent. */
+  | ({ readonly kind: "lateTransaction" } & SentTransaction)
   /** A signature that is not the account's own (a smart-contract wallet). */
   | { readonly kind: "unverified" }
   | { readonly kind: "failed" };
@@ -61,6 +106,13 @@ let lastRequest = 0;
 let ownerFingerprint: string | null = null;
 /** Whether the shell accepts a request's `context` (from capabilities). */
 let acceptsContext = false;
+/** Whether the shell sends transactions with this website's rules. */
+let sendsTransactions = false;
+/** Whether the shell signs Safe transactions with this website's table. */
+let signsSafeTx = false;
+let stopLateTransactions: (() => void) | null = null;
+/** The chain of the open transaction request, for its explorer link. */
+let ownerChainId = 1;
 
 const setStatus = (next: DesktopWalletRequestStatus) => {
   status = next;
@@ -92,6 +144,27 @@ export function showDesktopWalletRefusal(): void {
   if (status.kind !== "waiting") setStatus({ kind: "refused" });
 }
 
+/**
+ * Shows that a transaction is not sent through forwarding (decided in the
+ * app): this 6529 Desktop sends none (`transactionUpdate`), or this one is
+ * not on the allow-list (`transaction`).
+ */
+export function showDesktopWalletTransactionRefusal(): void {
+  if (status.kind === "waiting") return;
+  setStatus({
+    kind: sendsTransactions ? "transaction" : "transactionUpdate",
+  });
+}
+
+/**
+ * Shows that this 6529 Desktop cannot ask the browser wallet to sign this
+ * Safe transaction (its SafeTx table differs): update or use the website.
+ */
+export function showDesktopWalletSafeTxRefusal(): void {
+  if (status.kind === "waiting") return;
+  setStatus({ kind: "safeTxUpdate" });
+}
+
 const readProfiles = (value: unknown): ReadonlySet<string> =>
   new Set(
     Array.isArray(value)
@@ -110,20 +183,27 @@ const readProfiles = (value: unknown): ReadonlySet<string> =>
  */
 function readStoredProfiles(): Promise<boolean> {
   if (profilesRead) return Promise.resolve(true);
-  profilesLoading ??= (async () => {
+  const store = getDesktopStore();
+  if (!store) return Promise.resolve(false);
+  if (profilesLoading) return profilesLoading;
+  const generation = profilesGeneration;
+  const read: Promise<boolean> = Promise.resolve().then(async () => {
+    let loaded = false;
     try {
-      const store = getDesktopStore();
-      if (!store) return false;
-      profiles = readProfiles(await store.get(PROFILES_KEY));
-      profilesRead = true;
-      return true;
+      const storedProfiles = await store.get(PROFILES_KEY);
+      if (generation === profilesGeneration) {
+        profilesRead = true;
+        setProfiles(readProfiles(storedProfiles));
+        loaded = true;
+      }
     } catch {
-      return false;
-    } finally {
-      profilesLoading = null;
+      loaded = false;
     }
-  })();
-  return profilesLoading;
+    if (profilesLoading === read) profilesLoading = null;
+    return loaded;
+  });
+  profilesLoading = read;
+  return read;
 }
 
 /** Loads the browser-wallet profile list (an unreadable list offers none). */
@@ -142,13 +222,15 @@ export const isBrowserWalletProfile = (address: string | null | undefined) =>
 async function updateProfiles(
   change: (current: ReadonlySet<string>) => ReadonlySet<string> | null
 ): Promise<void> {
+  const generation = profilesGeneration;
   let read = await readStoredProfiles();
   // One retry: a store that was briefly busy should not lose the change.
   if (!read) read = await readStoredProfiles();
-  if (!read) return;
+  if (!read || generation !== profilesGeneration) return;
   const next = change(profiles);
   if (next === null) return;
-  profiles = next;
+  setProfiles(next);
+  if (generation !== profilesGeneration) return;
   await getDesktopStore()?.set(PROFILES_KEY, [...next]);
 }
 
@@ -194,12 +276,13 @@ export async function forgetBrowserWalletProfile(
  * kept. Never throws.
  */
 export async function forgetAllBrowserWalletProfiles(): Promise<void> {
-  profiles = new Set();
+  profilesGeneration += 1;
+  profilesRead = true;
+  setProfiles(new Set());
   try {
     const store = getDesktopStore();
     if (!store) return;
     await store.set(PROFILES_KEY, []);
-    profilesRead = true;
   } catch {
     // The connector still signs only for a profile with a desktop session.
   }
@@ -214,6 +297,8 @@ export async function getDesktopWalletMethods(): Promise<
   readonly WalletForwardingMethod[]
 > {
   acceptsContext = false;
+  sendsTransactions = false;
+  signsSafeTx = false;
   const api = getDesktopShellApi();
   const bridge = getDesktopWallet();
   if (!api || !bridge) return [];
@@ -222,15 +307,31 @@ export async function getDesktopWalletMethods(): Promise<
     if (info.supportsWalletForwarding !== true) return [];
     const capabilities = await bridge.capabilities();
     acceptsContext = walletBridgeAcceptsContext(capabilities);
+    sendsTransactions = walletBridgeSendsTransactions(capabilities);
+    signsSafeTx = walletBridgeSignsSafeTx(capabilities);
     return parseWalletBridgeCapabilities(capabilities);
   } catch {
     acceptsContext = false;
+    sendsTransactions = false;
+    signsSafeTx = false;
     return [];
   }
 }
 
+/**
+ * Whether this 6529 Desktop sends allow-listed transactions to the browser
+ * wallet (it reported this website's transaction rules).
+ */
+export const desktopWalletSendsTransactions = (): boolean => sendsTransactions;
+
 /** Whether requests may carry `context` (the shell said it accepts it). */
 export const desktopWalletAcceptsContext = (): boolean => acceptsContext;
+
+/**
+ * Whether this 6529 Desktop asks the browser wallet to sign Safe
+ * transactions (it reported this website's SafeTx table).
+ */
+export const desktopWalletSignsSafeTx = (): boolean => signsSafeTx;
 
 const applyShellStatus = (value: unknown) => {
   const shellStatus = parseWalletBridgeStatus(value);
@@ -240,6 +341,7 @@ const applyShellStatus = (value: unknown) => {
       requestCode: shellStatus.requestCode,
       expiresAt: shellStatus.expiresAt,
       fingerprint: ownerRequest === null ? null : ownerFingerprint,
+      transaction: shellStatus.method === "eth_sendTransaction",
     });
   } else if (status.kind === "waiting") {
     // The answer itself sets the final message; until then, nothing waits.
@@ -247,10 +349,41 @@ const applyShellStatus = (value: unknown) => {
   }
 };
 
+const TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/;
+/** Chains transactions are forwarded on (Ethereum, Sepolia). */
+const TRANSACTION_CHAINS = new Set([1, 11_155_111]);
+
+/** A late transaction event: the hash it reports and its chain, or null. */
+function readLateTransaction(value: unknown): SentTransaction | null {
+  if (typeof value !== "object" || value === null) return null;
+  const event = value as Record<string, unknown>;
+  const hash = event["ok"] === true ? event["value"] : event["transactionHash"];
+  const chainId = event["chainId"];
+  return typeof hash === "string" &&
+    TRANSACTION_HASH.test(hash) &&
+    typeof chainId === "number" &&
+    TRANSACTION_CHAINS.has(chainId)
+    ? { hash: hash.toLowerCase(), chainId }
+    : null;
+}
+
+/** Shows a transaction sent after its request ended, unless one is open. */
+function watchLateTransactions(): void {
+  const bridge = getDesktopWallet();
+  if (!bridge?.onLateTransaction || stopLateTransactions) return;
+  stopLateTransactions = bridge.onLateTransaction((value) => {
+    const sent = readLateTransaction(value);
+    if (sent && status.kind !== "waiting") {
+      setStatus({ kind: "lateTransaction", ...sent });
+    }
+  });
+}
+
 /** Follows the shell's request status (the code to show while waiting). */
 export function watchDesktopWalletStatus(): void {
   const bridge = getDesktopWallet();
   if (!bridge || stopWatching) return;
+  watchLateTransactions();
   stopWatching = bridge.onStatusChange((value) => {
     statusEventSeen = true;
     applyShellStatus(value);
@@ -264,10 +397,20 @@ export function watchDesktopWalletStatus(): void {
     .catch(() => undefined);
 }
 
-type FinishedKind = Exclude<
-  DesktopWalletRequestStatus["kind"],
-  "idle" | "waiting"
->;
+type FinishedKind =
+  | "cancelled"
+  | "expired"
+  | "busy"
+  | "refused"
+  | "transaction"
+  | "unverified"
+  | "failed";
+
+/** The shell's refusal words for a transaction outside the rules. */
+const TRANSACTION_REFUSALS = new Set([
+  "unknown-transaction",
+  "transaction-rule",
+]);
 
 const FAILURE_STATUS: Partial<Record<string, FinishedKind>> = {
   cancelled: "cancelled",
@@ -278,12 +421,33 @@ const FAILURE_STATUS: Partial<Record<string, FinishedKind>> = {
   invalid: "refused",
 };
 
+/** The message for a transaction answer, or null for the usual ones. */
+function transactionStatus(
+  response: WalletBridgeResponse
+): DesktopWalletRequestStatus | null {
+  if (response.ok || response.transactionHash === undefined) return null;
+  const sent = { hash: response.transactionHash, chainId: ownerChainId };
+  // Any answer that names a sent transaction shows it (never a plain
+  // failure), so the user checks it before trying again.
+  return response.reason === "transaction-mismatch"
+    ? { kind: "transactionMismatch", ...sent }
+    : { kind: "transactionUnverified", ...sent };
+}
+
 function finish(response: WalletBridgeResponse): WalletBridgeResponse {
-  if (response.ok || response.code === "rejected") {
+  const forTransaction = transactionStatus(response);
+  if (forTransaction) {
+    setStatus(forTransaction);
+  } else if (response.ok || response.code === "rejected") {
     // A signature, or the user's own decline in the browser: no message.
     setStatus(IDLE);
   } else if (response.reason === "unverified-signature") {
     setStatus({ kind: "unverified" });
+  } else if (
+    response.reason !== undefined &&
+    TRANSACTION_REFUSALS.has(response.reason)
+  ) {
+    setStatus({ kind: "transaction" });
   } else {
     setStatus({ kind: FAILURE_STATUS[response.code] ?? "failed" });
   }
@@ -308,10 +472,14 @@ export async function runDesktopWalletRequest(
   if (ownerRequest === null) {
     ownerRequest = id;
     ownerFingerprint = fingerprint;
+    ownerChainId = request.chainId;
   }
   try {
     const response = parseWalletBridgeResponse(
-      await bridge.request(request).catch(() => null)
+      await bridge.request(request).catch(() => null),
+      request.method === "eth_sendTransaction"
+        ? "eth_sendTransaction"
+        : "personal_sign"
     );
     return ownerRequest === id ? finish(response) : response;
   } finally {
@@ -338,13 +506,20 @@ export function reopenDesktopWalletRequest(): void {
 
 /** @api Resets the module state between tests. */
 export function __resetDesktopBrowserWalletForTests(): void {
+  profilesGeneration += 1;
   profiles = new Set();
+  profileListeners.clear();
   profilesRead = false;
   profilesLoading = null;
   statusEventSeen = false;
   ownerRequest = null;
   ownerFingerprint = null;
   acceptsContext = false;
+  sendsTransactions = false;
+  signsSafeTx = false;
+  ownerChainId = 1;
+  stopLateTransactions?.();
+  stopLateTransactions = null;
   lastRequest = 0;
   status = IDLE;
   stopWatching?.();

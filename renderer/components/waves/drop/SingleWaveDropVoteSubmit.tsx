@@ -15,9 +15,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commonApiPost } from "@/services/api/common-api";
 import type { DropRateChangeRequest } from "@/entities/IDrop";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
-import { formatNumberWithCommas } from "@/helpers/Helpers";
+import {
+  VoteActionButton,
+  getVoteActionLabel,
+} from "@/components/voting/VoteActionButton";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { useWavesPausedReason } from "@/hooks/useWavesMovePhase";
+import { useChainWavesWriters } from "@/components/chain-waves/useChainWavesWriters";
+import { isUserRejectedSigningError } from "@/helpers/wallet-error.helpers";
+import { withViewerVote } from "@/lib/chain-waves/optimistic";
 import { AuthContext } from "@/components/auth/Auth";
-import { getToastErrorDetails } from "@/helpers/toast.helpers";
+import {
+  chainWriteDetails,
+  chainWriteFailure,
+} from "@/components/chain-waves/chainWavesErrorMessage";
+import { chainIdentityPointer } from "@/components/chain-waves/chainIdentityPointer";
 import {
   SingleWaveDropVoteSize,
   SingleWaveDropVoteSubmissionMode,
@@ -92,6 +104,9 @@ const SingleWaveDropVoteSubmit = forwardRef<
     }: Props,
     ref
   ) => {
+    const locale = useBrowserLocale();
+    const pausedReason = useWavesPausedReason("votes");
+    const chainWriters = useChainWavesWriters();
     const position = drop.rank;
     const { requestAuth, setToast, connectedProfile, activeProfileProxy } =
       useContext(AuthContext);
@@ -100,7 +115,11 @@ const SingleWaveDropVoteSubmit = forwardRef<
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSpinnerExiting, setIsSpinnerExiting] = useState(false);
     const [isTextExiting, setIsTextExiting] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [processingVote, setProcessingVote] = useState<{
+      amount: number;
+      label: string;
+    } | null>(null);
+    const isProcessing = processingVote !== null;
     const animationTimelineRef = useRef<VoteAnimationTimeline | null>(null);
     const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
     const delayCancelersRef = useRef<(() => void)[]>([]);
@@ -121,27 +140,41 @@ const SingleWaveDropVoteSubmit = forwardRef<
       particlesDuration + particlesDelay * particleCount + 2500;
 
     const rateChangeMutation = useMutation({
-      mutationFn: async (param: { rate: number }) =>
-        await commonApiPost<DropRateChangeRequest, ApiDrop>({
+      mutationFn: async (param: { rate: number }): Promise<ApiDrop> => {
+        if (chainWriters) {
+          // On the 6529 Network the vote carries its own signature; the
+          // caches show it until 6529.io's index reads it from the chain.
+          await chainWriters.vote({ dropId: drop.id, amount: param.rate });
+          return withViewerVote(drop, param.rate);
+        }
+        return await commonApiPost<DropRateChangeRequest, ApiDrop>({
           endpoint: `drops/${drop.id}/ratings`,
           body: {
             rating: param.rate,
             category: DEFAULT_DROP_RATE_CATEGORY,
           },
-        }),
+        });
+      },
       onSuccess: (updatedDrop) => {
         applyWaveDropVoteUpdate(queryClient, updatedDrop, drop.wave.id, {
           contextProfile: activeProfileProxy
             ? undefined
             : connectedProfile?.handle,
+          fromChain: chainWriters !== null,
         });
       },
       onError: (error) => {
+        // Cancelled at the wallet prompt: nothing was sent.
+        if (isUserRejectedSigningError(error)) {
+          return;
+        }
         setToast({
           type: "error",
           title: "Couldn't submit your vote.",
-          description: "Please try again.",
-          details: getToastErrorDetails(error),
+          description:
+            chainIdentityPointer(locale, error) ??
+            chainWriteFailure(locale, error, "Please try again."),
+          details: chainWriteDetails(error),
         });
       },
     });
@@ -154,6 +187,10 @@ const SingleWaveDropVoteSubmit = forwardRef<
     const getVoteError = () => {
       if (submitBlockReason) {
         return submitBlockReason;
+      }
+
+      if (pausedReason) {
+        return pausedReason;
       }
 
       if (!Number.isFinite(newRating)) {
@@ -312,7 +349,7 @@ const SingleWaveDropVoteSubmit = forwardRef<
       setLoading(false);
       setIsSpinnerExiting(false);
       setIsTextExiting(false);
-      setIsProcessing(false);
+      setProcessingVote(null);
     };
 
     const showSuccessfulVote = () => {
@@ -330,7 +367,7 @@ const SingleWaveDropVoteSubmit = forwardRef<
         const resetTimeout = setTimeout(() => {
           setShowSuccess(false);
           setIsTextExiting(false);
-          setIsProcessing(false);
+          setProcessingVote(null);
         }, VOTE_BUTTON_TRANSITION_MS);
         timeoutsRef.current.push(resetTimeout);
       }, totalParticlesTime);
@@ -422,6 +459,14 @@ const SingleWaveDropVoteSubmit = forwardRef<
 
       const successTimeout = setTimeout(() => {
         onVoteSuccess?.();
+        // A caller that closes on the background path (the vote dialogs)
+        // closes once the 6529 Network has taken the vote.
+        if (
+          submissionMode ===
+          SingleWaveDropVoteSubmissionMode.BACKGROUND_AFTER_AUTH
+        ) {
+          onVoteRequestStarted?.();
+        }
       }, 1000);
       timeoutsRef.current.push(successTimeout);
 
@@ -441,7 +486,7 @@ const SingleWaveDropVoteSubmit = forwardRef<
 
       setShowSuccess(false);
       setIsTextExiting(false);
-      setIsProcessing(false);
+      setProcessingVote(null);
     };
 
     const handleClick = async () => {
@@ -458,7 +503,7 @@ const SingleWaveDropVoteSubmit = forwardRef<
         return;
       }
 
-      setIsProcessing(true);
+      setProcessingVote({ amount: newRating, label: idleButtonLabel });
       setIsTextExiting(true);
       setLoading(true);
 
@@ -472,7 +517,8 @@ const SingleWaveDropVoteSubmit = forwardRef<
 
       let success = false;
       try {
-        ({ success } = await requestAuth());
+        // On the 6529 Network each vote carries its own signature.
+        ({ success } = chainWriters ? { success: true } : await requestAuth());
       } catch {
         resetLoadingState();
         return;
@@ -483,9 +529,13 @@ const SingleWaveDropVoteSubmit = forwardRef<
         return;
       }
 
+      // On the 6529 Network the wallet or this browser's key signs after the
+      // click, and the vote counts once a block holds it: the dialog waits
+      // for that before it says the vote went in.
       if (
         submissionMode ===
-        SingleWaveDropVoteSubmissionMode.BACKGROUND_AFTER_AUTH
+          SingleWaveDropVoteSubmissionMode.BACKGROUND_AFTER_AUTH &&
+        chainWriters === null
       ) {
         submitVoteInBackground();
         return;
@@ -498,43 +548,26 @@ const SingleWaveDropVoteSubmit = forwardRef<
       handleClick,
     }));
 
-    let voteDirectionClass = "";
-    if (size !== SingleWaveDropVoteSize.MINI) {
-      if (newRating > 0) {
-        voteDirectionClass = styles["voteButtonPositive"] ?? "";
-      } else if (newRating < 0) {
-        voteDirectionClass = styles["voteButtonNegative"] ?? "";
-      } else {
-        voteDirectionClass = styles["voteButtonNeutral"] ?? "";
-      }
-    }
-
-    const showVoteAmount =
-      size !== SingleWaveDropVoteSize.MINI &&
-      Number.isFinite(newRating) &&
-      newRating !== 0;
-    let voteAmountLabel: string | null = null;
-    if (showVoteAmount) {
-      const voteSign = newRating > 0 ? "+" : "";
-      voteAmountLabel = `${voteSign}${formatNumberWithCommas(
-        newRating
-      )} ${voteLabel}`;
-    }
-
     const idleButtonLabel =
-      submitLabelOverride ??
-      (voteAmountLabel === null ? "Vote" : `Vote ${voteAmountLabel}`);
+      submitLabelOverride ?? getVoteActionLabel(locale, newRating, voteLabel);
+    const displayedButtonLabel = processingVote?.label ?? idleButtonLabel;
 
     const getButtonContent = () => {
       return (
-        <div className={styles["buttonContent"] ?? ""}>
+        <div className={`${styles["buttonContent"] ?? ""} tw-min-h-5`}>
+          <span
+            aria-hidden="true"
+            className="tw-invisible tw-whitespace-nowrap"
+          >
+            {displayedButtonLabel}
+          </span>
           {(!loading || isTextExiting) && (
             <span
               className={`${styles["buttonText"] ?? ""} ${
                 isTextExiting ? (styles["exit"] ?? "") : (styles["enter"] ?? "")
               }`}
             >
-              {showSuccess ? "Voted" : idleButtonLabel}
+              {showSuccess ? "Voted" : displayedButtonLabel}
             </span>
           )}
           {loading && (
@@ -555,21 +588,23 @@ const SingleWaveDropVoteSubmit = forwardRef<
     };
 
     return (
-      <div className={`vote-button-container-${randomID}`}>
-        <button
+      <div
+        className={`vote-button-container-${randomID} ${size === SingleWaveDropVoteSize.MINI ? "tw-w-auto" : "tw-w-full"}`}
+      >
+        <VoteActionButton
           id={`vote-button-${randomID}`}
-          className={`${
-            size === SingleWaveDropVoteSize.MINI
-              ? (styles["voteButtonMini"] ?? "")
-              : (styles["voteButton"] ?? "")
-          } ${voteDirectionClass} ${isProcessing ? (styles["processing"] ?? "") : ""}`}
+          amount={processingVote?.amount ?? newRating}
+          unit={voteLabel}
+          aria-label={loading ? displayedButtonLabel : undefined}
+          variant={size === SingleWaveDropVoteSize.MINI ? "compact" : "default"}
+          className={isProcessing ? (styles["processing"] ?? "") : undefined}
           onClick={(e) => {
             e.stopPropagation();
             void handleClick();
           }}
         >
           {getButtonContent()}
-        </button>
+        </VoteActionButton>
       </div>
     );
   }

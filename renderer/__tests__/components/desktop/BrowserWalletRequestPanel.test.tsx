@@ -71,6 +71,8 @@ const seizeConnect = jest.fn();
 const signMessageAsync = jest.fn();
 const signTypedDataAsync = jest.fn();
 const switchChainAsync = jest.fn();
+const sendTransactionAsync = jest.fn();
+const publicClient = { call: jest.fn(), readContract: jest.fn() };
 const assign = jest.fn();
 
 jest.mock("wagmi", () => ({
@@ -79,6 +81,8 @@ jest.mock("wagmi", () => ({
   useSignMessage: () => ({ signMessageAsync }),
   useSignTypedData: () => ({ signTypedDataAsync }),
   useSwitchChain: () => ({ switchChainAsync }),
+  useSendTransaction: () => ({ sendTransactionAsync }),
+  usePublicClient: () => publicClient,
 }));
 const mockChains = [{ id: 1 }];
 jest.mock("@/components/auth/SeizeConnectContext", () => ({
@@ -90,21 +94,24 @@ jest.mock("@/helpers/desktop-navigation", () => ({
 
 const envelope = (
   overrides: Partial<WalletRequestEnvelope> = {}
-): WalletRequestEnvelope => ({
-  v: 1,
-  id: ID,
-  scheme: "localcore6529",
-  origin: globalThis.location.origin,
-  issuedAt: Date.now(),
-  expiresAt: Date.now() + 60_000,
-  request: {
-    method: "personal_sign",
-    params: [toHex(MESSAGE), ADDRESS],
-    address: ADDRESS,
-    chainId: 1,
-  },
-  ...overrides,
-});
+): WalletRequestEnvelope => {
+  const issuedAt = Date.now();
+  return {
+    v: 1,
+    id: ID,
+    scheme: "localcore6529",
+    origin: globalThis.location.origin,
+    issuedAt,
+    expiresAt: issuedAt + 60_000,
+    request: {
+      method: "personal_sign",
+      params: [toHex(MESSAGE), ADDRESS],
+      address: ADDRESS,
+      chainId: 1,
+    },
+    ...overrides,
+  };
+};
 
 async function fragmentFor(
   value: WalletRequestEnvelope | Record<string, unknown>,

@@ -1,15 +1,17 @@
 "use client";
 
+import IconButton from "@/components/utils/button/IconButton";
+
 import CommonDropdownItemsDefaultWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsDefaultWrapper";
 import CommonDropdownItemsMobileWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsMobileWrapper";
-import { useWaveInformationPanel } from "@/components/brain/mobile/WaveInformationPanelContext";
 import {
-  WAVE_HEADER_ACTION_CLASSES,
-  WAVE_HEADER_ACTION_SURFACE_CLASSES,
-} from "@/components/brain/left-sidebar/waves/WaveHeaderActions";
+  useWaveInformationPanel,
+  WAVE_OPTIONS_VIEW,
+} from "@/components/brain/mobile/WaveInformationPanelContext";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import useIsMobileLayoutViewport from "@/hooks/useIsMobileLayoutViewport";
+import { useWavesWritesPaused } from "@/hooks/useWavesMovePhase";
 import { t } from "@/i18n/messages";
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { useRef, type ReactNode } from "react";
@@ -28,7 +30,8 @@ export default function WaveHeaderOptions({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const locale = useBrowserLocale();
   const panel = useWaveInformationPanel(
-    t(locale, "waves.header.ownerOptionsTitle")
+    t(locale, "waves.header.ownerOptionsTitle"),
+    WAVE_OPTIONS_VIEW
   );
   const {
     isOpen: isOptionsOpen,
@@ -39,6 +42,10 @@ export default function WaveHeaderOptions({
   const useSheetActions = panel.isInSheet || isMobileLayoutViewport;
   const popupRole = isMobileLayoutViewport ? "dialog" : "menu";
   const { requestDelete, completeMobileOptionsLeave } = useWaveDeleteFlow();
+  // Closing a wave moves to the 6529 Network with its other settings. Direct
+  // messages stay on this site.
+  const isDirectMessage = wave.chat.scope.group?.is_direct_message ?? false;
+  const wavesWritesPaused = useWavesWritesPaused() && !isDirectMessage;
 
   if (!showOwnerActions) {
     return null;
@@ -70,10 +77,12 @@ export default function WaveHeaderOptions({
           isMobile={useSheetActions}
           onSuccess={closeOptions}
         />
-        <WaveDelete
-          isMobile={useSheetActions}
-          onDeleteRequest={handleDeleteRequest}
-        />
+        {!wavesWritesPaused && (
+          <WaveDelete
+            isMobile={useSheetActions}
+            onDeleteRequest={handleDeleteRequest}
+          />
+        )}
       </div>
     </li>
   );
@@ -114,10 +123,11 @@ export default function WaveHeaderOptions({
   return (
     <>
       <div className="tw-relative tw-z-20 tw-flex tw-h-8 tw-items-center">
-        <button
+        <IconButton
           ref={buttonRef}
           type="button"
-          className={WAVE_HEADER_ACTION_CLASSES}
+          layout="toolbar"
+          aria-label={t(locale, "waves.header.ownerOptionsOpenLabel")}
           id="options-menu-0-button"
           aria-expanded={isOptionsOpen}
           aria-controls={panel.isInSheet ? panel.contentId : undefined}
@@ -130,13 +140,12 @@ export default function WaveHeaderOptions({
           <span className="tw-sr-only">
             {t(locale, "waves.header.ownerOptionsOpenLabel")}
           </span>
-          <span className={WAVE_HEADER_ACTION_SURFACE_CLASSES}>
-            <EllipsisVerticalIcon
-              className="tw-size-5 tw-flex-shrink-0"
-              aria-hidden="true"
-            />
-          </span>
-        </button>
+
+          <EllipsisVerticalIcon
+            className="tw-size-5 tw-flex-shrink-0"
+            aria-hidden="true"
+          />
+        </IconButton>
         {optionsSurface}
       </div>
     </>

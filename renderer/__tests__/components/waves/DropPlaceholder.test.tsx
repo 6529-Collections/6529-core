@@ -5,6 +5,8 @@ import {
 } from "@/hooks/useDropPriviledges";
 import { fireEvent, render, screen } from "@testing-library/react";
 
+const PROXY_SESSION_MESSAGE =
+  "You're signed in as a proxy for another profile, so you can't post here. To post as yourself, switch back to your own profile, or sign out and connect again.";
 const mockSeizeConnect = jest.fn();
 let mockSeizeConnectOpen = false;
 let mockIsWideContainer = false;
@@ -207,9 +209,7 @@ describe("DropPlaceholder", () => {
         />
       );
 
-      expect(
-        screen.getByText("Proxy users cannot participate in chat")
-      ).toBeInTheDocument();
+      expect(screen.getByText(PROXY_SESSION_MESSAGE)).toBeInTheDocument();
     });
 
     it("renders no permission message for chat", () => {
@@ -299,9 +299,7 @@ describe("DropPlaceholder", () => {
         />
       );
 
-      expect(
-        screen.getByText("Proxy users cannot make submissions")
-      ).toBeInTheDocument();
+      expect(screen.getByText(PROXY_SESSION_MESSAGE)).toBeInTheDocument();
     });
 
     it("renders no permission message for submission", () => {
@@ -340,6 +338,19 @@ describe("DropPlaceholder", () => {
 
       expect(
         screen.getByText("Submission period has ended")
+      ).toBeInTheDocument();
+    });
+
+    it("says submissions are paused for the move to the 6529 Network", () => {
+      render(
+        <DropPlaceholder
+          type="submission"
+          submissionRestriction={SubmissionRestriction.PAUSED_FOR_MOVE}
+        />
+      );
+
+      expect(
+        screen.getByText("Paused for the move to the 6529 Network.")
       ).toBeInTheDocument();
     });
 
@@ -445,6 +456,18 @@ describe("DropPlaceholder", () => {
       expect(
         screen.queryByRole("button", { name: "Create profile" })
       ).not.toBeInTheDocument();
+    });
+
+    it("explains a proxy session when both chat and submissions are blocked", () => {
+      render(
+        <DropPlaceholder
+          type="both"
+          chatRestriction={ChatRestriction.PROXY_USER}
+          submissionRestriction={SubmissionRestriction.PROXY_USER}
+        />
+      );
+
+      expect(screen.getByText(PROXY_SESSION_MESSAGE)).toBeInTheDocument();
     });
 
     it("renders generic message for both type", () => {

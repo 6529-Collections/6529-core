@@ -20,6 +20,9 @@ import {
   SELF_ID,
 } from "./fakeE2eeEngine";
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}));
 jest.mock("@/hooks/useDisplayTimeZone", () => ({
   useDisplayTimeZone: jest.fn(),
 }));
@@ -177,6 +180,60 @@ describe("encrypted chats in the display time zone", () => {
     expect(separators()).toEqual(["Yesterday", "Today"]);
   });
 
+  it("dates moved history by when it was first sent", () => {
+    mockZone.mockReturnValue(UTC_ZONE);
+    const imported = (createdAt: number, dropId: string) => ({
+      waveId: "wave",
+      dropId,
+      part: 1,
+      serialNo: 1,
+      authorProfileId: SELF_ID,
+      authorHandle: null,
+      createdAt,
+      editedAt: null,
+      replyToDropId: null,
+      mediaNotImported: 0,
+      reactions: [] as [string, number][],
+    });
+    // Moved in today, after a message sent today, from two earlier days.
+    const messages = [
+      message({ id: "a", seq: 1, ts: SENT, text: "today" }),
+      message({
+        id: "b",
+        seq: 2,
+        ts: SENT,
+        text: "march",
+        imported: imported(Date.UTC(2026, 2, 3, 9), "d1"),
+      }),
+      message({
+        id: "c",
+        seq: 3,
+        ts: SENT,
+        text: "same day again",
+        imported: imported(Date.UTC(2026, 9, 12, 8), "d2"),
+      }),
+    ];
+    render(
+      <E2eeTimeline
+        conversation={conversation()}
+        messages={messages}
+        engine={createFakeE2eeEngine()}
+        selfProfileId={SELF_ID}
+        canAct
+        actions={actions}
+      />
+    );
+    const separators = [
+      ...screen.getByRole("list", { name: "Messages" }).children,
+    ]
+      .filter((item) => !item.hasAttribute("data-e2ee-row"))
+      .map((item) => item.textContent);
+    expect(separators).toHaveLength(3);
+    expect(separators[0]).toBe("Today");
+    expect(separators[1]).toMatch(/Mar/u);
+    expect(separators[2]).toBe("Today");
+  });
+
   it("shows a chat's last activity in the display zone", () => {
     mockZone.mockReturnValue(UTC_ZONE);
     render(
@@ -187,6 +244,9 @@ describe("encrypted chats in the display time zone", () => {
       />
     );
     expect(screen.getByText("10:00 AM UTC")).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAccessibleDescription(
+      "10:00 AM UTC"
+    );
   });
 
   it("states the zone in exported message times", () => {

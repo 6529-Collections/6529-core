@@ -2,6 +2,7 @@
 // Explicit build/dev flags override stale shell or .env values for both backends.
 const DESKTOP_FEATURE_FLAGS = Object.freeze({
   NEXT_PUBLIC_E2EE_DM_ENABLED: "true",
+  NEXT_PUBLIC_E2EE_READ_SYNC: "false",
   NEXT_PUBLIC_FEATURE_SIGNED_MESSAGES: "true",
   NEXT_PUBLIC_FEATURE_APP_DEVICE_GRANTS: "true",
 });

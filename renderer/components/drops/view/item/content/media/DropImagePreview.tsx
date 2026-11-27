@@ -7,7 +7,7 @@ import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { getMediaGatewayFallbackUrls } from "@/components/nft-image/utils/gateway-fallback";
 import { parseDecentralizedMediaRef } from "@/lib/media/decentralized-media";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
-import { IMAGE_RESIZE_CDN_ORIGIN } from "@/helpers/image-resize-cdn";
+import { isFirstPartyMediaOrigin } from "@/lib/media/first-party-media";
 import {
   getAnimatedImagePreviewUri,
   isGifImageUrl,
@@ -128,7 +128,7 @@ function getHighQualityArtworkImageSrc(src: string): string | null {
   try {
     const url = new URL(original);
     if (
-      url.origin === IMAGE_RESIZE_CDN_ORIGIN &&
+      isFirstPartyMediaOrigin(url.origin) &&
       url.pathname.startsWith("/drops/") &&
       /\.(jpe?g|png|webp|avif)$/i.test(url.pathname)
     )

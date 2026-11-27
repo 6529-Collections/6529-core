@@ -257,7 +257,7 @@ const getChipClasses = (
 
   if (variant === "header-avatar") {
     variantClasses =
-      "tw-h-5 tw-min-w-[34px] tw-cursor-help tw-gap-0.5 tw-whitespace-nowrap tw-rounded-md tw-bg-iron-950 tw-px-0.5 tw-py-0 tw-text-[11px] tw-font-semibold tw-leading-4 tw-ring-1 tw-ring-inset tw-ring-iron-700";
+      "tw-h-5 tw-min-w-[34px] tw-cursor-help tw-gap-0.5 tw-whitespace-nowrap tw-rounded-md tw-bg-iron-950 tw-px-0.5 tw-py-0 tw-text-[11px] tw-font-semibold tw-leading-4";
     sizeClasses = "";
   } else if (isInlineSidebarVariant(variant)) {
     variantClasses =
@@ -296,7 +296,7 @@ const getChipLabelClasses = (variant: WaveTrustSignalsVariant): string => {
   }
 
   if (isInlineSidebarVariant(variant)) {
-    return "tw-text-[11px] tw-font-medium";
+    return "tw-text-[11px] tw-font-normal";
   }
 
   if (variant === "sidebar") {
@@ -323,11 +323,11 @@ const getIconClasses = (variant: WaveTrustSignalsVariant): string => {
 
 const getValueClasses = (variant: WaveTrustSignalsVariant): string => {
   if (isInlineSidebarVariant(variant)) {
-    return "tw-tabular-nums";
+    return "tw-font-normal";
   }
 
   if (isInlineHeaderVariant(variant)) {
-    return "tw-text-[11px] tw-font-semibold tw-leading-4 tw-tabular-nums";
+    return `tw-text-[11px] ${variant === "header-inline" ? "tw-font-medium" : "tw-font-semibold"} tw-leading-4 tw-tabular-nums`;
   }
 
   return "tw-tabular-nums";
