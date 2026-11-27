@@ -79,7 +79,7 @@ const calculateHeightStyle = (
   };
 };
 
-const calculateNativeKeyboardHeightStyle = (
+export const calculateNativeKeyboardHeightStyle = (
   spaces: LayoutSpaces,
   isCapacitor: boolean,
   isViewportLocked: boolean,
@@ -100,7 +100,7 @@ const calculateNativeKeyboardHeightStyle = (
 
 // Context type definition
 // Define valid ref types for type safety
-type LayoutRefType =
+export type LayoutRefType =
   | "header"
   | "pinned"
   | "tabs"
@@ -216,7 +216,7 @@ interface LayoutContextType {
 }
 
 // Default context values
-const defaultSpaces: LayoutSpaces = {
+export const defaultSpaces: LayoutSpaces = {
   headerSpace: 0,
   pinnedSpace: 0,
   tabsSpace: 0,
@@ -231,7 +231,7 @@ const getStyleSpaces = (spaces: LayoutSpaces): LayoutSpaces =>
   spaces.measurementsComplete ? spaces : defaultSpaces;
 
 // Create context
-const LayoutContext = createContext<LayoutContextType>({
+export const LayoutContext = createContext<LayoutContextType>({
   spaces: defaultSpaces,
   registerRef: () => {}, // No-op for default value
   contentContainerStyle: {}, // Empty style object as default
