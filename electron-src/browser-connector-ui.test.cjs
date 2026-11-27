@@ -75,6 +75,27 @@ async function withConnector(
   const pending = [];
   const fetched = [];
   let calls = 0;
+  let connectClicks = 0;
+  // The browser's wallet connection for the app origin; null = not connected.
+  const connection = (() => {
+    const listeners = new Set();
+    const snapshot = (value) =>
+      value ? { address: value, isConnected: true } : { address: undefined, isConnected: false };
+    let current = snapshot(
+      options.connectedAs === undefined ? connected : options.connectedAs,
+    );
+    return {
+      get: () => current,
+      set: (value) => {
+        current = snapshot(value);
+        for (const listener of listeners) listener();
+      },
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    };
+  })();
   const signArgs = [];
   const switched = [];
   const sign = (args) => {
@@ -151,10 +172,30 @@ async function withConnector(
         };
       if (name.endsWith("SeizeConnectContext"))
         return {
-          useSeizeConnectContext: () => ({
-            address: connected,
-            isConnected: true,
-          }),
+          useSeizeConnectContext: () =>
+            React.useSyncExternalStore(
+              connection.subscribe,
+              connection.get,
+            ),
+        };
+      // The shared connect control; clicking it stands in for the wallet
+      // modal and connects the given address.
+      if (name.endsWith("HeaderUserConnect"))
+        return {
+          __esModule: true,
+          default: ({ label }) =>
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  connectClicks++;
+                  if (options.connectsAs !== undefined)
+                    connection.set(options.connectsAs);
+                },
+              },
+              label,
+            ),
         };
       if (name.endsWith("typedDataRequest"))
         return {
@@ -205,6 +246,7 @@ async function withConnector(
       signArgs,
       switched,
       calls: () => calls,
+      connectClicks: () => connectClicks,
     });
   } finally {
     await React.act(async () => root.unmount());
@@ -551,4 +593,74 @@ test("an open request stops offering Sign when the app's expiry passes", async (
     assert.match(text(), /has expired/);
     assert.equal(calls(), 0);
   }, "personal_sign");
+});
+
+test("a browser without a wallet connection can connect on the request page and then sign", async () => {
+  await withConnector(
+    async ({ button, text, connectClicks, calls, pending, timers, outgoing }) => {
+      assert.equal(button("Sign"), undefined);
+      assert.match(text(), /Connect your browser wallet here/);
+      assert.doesNotMatch(text(), /Close this window/);
+      assert.ok(button("Cancel"));
+      await React.act(async () => button("Connect wallet").click());
+      assert.equal(connectClicks(), 1);
+      // Connected as the requested wallet: the request continues in place.
+      assert.ok(button("Sign"));
+      await React.act(async () => button("Sign").click());
+      assert.equal(calls(), 1);
+      await React.act(async () => pending[0].resolve("0xsigned"));
+      await React.act(async () => timers[0]());
+      assert.deepEqual(returned(outgoing[0]), {
+        v: 2,
+        id: REQUEST_ID,
+        token: RETURN_TOKEN,
+        result: "0xsigned",
+      });
+    },
+    "personal_sign",
+    undefined,
+    { connectedAs: null, connectsAs: address },
+  );
+});
+
+test("connecting a different wallet on the request page still offers nothing to sign", async () => {
+  await withConnector(
+    async ({ button, calls }) => {
+      await React.act(async () => button("Connect wallet").click());
+      assert.equal(button("Sign"), undefined);
+      assert.ok(button("Cancel"));
+      assert.equal(calls(), 0);
+    },
+    "personal_sign",
+    undefined,
+    { connectedAs: null, connectsAs: `0x${"33".repeat(20)}` },
+  );
+});
+
+test("a browser without a wallet connection can cancel the request back to the app", async () => {
+  await withConnector(
+    async ({ button, text, timers, outgoing, calls }) => {
+      await React.act(async () => button("Cancel").click());
+      assert.equal(button("Cancel"), undefined);
+      // Once cancelled, the page offers no way to start a second outcome.
+      assert.equal(button("Connect wallet"), undefined);
+      assert.match(text(), /Cancelled\. Returning to 6529 Desktop Classic/);
+      assert.equal(
+        globalThis.document.activeElement?.getAttribute("role"),
+        "status",
+      );
+      assert.equal(timers.length, 1);
+      await React.act(async () => timers[0]());
+      assert.deepEqual(returned(outgoing[0]), {
+        v: 2,
+        id: REQUEST_ID,
+        token: RETURN_TOKEN,
+        error: "cancelled",
+      });
+      assert.equal(calls(), 0);
+    },
+    "personal_sign",
+    undefined,
+    { connectedAs: null },
+  );
 });
