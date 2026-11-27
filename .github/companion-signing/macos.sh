@@ -69,10 +69,49 @@ case "$CHANNEL:$bundle" in
     ;;
   *) printf 'Unexpected Companion bundle identifier for %s.\n' "$CHANNEL" >&2; exit 1 ;;
 esac
+
+update_base="$(plist_value CompanionUpdateBaseURL)"
+s3_base='https://6529bucket.s3.eu-west-1.amazonaws.com/6529-validator-companion/'
+# ArNS separates an undername from the registered name with an underscore.
+stable_arns_base='https://releases_6529-validator-companion.ar.io/'
+test_arns_base='https://test-releases_6529-validator-companion.ar.io/'
+catalog_base="$(python3 - "$work/build-info.json" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as source:
+        catalog = json.load(source)
+except (OSError, ValueError):
+    sys.exit("Could not read the Companion signing catalog.")
+if not isinstance(catalog, dict):
+    sys.exit("Invalid Companion signing catalog.")
+if "updateBase" in catalog:
+    base = catalog["updateBase"]
+    if not isinstance(base, str) or not base or any(not 32 < ord(char) < 127 for char in base):
+        sys.exit("Invalid updateBase in the Companion signing catalog.")
+    print(base)
+PY
+)"
+# Only older S3 catalogs may omit the feed. The attestation job requires it for ArNS.
+if [[ -z "$catalog_base" ]]; then
+  if [[ "$update_base" != "$s3_base" ]]; then
+    printf 'The Companion signing catalog is missing updateBase.\n' >&2
+    exit 1
+  fi
+  catalog_base="$s3_base"
+fi
+case "$CHANNEL:$catalog_base" in
+  "stable:$s3_base"|"test:$s3_base"|"stable:$stable_arns_base"|"test:$test_arns_base") ;;
+  *) printf 'Unexpected Companion update feed in the catalog for %s.\n' "$CHANNEL" >&2; exit 1 ;;
+esac
+if [[ "$update_base" != "$catalog_base" ]]; then
+  printf 'Companion bundle update feed does not match the signing catalog.\n' >&2
+  exit 1
+fi
 [[ "$(plist_value CFBundleExecutable)" == CompanionIroh &&
    "$(plist_value CFBundleShortVersionString)" == "$VERSION" &&
    "$(plist_value CompanionUpdateChannel)" == "$CHANNEL" &&
-   "$(plist_value CompanionUpdateBaseURL)" == 'https://6529bucket.s3.eu-west-1.amazonaws.com/6529-validator-companion/' &&
    "$(plist_value LSMinimumSystemVersion)" == 13.0 ]]
 arch=arm64
 if [[ "$TARGET" == mac-x64 ]]; then arch=x86_64; fi
